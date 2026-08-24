@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: acapelius-postgres
+    environment:
+      POSTGRES_USER: acapelius
+      POSTGRES_PASSWORD: acapelius
+      POSTGRES_DB: acapelius
+      TZ: America/Argentina/Buenos_Aires
+    ports:
+      # 5433 en el host para no chocar con un Postgres local en 5432.
+      - "5433:5432"
+    volumes:
+      - acapelius_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acapelius -d acapelius"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  acapelius_pgdata:

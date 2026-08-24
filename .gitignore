@@ -1,0 +1,24 @@
+# Go
+/bin/
+/tmp/
+*.test
+*.out
+
+# Local toolchain binaries installed by `make tools`
+/bin/sqlc
+/bin/goose
+
+# Frontend
+/web/node_modules/
+/web/dist/*
+!/web/dist/.gitkeep
+/web/.vite/
+
+# Env
+.env
+.env.local
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
