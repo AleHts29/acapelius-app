@@ -6,10 +6,10 @@ ventas, rendiciones y asistencia.
 
 La especificacion funcional completa esta en [`docs/spec.md`](docs/spec.md).
 
-**Estado: fase 2 terminada.** Fundaciones, autenticacion, catalogo del admin,
-y el ciclo de venta completo: registro con validacion de cupo transaccional,
-tickets con QR firmado, email de la entrada, pagina publica `/e/{code}`,
-pagos, cortesias y anulaciones. El modo puerta llega en las fases 3 y 4 (ver
+**Estado: fase 3 terminada.** Fundaciones, autenticacion, catalogo, ciclo de
+venta completo y el modo puerta online: escaneo de QR con la camara, pantallas
+verde/rojo, doble escaneo detectado, busqueda manual por nombre/vendedora y
+contador de ingresados. El modo offline llega en la fase 4 (ver
 [Plan de fases](#plan-de-fases)).
 
 ## Arrancar
@@ -131,6 +131,9 @@ POST   /api/tickets/{id}/void       # admin; anula una entrada suelta
 
 GET    /api/public/sales/{code}     # sin auth: datos de la pagina publica
 GET    /api/public/tickets/{code}.png  # sin auth: QR como imagen (email)
+
+GET    /api/functions/{id}/door-snapshot  # door/seller: tickets + checkins
+POST   /api/checkins                # door/seller: scan o manual
 ```
 
 Las lecturas del catalogo estan abiertas a todos los roles porque la vendedora
@@ -153,6 +156,20 @@ respaldo (y para reenviar por WhatsApp).
 **Emails.** Cada envio queda registrado en `email_sends` (destinatario,
 resultado, error) para responder "no me llego" con datos. Un fallo de envio no
 anula la venta: se reintenta con "reenviar email".
+
+**Check-in.** `POST /api/checkins` responde siempre 200 con un `result`
+discriminado (`ok`, `already_checked_in`, `invalid`, `void`,
+`wrong_function`): son estados esperados del flujo de puerta, no errores. El
+`UNIQUE(ticket_id)` de `checkins` + `ON CONFLICT DO NOTHING` resuelve la
+carrera de dos escaneos simultaneos del mismo ticket y es el ancla de
+idempotencia del sync offline (fase 4). El snapshot de puerta no incluye
+montos ni datos de contacto (el rol door no ve plata). Ademas del rol `door`,
+una vendedora puede operar la puerta (spec §3). Una funcion con ingresos
+registrados ya no se puede editar ni anular sus ventas ingresadas.
+
+**Escaneo en el celular.** La camara requiere HTTPS (o localhost). Para probar
+el modo puerta desde un celular en desarrollo hace falta un tunel HTTPS, por
+ejemplo `cloudflared tunnel --url http://localhost:5173`.
 
 ## Tests
 
@@ -188,7 +205,8 @@ Estan documentadas en [`.env.example`](.env.example). Las que no pueden faltar:
 - [x] **2 — Ventas, entradas con QR y email.** Cupo transaccional, tickets
       ULID firmados, email con QRs, pagina publica, pagos, cortesias y
       anulaciones.
-- [ ] **3 — Check-in online.**
+- [x] **3 — Check-in online.** Escaneo, verde/rojo, doble escaneo, busqueda
+      manual, contador; check-in concurrente resuelto por unicidad en DB.
 - [ ] **4 — Offline en la puerta.**
 - [ ] **5 — Panel de Eli.**
 - [ ] **6 — Pulido y deploy.**

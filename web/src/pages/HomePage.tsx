@@ -6,10 +6,7 @@ import { useSession } from '../auth/session'
 const ROADMAP: Record<string, string[]> = {
   admin: ['Panel de rendiciones y asistencia (fase 5)'],
   seller: ['Ver el saldo a rendir (fase 5)'],
-  door: [
-    'Escanear QR en la puerta (fase 3)',
-    'Modo offline con la lista precargada (fase 4)',
-  ],
+  door: ['Modo offline con la lista precargada (fase 4)'],
 }
 
 export function HomePage() {
@@ -28,8 +25,19 @@ export function HomePage() {
         </p>
       </div>
 
+      <nav className="stack" style={{ marginTop: '1rem' }} aria-label="Puerta">
+        <Link className="nav-card" to="/puerta">
+          <span>
+            <strong>Modo puerta</strong>
+            <br />
+            <span className="muted">Escanear QR y marcar ingresos</span>
+          </span>
+          <span className="muted">›</span>
+        </Link>
+      </nav>
+
       {(user.role === 'admin' || user.role === 'seller') && (
-        <nav className="stack" style={{ marginTop: '1rem' }} aria-label="Secciones">
+        <nav className="stack" style={{ marginTop: '0.75rem' }} aria-label="Secciones">
           <Link className="nav-card" to="/ventas/nueva">
             <span>
               <strong>{user.role === 'admin' ? 'Nueva venta o cortesia' : 'Nueva venta'}</strong>

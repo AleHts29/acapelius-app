@@ -464,3 +464,124 @@ a.list__item:hover {
   padding: 2rem 0;
   margin: 0;
 }
+
+/* --- Modo puerta ---------------------------------------------------------- */
+
+.door-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.door-counter {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.door-counter__big {
+  font-size: 2rem;
+  font-weight: 750;
+  color: var(--ok);
+}
+
+.door-counter__small {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+.door-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.door-tab {
+  min-height: var(--tap-target);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 1rem;
+  font-weight: 650;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.door-tab--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.door-scanner-wrap {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000;
+}
+
+#door-scanner {
+  width: 100%;
+}
+
+#door-scanner video {
+  width: 100% !important;
+  border-radius: var(--radius);
+}
+
+.door-ticket {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Overlay de resultado: a pantalla completa, legible de un vistazo a un
+   metro de distancia, de noche. */
+.door-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  padding: 2rem;
+  cursor: pointer;
+  font-family: inherit;
+  color: #fff;
+  text-align: center;
+}
+
+.door-overlay--ok {
+  background: #15803d;
+}
+
+.door-overlay--bad {
+  background: #b91c1c;
+}
+
+.door-overlay__icon {
+  font-size: 5rem;
+  line-height: 1;
+}
+
+.door-overlay__title {
+  font-size: 2.2rem;
+  font-weight: 750;
+}
+
+.door-overlay__detail {
+  font-size: 1.15rem;
+  opacity: 0.95;
+}
+
+.door-overlay__hint {
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}

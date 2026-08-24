@@ -179,6 +179,47 @@ export interface PublicSale {
   tickets: PublicTicket[]
 }
 
+export interface DoorTicket {
+  code: string
+  status: TicketStatus
+  buyer_name: string
+  seller_name: string
+  is_comp: boolean
+}
+
+export interface DoorCheckin {
+  ticket_code: string
+  created_at: string
+  method: 'scan' | 'manual'
+  by_name: string
+}
+
+export interface DoorSnapshot {
+  function: {
+    id: number
+    name: string | null
+    venue: string
+    starts_at: string
+    capacity: number
+  }
+  tickets: DoorTicket[]
+  checkins: DoorCheckin[]
+}
+
+export type CheckinResult = 'ok' | 'already_checked_in' | 'invalid' | 'void' | 'wrong_function'
+
+export interface CheckinResponse {
+  result: CheckinResult
+  buyer_name?: string
+  seller_name?: string
+  checked_in_at?: string
+  by_name?: string
+}
+
+export type CheckinInput =
+  | { function_id: number; method: 'scan'; payload: string; device_id?: string }
+  | { function_id: number; method: 'manual'; code: string; device_id?: string }
+
 export const api = {
   me: () => request<{ user: User }>('GET', '/me'),
   login: (email: string, password: string) =>
@@ -229,6 +270,10 @@ export const api = {
   voidSale: (id: number) => request<{ sale: Sale }>('POST', `/sales/${id}/void`),
 
   publicSale: (code: string) => request<PublicSale>('GET', `/public/sales/${code}`),
+
+  doorSnapshot: (functionId: number) =>
+    request<DoorSnapshot>('GET', `/functions/${functionId}/door-snapshot`),
+  checkin: (input: CheckinInput) => request<CheckinResponse>('POST', '/checkins', input),
 }
 
 /** Link publico de una venta, para compartir por WhatsApp. */

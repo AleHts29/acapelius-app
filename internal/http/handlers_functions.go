@@ -122,8 +122,18 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// NOTA fase 3: cuando existan check-ins, una funcion con ingresos ya
-	// registrados no se podra editar (spec §5.1).
+	// Una funcion con ingresos registrados no se edita mas (spec §5.1): a esa
+	// altura cambiar fecha, lugar o cupo solo puede generar lio en la puerta.
+	checkins, err := s.queries.CountCheckinsForFunction(r.Context(), id)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if checkins > 0 {
+		httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+			"La funcion ya tiene ingresos registrados y no se puede editar.")
+		return
+	}
 
 	name := current.Name
 	if req.Name != nil {

@@ -100,6 +100,14 @@ func (s *Server) Handler() http.Handler {
 					seller.Post("/sales/{id}/resend-email", s.handleResendEmail)
 				})
 
+				// Modo puerta: door es su rol natural, pero una vendedora
+				// tambien puede estar en la puerta (spec §3, nota de roles).
+				ready.Group(func(door chi.Router) {
+					door.Use(auth.RequireRole(domain.RoleDoor, domain.RoleSeller))
+					door.Get("/functions/{id}/door-snapshot", s.handleDoorSnapshot)
+					door.Post("/checkins", s.handleCreateCheckin)
+				})
+
 				ready.Group(func(admin chi.Router) {
 					admin.Use(auth.RequireRole(domain.RoleAdmin))
 					admin.Post("/users", s.handleCreateUser)

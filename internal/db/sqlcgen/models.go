@@ -8,6 +8,15 @@ import (
 	"time"
 )
 
+type Checkin struct {
+	ID        int64     `json:"id"`
+	TicketID  int64     `json:"ticket_id"`
+	UserID    int64     `json:"user_id"`
+	Method    string    `json:"method"`
+	DeviceID  *string   `json:"device_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type EmailSend struct {
 	ID        int64     `json:"id"`
 	SaleID    int64     `json:"sale_id"`
