@@ -274,6 +274,11 @@ export const api = {
   doorSnapshot: (functionId: number) =>
     request<DoorSnapshot>('GET', `/functions/${functionId}/door-snapshot`),
   checkin: (input: CheckinInput) => request<CheckinResponse>('POST', '/checkins', input),
+  syncCheckins: (input: {
+    function_id: number
+    device_id: string
+    checkins: Array<{ payload?: string; code?: string; method: 'scan' | 'manual'; at: string }>
+  }) => request<{ results: CheckinResponse[] }>('POST', '/checkins/sync', input),
 }
 
 /** Link publico de una venta, para compartir por WhatsApp. */

@@ -491,6 +491,25 @@ a.list__item:hover {
   color: var(--text-muted);
 }
 
+.door-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.85rem;
+  color: var(--ok);
+}
+
+.door-status--offline {
+  color: #fbbf24;
+  border-color: #7a5c12;
+}
+
 .door-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;

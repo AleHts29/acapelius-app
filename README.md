@@ -6,11 +6,11 @@ ventas, rendiciones y asistencia.
 
 La especificacion funcional completa esta en [`docs/spec.md`](docs/spec.md).
 
-**Estado: fase 3 terminada.** Fundaciones, autenticacion, catalogo, ciclo de
-venta completo y el modo puerta online: escaneo de QR con la camara, pantallas
-verde/rojo, doble escaneo detectado, busqueda manual por nombre/vendedora y
-contador de ingresados. El modo offline llega en la fase 4 (ver
-[Plan de fases](#plan-de-fases)).
+**Estado: fase 4 terminada.** Fundaciones, autenticacion, catalogo, ciclo de
+venta completo y el modo puerta **offline-first**: el snapshot vive en
+IndexedDB, cada escaneo se valida localmente sin tocar la red, los ingresos se
+encolan y se sincronizan solos al volver la conexion. Queda el panel de Eli
+(fase 5) y el deploy (fase 6).
 
 ## Arrancar
 
@@ -134,6 +134,7 @@ GET    /api/public/tickets/{code}.png  # sin auth: QR como imagen (email)
 
 GET    /api/functions/{id}/door-snapshot  # door/seller: tickets + checkins
 POST   /api/checkins                # door/seller: scan o manual
+POST   /api/checkins/sync           # batch idempotente de la cola offline
 ```
 
 Las lecturas del catalogo estan abiertas a todos los roles porque la vendedora
@@ -166,6 +167,21 @@ idempotencia del sync offline (fase 4). El snapshot de puerta no incluye
 montos ni datos de contacto (el rol door no ve plata). Ademas del rol `door`,
 una vendedora puede operar la puerta (spec §3). Una funcion con ingresos
 registrados ya no se puede editar ni anular sus ventas ingresadas.
+
+**Offline en la puerta (fase 4).** El modo puerta es offline-first: al abrirse
+con conexion guarda el snapshot en IndexedDB y **todos** los escaneos se
+validan localmente (el codigo existe en el snapshot, no esta usado ni en la
+cola local); la red nunca esta en el camino de un escaneo. Cada verde se
+encola en IndexedDB y la cola se sincroniza con `POST /api/checkins/sync` al
+volver la conexion (tambien cada 15 s y al encolar). El sync es idempotente:
+cualquier resultado del server es terminal y reintentar un batch procesado
+devuelve `already_checked_in`, que el cliente trata igual que `ok`. Si dos
+dispositivos escanearon el mismo ticket offline, gana el primero que
+sincroniza (spec §6.4). El service worker (`web/public/sw.js`) cachea la shell
+para que la app abra sin red; la primera carga del snapshot si necesita
+conexion. La firma HMAC se verifica en el server al sincronizar; localmente
+alcanza con que el codigo exista en el snapshot (spec §6.2), por lo que sin
+conexion un QR de otra funcion se reporta como "invalido" (rojo igual).
 
 **Escaneo en el celular.** La camara requiere HTTPS (o localhost). Para probar
 el modo puerta desde un celular en desarrollo hace falta un tunel HTTPS, por
@@ -207,6 +223,8 @@ Estan documentadas en [`.env.example`](.env.example). Las que no pueden faltar:
       anulaciones.
 - [x] **3 — Check-in online.** Escaneo, verde/rojo, doble escaneo, busqueda
       manual, contador; check-in concurrente resuelto por unicidad en DB.
-- [ ] **4 — Offline en la puerta.**
+- [x] **4 — Offline en la puerta.** Snapshot en IndexedDB, validacion local,
+      cola con sync idempotente, conflicto entre dispositivos resuelto por el
+      primero que sincroniza, service worker para la shell.
 - [ ] **5 — Panel de Eli.**
 - [ ] **6 — Pulido y deploy.**

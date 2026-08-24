@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Html5Qrcode } from 'html5-qrcode'
 
-import { ApiError, api } from '../api/client'
-import type { CheckinInput, CheckinResponse, DoorTicket } from '../api/client'
+import type { CheckinResponse, DoorTicket } from '../api/client'
+import type { CheckinAttempt } from '../door/useDoorStore'
+import { useDoorStore } from '../door/useDoorStore'
+import { doorCounter, effectiveTickets } from '../door/logic'
 import { filterTickets } from '../lib/search'
 
 // Que muestra la pantalla de resultado a pantalla completa.
@@ -32,20 +33,20 @@ function toDisplay(resp: CheckinResponse): DisplayResult {
       return {
         ok: false,
         title: 'Ya ingreso',
-        detail: `${resp.buyer_name} entro a las ${resp.checked_in_at ? timeOf(resp.checked_in_at) : '?'} (lo marco ${resp.by_name})`,
+        detail: `${resp.buyer_name} entro ${resp.checked_in_at ? `a las ${timeOf(resp.checked_in_at)}` : 'antes'} (${resp.by_name ?? 'sin registro'})`,
         autoCloseMs: 4000,
       }
     case 'void':
       return { ok: false, title: 'Entrada anulada', detail: resp.buyer_name, autoCloseMs: 4000 }
     case 'wrong_function':
+      return { ok: false, title: 'Es de otra funcion', detail: resp.buyer_name, autoCloseMs: 4000 }
+    case 'invalid':
       return {
         ok: false,
-        title: 'Es de otra funcion',
-        detail: resp.buyer_name,
+        title: 'QR invalido',
+        detail: 'No es una entrada de esta funcion.',
         autoCloseMs: 4000,
       }
-    case 'invalid':
-      return { ok: false, title: 'QR invalido', detail: 'No es una entrada de este sistema.', autoCloseMs: 4000 }
   }
 }
 
@@ -133,11 +134,9 @@ function Scanner({ onScan, enabled }: { onScan: (payload: string) => void; enabl
 function ManualSearch({
   tickets,
   onCheckin,
-  busy,
 }: {
   tickets: DoorTicket[]
   onCheckin: (code: string) => void
-  busy: boolean
 }) {
   const [query, setQuery] = useState('')
   const found = filterTickets(tickets, query)
@@ -171,7 +170,6 @@ function ManualSearch({
                 className="button"
                 style={{ width: 'auto' }}
                 type="button"
-                disabled={busy}
                 onClick={() => onCheckin(ticket.code)}
               >
                 Marcar ingreso
@@ -189,62 +187,58 @@ function ManualSearch({
 export function DoorModePage() {
   const { functionId: raw } = useParams()
   const functionId = Number(raw)
-  const queryClient = useQueryClient()
 
   const [tab, setTab] = useState<'scan' | 'search'>('scan')
   const [result, setResult] = useState<DisplayResult | null>(null)
 
-  const snapshot = useQuery({
-    queryKey: ['door-snapshot', functionId],
-    queryFn: () => api.doorSnapshot(functionId),
-    enabled: Number.isInteger(functionId),
-    // Refresco periodico mientras hay conexion (spec §6.5).
-    refetchInterval: 30_000,
-  })
-
-  const checkin = useMutation({
-    mutationFn: (input: CheckinInput) => api.checkin(input),
-    onSuccess: (resp) => {
-      setResult(toDisplay(resp))
-      void queryClient.invalidateQueries({ queryKey: ['door-snapshot', functionId] })
-    },
-    onError: (err) => {
-      setResult({
-        ok: false,
-        title: err instanceof ApiError && err.code === 'network_error' ? 'Sin conexion' : 'Error',
-        detail:
-          err instanceof ApiError && err.code === 'network_error'
-            ? 'El modo offline llega en la proxima version.'
-            : 'No se pudo registrar. Proba de nuevo.',
-        autoCloseMs: 4000,
-      })
-    },
-  })
+  const store = useDoorStore(functionId)
 
   if (!Number.isInteger(functionId)) {
     return <p className="alert">Funcion invalida.</p>
   }
 
-  const tickets = snapshot.data?.tickets ?? []
-  const issued = tickets.filter((t) => t.status !== 'void').length
-  const entered = tickets.filter((t) => t.status === 'checked_in').length
-  const fn = snapshot.data?.function
+  async function attempt(input: CheckinAttempt) {
+    const verdict = await store.checkin(input)
+    setResult(toDisplay(verdict))
+  }
+
+  if (store.loadError) {
+    return <p className="alert">{store.loadError}</p>
+  }
+  if (!store.snapshot) {
+    return <p className="muted">Cargando la lista de entradas...</p>
+  }
+
+  const { entered, issued } = doorCounter(store.snapshot, store.pending)
+  const tickets = effectiveTickets(store.snapshot, store.pending)
+  const fn = store.snapshot.function
 
   return (
     <>
       <div className="door-head">
         <div>
           <h1 className="page-title" style={{ marginBottom: 0 }}>
-            {fn ? (fn.name ?? fn.venue) : 'Puerta'}
+            {fn.name ?? fn.venue}
           </h1>
           <p className="muted" style={{ margin: 0 }}>
-            {fn?.venue}
+            {fn.venue}
           </p>
         </div>
         <div className="door-counter" aria-label="Ingresados sobre emitidos">
           <span className="door-counter__big">{entered}</span>
           <span className="door-counter__small">/ {issued}</span>
         </div>
+      </div>
+
+      {/* Estado de conexion y de la cola (spec fase 4). El escaneo funciona
+          igual sin conexion; esto solo informa. */}
+      <div className={`door-status${store.online ? '' : ' door-status--offline'}`}>
+        <span>{store.online ? '● En linea' : '○ Sin conexion — se sigue escaneando'}</span>
+        {store.pending.length > 0 && (
+          <span>
+            {store.pending.length} sin sincronizar
+          </span>
+        )}
       </div>
 
       <div className="door-tabs" role="tablist">
@@ -270,16 +264,13 @@ export function DoorModePage() {
 
       {tab === 'scan' ? (
         <Scanner
-          enabled={result === null && !checkin.isPending}
-          onScan={(payload) =>
-            checkin.mutate({ function_id: functionId, method: 'scan', payload })
-          }
+          enabled={result === null}
+          onScan={(payload) => void attempt({ method: 'scan', payload })}
         />
       ) : (
         <ManualSearch
           tickets={tickets}
-          busy={checkin.isPending}
-          onCheckin={(code) => checkin.mutate({ function_id: functionId, method: 'manual', code })}
+          onCheckin={(code) => void attempt({ method: 'manual', code })}
         />
       )}
 

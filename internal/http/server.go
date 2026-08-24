@@ -106,6 +106,7 @@ func (s *Server) Handler() http.Handler {
 					door.Use(auth.RequireRole(domain.RoleDoor, domain.RoleSeller))
 					door.Get("/functions/{id}/door-snapshot", s.handleDoorSnapshot)
 					door.Post("/checkins", s.handleCreateCheckin)
+					door.Post("/checkins/sync", s.handleSyncCheckins)
 				})
 
 				ready.Group(func(admin chi.Router) {

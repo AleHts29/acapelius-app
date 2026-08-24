@@ -18,6 +18,14 @@ const queryClient = new QueryClient({
   },
 })
 
+// La shell cacheada permite abrir el modo puerta sin conexion. Solo en el
+// build de produccion: en dev el service worker pelearia con Vite.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js')
+  })
+}
+
 const container = document.getElementById('root')
 if (!container) {
   throw new Error('no se encontro #root en index.html')
