@@ -6,8 +6,9 @@ ventas, rendiciones y asistencia.
 
 La especificacion funcional completa esta en [`docs/spec.md`](docs/spec.md).
 
-**Estado: fase 0 terminada.** Estan las fundaciones y la autenticacion. Las
-temporadas, las ventas y el modo puerta llegan en las fases siguientes (ver
+**Estado: fase 1 terminada.** Fundaciones, autenticacion, y el catalogo del
+admin: temporadas, funciones (lugar, fecha, cupo, precio) y alta de usuarios.
+Las ventas y el modo puerta llegan en las fases siguientes (ver
 [Plan de fases](#plan-de-fases)).
 
 ## Arrancar
@@ -114,7 +115,16 @@ POST   /api/auth/change-password
 GET    /api/me
 POST   /api/users                   # admin
 GET    /api/users                   # admin
+POST   /api/seasons                 # admin
+GET    /api/seasons                 # cualquier rol
+POST   /api/functions               # admin
+GET    /api/functions?season_id=    # cualquier rol
+PATCH  /api/functions/{id}          # admin; PATCH parcial
 ```
+
+Las lecturas del catalogo estan abiertas a todos los roles porque la vendedora
+elige funcion al vender y la puerta al abrir su modo; las escrituras son solo
+del admin.
 
 ## Tests
 
@@ -145,7 +155,8 @@ Estan documentadas en [`.env.example`](.env.example). Las que no pueden faltar:
 
 - [x] **0 — Fundaciones.** Repo, Postgres, migraciones, sqlc, router, auth con
       roles, seed del admin, frontend embebido.
-- [ ] **1 — Temporadas, funciones y usuarios.**
+- [x] **1 — Temporadas, funciones y usuarios.** Catalogo del admin con
+      pantallas propias; PATCH parcial de funciones.
 - [ ] **2 — Ventas, entradas con QR y email.**
 - [ ] **3 — Check-in online.**
 - [ ] **4 — Offline en la puerta.**

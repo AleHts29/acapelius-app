@@ -85,6 +85,34 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return payload as T
 }
 
+export interface Season {
+  id: number
+  name: string
+  is_active: boolean
+  created_at: string
+}
+
+/** Una funcion (fecha del coro). "Function" a secas choca con el global de JS. */
+export interface ShowFunction {
+  id: number
+  season_id: number
+  name: string | null
+  venue: string
+  starts_at: string
+  capacity: number
+  price_cents: number
+  created_at: string
+}
+
+export interface FunctionInput {
+  season_id: number
+  name: string
+  venue: string
+  starts_at: string
+  capacity: number
+  price_cents: number
+}
+
 export const api = {
   me: () => request<{ user: User }>('GET', '/me'),
   login: (email: string, password: string) =>
@@ -98,6 +126,19 @@ export const api = {
   listUsers: () => request<{ users: User[] }>('GET', '/users'),
   createUser: (input: { name: string; email: string; role: Role; password?: string }) =>
     request<{ user: User; temp_password?: string }>('POST', '/users', input),
+
+  listSeasons: () => request<{ seasons: Season[] }>('GET', '/seasons'),
+  createSeason: (name: string) => request<{ season: Season }>('POST', '/seasons', { name }),
+
+  listFunctions: (seasonId?: number) =>
+    request<{ functions: ShowFunction[] }>(
+      'GET',
+      seasonId === undefined ? '/functions' : `/functions?season_id=${seasonId}`,
+    ),
+  createFunction: (input: FunctionInput) =>
+    request<{ function: ShowFunction }>('POST', '/functions', input),
+  updateFunction: (id: number, input: Partial<Omit<FunctionInput, 'season_id'>>) =>
+    request<{ function: ShowFunction }>('PATCH', `/functions/${id}`, input),
 }
 
 /** Etiqueta de rol para mostrar en pantalla. */

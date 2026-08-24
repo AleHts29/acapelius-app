@@ -248,3 +248,114 @@ h3 {
 .stack > * + * {
   margin-top: 0.75rem;
 }
+
+/* --- Paginas ------------------------------------------------------------ */
+
+.page-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.app-header__back {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-decoration: none;
+  min-height: var(--tap-target);
+}
+
+.nav-card:hover {
+  background: var(--surface-raised);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list > li + li {
+  border-top: 1px solid var(--border);
+}
+
+.list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0.25rem;
+  min-height: var(--tap-target);
+  color: var(--text);
+  text-decoration: none;
+}
+
+a.list__item:hover {
+  background: var(--surface-raised);
+}
+
+.list__item--static {
+  cursor: default;
+}
+
+.form-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: stretch;
+}
+
+.form-row .button {
+  width: auto;
+}
+
+.form-row__action {
+  flex-shrink: 0;
+}
+
+.form-row > .field__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.panel--success {
+  border-color: var(--ok);
+  margin-bottom: 1rem;
+}
+
+.credentials {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  user-select: all;
+}
+
+.function-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.function-card__title {
+  font-size: 1.1rem;
+}
+
+.function-card__line {
+  margin: 0.15rem 0 0;
+}

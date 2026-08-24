@@ -1,0 +1,166 @@
+package httpapi
+
+import (
+	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/ale-hts/acapelius/internal/db/sqlcgen"
+	"github.com/ale-hts/acapelius/internal/domain"
+	"github.com/ale-hts/acapelius/internal/httpx"
+)
+
+type createFunctionRequest struct {
+	SeasonID   int64     `json:"season_id"`
+	Name       string    `json:"name"`
+	Venue      string    `json:"venue"`
+	StartsAt   time.Time `json:"starts_at"` // RFC 3339
+	Capacity   int32     `json:"capacity"`
+	PriceCents int64     `json:"price_cents"`
+}
+
+type functionResponse struct {
+	Function sqlcgen.Function `json:"function"`
+}
+
+type listFunctionsResponse struct {
+	Functions []sqlcgen.Function `json:"functions"`
+}
+
+func (s *Server) handleCreateFunction(w http.ResponseWriter, r *http.Request) {
+	var req createFunctionRequest
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	req.Venue = strings.TrimSpace(req.Venue)
+	if err := domain.ValidateFunction(req.Venue, req.StartsAt, req.Capacity, req.PriceCents); err != nil {
+		mapDomainError(w, err)
+		return
+	}
+
+	// Se chequea que la temporada exista para responder un 404 claro en vez
+	// de dejar que reviente la foreign key.
+	if _, err := s.queries.GetSeason(r.Context(), req.SeasonID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrSeasonNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	function, err := s.queries.CreateFunction(r.Context(), sqlcgen.CreateFunctionParams{
+		SeasonID:   req.SeasonID,
+		Name:       domain.NormalizeFunctionName(req.Name),
+		Venue:      req.Venue,
+		StartsAt:   req.StartsAt,
+		Capacity:   req.Capacity,
+		PriceCents: req.PriceCents,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, functionResponse{Function: function})
+}
+
+func (s *Server) handleListFunctions(w http.ResponseWriter, r *http.Request) {
+	var seasonID *int64
+	if raw := r.URL.Query().Get("season_id"); raw != "" {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "season_id tiene que ser un numero.")
+			return
+		}
+		seasonID = &id
+	}
+
+	functions, err := s.queries.ListFunctions(r.Context(), seasonID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, listFunctionsResponse{Functions: functions})
+}
+
+// updateFunctionRequest usa punteros para distinguir "no vino" de "vino vacio":
+// un PATCH solo toca lo que el cliente mando.
+type updateFunctionRequest struct {
+	Name       *string    `json:"name"`
+	Venue      *string    `json:"venue"`
+	StartsAt   *time.Time `json:"starts_at"`
+	Capacity   *int32     `json:"capacity"`
+	PriceCents *int64     `json:"price_cents"`
+}
+
+func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrFunctionNotFound)
+		return
+	}
+
+	var req updateFunctionRequest
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	current, err := s.queries.GetFunction(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrFunctionNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	// NOTA fase 3: cuando existan check-ins, una funcion con ingresos ya
+	// registrados no se podra editar (spec §5.1).
+
+	name := current.Name
+	if req.Name != nil {
+		name = domain.NormalizeFunctionName(*req.Name)
+	}
+	venue := current.Venue
+	if req.Venue != nil {
+		venue = strings.TrimSpace(*req.Venue)
+	}
+	startsAt := current.StartsAt
+	if req.StartsAt != nil {
+		startsAt = *req.StartsAt
+	}
+	capacity := current.Capacity
+	if req.Capacity != nil {
+		capacity = *req.Capacity
+	}
+	priceCents := current.PriceCents
+	if req.PriceCents != nil {
+		priceCents = *req.PriceCents
+	}
+
+	if err := domain.ValidateFunction(venue, startsAt, capacity, priceCents); err != nil {
+		mapDomainError(w, err)
+		return
+	}
+
+	updated, err := s.queries.UpdateFunction(r.Context(), sqlcgen.UpdateFunctionParams{
+		Name:       name,
+		Venue:      venue,
+		StartsAt:   startsAt,
+		Capacity:   capacity,
+		PriceCents: priceCents,
+		ID:         id,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, functionResponse{Function: updated})
+}

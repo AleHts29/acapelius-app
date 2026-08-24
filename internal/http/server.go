@@ -12,6 +12,7 @@ import (
 
 	"github.com/ale-hts/acapelius/internal/auth"
 	"github.com/ale-hts/acapelius/internal/config"
+	"github.com/ale-hts/acapelius/internal/db/sqlcgen"
 	"github.com/ale-hts/acapelius/internal/domain"
 	"github.com/ale-hts/acapelius/internal/httpx"
 	"github.com/ale-hts/acapelius/web"
@@ -19,14 +20,15 @@ import (
 
 // Server tiene las dependencias que comparten los handlers.
 type Server struct {
-	cfg  *config.Config
-	pool *pgxpool.Pool
-	auth *auth.Service
+	cfg     *config.Config
+	pool    *pgxpool.Pool
+	auth    *auth.Service
+	queries *sqlcgen.Queries
 }
 
 // New construye el server HTTP con todas sus rutas montadas.
 func New(cfg *config.Config, pool *pgxpool.Pool, authService *auth.Service) *Server {
-	return &Server{cfg: cfg, pool: pool, auth: authService}
+	return &Server{cfg: cfg, pool: pool, auth: authService, queries: sqlcgen.New(pool)}
 }
 
 // loginRateLimit acota los intentos de login por IP. Generoso para no trabar a
@@ -69,10 +71,18 @@ func (s *Server) Handler() http.Handler {
 			priv.Group(func(ready chi.Router) {
 				ready.Use(auth.RequirePasswordChanged)
 
+				// Lecturas del catalogo, para cualquier rol: la vendedora
+				// elige funcion al vender y la puerta al abrir su modo.
+				ready.Get("/seasons", s.handleListSeasons)
+				ready.Get("/functions", s.handleListFunctions)
+
 				ready.Group(func(admin chi.Router) {
 					admin.Use(auth.RequireRole(domain.RoleAdmin))
 					admin.Post("/users", s.handleCreateUser)
 					admin.Get("/users", s.handleListUsers)
+					admin.Post("/seasons", s.handleCreateSeason)
+					admin.Post("/functions", s.handleCreateFunction)
+					admin.Patch("/functions/{id}", s.handleUpdateFunction)
 				})
 			})
 		})

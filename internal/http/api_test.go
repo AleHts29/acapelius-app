@@ -68,7 +68,7 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	// Cada test arranca con la base limpia; los tests no corren en paralelo
 	// entre si porque comparten esta base.
-	if _, err := pool.Exec(ctx, "TRUNCATE users, sessions RESTART IDENTITY CASCADE"); err != nil {
+	if _, err := pool.Exec(ctx, "TRUNCATE users, sessions, seasons, functions RESTART IDENTITY CASCADE"); err != nil {
 		t.Fatalf("limpiar la base de test: %v", err)
 	}
 
