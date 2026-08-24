@@ -113,6 +113,72 @@ export interface FunctionInput {
   price_cents: number
 }
 
+export type PaymentStatus = 'pending' | 'paid'
+export type PaymentMethod = 'cash' | 'transfer'
+export type TicketStatus = 'issued' | 'checked_in' | 'void'
+export type EmailStatus = 'sent' | 'failed' | 'none'
+
+export interface Sale {
+  id: number
+  function_id: number
+  seller_id: number
+  code: string
+  buyer_name: string
+  buyer_email: string | null
+  buyer_phone: string | null
+  quantity: number
+  amount_cents: number
+  payment_status: PaymentStatus
+  payment_method: PaymentMethod | null
+  is_comp: boolean
+  notes: string | null
+  voided_at: string | null
+  created_at: string
+}
+
+export interface Ticket {
+  id: number
+  sale_id: number
+  code: string
+  status: TicketStatus
+  created_at: string
+}
+
+/** Fila del listado de ventas, con los datos de la funcion y la vendedora. */
+export interface SaleRow extends Sale {
+  function_venue: string
+  function_starts_at: string
+  function_name: string | null
+  seller_name: string
+  active_tickets: number
+}
+
+export interface NewSaleInput {
+  function_id: number
+  buyer_name: string
+  buyer_email?: string
+  buyer_phone?: string
+  quantity: number
+  is_comp?: boolean
+  notes?: string
+}
+
+export interface PublicTicket {
+  code: string
+  payload: string
+  status: TicketStatus
+}
+
+export interface PublicSale {
+  buyer_name: string
+  seller_name: string
+  quantity: number
+  is_comp: boolean
+  voided: boolean
+  function: { name: string | null; venue: string; starts_at: string }
+  tickets: PublicTicket[]
+}
+
 export const api = {
   me: () => request<{ user: User }>('GET', '/me'),
   login: (email: string, password: string) =>
@@ -139,6 +205,35 @@ export const api = {
     request<{ function: ShowFunction }>('POST', '/functions', input),
   updateFunction: (id: number, input: Partial<Omit<FunctionInput, 'season_id'>>) =>
     request<{ function: ShowFunction }>('PATCH', `/functions/${id}`, input),
+
+  createSale: (input: NewSaleInput) =>
+    request<{ sale: Sale; tickets: Ticket[]; public_url: string; email_status: EmailStatus }>(
+      'POST',
+      '/sales',
+      input,
+    ),
+  listSales: (opts?: { mine?: boolean; functionId?: number }) => {
+    const params = new URLSearchParams()
+    if (opts?.mine) params.set('mine', '1')
+    if (opts?.functionId !== undefined) params.set('function_id', String(opts.functionId))
+    const qs = params.toString()
+    return request<{ sales: SaleRow[] }>('GET', qs ? `/sales?${qs}` : '/sales')
+  },
+  updateSalePayment: (id: number, status: PaymentStatus, method?: PaymentMethod) =>
+    request<{ sale: Sale }>('PATCH', `/sales/${id}`, {
+      payment_status: status,
+      payment_method: method ?? '',
+    }),
+  resendSaleEmail: (id: number) =>
+    request<{ email_status: EmailStatus }>('POST', `/sales/${id}/resend-email`),
+  voidSale: (id: number) => request<{ sale: Sale }>('POST', `/sales/${id}/void`),
+
+  publicSale: (code: string) => request<PublicSale>('GET', `/public/sales/${code}`),
+}
+
+/** Link publico de una venta, para compartir por WhatsApp. */
+export function publicSaleURL(code: string): string {
+  return `${window.location.origin}/e/${code}`
 }
 
 /** Etiqueta de rol para mostrar en pantalla. */

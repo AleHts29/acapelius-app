@@ -15,6 +15,8 @@ import (
 	"github.com/ale-hts/acapelius/internal/db/sqlcgen"
 	"github.com/ale-hts/acapelius/internal/domain"
 	"github.com/ale-hts/acapelius/internal/httpx"
+	"github.com/ale-hts/acapelius/internal/mail"
+	"github.com/ale-hts/acapelius/internal/qr"
 	"github.com/ale-hts/acapelius/web"
 )
 
@@ -24,11 +26,20 @@ type Server struct {
 	pool    *pgxpool.Pool
 	auth    *auth.Service
 	queries *sqlcgen.Queries
+	signer  *qr.Signer
+	mailer  mail.Driver
 }
 
 // New construye el server HTTP con todas sus rutas montadas.
-func New(cfg *config.Config, pool *pgxpool.Pool, authService *auth.Service) *Server {
-	return &Server{cfg: cfg, pool: pool, auth: authService, queries: sqlcgen.New(pool)}
+func New(cfg *config.Config, pool *pgxpool.Pool, authService *auth.Service, signer *qr.Signer, mailer mail.Driver) *Server {
+	return &Server{
+		cfg:     cfg,
+		pool:    pool,
+		auth:    authService,
+		queries: sqlcgen.New(pool),
+		signer:  signer,
+		mailer:  mailer,
+	}
 }
 
 // loginRateLimit acota los intentos de login por IP. Generoso para no trabar a
@@ -53,6 +64,11 @@ func (s *Server) Handler() http.Handler {
 	r.Route("/api", func(api chi.Router) {
 		api.Get("/health", s.handleHealth)
 
+		// Publico, sin sesion: la pagina de la entrada y los PNG de los QR.
+		// El sale_code / ticket_code no adivinable es la autorizacion.
+		api.Get("/public/sales/{code}", s.handlePublicSale)
+		api.Get("/public/tickets/{code}.png", s.handlePublicTicketPNG)
+
 		api.Group(func(pub chi.Router) {
 			pub.Use(httprate.LimitByIP(loginRateLimitRequests, loginRateLimitWindow))
 			pub.Post("/auth/login", s.handleLogin)
@@ -76,6 +92,14 @@ func (s *Server) Handler() http.Handler {
 				ready.Get("/seasons", s.handleListSeasons)
 				ready.Get("/functions", s.handleListFunctions)
 
+				ready.Group(func(seller chi.Router) {
+					seller.Use(auth.RequireRole(domain.RoleSeller))
+					seller.Post("/sales", s.handleCreateSale)
+					seller.Get("/sales", s.handleListSales)
+					seller.Patch("/sales/{id}", s.handleUpdateSalePayment)
+					seller.Post("/sales/{id}/resend-email", s.handleResendEmail)
+				})
+
 				ready.Group(func(admin chi.Router) {
 					admin.Use(auth.RequireRole(domain.RoleAdmin))
 					admin.Post("/users", s.handleCreateUser)
@@ -83,6 +107,8 @@ func (s *Server) Handler() http.Handler {
 					admin.Post("/seasons", s.handleCreateSeason)
 					admin.Post("/functions", s.handleCreateFunction)
 					admin.Patch("/functions/{id}", s.handleUpdateFunction)
+					admin.Post("/sales/{id}/void", s.handleVoidSale)
+					admin.Post("/tickets/{id}/void", s.handleVoidTicket)
 				})
 			})
 		})

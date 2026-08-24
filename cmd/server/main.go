@@ -18,6 +18,8 @@ import (
 	"github.com/ale-hts/acapelius/internal/config"
 	"github.com/ale-hts/acapelius/internal/db"
 	httpapi "github.com/ale-hts/acapelius/internal/http"
+	"github.com/ale-hts/acapelius/internal/mail"
+	"github.com/ale-hts/acapelius/internal/qr"
 	"github.com/ale-hts/acapelius/web"
 )
 
@@ -67,7 +69,16 @@ func run() error {
 
 	sessions := auth.NewSessionManager(pool, cfg)
 	authService := auth.NewService(pool, sessions)
-	api := httpapi.New(cfg, pool, authService)
+
+	signer := qr.NewSigner(cfg.ServerSecret)
+	var mailer mail.Driver
+	if cfg.EmailDriver == config.EmailDriverResend {
+		mailer = mail.NewResendDriver(cfg.ResendAPIKey, cfg.EmailFrom)
+	} else {
+		mailer = mail.NewLogDriver(os.Stdout)
+	}
+
+	api := httpapi.New(cfg, pool, authService, signer, mailer)
 
 	srv := &http.Server{
 		Addr:              net.JoinHostPort("", fmt.Sprintf("%d", cfg.Port)),

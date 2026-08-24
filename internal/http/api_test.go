@@ -8,6 +8,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,6 +20,8 @@ import (
 	"github.com/ale-hts/acapelius/internal/db/sqlcgen"
 	"github.com/ale-hts/acapelius/internal/domain"
 	httpapi "github.com/ale-hts/acapelius/internal/http"
+	"github.com/ale-hts/acapelius/internal/mail"
+	"github.com/ale-hts/acapelius/internal/qr"
 )
 
 // Estos tests corren contra un Postgres real. Se saltean si no hay
@@ -33,8 +36,10 @@ const (
 )
 
 type testEnv struct {
-	server *httptest.Server
-	pool   *pgxpool.Pool
+	server   *httptest.Server
+	pool     *pgxpool.Pool
+	emailLog *syncBuffer
+	signer   *qr.Signer
 }
 
 func newTestEnv(t *testing.T) *testEnv {
@@ -68,20 +73,45 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	// Cada test arranca con la base limpia; los tests no corren en paralelo
 	// entre si porque comparten esta base.
-	if _, err := pool.Exec(ctx, "TRUNCATE users, sessions, seasons, functions RESTART IDENTITY CASCADE"); err != nil {
+	if _, err := pool.Exec(ctx, "TRUNCATE users, sessions, seasons, functions, sales, tickets, email_sends RESTART IDENTITY CASCADE"); err != nil {
 		t.Fatalf("limpiar la base de test: %v", err)
 	}
 
 	sessions := auth.NewSessionManager(pool, cfg)
 	authService := auth.NewService(pool, sessions)
-	server := httptest.NewServer(httpapi.New(cfg, pool, authService).Handler())
+
+	// El driver log escribe en un buffer que los tests pueden inspeccionar.
+	emailLog := &syncBuffer{}
+	signer := qr.NewSigner(cfg.ServerSecret)
+	mailer := mail.NewLogDriver(emailLog)
+
+	server := httptest.NewServer(httpapi.New(cfg, pool, authService, signer, mailer).Handler())
 
 	t.Cleanup(func() {
 		server.Close()
 		pool.Close()
 	})
 
-	return &testEnv{server: server, pool: pool}
+	return &testEnv{server: server, pool: pool, emailLog: emailLog, signer: signer}
+}
+
+// syncBuffer es un bytes.Buffer con lock: el server escribe emails desde las
+// goroutines de los handlers mientras el test lee.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }
 
 // seedUser inserta un usuario directamente en la base, como hace `make seed`.

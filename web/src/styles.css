@@ -359,3 +359,108 @@ a.list__item:hover {
 .function-card__line {
   margin: 0.15rem 0 0;
 }
+
+/* --- Ventas -------------------------------------------------------------- */
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.page-head .page-title {
+  margin-bottom: 0;
+}
+
+.sale-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.sale-total {
+  font-size: 1.1rem;
+  margin: 0 0 1rem;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.checkbox-field input[type='checkbox'] {
+  width: 1.35rem;
+  height: 1.35rem;
+  accent-color: var(--accent);
+}
+
+.button--danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.panel--voided {
+  opacity: 0.55;
+}
+
+/* --- Pagina publica de la entrada ---------------------------------------- */
+
+.ticket-page {
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  text-align: center;
+}
+
+.ticket-page__head {
+  margin-bottom: 1.25rem;
+}
+
+.ticket-page__title {
+  font-size: 1.5rem;
+}
+
+.ticket-page__meta {
+  color: var(--text-muted);
+  margin: 0.5rem 0 0;
+}
+
+.ticket-page__buyer {
+  font-size: 1.15rem;
+  font-weight: 650;
+  margin: 0.75rem 0 0;
+}
+
+.ticket-page__note {
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.ticket {
+  background: #ffffff; /* el QR necesita fondo blanco para escanear bien */
+  border-radius: var(--radius);
+  padding: 1.25rem 1rem 0.85rem;
+}
+
+.ticket__qr {
+  max-width: 240px;
+  width: 100%;
+  height: auto;
+}
+
+.ticket__label {
+  color: #444;
+  margin: 0.4rem 0 0;
+  font-size: 0.9rem;
+}
+
+.ticket__void {
+  color: #b00020;
+  font-weight: 650;
+  padding: 2rem 0;
+  margin: 0;
+}

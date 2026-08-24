@@ -6,9 +6,10 @@ ventas, rendiciones y asistencia.
 
 La especificacion funcional completa esta en [`docs/spec.md`](docs/spec.md).
 
-**Estado: fase 1 terminada.** Fundaciones, autenticacion, y el catalogo del
-admin: temporadas, funciones (lugar, fecha, cupo, precio) y alta de usuarios.
-Las ventas y el modo puerta llegan en las fases siguientes (ver
+**Estado: fase 2 terminada.** Fundaciones, autenticacion, catalogo del admin,
+y el ciclo de venta completo: registro con validacion de cupo transaccional,
+tickets con QR firmado, email de la entrada, pagina publica `/e/{code}`,
+pagos, cortesias y anulaciones. El modo puerta llega en las fases 3 y 4 (ver
 [Plan de fases](#plan-de-fases)).
 
 ## Arrancar
@@ -120,11 +121,38 @@ GET    /api/seasons                 # cualquier rol
 POST   /api/functions               # admin
 GET    /api/functions?season_id=    # cualquier rol
 PATCH  /api/functions/{id}          # admin; PATCH parcial
+
+POST   /api/sales                   # seller/admin; is_comp solo admin
+GET    /api/sales?mine=1            # seller ve lo suyo; admin todo
+PATCH  /api/sales/{id}              # pago: status + metodo
+POST   /api/sales/{id}/resend-email
+POST   /api/sales/{id}/void         # admin; rechaza si hay check-in
+POST   /api/tickets/{id}/void       # admin; anula una entrada suelta
+
+GET    /api/public/sales/{code}     # sin auth: datos de la pagina publica
+GET    /api/public/tickets/{code}.png  # sin auth: QR como imagen (email)
 ```
 
 Las lecturas del catalogo estan abiertas a todos los roles porque la vendedora
 elige funcion al vender y la puerta al abrir su modo; las escrituras son solo
 del admin.
+
+**Ventas.** El alta corre en una transaccion que lockea la fila de la funcion
+(`SELECT ... FOR UPDATE`): dos ventas concurrentes no pueden pasar el chequeo
+de cupo a la vez. El monto queda congelado al precio vigente
+(`amount_cents`); cambiar el precio de la funcion no toca ventas ya hechas.
+Anular libera cupo. El cupo de una funcion no puede editarse por debajo de lo
+ya emitido.
+
+**QR.** El payload es `{ticket_code}.{firma}`, con firma
+HMAC-SHA256(SERVER_SECRET) truncada a 16 bytes, sin datos personales. La
+pagina publica `/e/{code}` renderiza los QR en el browser; el email los lleva
+como imagen hosteada + adjuntos PNG, y siempre incluye el link publico como
+respaldo (y para reenviar por WhatsApp).
+
+**Emails.** Cada envio queda registrado en `email_sends` (destinatario,
+resultado, error) para responder "no me llego" con datos. Un fallo de envio no
+anula la venta: se reintenta con "reenviar email".
 
 ## Tests
 
@@ -157,7 +185,9 @@ Estan documentadas en [`.env.example`](.env.example). Las que no pueden faltar:
       roles, seed del admin, frontend embebido.
 - [x] **1 — Temporadas, funciones y usuarios.** Catalogo del admin con
       pantallas propias; PATCH parcial de funciones.
-- [ ] **2 — Ventas, entradas con QR y email.**
+- [x] **2 — Ventas, entradas con QR y email.** Cupo transaccional, tickets
+      ULID firmados, email con QRs, pagina publica, pagos, cortesias y
+      anulaciones.
 - [ ] **3 — Check-in online.**
 - [ ] **4 — Offline en la puerta.**
 - [ ] **5 — Panel de Eli.**

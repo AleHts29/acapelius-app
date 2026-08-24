@@ -4,14 +4,8 @@ import { useSession } from '../auth/session'
 
 /** Lo que cada rol va a poder hacer, y en que fase del plan llega. */
 const ROADMAP: Record<string, string[]> = {
-  admin: [
-    'Ventas, cortesias y anulaciones (fase 2)',
-    'Panel de ventas, rendiciones y asistencia (fase 5)',
-  ],
-  seller: [
-    'Registrar ventas y enviar entradas (fase 2)',
-    'Marcar pagos y ver el saldo a rendir (fase 5)',
-  ],
+  admin: ['Panel de rendiciones y asistencia (fase 5)'],
+  seller: ['Ver el saldo a rendir (fase 5)'],
   door: [
     'Escanear QR en la puerta (fase 3)',
     'Modo offline con la lista precargada (fase 4)',
@@ -34,8 +28,29 @@ export function HomePage() {
         </p>
       </div>
 
-      {user.role === 'admin' && (
+      {(user.role === 'admin' || user.role === 'seller') && (
         <nav className="stack" style={{ marginTop: '1rem' }} aria-label="Secciones">
+          <Link className="nav-card" to="/ventas/nueva">
+            <span>
+              <strong>{user.role === 'admin' ? 'Nueva venta o cortesia' : 'Nueva venta'}</strong>
+              <br />
+              <span className="muted">Registrar y mandar la entrada</span>
+            </span>
+            <span className="muted">›</span>
+          </Link>
+          <Link className="nav-card" to="/ventas">
+            <span>
+              <strong>{user.role === 'admin' ? 'Ventas' : 'Mis ventas'}</strong>
+              <br />
+              <span className="muted">Pagos, links y reenvios</span>
+            </span>
+            <span className="muted">›</span>
+          </Link>
+        </nav>
+      )}
+
+      {user.role === 'admin' && (
+        <nav className="stack" style={{ marginTop: '0.75rem' }} aria-label="Administracion">
           <Link className="nav-card" to="/temporadas">
             <span>
               <strong>Temporadas y funciones</strong>

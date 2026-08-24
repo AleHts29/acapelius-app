@@ -29,9 +29,10 @@ export default defineConfig({
     // El escaneo de QR necesita getUserMedia, que exige HTTPS salvo en
     // localhost. Para probar desde el celular hace falta un tunel (ver README).
     host: true,
+    // /e/{code} NO se proxea: es una ruta del SPA (la pagina publica de la
+    // entrada); solo la API va al backend.
     proxy: {
       '/api': { target: API_TARGET, changeOrigin: true },
-      '/e': { target: API_TARGET, changeOrigin: true },
     },
   },
   build: {

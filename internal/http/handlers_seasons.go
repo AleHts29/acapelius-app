@@ -57,13 +57,31 @@ func mapDomainError(w http.ResponseWriter, err error) bool {
 	var status int
 	var code string
 	switch {
-	case errors.Is(err, domain.ErrSeasonNotFound), errors.Is(err, domain.ErrFunctionNotFound):
+	case errors.Is(err, domain.ErrSeasonNotFound),
+		errors.Is(err, domain.ErrFunctionNotFound),
+		errors.Is(err, domain.ErrSaleNotFound),
+		errors.Is(err, domain.ErrTicketNotFound):
 		status, code = http.StatusNotFound, httpx.CodeNotFound
+	case errors.Is(err, domain.ErrCapacityExceeded),
+		errors.Is(err, domain.ErrSaleVoided),
+		errors.Is(err, domain.ErrTicketCheckedIn):
+		status, code = http.StatusConflict, httpx.CodeConflict
+	case errors.Is(err, domain.ErrNotYourSale):
+		status, code = http.StatusForbidden, httpx.CodeForbidden
 	case errors.Is(err, domain.ErrSeasonNameRequired),
 		errors.Is(err, domain.ErrVenueRequired),
 		errors.Is(err, domain.ErrStartsAtRequired),
 		errors.Is(err, domain.ErrCapacityInvalid),
-		errors.Is(err, domain.ErrPriceInvalid):
+		errors.Is(err, domain.ErrPriceInvalid),
+		errors.Is(err, domain.ErrBuyerNameRequired),
+		errors.Is(err, domain.ErrQuantityInvalid),
+		errors.Is(err, domain.ErrEmailInvalid),
+		errors.Is(err, domain.ErrEmailRequired),
+		errors.Is(err, domain.ErrPaymentMethodMissing),
+		errors.Is(err, domain.ErrPaymentMethodInvalid),
+		errors.Is(err, domain.ErrPaymentStatusInvalid),
+		errors.Is(err, domain.ErrCompHasNoPayment),
+		errors.Is(err, domain.ErrBuyerEmailMissing):
 		status, code = http.StatusBadRequest, httpx.CodeValidation
 	default:
 		return false

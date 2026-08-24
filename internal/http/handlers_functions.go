@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -148,6 +149,20 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 	if err := domain.ValidateFunction(venue, startsAt, capacity, priceCents); err != nil {
 		mapDomainError(w, err)
 		return
+	}
+
+	// El cupo no puede quedar por debajo de lo ya vendido.
+	if capacity < current.Capacity {
+		active, err := s.queries.CountActiveTickets(r.Context(), id)
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		if int64(capacity) < active {
+			httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+				fmt.Sprintf("Ya hay %d entradas emitidas: el cupo no puede ser menor.", active))
+			return
+		}
 	}
 
 	updated, err := s.queries.UpdateFunction(r.Context(), sqlcgen.UpdateFunctionParams{

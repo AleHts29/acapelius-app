@@ -8,6 +8,15 @@ import (
 	"time"
 )
 
+type EmailSend struct {
+	ID        int64     `json:"id"`
+	SaleID    int64     `json:"sale_id"`
+	Recipient string    `json:"recipient"`
+	Status    string    `json:"status"`
+	Error     *string   `json:"error"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Function struct {
 	ID         int64     `json:"id"`
 	SeasonID   int64     `json:"season_id"`
@@ -17,6 +26,24 @@ type Function struct {
 	Capacity   int32     `json:"capacity"`
 	PriceCents int64     `json:"price_cents"`
 	CreatedAt  time.Time `json:"created_at"`
+}
+
+type Sale struct {
+	ID            int64      `json:"id"`
+	FunctionID    int64      `json:"function_id"`
+	SellerID      int64      `json:"seller_id"`
+	Code          string     `json:"code"`
+	BuyerName     string     `json:"buyer_name"`
+	BuyerEmail    *string    `json:"buyer_email"`
+	BuyerPhone    *string    `json:"buyer_phone"`
+	Quantity      int32      `json:"quantity"`
+	AmountCents   int64      `json:"amount_cents"`
+	PaymentStatus string     `json:"payment_status"`
+	PaymentMethod *string    `json:"payment_method"`
+	IsComp        bool       `json:"is_comp"`
+	Notes         *string    `json:"notes"`
+	VoidedAt      *time.Time `json:"voided_at"`
+	CreatedAt     time.Time  `json:"created_at"`
 }
 
 type Season struct {
@@ -30,6 +57,14 @@ type Session struct {
 	Token  string    `json:"token"`
 	Data   []byte    `json:"data"`
 	Expiry time.Time `json:"expiry"`
+}
+
+type Ticket struct {
+	ID        int64     `json:"id"`
+	SaleID    int64     `json:"sale_id"`
+	Code      string    `json:"code"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type User struct {

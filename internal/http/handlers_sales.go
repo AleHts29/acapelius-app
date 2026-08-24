@@ -1,0 +1,443 @@
+package httpapi
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+	"github.com/oklog/ulid/v2"
+
+	"github.com/ale-hts/acapelius/internal/auth"
+	"github.com/ale-hts/acapelius/internal/db/sqlcgen"
+	"github.com/ale-hts/acapelius/internal/domain"
+	"github.com/ale-hts/acapelius/internal/httpx"
+	"github.com/ale-hts/acapelius/internal/mail"
+)
+
+type createSaleRequest struct {
+	FunctionID int64  `json:"function_id"`
+	BuyerName  string `json:"buyer_name"`
+	BuyerEmail string `json:"buyer_email"`
+	BuyerPhone string `json:"buyer_phone"`
+	Quantity   int32  `json:"quantity"`
+	IsComp     bool   `json:"is_comp"`
+	Notes      string `json:"notes"`
+}
+
+// Estados de envio de email que reporta la API al crear/reenviar.
+const (
+	emailStatusSent   = "sent"
+	emailStatusFailed = "failed"
+	emailStatusNone   = "none" // la venta no tiene email
+)
+
+type saleResponse struct {
+	Sale        sqlcgen.Sale     `json:"sale"`
+	Tickets     []sqlcgen.Ticket `json:"tickets"`
+	PublicURL   string           `json:"public_url"`
+	EmailStatus string           `json:"email_status"`
+}
+
+func (s *Server) publicSaleURL(code string) string {
+	return s.cfg.BaseURL + "/e/" + code
+}
+
+func optionalText(v string) *string {
+	trimmed := strings.TrimSpace(v)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
+func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
+	var req createSaleRequest
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	user := auth.MustUserFrom(r.Context())
+
+	// Las cortesias las emite solo el admin (spec §3).
+	if req.IsComp && user.Role != domain.RoleAdmin {
+		httpx.Error(w, http.StatusForbidden, httpx.CodeForbidden, "Las cortesias las emite la direccion.")
+		return
+	}
+
+	req.BuyerName = strings.TrimSpace(req.BuyerName)
+	req.BuyerEmail = domain.NormalizeEmail(req.BuyerEmail)
+	if err := domain.ValidateNewSale(req.BuyerName, req.BuyerEmail, req.Quantity); err != nil {
+		if !mapDomainError(w, err) {
+			httpx.Internal(w, r, err)
+		}
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback tras commit es un no-op
+
+	q := s.queries.WithTx(tx)
+
+	// El lock sobre la funcion serializa las validaciones de cupo: dos ventas
+	// concurrentes no pueden pasar el chequeo a la vez (spec §4).
+	function, err := q.GetFunctionForUpdate(ctx, req.FunctionID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrFunctionNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	active, err := q.CountActiveTickets(ctx, req.FunctionID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if !domain.FitsCapacity(function.Capacity, active, req.Quantity) {
+		remaining := int64(function.Capacity) - active
+		if remaining < 0 {
+			remaining = 0
+		}
+		httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+			fmt.Sprintf("No queda cupo suficiente: quedan %d entradas.", remaining))
+		return
+	}
+
+	sale, err := q.CreateSale(ctx, sqlcgen.CreateSaleParams{
+		FunctionID:  req.FunctionID,
+		SellerID:    user.ID,
+		Code:        ulid.Make().String(),
+		BuyerName:   req.BuyerName,
+		BuyerEmail:  optionalText(req.BuyerEmail),
+		BuyerPhone:  optionalText(req.BuyerPhone),
+		Quantity:    req.Quantity,
+		AmountCents: domain.SaleAmount(function.PriceCents, req.Quantity, req.IsComp),
+		IsComp:      req.IsComp,
+		Notes:       optionalText(req.Notes),
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	tickets := make([]sqlcgen.Ticket, 0, req.Quantity)
+	for range req.Quantity {
+		ticket, err := q.CreateTicket(ctx, sqlcgen.CreateTicketParams{
+			SaleID: sale.ID,
+			Code:   ulid.Make().String(),
+		})
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		tickets = append(tickets, ticket)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	// El email va despues del commit: un fallo de envio no anula la venta,
+	// queda registrado y se puede reenviar.
+	emailStatus := emailStatusNone
+	if sale.BuyerEmail != nil {
+		emailStatus = s.sendTicketEmail(ctx, sale, function, tickets)
+	}
+
+	httpx.JSON(w, http.StatusCreated, saleResponse{
+		Sale:        sale,
+		Tickets:     tickets,
+		PublicURL:   s.publicSaleURL(sale.Code),
+		EmailStatus: emailStatus,
+	})
+}
+
+// sendTicketEmail compone y manda el email de la entrada, y registra el
+// resultado en email_sends. Nunca devuelve error: reporta el estado.
+func (s *Server) sendTicketEmail(ctx context.Context, sale sqlcgen.Sale, function sqlcgen.Function, tickets []sqlcgen.Ticket) string {
+	codes := make([]string, 0, len(tickets))
+	for _, t := range tickets {
+		if t.Status != string(domain.TicketVoid) {
+			codes = append(codes, t.Code)
+		}
+	}
+
+	functionName := ""
+	if function.Name != nil {
+		functionName = *function.Name
+	}
+
+	msg, err := mail.ComposeTicketEmail(mail.TicketEmailData{
+		BuyerName:    sale.BuyerName,
+		BuyerEmail:   *sale.BuyerEmail,
+		FunctionName: functionName,
+		Venue:        function.Venue,
+		StartsAt:     function.StartsAt,
+		Quantity:     len(codes),
+		IsComp:       sale.IsComp,
+		PublicURL:    s.publicSaleURL(sale.Code),
+		TicketCodes:  codes,
+		BaseURL:      s.cfg.BaseURL,
+	}, s.signer.PNG)
+
+	status := emailStatusSent
+	var sendErr *string
+	if err == nil {
+		sendCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		err = s.mailer.Send(sendCtx, msg)
+	}
+	if err != nil {
+		status = emailStatusFailed
+		msg := err.Error()
+		sendErr = &msg
+		slog.ErrorContext(ctx, "fallo el envio del email de la entrada",
+			"sale_id", sale.ID, "driver", s.mailer.Name(), "error", err)
+	}
+
+	if _, recErr := s.queries.RecordEmailSend(ctx, sqlcgen.RecordEmailSendParams{
+		SaleID:    sale.ID,
+		Recipient: *sale.BuyerEmail,
+		Status:    status,
+		Error:     sendErr,
+	}); recErr != nil {
+		slog.ErrorContext(ctx, "no se pudo registrar el envio de email", "sale_id", sale.ID, "error", recErr)
+	}
+	return status
+}
+
+type listSalesResponse struct {
+	Sales []sqlcgen.ListSalesDetailedRow `json:"sales"`
+}
+
+func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
+	user := auth.MustUserFrom(r.Context())
+
+	var sellerID *int64
+	// La vendedora solo ve lo suyo; el admin ve todo, o lo suyo con ?mine=1.
+	if user.Role != domain.RoleAdmin || r.URL.Query().Get("mine") == "1" {
+		sellerID = &user.ID
+	}
+
+	var functionID *int64
+	if raw := r.URL.Query().Get("function_id"); raw != "" {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "function_id tiene que ser un numero.")
+			return
+		}
+		functionID = &id
+	}
+
+	sales, err := s.queries.ListSalesDetailed(r.Context(), sqlcgen.ListSalesDetailedParams{
+		SellerID:   sellerID,
+		FunctionID: functionID,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, listSalesResponse{Sales: sales})
+}
+
+// loadOwnedSale carga una venta y verifica que el usuario pueda operarla:
+// la vendedora si es suya, el admin siempre. Escribe la respuesta de error y
+// devuelve ok=false si no se puede seguir.
+func (s *Server) loadOwnedSale(w http.ResponseWriter, r *http.Request) (sqlcgen.Sale, bool) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrSaleNotFound)
+		return sqlcgen.Sale{}, false
+	}
+
+	sale, err := s.queries.GetSale(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrSaleNotFound)
+			return sqlcgen.Sale{}, false
+		}
+		httpx.Internal(w, r, err)
+		return sqlcgen.Sale{}, false
+	}
+
+	user := auth.MustUserFrom(r.Context())
+	if user.Role != domain.RoleAdmin && sale.SellerID != user.ID {
+		mapDomainError(w, domain.ErrNotYourSale)
+		return sqlcgen.Sale{}, false
+	}
+	return sale, true
+}
+
+type updateSalePaymentRequest struct {
+	PaymentStatus string `json:"payment_status"`
+	PaymentMethod string `json:"payment_method"`
+}
+
+func (s *Server) handleUpdateSalePayment(w http.ResponseWriter, r *http.Request) {
+	var req updateSalePaymentRequest
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	sale, ok := s.loadOwnedSale(w, r)
+	if !ok {
+		return
+	}
+	if sale.VoidedAt != nil {
+		mapDomainError(w, domain.ErrSaleVoided)
+		return
+	}
+
+	method, err := domain.ValidatePaymentChange(sale.IsComp,
+		domain.PaymentStatus(req.PaymentStatus), domain.PaymentMethod(req.PaymentMethod))
+	if err != nil {
+		mapDomainError(w, err)
+		return
+	}
+
+	updated, err := s.queries.UpdateSalePayment(r.Context(), sqlcgen.UpdateSalePaymentParams{
+		PaymentStatus: req.PaymentStatus,
+		PaymentMethod: method,
+		ID:            sale.ID,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]sqlcgen.Sale{"sale": updated})
+}
+
+func (s *Server) handleResendEmail(w http.ResponseWriter, r *http.Request) {
+	sale, ok := s.loadOwnedSale(w, r)
+	if !ok {
+		return
+	}
+	if sale.VoidedAt != nil {
+		mapDomainError(w, domain.ErrSaleVoided)
+		return
+	}
+	if sale.BuyerEmail == nil {
+		mapDomainError(w, domain.ErrBuyerEmailMissing)
+		return
+	}
+
+	function, err := s.queries.GetFunction(r.Context(), sale.FunctionID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	tickets, err := s.queries.ListTicketsBySale(r.Context(), sale.ID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	status := s.sendTicketEmail(r.Context(), sale, function, tickets)
+	httpx.JSON(w, http.StatusOK, map[string]string{"email_status": status})
+}
+
+func (s *Server) handleVoidSale(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrSaleNotFound)
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	q := s.queries.WithTx(tx)
+
+	sale, err := q.GetSale(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrSaleNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	// Anular dos veces es un no-op, no un error.
+	if sale.VoidedAt == nil {
+		checkedIn, err := q.CountTicketsBySaleAndStatus(ctx, sqlcgen.CountTicketsBySaleAndStatusParams{
+			SaleID: sale.ID,
+			Status: string(domain.TicketCheckedIn),
+		})
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		if checkedIn > 0 {
+			mapDomainError(w, domain.ErrTicketCheckedIn)
+			return
+		}
+
+		if err := q.VoidTicketsOfSale(ctx, sale.ID); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		if sale, err = q.VoidSale(ctx, sale.ID); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]sqlcgen.Sale{"sale": sale})
+}
+
+func (s *Server) handleVoidTicket(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrTicketNotFound)
+		return
+	}
+
+	ticket, err := s.queries.GetTicket(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrTicketNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	switch domain.TicketStatus(ticket.Status) {
+	case domain.TicketCheckedIn:
+		mapDomainError(w, domain.ErrTicketCheckedIn)
+		return
+	case domain.TicketVoid:
+		// Idempotente.
+	case domain.TicketIssued:
+		if ticket, err = s.queries.VoidTicket(r.Context(), ticket.ID); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+	}
+	httpx.JSON(w, http.StatusOK, map[string]sqlcgen.Ticket{"ticket": ticket})
+}
