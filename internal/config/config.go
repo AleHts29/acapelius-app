@@ -14,6 +14,7 @@ type EmailDriver string
 const (
 	EmailDriverLog    EmailDriver = "log"
 	EmailDriverResend EmailDriver = "resend"
+	EmailDriverSMTP   EmailDriver = "smtp" // p. ej. Gmail con app password
 )
 
 // Config es la configuracion completa del server. Se carga una vez al arrancar.
@@ -24,6 +25,10 @@ type Config struct {
 	ServerSecret []byte
 	EmailDriver  EmailDriver
 	ResendAPIKey string
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUser     string
+	SMTPPassword string
 	EmailFrom    string
 	TZ           string
 	AutoMigrate  bool
@@ -45,10 +50,19 @@ func Load() (*Config, error) {
 		ServerSecret: []byte(os.Getenv("SERVER_SECRET")),
 		EmailDriver:  EmailDriver(getenv("EMAIL_DRIVER", string(EmailDriverLog))),
 		ResendAPIKey: os.Getenv("RESEND_API_KEY"),
+		SMTPHost:     getenv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPUser:     os.Getenv("SMTP_USER"),
+		SMTPPassword: os.Getenv("SMTP_PASSWORD"),
 		EmailFrom:    getenv("EMAIL_FROM", "Acapelius <entradas@example.com>"),
 		TZ:           getenv("TZ", "America/Argentina/Buenos_Aires"),
 		Env:          getenv("APP_ENV", "development"),
 	}
+
+	smtpPort, err := strconv.Atoi(getenv("SMTP_PORT", "587"))
+	if err != nil || smtpPort <= 0 || smtpPort > 65535 {
+		problems = append(problems, "SMTP_PORT debe ser un numero de puerto valido")
+	}
+	cfg.SMTPPort = smtpPort
 
 	port, err := strconv.Atoi(getenv("PORT", "8080"))
 	if err != nil || port <= 0 || port > 65535 {
@@ -75,8 +89,12 @@ func Load() (*Config, error) {
 		if cfg.ResendAPIKey == "" {
 			problems = append(problems, "RESEND_API_KEY es obligatoria cuando EMAIL_DRIVER=resend")
 		}
+	case EmailDriverSMTP:
+		if cfg.SMTPUser == "" || cfg.SMTPPassword == "" {
+			problems = append(problems, "SMTP_USER y SMTP_PASSWORD son obligatorias cuando EMAIL_DRIVER=smtp (Gmail: la cuenta y su app password)")
+		}
 	default:
-		problems = append(problems, "EMAIL_DRIVER debe ser 'log' o 'resend'")
+		problems = append(problems, "EMAIL_DRIVER debe ser 'log', 'resend' o 'smtp'")
 	}
 
 	if len(problems) > 0 {

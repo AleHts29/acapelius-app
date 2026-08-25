@@ -6,8 +6,9 @@ problemas tipicos. Todo lo de desarrollo esta en el [README](../README.md).
 ## Deploy inicial en Fly.io
 
 Requisitos: cuenta en [fly.io](https://fly.io), `flyctl` instalado
-(`brew install flyctl`), y una API key de [Resend](https://resend.com) con un
-dominio verificado para los emails.
+(`brew install flyctl`), y el email configurado — Gmail con app password (ver
+[Email por Gmail](#email-por-gmail)) o una API key de
+[Resend](https://resend.com) con dominio verificado.
 
 ```bash
 fly auth login
@@ -26,12 +27,14 @@ fly mpg attach acapelius-db --app acapelius   # setea DATABASE_URL sola
 #     consola y setear la URL a mano:
 # fly secrets set DATABASE_URL='postgres://...neon.tech/acapelius?sslmode=require'
 
-# 3. Secrets (los que no vienen del attach):
+# 3. Secrets (los que no vienen del attach). Con Gmail:
 fly secrets set \
   SERVER_SECRET="$(openssl rand -hex 32)" \
-  RESEND_API_KEY='re_...' \
-  EMAIL_FROM='Acapelius <entradas@tudominio.com>' \
+  SMTP_USER='acapelius@gmail.com' \
+  SMTP_PASSWORD='xxxx xxxx xxxx xxxx' \
+  EMAIL_FROM='Acapelius <acapelius@gmail.com>' \
   BASE_URL='https://acapelius.fly.dev'
+# (con Resend: RESEND_API_KEY en vez de SMTP_*, y EMAIL_DRIVER=resend en fly.toml)
 
 # 4. Deploy (compila el Dockerfile: frontend + binario Go):
 fly deploy
@@ -77,6 +80,42 @@ queres cero fricciones las noches de diciembre:
 fly scale count 1   # y despues de la temporada, si queres ahorrar:
 # (volver a auto-stop no requiere nada; min_machines_running sigue en 0)
 ```
+
+## Email por Gmail
+
+La app manda los emails de las entradas desde `acapelius@gmail.com` por SMTP.
+Configuracion, una sola vez:
+
+1. Entrar a la cuenta y activar la **verificacion en 2 pasos**
+   (myaccount.google.com → Seguridad). Sin esto Google no deja crear
+   contrasenas de aplicacion.
+2. Crear una **contrasena de aplicacion** en
+   <https://myaccount.google.com/apppasswords> (nombre: "Acapelius"). Google
+   muestra 16 caracteres una sola vez: esa es `SMTP_PASSWORD`.
+3. Configurar (en `.env` local o `fly secrets set` en produccion):
+
+   ```
+   EMAIL_DRIVER=smtp
+   SMTP_USER=acapelius@gmail.com
+   SMTP_PASSWORD=<la contrasena de aplicacion>
+   EMAIL_FROM="Acapelius <acapelius@gmail.com>"
+   ```
+
+   `SMTP_HOST`/`SMTP_PORT` ya tienen los valores de Gmail por defecto.
+
+A tener en cuenta:
+
+- **`EMAIL_FROM` debe usar la misma direccion de la cuenta**: Gmail reescribe
+  cualquier otro remitente.
+- **Limite de ~500 destinatarios por dia** en cuentas gratuitas. Para un coro
+  (cientos de entradas por temporada, no por dia) alcanza de sobra; si un dia
+  se pasa, Gmail bloquea el envio 24 hs — el link publico de cada entrada
+  sigue funcionando y se puede compartir por WhatsApp.
+- Si se cambia la contrasena de la cuenta o se revoca la app password, los
+  envios empiezan a fallar con "autenticacion SMTP": generar una nueva y
+  actualizar el secret.
+- Los envios fallidos quedan en `email_sends` y se reintentan con "Reenviar
+  email" desde la pantalla de ventas.
 
 ## Alta de una temporada nueva
 
@@ -167,7 +206,8 @@ baja solo cuando vuelve la red.
 |---|---|
 | `DATABASE_URL` | secret (attach de Fly o URL de Neon con `sslmode=require`) |
 | `SERVER_SECRET` | secret, 32+ bytes. **Cambiarlo invalida todos los QR ya emitidos y las sesiones**: no rotarlo en temporada |
-| `RESEND_API_KEY` | secret |
-| `EMAIL_FROM` | `Acapelius <entradas@dominio-verificado-en-resend>` |
+| `SMTP_USER` / `SMTP_PASSWORD` | secret; la cuenta de Gmail y su app password |
+| `EMAIL_FROM` | `Acapelius <acapelius@gmail.com>` (misma cuenta que SMTP_USER) |
+| `RESEND_API_KEY` | secret; solo si `EMAIL_DRIVER=resend` |
 | `BASE_URL` | la URL publica con https |
 | resto | en `fly.toml` (`PORT`, `APP_ENV`, `EMAIL_DRIVER`, `TZ`, `AUTO_MIGRATE`) |

@@ -1,6 +1,7 @@
 # Config de Fly.io. Ver docs/operations.md para el deploy paso a paso.
-# Secrets (fly secrets set): DATABASE_URL, SERVER_SECRET, RESEND_API_KEY,
-# BASE_URL, EMAIL_FROM.
+# Secrets (fly secrets set): DATABASE_URL, SERVER_SECRET, BASE_URL,
+# EMAIL_FROM, y segun el driver de email: SMTP_USER + SMTP_PASSWORD (Gmail)
+# o RESEND_API_KEY (Resend).
 
 app = "acapelius"
 primary_region = "eze" # Buenos Aires
@@ -11,7 +12,11 @@ primary_region = "eze" # Buenos Aires
 [env]
   PORT = "8080"
   APP_ENV = "production"
-  EMAIL_DRIVER = "resend"
+  # Gmail de acapelius@gmail.com via SMTP; el resto de la config va en
+  # secrets (SMTP_USER, SMTP_PASSWORD). Alternativa: "resend".
+  EMAIL_DRIVER = "smtp"
+  SMTP_HOST = "smtp.gmail.com"
+  SMTP_PORT = "587"
   TZ = "America/Argentina/Buenos_Aires"
   # Aplica las migraciones pendientes al arrancar. Con una sola maquina es lo
   # mas simple y seguro; goose es idempotente.

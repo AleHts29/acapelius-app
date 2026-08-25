@@ -73,9 +73,12 @@ func run() error {
 
 	signer := qr.NewSigner(cfg.ServerSecret)
 	var mailer mail.Driver
-	if cfg.EmailDriver == config.EmailDriverResend {
+	switch cfg.EmailDriver {
+	case config.EmailDriverResend:
 		mailer = mail.NewResendDriver(cfg.ResendAPIKey, cfg.EmailFrom)
-	} else {
+	case config.EmailDriverSMTP:
+		mailer = mail.NewSMTPDriver(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword, cfg.EmailFrom)
+	default:
 		mailer = mail.NewLogDriver(os.Stdout)
 	}
 
