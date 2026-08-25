@@ -23,7 +23,7 @@ function ShareLinkButton({ url, buyerName }: { url: string; buyerName: string })
       setLabel('Link copiado ✓')
       setTimeout(() => setLabel(null), 2500)
     } else if (result === 'failed') {
-      setLabel('No se pudo copiar; toca el link de abajo y copialo a mano')
+      setLabel('No se pudo copiar; tocá el link de abajo y copialo a mano')
     }
   }
 
@@ -31,6 +31,37 @@ function ShareLinkButton({ url, buyerName }: { url: string; buyerName: string })
     <button className="button" type="button" onClick={() => void share()}>
       {label ?? 'Compartir por WhatsApp'}
     </button>
+  )
+}
+
+/** Stepper de cantidad con total en vivo (design system §3.5). */
+function QtyStepper({
+  value,
+  onChange,
+  totalCents,
+  isComp,
+}: {
+  value: number
+  onChange: (n: number) => void
+  totalCents: number
+  isComp: boolean
+}) {
+  return (
+    <div className="qty">
+      <div className="stepper">
+        <button type="button" aria-label="Una entrada menos" disabled={value <= 1} onClick={() => onChange(value - 1)}>
+          −
+        </button>
+        <b aria-live="polite">{value}</b>
+        <button type="button" aria-label="Una entrada más" onClick={() => onChange(value + 1)}>
+          +
+        </button>
+      </div>
+      <div className="qty__total">
+        Total
+        <b>{isComp ? 'Cortesía' : formatMoney(totalCents)}</b>
+      </div>
+    </div>
   )
 }
 
@@ -42,7 +73,7 @@ export function NewSalePage() {
   const [buyerName, setBuyerName] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
-  const [quantity, setQuantity] = useState('1')
+  const [quantity, setQuantity] = useState(1)
   const [isComp, setIsComp] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<CreatedSale | null>(null)
@@ -66,17 +97,12 @@ export function NewSalePage() {
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     const fnID = Number(functionId)
-    const qty = Number(quantity)
     if (!fnID) {
-      setError('Elegi la funcion.')
+      setError('Elegí la función.')
       return
     }
     if (buyerName.trim() === '') {
       setError('Falta el nombre de quien compra.')
-      return
-    }
-    if (!Number.isInteger(qty) || qty <= 0) {
-      setError('La cantidad tiene que ser 1 o mas.')
       return
     }
     create.mutate({
@@ -84,18 +110,14 @@ export function NewSalePage() {
       buyer_name: buyerName.trim(),
       buyer_email: buyerEmail.trim() || undefined,
       buyer_phone: buyerPhone.trim() || undefined,
-      quantity: qty,
+      quantity,
       is_comp: isComp || undefined,
     })
   }
 
   const selectedFunction = functions.data?.functions.find((f) => f.id === Number(functionId))
-  const total =
-    selectedFunction && Number(quantity) > 0 && !isComp
-      ? selectedFunction.price_cents * Number(quantity)
-      : 0
+  const total = selectedFunction ? selectedFunction.price_cents * quantity : 0
 
-  // Pantalla de exito: el link comparte la entrada; de aca se vuelve a vender.
   if (created) {
     return (
       <>
@@ -105,17 +127,17 @@ export function NewSalePage() {
           <p className="panel__label">Entradas de {created.sale.buyer_name}</p>
           <div className="success-actions">
             {created.emailStatus === 'sent' && (
-              <p className="muted" style={{ margin: 0 }}>
-                📧 El email con los QR ya salio para {created.sale.buyer_email}.
+              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+                📧 El email con los QR ya salió para {created.sale.buyer_email}.
               </p>
             )}
             {created.emailStatus === 'failed' && (
               <p className="alert" role="alert">
-                El email no salio. Compartile el link, o reintenta desde "Mis ventas".
+                El email no salió. Compartile el link, o reintentá desde "Mis ventas".
               </p>
             )}
             {created.emailStatus === 'none' && (
-              <p className="muted" style={{ margin: 0 }}>
+              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
                 Sin email: compartile el link, o en la puerta la buscan por nombre.
               </p>
             )}
@@ -124,7 +146,7 @@ export function NewSalePage() {
           </div>
         </div>
 
-        <div className="stack" style={{ marginTop: '1rem' }}>
+        <div className="stack" style={{ marginTop: 12 }}>
           <button
             className="button"
             type="button"
@@ -133,13 +155,13 @@ export function NewSalePage() {
               setBuyerName('')
               setBuyerEmail('')
               setBuyerPhone('')
-              setQuantity('1')
+              setQuantity(1)
               setIsComp(false)
             }}
           >
             Registrar otra venta
           </button>
-          <Link className="button button--ghost" style={{ textAlign: 'center' }} to="/ventas">
+          <Link className="button button--ghost" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', width: '100%' }} to="/ventas">
             Ir a mis ventas
           </Link>
         </div>
@@ -149,9 +171,9 @@ export function NewSalePage() {
 
   return (
     <>
-      <h1 className="page-title">{isComp ? 'Nueva cortesia' : 'Nueva venta'}</h1>
+      <h1 className="page-title">{isComp ? 'Nueva cortesía' : 'Nueva venta'}</h1>
 
-      <form className="panel" onSubmit={handleSubmit}>
+      <form className="panel" style={{ borderRadius: 18 }} onSubmit={handleSubmit}>
         {error && (
           <p className="alert" role="alert">
             {error}
@@ -159,34 +181,34 @@ export function NewSalePage() {
         )}
 
         <label className="field">
-          <span className="field__label">Funcion</span>
+          <span className="field__label">Función</span>
           <select
             className="field__input"
             value={functionId}
             onChange={(e) => setFunctionId(e.target.value)}
           >
-            <option value="">Elegi la funcion...</option>
+            <option value="">Elegí la función…</option>
             {functions.data?.functions.map((fn) => (
               <option key={fn.id} value={fn.id}>
-                {formatDateTime(fn.starts_at)} — {fn.name ?? fn.venue}
+                {fn.name ?? fn.venue} · {formatDateTime(fn.starts_at)}
               </option>
             ))}
           </select>
         </label>
 
         <label className="field">
-          <span className="field__label">Nombre de quien compra</span>
+          <span className="field__label">Quién compra</span>
           <input
             className="field__input"
             type="text"
             value={buyerName}
             onChange={(e) => setBuyerName(e.target.value)}
-            placeholder="Maria Dutra"
+            placeholder="María Dutra"
           />
         </label>
 
         <label className="field">
-          <span className="field__label">Email (opcional)</span>
+          <span className="field__label">Email</span>
           <input
             className="field__input"
             type="email"
@@ -197,49 +219,44 @@ export function NewSalePage() {
             inputMode="email"
             placeholder="maria@gmail.com"
           />
-          <span className="field__hint">Si lo pones, le llega la entrada con los QR.</span>
+          <span className="field__hint">
+            Le llega la entrada con los QR. Si no tiene, después compartís el link.
+          </span>
         </label>
 
-        <div className="form-grid">
-          <label className="field">
-            <span className="field__label">Telefono (opcional)</span>
-            <input
-              className="field__input"
-              type="tel"
-              value={buyerPhone}
-              onChange={(e) => setBuyerPhone(e.target.value)}
-              inputMode="tel"
-            />
-          </label>
-          <label className="field">
-            <span className="field__label">Cantidad</span>
-            <input
-              className="field__input"
-              type="number"
-              min={1}
-              inputMode="numeric"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
-          </label>
+        <label className="field">
+          <span className="field__label">Teléfono (opcional)</span>
+          <input
+            className="field__input"
+            type="tel"
+            value={buyerPhone}
+            onChange={(e) => setBuyerPhone(e.target.value)}
+            inputMode="tel"
+          />
+        </label>
+
+        <div className="field">
+          <span className="field__label">Cantidad</span>
+          <QtyStepper value={quantity} onChange={setQuantity} totalCents={total} isComp={isComp} />
         </div>
 
-        {isAdmin && (
-          <label className="field checkbox-field">
-            <input type="checkbox" checked={isComp} onChange={(e) => setIsComp(e.target.checked)} />
-            <span>Cortesia (sin cargo, no suma deuda)</span>
-          </label>
-        )}
-
-        {total > 0 && (
-          <p className="sale-total">
-            Total: <strong>{formatMoney(total)}</strong>
-          </p>
-        )}
-
-        <button className="button" type="submit" disabled={create.isPending}>
-          {create.isPending ? 'Registrando...' : isComp ? 'Emitir cortesia' : 'Registrar venta'}
+        <button className="button" style={{ marginTop: 16 }} type="submit" disabled={create.isPending}>
+          {create.isPending
+            ? 'Registrando…'
+            : isComp
+              ? 'Emitir cortesía'
+              : 'Registrar venta y enviar QR'}
         </button>
+        {isAdmin && (
+          <button
+            className="button button--ghost"
+            style={{ width: '100%', marginTop: 9 }}
+            type="button"
+            onClick={() => setIsComp(!isComp)}
+          >
+            {isComp ? 'Volver a venta común' : 'Marcar como cortesía'}
+          </button>
+        )}
       </form>
     </>
   )

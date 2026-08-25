@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { api } from '../api/client'
 import { formatDateTime } from '../lib/format'
+import { Chip } from '../ui/StatusChip'
 
 function timeOf(iso: string): string {
   return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
@@ -38,7 +39,7 @@ export function AttendancePage() {
 
       {functions.data && functions.data.functions.length > 1 && (
         <label className="field">
-          <span className="field__label">Funcion</span>
+          <span className="field__label">Función</span>
           <select
             className="field__input"
             value={effectiveFunctionId ?? ''}
@@ -54,23 +55,24 @@ export function AttendancePage() {
       )}
 
       {report.isPending ? (
-        <p className="muted">Cargando...</p>
+        <p className="muted">Cargando…</p>
       ) : report.data ? (
         <>
-          <div className="panel attendance-counter">
-            <span className="attendance-counter__nums">
-              <span className="door-counter__big">{report.data.entered}</span>
-              <span className="door-counter__small"> / {report.data.issued}</span>
-            </span>
-            <span className="muted">
-              ingresaron de {report.data.issued} emitidas · se actualiza solo
-            </span>
+          <div className="kpis" aria-live="polite">
+            <div className="kpi">
+              <b className="g">{report.data.entered} / {report.data.issued}</b>
+              <span>Ingresaron</span>
+            </div>
+            <div className="kpi">
+              <b>{report.data.issued - report.data.entered}</b>
+              <span>Faltan entrar · se actualiza solo</span>
+            </div>
           </div>
 
-          <div className="panel" style={{ marginTop: '1rem' }}>
-            <p className="panel__label">Quien entro</p>
+          <div className="panel" style={{ marginTop: 12 }}>
+            <p className="panel__label">Quién entró</p>
             {report.data.entries.length === 0 ? (
-              <p className="muted">Todavia no entro nadie.</p>
+              <p className="muted">Todavía no entró nadie.</p>
             ) : (
               <ul className="list">
                 {report.data.entries.map((entry, i) => (
@@ -78,13 +80,13 @@ export function AttendancePage() {
                     <span>
                       {entry.buyer_name}
                       {entry.is_comp && (
-                        <span className="badge" style={{ marginLeft: '0.5rem' }}>
-                          Cortesia
+                        <span style={{ marginLeft: 8 }}>
+                          <Chip tone="blue">Cortesía</Chip>
                         </span>
                       )}
                       <br />
-                      <span className="muted" style={{ fontSize: '0.85rem' }}>
-                        le vendio {entry.seller_name} ·{' '}
+                      <span className="muted" style={{ fontSize: 11.5 }}>
+                        le vendió {entry.seller_name} ·{' '}
                         {entry.method === 'scan' ? 'escaneado' : 'manual'} por {entry.by_name}
                       </span>
                     </span>

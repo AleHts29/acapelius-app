@@ -13,23 +13,29 @@ export function DoorPage() {
 
   return (
     <>
-      <h1 className="page-title">Modo puerta</h1>
-      <p className="muted" style={{ marginTop: '-0.5rem', marginBottom: '1rem' }}>
-        Elegi la funcion de hoy.
-      </p>
+      <h1 className="page-title" style={{ marginBottom: 2 }}>Modo puerta</h1>
+      <p className="eyebrow" style={{ margin: '0 0 12px' }}>Elegí la función de hoy</p>
 
       {isPending ? (
-        <p className="muted">Cargando funciones...</p>
+        <p className="muted">Cargando funciones…</p>
       ) : data && data.functions.length > 0 ? (
         <div className="stack">
           {data.functions.map((fn) => (
-            <Link key={fn.id} className="nav-card" to={`/puerta/${fn.id}`}>
-              <span>
-                <strong>{fn.name ?? fn.venue}</strong>
-                <br />
-                <span className="muted">{formatDateTime(fn.starts_at)}</span>
-              </span>
-              <span className="muted">›</span>
+            <Link
+              key={fn.id}
+              to={`/puerta/${fn.id}`}
+              className="lrow"
+              style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
+            >
+              <div className="lrow__head">
+                <span>
+                  <b>{fn.name ?? fn.venue}</b>
+                  <span className="lrow__sub" style={{ display: 'block' }}>
+                    {formatDateTime(fn.starts_at)} · {fn.sold} de {fn.capacity} vendidas
+                  </span>
+                </span>
+                <span className="muted" aria-hidden>›</span>
+              </div>
             </Link>
           ))}
         </div>

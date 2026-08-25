@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, api } from '../api/client'
 import type { PaymentMethod, SettlementReportRow } from '../api/client'
 import { formatDateTime, formatMoney, pesosToCents } from '../lib/format'
+import { BalanceChip } from '../ui/StatusChip'
 
 function SettlementForm({
   row,
@@ -35,14 +36,14 @@ function SettlementForm({
       onDone()
     },
     onError: (err) =>
-      setError(err instanceof ApiError ? err.message : 'No se pudo registrar la rendicion.'),
+      setError(err instanceof ApiError ? err.message : 'No se pudo registrar la rendición.'),
   })
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     const cents = pesosToCents(amount)
     if (cents === null || cents === 0) {
-      setError('El monto no es valido. Ejemplo: 30000 o 30000,50.')
+      setError('El monto no es válido. Ejemplo: 30000 o 30000,50.')
       return
     }
     create.mutate(cents)
@@ -69,7 +70,7 @@ function SettlementForm({
           />
         </label>
         <label className="field">
-          <span className="field__label">Metodo</span>
+          <span className="field__label">Método</span>
           <select
             className="field__input"
             value={method}
@@ -87,12 +88,12 @@ function SettlementForm({
           type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Despues del ensayo"
+          placeholder="Después del ensayo"
         />
       </label>
       <div className="form-row">
         <button className="button" type="submit" disabled={create.isPending}>
-          {create.isPending ? 'Registrando...' : 'Registrar rendicion'}
+          {create.isPending ? 'Registrando…' : 'Registrar rendición'}
         </button>
         <button className="button button--ghost form-row__action" type="button" onClick={onDone}>
           Cancelar
@@ -138,28 +139,20 @@ export function SettlementsPage() {
       )}
 
       {report.isPending ? (
-        <p className="muted">Cargando...</p>
+        <p className="muted">Cargando…</p>
       ) : !report.data || report.data.rows.length === 0 ? (
         <p className="muted">No hay movimientos en esta temporada.</p>
       ) : (
         <>
           <div className="stack">
             {report.data.rows.map((row) => (
-              <div key={row.seller_id} className="panel">
-                <div className="function-card__head">
-                  <h3 className="function-card__title">{row.seller_name}</h3>
-                  <span
-                    className={`settlement-balance${row.balance_cents > 0 ? ' settlement-balance--owes' : ''}`}
-                  >
-                    {row.balance_cents > 0
-                      ? `Debe ${formatMoney(row.balance_cents)}`
-                      : row.balance_cents < 0
-                        ? `A favor ${formatMoney(-row.balance_cents)}`
-                        : 'Al dia'}
-                  </span>
+              <div key={row.seller_id} className="lrow">
+                <div className="lrow__head">
+                  <b>{row.seller_name}</b>
+                  <BalanceChip balanceCents={row.balance_cents} />
                 </div>
-                <p className="muted function-card__line">
-                  Cobro {formatMoney(row.collected_cents)} · rindio {formatMoney(row.settled_cents)}
+                <p className="lrow__sub" style={{ margin: '2px 0 0' }}>
+                  Cobró {formatMoney(row.collected_cents)} · rindió {formatMoney(row.settled_cents)}
                   {row.pending_cents > 0 && <> · por cobrar {formatMoney(row.pending_cents)}</>}
                 </p>
 
@@ -173,11 +166,11 @@ export function SettlementsPage() {
                   (row.balance_cents !== 0 || row.collected_cents > 0) && (
                     <button
                       className="button button--ghost"
-                      style={{ marginTop: '0.6rem' }}
+                      style={{ marginTop: 10 }}
                       type="button"
                       onClick={() => setOpenForm(row.seller_id)}
                     >
-                      Registrar rendicion
+                      Registrar rendición
                     </button>
                   )
                 )}
@@ -186,13 +179,13 @@ export function SettlementsPage() {
           </div>
 
           {report.data.settlements.length > 0 && (
-            <div className="panel" style={{ marginTop: '1rem' }}>
+            <div className="panel" style={{ marginTop: 12 }}>
               <p className="panel__label">Historial</p>
               <ul className="list">
                 {report.data.settlements.map((settlement) => (
                   <li key={settlement.id} className="list__item list__item--static">
                     <span>
-                      {settlement.seller_name} rindio{' '}
+                      {settlement.seller_name} rindió{' '}
                       <strong>{formatMoney(settlement.amount_cents)}</strong>{' '}
                       {settlement.method === 'cash' ? 'en efectivo' : 'por transferencia'}
                       {settlement.notes && (

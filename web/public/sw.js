@@ -3,7 +3,7 @@
 //  - /assets/*  : cache-first  (archivos con hash en el nombre, inmutables)
 //  - navegacion : network-first con fallback al ultimo index.html cacheado
 //  - /api/*     : nunca se cachea; la capa offline de la app es IndexedDB
-const CACHE = 'acapelius-shell-v1'
+const CACHE = 'acapelius-shell-v2'
 
 self.addEventListener('install', () => {
   self.skipWaiting()
@@ -58,7 +58,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return
   if (url.pathname.startsWith('/api/')) return // la API no se cachea nunca
 
-  if (url.pathname.startsWith('/assets/')) {
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/fonts/')) {
     event.respondWith(cacheFirst(request))
   } else if (request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(request))

@@ -64,20 +64,20 @@ export function SeasonsPage() {
       <div className="panel">
         <p className="panel__label">Existentes</p>
         {isPending ? (
-          <p className="muted">Cargando...</p>
+          <p className="muted">Cargando…</p>
         ) : data && data.seasons.length > 0 ? (
           <ul className="list">
             {data.seasons.map((season) => (
               <li key={season.id}>
                 <Link className="list__item" to={`/temporadas/${season.id}`}>
-                  <span>{season.name}</span>
-                  <span className="muted">›</span>
+                  <span style={{ fontWeight: 700 }}>{season.name}</span>
+                  <span className="muted" aria-hidden>›</span>
                 </Link>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="muted">Todavia no hay temporadas.</p>
+          <p className="muted">Todavía no hay temporadas.</p>
         )}
       </div>
     </>

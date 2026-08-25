@@ -71,32 +71,21 @@ export function SalesReportPage() {
 
   return (
     <>
-      <h1 className="page-title">Ventas</h1>
+      <h1 className="page-title">Panel de ventas</h1>
 
-      <div className="panel report-summary">
-        <div>
-          <p className="panel__label">Vendidas</p>
-          <p className="report-summary__big">
-            {totals.tickets}
-            {totals.comps > 0 && <span className="muted"> +{totals.comps} cort.</span>}
-          </p>
-        </div>
-        <div>
-          <p className="panel__label">Cobrado</p>
-          <p className="report-summary__big report-summary__ok">{formatMoney(totals.paid)}</p>
-        </div>
-        <div>
-          <p className="panel__label">Por cobrar</p>
-          <p className="report-summary__big report-summary__warn">{formatMoney(totals.pending)}</p>
-        </div>
+      <div className="kpis">
+        <div className="kpi"><b className="g">{formatMoney(totals.paid)}</b><span>Cobrado</span></div>
+        <div className="kpi"><b className="y">{formatMoney(totals.pending)}</b><span>Por cobrar</span></div>
+        <div className="kpi"><b className="b">{totals.tickets}</b><span>Vendidas</span></div>
+        <div className="kpi"><b>{totals.comps}</b><span>Cortesías</span></div>
       </div>
 
-      <div className="door-tabs" role="tablist" style={{ marginTop: '1rem' }}>
+      <div className="segmented" role="tablist">
         <button
           type="button"
           role="tab"
           aria-selected={groupBy === 'seller'}
-          className={`door-tab${groupBy === 'seller' ? ' door-tab--active' : ''}`}
+          className={groupBy === 'seller' ? 'on' : ''}
           onClick={() => setGroupBy('seller')}
         >
           Por corista
@@ -105,40 +94,38 @@ export function SalesReportPage() {
           type="button"
           role="tab"
           aria-selected={groupBy === 'function'}
-          className={`door-tab${groupBy === 'function' ? ' door-tab--active' : ''}`}
+          className={groupBy === 'function' ? 'on' : ''}
           onClick={() => setGroupBy('function')}
         >
-          Por funcion
+          Por función
         </button>
       </div>
 
       {isPending ? (
-        <p className="muted">Cargando...</p>
+        <p className="muted">Cargando…</p>
       ) : groups.length === 0 ? (
-        <p className="muted">Todavia no hay ventas.</p>
+        <p className="muted">Todavía no hay ventas.</p>
       ) : (
         <div className="stack">
           {groups.map((group) => (
-            <div key={group.key} className="panel">
-              <div className="function-card__head">
-                <div>
-                  <h3 className="function-card__title">{group.label}</h3>
-                  {group.sublabel && <p className="muted function-card__line">{group.sublabel}</p>}
-                </div>
-                <span className="badge">
+            <div key={group.key} className="lrow">
+              <div className="lrow__head">
+                <span>
+                  <b>{group.label}</b>
+                  {group.sublabel && <span className="lrow__sub" style={{ display: 'block' }}>{group.sublabel}</span>}
+                </span>
+                <span className="chip chip--blue">
                   {group.ticketsSold} {group.ticketsSold === 1 ? 'entrada' : 'entradas'}
-                  {group.compTickets > 0 && ` + ${group.compTickets} cort.`}
+                  {group.compTickets > 0 && ` +${group.compTickets} cort.`}
                 </span>
               </div>
               <div className="report-stat">
                 <span className="report-stat__item">
-                  <span className="muted">Cobrado </span>
-                  <strong className="report-summary__ok">{formatMoney(group.paidCents)}</strong>
+                  Cobrado <strong className="stat-ok">{formatMoney(group.paidCents)}</strong>
                 </span>
                 {group.pendingCents > 0 && (
                   <span className="report-stat__item">
-                    <span className="muted">Por cobrar </span>
-                    <strong className="report-summary__warn">{formatMoney(group.pendingCents)}</strong>
+                    Por cobrar <strong className="stat-warn">{formatMoney(group.pendingCents)}</strong>
                   </span>
                 )}
               </div>

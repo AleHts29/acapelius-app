@@ -103,6 +103,8 @@ export interface ShowFunction {
   capacity: number
   price_cents: number
   created_at: string
+  /** Entradas vivas emitidas (para barras de progreso). */
+  sold: number
 }
 
 export interface FunctionInput {

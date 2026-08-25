@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Dirección final (A + C + marca)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:#EFE6D6; color:#1D1D1B; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1280px; margin:0 auto; padding:48px 20px 80px; }
+  .intro h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(28px,4.5vw,40px); letter-spacing:-0.01em; }
+  .intro h1 span { color:#415DA7; }
+  .intro p { margin-top:12px; max-width:760px; font-size:15px; line-height:1.65; color:#4C4A44; }
+  .merge { margin-top:24px; display:grid; gap:12px; }
+  @media(min-width:820px){ .merge { grid-template-columns:1fr 1fr 1fr; } }
+  .m-card { background:#fff; border:1px solid #E0D6C2; border-radius:14px; padding:16px 18px; }
+  .m-card h3 { font-family:'Archivo',sans-serif; font-size:12px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; }
+  .m-card.a h3 { color:#8A6A3F; } .m-card.c h3 { color:#415DA7; } .m-card.b h3 { color:#1D1D1B; }
+  .m-card p { margin-top:8px; font-size:13px; line-height:1.6; color:#55524A; }
+  .palette { margin-top:18px; display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { display:flex; align-items:center; gap:7px; background:#fff; border:1px solid #E0D6C2; border-radius:99px; padding:5px 12px 5px 6px; font-size:11.5px; font-weight:600; color:#55524A; }
+  .chip i { width:18px; height:18px; border-radius:50%; display:block; border:1px solid rgba(0,0,0,.12); }
+
+  .phones { margin-top:28px; display:flex; gap:22px; overflow-x:auto; padding:6px 2px 18px; scroll-snap-type:x mandatory; }
+  .phone { flex:0 0 302px; scroll-snap-align:start; }
+  .screen { width:302px; height:634px; border-radius:34px; overflow:hidden; border:6px solid #1D1D1B; box-shadow:0 18px 40px rgba(29,29,27,.22); position:relative; display:flex; flex-direction:column; background:var(--bg); color:var(--ink); }
+  .cap { margin-top:10px; text-align:center; font-size:12.5px; font-weight:600; color:#6B675E; }
+
+  /* ====== TOKENS DE MARCA ====== */
+  .S { --bg:#F8ECDE; --card:#FFFFFF; --ink:#1D1D1B; --mut:#8B8578; --line:#EADFCB;
+       --azul:#415DA7; --azul-soft:#E8EDF8; --tinta:#1D1D1B;
+       --ok:#2F7D5B; --ok-soft:#E4F0EA; --warn:#B7791F; --warn-soft:#F7ECD7; --bad:#C24A4A; }
+
+  /* logo mark: nota + círculo simplificado */
+  .mark { width:34px; height:34px; border-radius:50%; border:1.8px solid currentColor; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-size:17px; font-style:italic; position:relative; }
+  .mark::after { content:""; position:absolute; top:-7px; right:2px; width:11px; height:9px; border-top:1.8px solid currentColor; border-right:1.8px solid currentColor; border-top-right-radius:9px; }
+
+  .S .top { padding:16px 20px 12px; display:flex; align-items:center; justify-content:space-between; }
+  .S .brandrow { display:flex; align-items:center; gap:9px; color:var(--azul); }
+  .S .brand { font-family:'Archivo',sans-serif; font-weight:800; font-size:14px; letter-spacing:0.22em; color:var(--ink); }
+  .S .avatar { width:30px; height:30px; border-radius:50%; background:var(--azul); color:#F8ECDE; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .S .body { flex:1; overflow:hidden; padding:4px 20px 0; }
+  .S .eyebrow { font-family:'Archivo',sans-serif; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--mut); font-weight:700; }
+
+  /* hero próxima función */
+  .S .hero { background:var(--azul); color:#F8ECDE; border-radius:18px; padding:15px 16px; position:relative; overflow:hidden; }
+  .S .hero .watermark { position:absolute; right:-22px; bottom:-30px; width:110px; height:110px; border:2px solid rgba(248,236,222,.16); border-radius:50%; }
+  .S .hero .watermark::after { content:"♪"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:44px; color:rgba(248,236,222,.16); }
+  .S .hero .eyebrow { color:rgba(248,236,222,.75); }
+  .S .hero .fn { margin-top:5px; font-family:'Archivo',sans-serif; font-size:18px; font-weight:800; }
+  .S .hero .meta { margin-top:2px; font-size:12.5px; color:rgba(248,236,222,.8); }
+  .S .hero .bar { margin-top:12px; height:6px; border-radius:99px; background:rgba(248,236,222,.25); overflow:hidden; }
+  .S .hero .bar i { display:block; height:100%; width:64%; background:#F8ECDE; }
+  .S .hero .barlbl { margin-top:6px; font-size:11.5px; color:rgba(248,236,222,.85); display:flex; justify-content:space-between; font-weight:600; }
+
+  /* categorías (de la C) con acento lateral, marca-fieles */
+  .S .cat { margin-top:12px; background:var(--card); border:1px solid var(--line); border-radius:15px; overflow:hidden; display:flex; }
+  .S .cat .edge { width:5px; }
+  .S .cat.door .edge { background:var(--ok); } .S .cat.sales .edge { background:var(--azul); } .S .cat.admin .edge { background:var(--tinta); }
+  .S .cat .inner { flex:1; padding:11px 14px 12px; }
+  .S .cat .h { display:flex; align-items:center; justify-content:space-between; }
+  .S .cat .h b { font-family:'Archivo',sans-serif; font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; }
+  .S .cat.door .h b { color:var(--ok); } .S .cat.sales .h b { color:var(--azul); } .S .cat.admin .h b { color:var(--tinta); }
+  .S .item { margin-top:9px; display:flex; align-items:center; justify-content:space-between; }
+  .S .item .t { font-size:13.5px; font-weight:700; }
+  .S .item .s { font-size:11px; color:var(--mut); margin-top:1px; }
+  .S .item .chev { color:var(--mut); font-size:14px; }
+  .S .pill { font-size:10.5px; font-weight:800; padding:4px 9px; border-radius:99px; white-space:nowrap; }
+  .S .pill.debt { background:var(--warn-soft); color:var(--warn); }
+  .S .pill.ok { background:var(--ok-soft); color:var(--ok); }
+  .S .pill.blue { background:var(--azul-soft); color:var(--azul); }
+
+  .S .tabs { border-top:1px solid var(--line); background:var(--card); display:grid; grid-template-columns:repeat(4,1fr); padding:9px 6px 14px; }
+  .S .tab { text-align:center; font-size:10px; font-weight:700; color:var(--mut); }
+  .S .tab .i { font-size:17px; display:block; margin-bottom:3px; }
+  .S .tab.on { color:var(--azul); }
+  .S .tab.on-door { color:var(--ok); }
+
+  /* venta */
+  .S h2.pg { font-family:'Archivo',sans-serif; font-size:22px; font-weight:800; }
+  .S .formcard { margin-top:12px; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; }
+  .S .fld { margin-top:12px; }
+  .S .fld:first-child { margin-top:0; }
+  .S .fld label { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; color:var(--mut); text-transform:uppercase; letter-spacing:0.12em; }
+  .S .input { margin-top:6px; border:1.5px solid var(--line); border-radius:12px; padding:12px 13px; font-size:14px; background:#FDFAF5; display:flex; justify-content:space-between; }
+  .S .input.focus { border-color:var(--azul); background:#fff; box-shadow:0 0 0 3px rgba(65,93,167,.12); }
+  .S .hint { margin-top:5px; font-size:10.5px; color:var(--mut); }
+  .S .qty { display:flex; align-items:center; gap:14px; margin-top:6px; }
+  .S .stepper { display:flex; align-items:center; border:1.5px solid var(--line); border-radius:12px; overflow:hidden; background:#FDFAF5; }
+  .S .stepper i { width:42px; height:42px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:var(--azul); }
+  .S .stepper b { width:44px; text-align:center; font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; }
+  .S .total { font-size:12px; color:var(--mut); }
+  .S .total b { color:var(--ink); font-size:14.5px; }
+  .S .cta { margin-top:16px; background:var(--azul); color:#F8ECDE; border-radius:13px; padding:14px; text-align:center; font-size:14.5px; font-weight:800; }
+  .S .cta.ghost { background:transparent; border:1.5px solid var(--line); color:var(--ink); margin-top:9px; padding:12px; font-weight:700; font-size:13px; }
+
+  /* puerta (clara) */
+  .S .doorhead { display:flex; align-items:center; justify-content:space-between; }
+  .S .doorhead .fn { font-family:'Archivo',sans-serif; font-size:18px; font-weight:800; }
+  .S .net { font-size:10.5px; font-weight:800; color:var(--ok); }
+  .S .counter { margin-top:12px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:11px 16px; display:flex; align-items:baseline; justify-content:space-between; }
+  .S .counter .n { font-family:'Archivo',sans-serif; font-size:30px; font-weight:800; color:var(--ok); }
+  .S .counter .n span { font-size:15px; color:var(--mut); font-weight:600; }
+  .S .counter .st { font-family:'Archivo',sans-serif; font-size:10px; color:var(--mut); font-weight:800; letter-spacing:0.12em; }
+  .S .okpanel { margin-top:12px; flex:1; border-radius:20px; background:var(--ok); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; position:relative; overflow:hidden; }
+  .S .okpanel .ring { width:62px; height:62px; border-radius:50%; border:2.5px solid rgba(255,255,255,.5); display:flex; align-items:center; justify-content:center; font-size:28px; background:rgba(255,255,255,.12); }
+  .S .okpanel .who { margin-top:14px; font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .S .okpanel .det { margin-top:4px; font-size:12.5px; opacity:.9; }
+  .S .okpanel .tick { margin-top:10px; font-size:10.5px; font-weight:800; letter-spacing:0.1em; opacity:.75; }
+  .S .okbtns { display:grid; grid-template-columns:1fr 1.3fr; gap:10px; margin-top:12px; padding-bottom:16px; }
+  .S .obtn { border-radius:12px; padding:13px; text-align:center; font-size:13px; font-weight:800; background:var(--card); border:1.5px solid var(--line); }
+  .S .obtn.p { background:var(--tinta); color:#F8ECDE; border-color:var(--tinta); }
+
+  /* puerta nocturna (tinta de marca) */
+  .N { --bg:#1D1D1B; --card:#28271F; --ink:#F8ECDE; --mut:#A39B8B; --line:#3A382E; }
+  .N .net.off { color:#D9A03F; }
+  .N .counter { background:var(--card); border-color:var(--line); }
+  .N .counter .n { color:#F8ECDE; }
+  .N .scan { margin-top:12px; flex:1; border-radius:20px; border:1.5px dashed rgba(248,236,222,.35); position:relative; display:flex; align-items:center; justify-content:center; background:#242320; }
+  .N .frame { width:150px; height:150px; border-radius:16px; border:2.5px solid #F8ECDE; position:relative; }
+  .N .frame::after { content:""; position:absolute; left:8px; right:8px; top:50%; height:2px; background:linear-gradient(90deg,transparent,#F8ECDE,transparent); }
+  .N .obtn { background:var(--card); border-color:var(--line); color:var(--ink); }
+  .N .obtn.p { background:#F8ECDE; color:#1D1D1B; border-color:#F8ECDE; }
+
+  /* dirección */
+  .S .kpis { margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .S .kpi { background:var(--card); border:1px solid var(--line); border-radius:15px; padding:12px 14px; }
+  .S .kpi b { font-family:'Archivo',sans-serif; font-size:19px; font-weight:800; display:block; }
+  .S .kpi span { font-size:10.5px; color:var(--mut); font-weight:600; }
+  .S .kpi b.g { color:var(--ok); } .S .kpi b.y { color:var(--warn); } .S .kpi b.b { color:var(--azul); }
+  .S .lrow { margin-top:9px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; }
+  .S .lrow .l b { font-size:13.5px; font-weight:700; display:block; }
+  .S .lrow .l span { font-size:11px; color:var(--mut); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="intro">
+    <h1>Acapelius · dirección final <span>con la marca aplicada</span></h1>
+    <p>Fusión de la Opción A y la Opción C sobre la identidad real: crema <b>#F8ECDE</b> como fondo, azul <b>#415DA7</b> como color primario y de acción, tinta <b>#1D1D1B</b> para jerarquía, y la nota musical del isologo como firma visual discreta. La tipografía de la interfaz (Archivo, bold y con tracking en títulos) hereda el carácter del wordmark ACAPELIUS.</p>
+  </div>
+
+  <div class="merge">
+    <div class="m-card a"><h3>Qué tomé de la A</h3><p>El fondo cálido claro (que ya era el crema de tu marca), las cards blancas con bordes suaves, la home contextual con la próxima función, y el guiño musical como motivo — ahora usando el círculo + nota del isologo real como marca de agua y sello de check-in.</p></div>
+    <div class="m-card c"><h3>Qué tomé de la C</h3><p>La agrupación por categorías con código de color, el stepper de cantidad con total en vivo, y el verde a pantalla completa en puerta. Las categorías ahora usan un borde lateral de color en vez de headers pintados: Puerta verde, Ventas azul de marca, Administración tinta.</p></div>
+    <div class="m-card b"><h3>La vuelta de tuerca</h3><p>El azul #415DA7 pasa a ser el protagonista (hero de función, CTAs, tab activa) y el negro de marca deja de ser fondo global — pero vuelve como <b>modo puerta nocturno opcional</b>: tinta + crema, pensado para escanear en la oscuridad del teatro sin encandilar.</p></div>
+  </div>
+
+  <div class="palette">
+    <span class="chip"><i style="background:#415DA7"></i>Azul marca #415DA7</span>
+    <span class="chip"><i style="background:#F8ECDE"></i>Crema marca #F8ECDE</span>
+    <span class="chip"><i style="background:#1D1D1B"></i>Tinta marca #1D1D1B</span>
+    <span class="chip"><i style="background:#FFFFFF"></i>Blanco #FFFFFF</span>
+    <span class="chip"><i style="background:#2F7D5B"></i>Semántico OK #2F7D5B</span>
+    <span class="chip"><i style="background:#B7791F"></i>Semántico deuda #B7791F</span>
+  </div>
+
+  <div class="phones">
+
+    <!-- INICIO -->
+    <div class="phone">
+      <div class="screen S">
+        <div class="top">
+          <div class="brandrow"><div class="mark">A</div><div class="brand">ACAPELIUS</div></div>
+          <div class="avatar">C</div>
+        </div>
+        <div class="body">
+          <div class="hero">
+            <div class="watermark"></div>
+            <div class="eyebrow">Próxima función · en 3 días</div>
+            <div class="fn">Función de gala</div>
+            <div class="meta">Vie 4 dic, 20:00 · Teatro del Globo</div>
+            <div class="bar"><i></i></div>
+            <div class="barlbl"><span>51 de 80 vendidas</span><span>64%</span></div>
+          </div>
+
+          <div class="cat sales">
+            <div class="edge"></div>
+            <div class="inner">
+              <div class="h"><b>Ventas</b><span class="pill blue">2 pendientes</span></div>
+              <div class="item"><div><div class="t">Nueva venta o cortesía</div><div class="s">Registrar y enviar QR</div></div><span class="chev">›</span></div>
+              <div class="item"><div><div class="t">Mis ventas</div><div class="s">Pagos, links y reenvíos</div></div><span class="chev">›</span></div>
+            </div>
+          </div>
+
+          <div class="cat door">
+            <div class="edge"></div>
+            <div class="inner">
+              <div class="h"><b>Operación</b></div>
+              <div class="item"><div><div class="t">Modo puerta</div><div class="s">Escanear QR y marcar ingresos</div></div><span class="chev">›</span></div>
+            </div>
+          </div>
+
+          <div class="cat admin">
+            <div class="edge"></div>
+            <div class="inner">
+              <div class="h"><b>Administración</b><span class="pill debt">Debe $90.000</span></div>
+              <div class="item"><div><div class="t">Rendiciones</div><div class="s">Carolina · registrar entregas</div></div><span class="chev">›</span></div>
+              <div class="item"><div><div class="t">Temporadas y equipo</div><div class="s">Funciones, cupos, usuarios</div></div><span class="chev">›</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab on"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Inicio — hero azul + categorías con borde de color</div>
+    </div>
+
+    <!-- NUEVA VENTA -->
+    <div class="phone">
+      <div class="screen S">
+        <div class="top">
+          <div class="brandrow"><div class="mark">A</div><div class="brand">ACAPELIUS</div></div>
+          <div class="avatar">C</div>
+        </div>
+        <div class="body">
+          <h2 class="pg">Nueva venta</h2>
+          <div class="formcard">
+            <div class="fld"><label>Función</label><div class="input">Gala · vie 4 dic, 20:00 <span>▾</span></div></div>
+            <div class="fld"><label>Quién compra</label><div class="input focus">María Dutra</div></div>
+            <div class="fld"><label>Email</label><div class="input" style="color:#8B8578">maria@gmail.com</div>
+              <div class="hint">Le llega la entrada con los QR. Si no tiene, después compartís el link.</div></div>
+            <div class="fld"><label>Cantidad</label>
+              <div class="qty">
+                <div class="stepper"><i>−</i><b>2</b><i>+</i></div>
+                <div class="total">Total<br><b>$90.000</b></div>
+              </div>
+            </div>
+            <div class="cta">Registrar venta y enviar QR</div>
+            <div class="cta ghost">Marcar como cortesía</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab on"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Nueva venta — azul de marca como acción</div>
+    </div>
+
+    <!-- PUERTA CLARA / ÉXITO -->
+    <div class="phone">
+      <div class="screen S">
+        <div class="top" style="padding-bottom:6px;">
+          <div class="brandrow"><div class="mark">A</div><div class="brand">ACAPELIUS</div></div>
+          <div class="avatar">E</div>
+        </div>
+        <div class="body" style="display:flex; flex-direction:column;">
+          <div class="doorhead"><div class="fn">Función de gala</div><div class="net">● En línea</div></div>
+          <div class="counter"><div class="n">38<span> / 80</span></div><div class="st">INGRESARON</div></div>
+          <div class="okpanel">
+            <div class="ring">✓</div>
+            <div class="who">María Dutra</div>
+            <div class="det">2 entradas · le vendió Carolina</div>
+            <div class="tick">SELLO ACAPELIUS · 20:47</div>
+          </div>
+          <div class="okbtns">
+            <div class="obtn">Buscar nombre</div>
+            <div class="obtn p">Siguiente escaneo</div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">Modo puerta — ingreso válido</div>
+    </div>
+
+    <!-- PUERTA NOCTURNA -->
+    <div class="phone">
+      <div class="screen S N">
+        <div class="top" style="padding-bottom:6px;">
+          <div class="brandrow" style="color:#F8ECDE;"><div class="mark">A</div><div class="brand" style="color:#F8ECDE;">ACAPELIUS</div></div>
+          <div class="avatar" style="background:#F8ECDE; color:#1D1D1B;">E</div>
+        </div>
+        <div class="body" style="display:flex; flex-direction:column;">
+          <div class="doorhead"><div class="fn">Función de gala</div><div class="net off">⬤ Sin conexión · 4 por sincronizar</div></div>
+          <div class="counter"><div class="n">38<span> / 80</span></div><div class="st">INGRESARON</div></div>
+          <div class="scan"><div class="frame"></div></div>
+          <div class="okbtns">
+            <div class="obtn">Buscar nombre</div>
+            <div class="obtn p">Escanear</div>
+          </div>
+        </div>
+      </div>
+      <div class="cap">Modo puerta nocturno — tinta + crema de marca, offline</div>
+    </div>
+
+    <!-- DIRECCIÓN -->
+    <div class="phone">
+      <div class="screen S">
+        <div class="top">
+          <div class="brandrow"><div class="mark">A</div><div class="brand">ACAPELIUS</div></div>
+          <div class="avatar">E</div>
+        </div>
+        <div class="body">
+          <h2 class="pg">Dirección</h2>
+          <div class="eyebrow" style="margin-top:2px;">Temporada 2026</div>
+          <div class="kpis">
+            <div class="kpi"><b class="g">$405.000</b><span>Recaudado</span></div>
+            <div class="kpi"><b class="y">$180.000</b><span>Por cobrar</span></div>
+            <div class="kpi"><b class="b">131</b><span>Vendidas</span></div>
+            <div class="kpi"><b>2/5</b><span>Funciones hechas</span></div>
+          </div>
+          <div class="eyebrow" style="margin-top:16px;">Rendiciones</div>
+          <div class="lrow"><div class="l"><b>Carolina</b><span>Cobró $135.000 · rindió $45.000</span></div><span class="pill debt">Debe $90.000</span></div>
+          <div class="lrow"><div class="l"><b>Virginia</b><span>Cobró $90.000 · rindió $90.000</span></div><span class="pill ok">Al día</span></div>
+          <div class="lrow"><div class="l"><b>Josefina</b><span>Cobró $45.000 · rindió $45.000</span></div><span class="pill ok">Al día</span></div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Dirección — KPIs y rendiciones con chips de estado</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

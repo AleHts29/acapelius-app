@@ -90,7 +90,7 @@ function TicketPageShell({
   return (
     <div className="ticket-page">
       <header className="ticket-page__head">
-        <img src="/logo-full.png" alt="Acapelius" style={{ width: 'min(60%, 240px)', marginBottom: '1rem' }} />
+        <img src="/logo-full-blue.png" alt="Acapelius" style={{ width: 'min(60%, 240px)', marginBottom: '1rem' }} />
         <h1 className="ticket-page__title">{title}</h1>
         <p className="ticket-page__meta">
           {formatDateTime(startsAt)}
@@ -115,12 +115,12 @@ function LoadingScreen() {
 function ErrorScreen({ error }: { error: unknown }) {
   const message =
     error instanceof ApiError && error.status === 404
-      ? 'Esta entrada no existe. Revisa el link.'
-      : 'No se pudo cargar la entrada. Proba de nuevo en un rato.'
+      ? 'Esta entrada no existe. Revisá el link.'
+      : 'No se pudo cargar la entrada. Probá de nuevo en un rato.'
   return (
     <div className="centered-screen">
       <div className="card">
-        <img className="login-logo" src="/logo-full.png" alt="Acapelius" />
+        <img className="login-logo" src="/logo-full-blue.png" alt="Acapelius" />
         <p className="alert">{message}</p>
       </div>
     </div>
@@ -151,7 +151,7 @@ export function TicketPage() {
     >
       {data.voided ? (
         <p className="alert" role="alert">
-          Esta entrada fue anulada. Cualquier duda, habla con {data.seller_name}.
+          Esta entrada fue anulada. Cualquier duda, hablá con {data.seller_name}.
         </p>
       ) : (
         <>
@@ -167,9 +167,9 @@ export function TicketPage() {
             ))}
           </div>
           <p className="muted ticket-page__note">
-            Entrada general, sin numerar. Mostra un QR por persona en la puerta.
+            Entrada general, sin numerar. Mostrá un QR por persona en la puerta.
             {data.tickets.length > 1 &&
-              ' Con "Reenviar esta entrada" le mandas a cada persona la suya.'}
+              ' Con "Reenviar esta entrada" le mandás a cada persona la suya.'}
           </p>
         </>
       )}
@@ -201,7 +201,7 @@ export function SingleTicketPage() {
     >
       {data.voided || !data.payload ? (
         <p className="alert" role="alert">
-          Esta entrada fue anulada. Cualquier duda, habla con {data.seller_name}.
+          Esta entrada fue anulada. Cualquier duda, hablá con {data.seller_name}.
         </p>
       ) : (
         <>
@@ -213,7 +213,7 @@ export function SingleTicketPage() {
             </p>
           </div>
           <p className="muted ticket-page__note">
-            Entrada general, sin numerar. Mostra este QR en la puerta.
+            Entrada general, sin numerar. Mostrá este QR en la puerta.
           </p>
         </>
       )}

@@ -1,40 +1,68 @@
+import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 
-import { roleLabel } from '../api/client'
 import { useSession } from '../auth/session'
+import { TabBar } from './TabBar'
 
 export function Layout() {
   const { user, logout } = useSession()
   const location = useLocation()
+  const [menuOpen, setMenuOpen] = useState(false)
   if (!user) return null
 
-  const atHome = location.pathname === '/'
+  const initial = user.name.trim().charAt(0).toUpperCase() || 'A'
+  // Direccion puede expandirse a 2 columnas en desktop (design system §5).
+  const wide = location.pathname.startsWith('/direccion') || location.pathname.startsWith('/panel')
 
   return (
     <div className="app-shell">
       <header className="app-header">
-        {atHome ? (
-          <span className="app-header__brand">
-            <img className="app-header__logo" src="/logo-mark.png" alt="" />
-            Acapelius
-          </span>
-        ) : (
-          <Link className="app-header__brand app-header__back" to="/">
-            <img className="app-header__logo" src="/logo-mark.png" alt="" />
-            Acapelius
-          </Link>
-        )}
-        <span className="app-header__user">
-          <span className="badge">{roleLabel(user.role)}</span>
-          <button className="button button--ghost" type="button" onClick={() => void logout()}>
-            Salir
+        <Link className="app-header__brand" to="/" aria-label="Inicio">
+          <img className="app-header__logo" src="/logo-mark-blue.png" alt="" />
+          <span className="app-header__word">ACAPELIUS</span>
+        </Link>
+        <div style={{ position: 'relative' }}>
+          <button
+            className="avatar"
+            type="button"
+            aria-label={`Cuenta de ${user.name}`}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            {initial}
           </button>
-        </span>
+          {menuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 'calc(100% + 6px)',
+                zIndex: 60,
+                background: 'var(--surface)',
+                border: '1px solid var(--line)',
+                borderRadius: 12,
+                padding: '10px 12px',
+                minWidth: 180,
+                boxShadow: '0 8px 24px rgba(29,29,27,.12)',
+              }}
+            >
+              <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: 13 }}>{user.name}</p>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: 11.5 }}>
+                {user.email}
+              </p>
+              <button className="button button--ghost" style={{ width: '100%' }} type="button" onClick={() => void logout()}>
+                Cerrar sesión
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
-      <main className="app-main">
+      <main className={`app-main${wide ? ' app-main--wide' : ''}`} onClick={() => menuOpen && setMenuOpen(false)}>
         <Outlet />
       </main>
+
+      <TabBar role={user.role} />
     </div>
   )
 }

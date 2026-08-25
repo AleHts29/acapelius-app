@@ -11,9 +11,15 @@ VALUES (
 RETURNING *;
 
 -- name: ListFunctions :many
-SELECT * FROM functions
-WHERE sqlc.narg(season_id)::bigint IS NULL OR season_id = sqlc.narg(season_id)::bigint
-ORDER BY starts_at;
+-- Incluye cuantas entradas vivas tiene cada funcion (para barras de progreso
+-- de venta). Solo cuenta, no expone plata.
+SELECT
+  f.*,
+  (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
+   WHERE s.function_id = f.id AND t.status <> 'void')::bigint AS sold
+FROM functions f
+WHERE sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint
+ORDER BY f.starts_at;
 
 -- name: GetFunction :one
 SELECT * FROM functions WHERE id = $1;

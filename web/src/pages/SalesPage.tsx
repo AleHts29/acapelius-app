@@ -5,7 +5,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, api, publicSaleURL } from '../api/client'
 import type { PaymentMethod, SaleRow } from '../api/client'
 import { useSession } from '../auth/session'
-import { formatDateTime, formatMoney } from '../lib/format'
+import { formatDateTime } from '../lib/format'
+import { SaleChip } from '../ui/StatusChip'
 
 const salesQueryKey = ['sales'] as const
 
@@ -31,7 +32,7 @@ function SaleCard({ sale, isAdmin }: { sale: SaleRow; isAdmin: boolean }) {
   const resend = useMutation({
     mutationFn: () => api.resendSaleEmail(sale.id),
     onSuccess: ({ email_status }) => {
-      setError(email_status === 'sent' ? null : 'El email no salio. Proba de nuevo.')
+      setError(email_status === 'sent' ? null : 'El email no salió. Probá de nuevo.')
     },
     onError: (err) => onError(err, 'No se pudo reenviar el email.'),
   })
@@ -51,36 +52,28 @@ function SaleCard({ sale, isAdmin }: { sale: SaleRow; isAdmin: boolean }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      setError('No se pudo copiar; abri la entrada y compartila desde ahi.')
+      setError('No se pudo copiar; abrí la entrada y compartila desde ahí.')
     }
   }
 
   const voided = sale.voided_at !== null
 
   return (
-    <div className={`panel${voided ? ' panel--voided' : ''}`}>
-      <div className="function-card__head">
-        <div>
-          <h3 className="function-card__title">{sale.buyer_name}</h3>
-          <p className="muted function-card__line">
+    <div className={`lrow${voided ? ' panel--voided' : ''}`}>
+      <div className="lrow__head">
+        <span>
+          <b>{sale.buyer_name}</b>
+          <span className="lrow__sub" style={{ display: 'block' }}>
             {sale.quantity} {sale.quantity === 1 ? 'entrada' : 'entradas'} ·{' '}
             {formatDateTime(sale.function_starts_at)}
-            {isAdmin && <> · vendio {sale.seller_name}</>}
-          </p>
-        </div>
-        <span className="badge">
-          {voided
-            ? 'Anulada'
-            : sale.is_comp
-              ? 'Cortesia'
-              : sale.payment_status === 'paid'
-                ? `Paga (${sale.payment_method === 'cash' ? 'efectivo' : 'transf.'})`
-                : 'Debe ' + formatMoney(sale.amount_cents)}
+            {isAdmin && <> · vendió {sale.seller_name}</>}
+          </span>
         </span>
+        <SaleChip sale={sale} />
       </div>
 
       {error && (
-        <p className="alert" role="alert">
+        <p className="alert" role="alert" style={{ marginTop: 10 }}>
           {error}
         </p>
       )}
@@ -96,7 +89,7 @@ function SaleCard({ sale, isAdmin }: { sale: SaleRow; isAdmin: boolean }) {
                   disabled={setPayment.isPending}
                   onClick={() => setPayment.mutate({ paid: true, method: 'cash' })}
                 >
-                  Pago efectivo
+                  Pagó en efectivo
                 </button>
                 <button
                   className="button button--ghost"
@@ -104,7 +97,7 @@ function SaleCard({ sale, isAdmin }: { sale: SaleRow; isAdmin: boolean }) {
                   disabled={setPayment.isPending}
                   onClick={() => setPayment.mutate({ paid: true, method: 'transfer' })}
                 >
-                  Pago transferencia
+                  Pagó por transferencia
                 </button>
               </>
             ) : (
@@ -129,7 +122,7 @@ function SaleCard({ sale, isAdmin }: { sale: SaleRow; isAdmin: boolean }) {
               disabled={resend.isPending}
               onClick={() => resend.mutate()}
             >
-              {resend.isPending ? 'Enviando...' : 'Reenviar email'}
+              {resend.isPending ? 'Enviando…' : 'Reenviar email'}
             </button>
           )}
 
@@ -166,13 +159,13 @@ export function SalesPage() {
     <>
       <div className="page-head">
         <h1 className="page-title">{isAdmin ? 'Ventas' : 'Mis ventas'}</h1>
-        <Link className="button" style={{ width: 'auto' }} to="/ventas/nueva">
+        <Link className="button" style={{ width: 'auto', textDecoration: 'none', display: 'inline-block' }} to="/ventas/nueva">
           Nueva venta
         </Link>
       </div>
 
       {isPending ? (
-        <p className="muted">Cargando...</p>
+        <p className="muted">Cargando…</p>
       ) : data && data.sales.length > 0 ? (
         <div className="stack">
           {data.sales.map((sale) => (
@@ -180,7 +173,7 @@ export function SalesPage() {
           ))}
         </div>
       ) : (
-        <p className="muted">Todavia no hay ventas registradas.</p>
+        <p className="muted">Todavía no hay ventas registradas.</p>
       )}
     </>
   )

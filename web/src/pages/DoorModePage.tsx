@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { ChevronLeft, Moon, Sun } from 'lucide-react'
 import { Html5Qrcode } from 'html5-qrcode'
 
 import type { CheckinResponse, DoorTicket } from '../api/client'
@@ -8,11 +9,14 @@ import { useDoorStore } from '../door/useDoorStore'
 import { doorCounter, effectiveTickets } from '../door/logic'
 import { filterTickets } from '../lib/search'
 
-// Que muestra la pantalla de resultado a pantalla completa.
+// Preferencia por dispositivo del modo nocturno (design system §3.7).
+const NIGHT_KEY = 'acapelius-door-night'
+
 interface DisplayResult {
   ok: boolean
   title: string
   detail?: string
+  seal?: string
   autoCloseMs: number
 }
 
@@ -25,59 +29,31 @@ function toDisplay(resp: CheckinResponse): DisplayResult {
     case 'ok':
       return {
         ok: true,
-        title: 'Adelante',
-        detail: `${resp.buyer_name} · le vendio ${resp.seller_name}`,
-        autoCloseMs: 2000,
+        title: resp.buyer_name ?? 'Adelante',
+        detail: `Le vendió ${resp.seller_name}`,
+        seal: `Sello Acapelius · ${resp.checked_in_at ? timeOf(resp.checked_in_at) : ''}`,
+        autoCloseMs: 2500,
       }
     case 'already_checked_in':
       return {
         ok: false,
-        title: 'Ya ingreso',
-        detail: `${resp.buyer_name} entro ${resp.checked_in_at ? `a las ${timeOf(resp.checked_in_at)}` : 'antes'} (${resp.by_name ?? 'sin registro'})`,
-        autoCloseMs: 4000,
+        title: resp.buyer_name ?? 'Ya ingresó',
+        detail: `Ya ingresó ${resp.checked_in_at ? `a las ${timeOf(resp.checked_in_at)}` : 'antes'} · ${resp.by_name ?? ''}`,
+        autoCloseMs: 5000,
       }
     case 'void':
-      return { ok: false, title: 'Entrada anulada', detail: resp.buyer_name, autoCloseMs: 4000 }
+      return { ok: false, title: 'Entrada anulada', detail: resp.buyer_name, autoCloseMs: 5000 }
     case 'wrong_function':
-      return { ok: false, title: 'Es de otra funcion', detail: resp.buyer_name, autoCloseMs: 4000 }
+      return { ok: false, title: 'Es de otra función', detail: resp.buyer_name, autoCloseMs: 5000 }
     case 'invalid':
-      return {
-        ok: false,
-        title: 'QR invalido',
-        detail: 'No es una entrada de esta funcion.',
-        autoCloseMs: 4000,
-      }
+      return { ok: false, title: 'QR inválido', detail: 'No es una entrada de esta función.', autoCloseMs: 5000 }
   }
 }
 
-/** Overlay verde/rojo a pantalla completa; se cierra solo o con un tap. */
-function ResultOverlay({ result, onClose }: { result: DisplayResult; onClose: () => void }) {
-  useEffect(() => {
-    navigator.vibrate?.(result.ok ? 120 : [90, 70, 90])
-    const timer = setTimeout(onClose, result.autoCloseMs)
-    return () => clearTimeout(timer)
-  }, [result, onClose])
-
-  return (
-    <button
-      type="button"
-      className={`door-overlay ${result.ok ? 'door-overlay--ok' : 'door-overlay--bad'}`}
-      onClick={onClose}
-    >
-      <span className="door-overlay__icon">{result.ok ? '✓' : '✕'}</span>
-      <span className="door-overlay__title">{result.title}</span>
-      {result.detail && <span className="door-overlay__detail">{result.detail}</span>}
-      <span className="door-overlay__hint">toca para seguir</span>
-    </button>
-  )
-}
-
-/** Camara + html5-qrcode. Avisa cada payload leido; el padre decide. */
+/** Camara con html5-qrcode; queda montada siempre y se tapa con los paneles. */
 function Scanner({ onScan, enabled }: { onScan: (payload: string) => void; enabled: boolean }) {
   const [cameraError, setCameraError] = useState<string | null>(null)
 
-  // Refs para que el callback de la camara (creado una sola vez) vea siempre
-  // el estado actual sin reiniciar el scanner.
   const enabledRef = useRef(enabled)
   enabledRef.current = enabled
   const onScanRef = useRef(onScan)
@@ -91,25 +67,23 @@ function Scanner({ onScan, enabled }: { onScan: (payload: string) => void; enabl
     scanner
       .start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        { fps: 10, qrbox: { width: 230, height: 230 } },
         (text) => {
           if (!enabledRef.current) return
-          // La camara repite el mismo QR ~10 veces por segundo: se ignora el
-          // mismo payload durante 3 segundos.
           const now = Date.now()
           const last = lastRef.current
           if (last && last.payload === text && now - last.at < 3000) return
           lastRef.current = { payload: text, at: now }
           onScanRef.current(text)
         },
-        () => {}, // frames sin QR: ruido normal
+        () => {},
       )
       .catch((err: unknown) => {
         if (alive) {
           setCameraError(
             err instanceof Error && err.message.includes('Permission')
-              ? 'Sin permiso de camara. Habilitala para este sitio.'
-              : 'No se pudo abrir la camara. El escaneo necesita HTTPS (o localhost).',
+              ? 'Sin permiso de cámara. Habilitala para este sitio.'
+              : 'No se pudo abrir la cámara. El escaneo necesita HTTPS (o localhost).',
           )
         }
       })
@@ -124,14 +98,17 @@ function Scanner({ onScan, enabled }: { onScan: (payload: string) => void; enabl
   }, [])
 
   return (
-    <div className="door-scanner-wrap">
+    <div className="door__scan">
       <div id="door-scanner" />
-      {cameraError && <p className="alert">{cameraError}</p>}
+      {cameraError && (
+        <p className="alert" style={{ position: 'relative', zIndex: 1, margin: 12 }}>{cameraError}</p>
+      )}
+      {!cameraError && <p className="door__scan-hint">Apuntá al QR de la entrada</p>}
     </div>
   )
 }
 
-function ManualSearch({
+function SearchSheet({
   tickets,
   onCheckin,
 }: {
@@ -142,40 +119,39 @@ function ManualSearch({
   const found = filterTickets(tickets, query)
 
   return (
-    <div>
+    <div className="door__sheet">
       <input
         className="field__input"
+        style={{ marginTop: 0 }}
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Nombre de quien compro, o de la vendedora"
+        placeholder="Nombre de quien compró, o de la corista"
         aria-label="Buscar entrada"
         autoFocus
       />
-
-      <div className="stack" style={{ marginTop: '0.75rem' }}>
+      <div className="door__results">
         {query.trim() !== '' && found.length === 0 && (
-          <p className="muted">No aparece. Proba con menos letras, o solo el apellido.</p>
+          <p className="muted" style={{ padding: '10px 2px' }}>
+            No aparece. Probá con menos letras, o solo el apellido.
+          </p>
         )}
         {found.slice(0, 20).map((ticket) => (
-          <div key={ticket.code} className="panel door-ticket">
-            <div>
+          <div key={ticket.code} className="door-ticket">
+            <span>
               <strong>{ticket.buyer_name}</strong>
-              {ticket.is_comp && <span className="badge" style={{ marginLeft: '0.5rem' }}>Cortesia</span>}
+              {ticket.is_comp && ' · cortesía'}
               <br />
-              <span className="muted">le vendio {ticket.seller_name}</span>
-            </div>
+              <span className="muted" style={{ fontSize: 11.5 }}>le vendió {ticket.seller_name}</span>
+            </span>
             {ticket.status === 'issued' ? (
-              <button
-                className="button"
-                style={{ width: 'auto' }}
-                type="button"
-                onClick={() => onCheckin(ticket.code)}
-              >
+              <button className="mark-btn" type="button" onClick={() => onCheckin(ticket.code)}>
                 Marcar ingreso
               </button>
             ) : (
-              <span className="badge">{ticket.status === 'checked_in' ? 'Ya entro' : 'Anulada'}</span>
+              <span className="muted" style={{ fontSize: 11.5, flexShrink: 0 }}>
+                {ticket.status === 'checked_in' ? 'Ya entró' : 'Anulada'}
+              </span>
             )}
           </div>
         ))}
@@ -184,8 +160,7 @@ function ManualSearch({
   )
 }
 
-/** Mantiene la pantalla prendida mientras el modo puerta esta abierto: en
- * plena fila nadie quiere desbloquear el celular entre escaneo y escaneo. */
+/** Mantiene la pantalla prendida mientras la puerta esta abierta. */
 function useWakeLock() {
   useEffect(() => {
     let lock: WakeLockSentinel | null = null
@@ -193,11 +168,10 @@ function useWakeLock() {
       try {
         lock = (await navigator.wakeLock?.request('screen')) ?? null
       } catch {
-        // Denegado o sin soporte: la app funciona igual.
+        // Sin soporte o denegado: la app funciona igual.
       }
     }
     void acquire()
-    // Al volver de segundo plano el lock se pierde; se vuelve a pedir.
     const onVisible = () => {
       if (document.visibilityState === 'visible') void acquire()
     }
@@ -212,95 +186,139 @@ function useWakeLock() {
 export function DoorModePage() {
   const { functionId: raw } = useParams()
   const functionId = Number(raw)
+  const navigate = useNavigate()
 
-  const [tab, setTab] = useState<'scan' | 'search'>('scan')
+  const [night, setNight] = useState(() => localStorage.getItem(NIGHT_KEY) === '1')
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [result, setResult] = useState<DisplayResult | null>(null)
+  const timerRef = useRef<number | null>(null)
 
   const store = useDoorStore(functionId)
   useWakeLock()
 
-  if (!Number.isInteger(functionId)) {
-    return <p className="alert">Funcion invalida.</p>
+  function toggleNight() {
+    const next = !night
+    setNight(next)
+    localStorage.setItem(NIGHT_KEY, next ? '1' : '0')
+  }
+
+  function showResult(display: DisplayResult) {
+    if (timerRef.current) window.clearTimeout(timerRef.current)
+    navigator.vibrate?.(display.ok ? 120 : [90, 70, 90])
+    setResult(display)
+    timerRef.current = window.setTimeout(() => setResult(null), display.autoCloseMs)
+  }
+
+  function clearResult() {
+    if (timerRef.current) window.clearTimeout(timerRef.current)
+    setResult(null)
   }
 
   async function attempt(input: CheckinAttempt) {
     const verdict = await store.checkin(input)
-    setResult(toDisplay(verdict))
+    setSheetOpen(false)
+    showResult(toDisplay(verdict))
+  }
+
+  useEffect(() => () => {
+    if (timerRef.current) window.clearTimeout(timerRef.current)
+  }, [])
+
+  if (!Number.isInteger(functionId)) {
+    return <p className="alert">Función inválida.</p>
   }
 
   if (store.loadError) {
-    return <p className="alert">{store.loadError}</p>
-  }
-  if (!store.snapshot) {
-    return <p className="muted">Cargando la lista de entradas...</p>
+    return (
+      <div className="door">
+        <div className="door__top">
+          <button className="door__exit" type="button" onClick={() => navigate('/puerta')}>
+            <ChevronLeft size={18} aria-hidden /> Salir
+          </button>
+        </div>
+        <p className="alert">{store.loadError}</p>
+      </div>
+    )
   }
 
-  const { entered, issued } = doorCounter(store.snapshot, store.pending)
-  const tickets = effectiveTickets(store.snapshot, store.pending)
-  const fn = store.snapshot.function
+  const snapshot = store.snapshot
+  const { entered, issued } = snapshot ? doorCounter(snapshot, store.pending) : { entered: 0, issued: 0 }
+  const tickets = snapshot ? effectiveTickets(snapshot, store.pending) : []
 
   return (
-    <>
-      <div className="door-head">
-        <div>
-          <h1 className="page-title" style={{ marginBottom: 0 }}>
-            {fn.name ?? fn.venue}
-          </h1>
-          <p className="muted" style={{ margin: 0 }}>
-            {fn.venue}
-          </p>
-        </div>
-        <div className="door-counter" aria-label="Ingresados sobre emitidos">
-          <span className="door-counter__big">{entered}</span>
-          <span className="door-counter__small">/ {issued}</span>
+    <div className={`door${night ? ' night' : ''}`}>
+      <div className="door__top">
+        <button className="door__exit" type="button" onClick={() => navigate('/puerta')}>
+          <ChevronLeft size={18} aria-hidden /> Salir
+        </button>
+        <button className="door__night" type="button" onClick={toggleNight} aria-pressed={night}>
+          {night ? <Sun size={13} aria-hidden style={{ verticalAlign: -2 }} /> : <Moon size={13} aria-hidden style={{ verticalAlign: -2 }} />}{' '}
+          {night ? 'Modo claro' : 'Modo nocturno'}
+        </button>
+      </div>
+
+      <div className="door__head">
+        <div className="door__fn">{snapshot ? (snapshot.function.name ?? snapshot.function.venue) : 'Puerta'}</div>
+        <div className={`net${store.online ? '' : ' net--off'}`}>
+          {store.online
+            ? '● En línea'
+            : `⬤ Sin conexión${store.pending.length > 0 ? ` · ${store.pending.length} por sincronizar` : ''}`}
         </div>
       </div>
 
-      {/* Estado de conexion y de la cola (spec fase 4). El escaneo funciona
-          igual sin conexion; esto solo informa. */}
-      <div className={`door-status${store.online ? '' : ' door-status--offline'}`}>
-        <span>{store.online ? '● En linea' : '○ Sin conexion — se sigue escaneando'}</span>
-        {store.pending.length > 0 && (
-          <span>
-            {store.pending.length} sin sincronizar
-          </span>
+      <div className="door__counter" aria-live="polite">
+        <div className="n">
+          {entered}
+          <span> / {issued}</span>
+        </div>
+        <div className="st">INGRESARON</div>
+      </div>
+
+      <div className="door__stage">
+        <Scanner
+          enabled={result === null && !sheetOpen}
+          onScan={(payload) => void attempt({ method: 'scan', payload })}
+        />
+        {result && (
+          <button
+            type="button"
+            className={`verdict ${result.ok ? 'verdict--ok' : 'verdict--bad'}`}
+            onClick={clearResult}
+            aria-live="assertive"
+          >
+            <span className="verdict__ring" aria-hidden>{result.ok ? '✓' : '✕'}</span>
+            <span className="verdict__who">{result.title}</span>
+            {result.detail && <span className="verdict__det">{result.detail}</span>}
+            {result.seal && <span className="verdict__seal">{result.seal}</span>}
+          </button>
+        )}
+        {sheetOpen && !result && (
+          <SearchSheet tickets={tickets} onCheckin={(code) => void attempt({ method: 'manual', code })} />
         )}
       </div>
 
-      <div className="door-tabs" role="tablist">
+      <div className="door__btns">
         <button
+          className="door__btn"
           type="button"
-          role="tab"
-          aria-selected={tab === 'scan'}
-          className={`door-tab${tab === 'scan' ? ' door-tab--active' : ''}`}
-          onClick={() => setTab('scan')}
+          onClick={() => {
+            clearResult()
+            setSheetOpen(!sheetOpen)
+          }}
         >
-          Escanear
+          {sheetOpen ? 'Cerrar búsqueda' : 'Buscar nombre'}
         </button>
         <button
+          className="door__btn door__btn--primary"
           type="button"
-          role="tab"
-          aria-selected={tab === 'search'}
-          className={`door-tab${tab === 'search' ? ' door-tab--active' : ''}`}
-          onClick={() => setTab('search')}
+          onClick={() => {
+            clearResult()
+            setSheetOpen(false)
+          }}
         >
-          Buscar por nombre
+          {result ? 'Siguiente escaneo' : sheetOpen ? 'Volver a escanear' : 'Escaneando…'}
         </button>
       </div>
-
-      {tab === 'scan' ? (
-        <Scanner
-          enabled={result === null}
-          onScan={(payload) => void attempt({ method: 'scan', payload })}
-        />
-      ) : (
-        <ManualSearch
-          tickets={tickets}
-          onCheckin={(code) => void attempt({ method: 'manual', code })}
-        />
-      )}
-
-      {result && <ResultOverlay result={result} onClose={() => setResult(null)} />}
-    </>
+    </div>
   )
 }

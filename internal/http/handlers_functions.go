@@ -30,7 +30,7 @@ type functionResponse struct {
 }
 
 type listFunctionsResponse struct {
-	Functions []sqlcgen.Function `json:"functions"`
+	Functions []sqlcgen.ListFunctionsRow `json:"functions"`
 }
 
 func (s *Server) handleCreateFunction(w http.ResponseWriter, r *http.Request) {

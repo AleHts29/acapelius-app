@@ -76,20 +76,38 @@ func (q *Queries) GetFunction(ctx context.Context, id int64) (Function, error) {
 }
 
 const listFunctions = `-- name: ListFunctions :many
-SELECT id, season_id, name, venue, starts_at, capacity, price_cents, created_at FROM functions
-WHERE $1::bigint IS NULL OR season_id = $1::bigint
-ORDER BY starts_at
+SELECT
+  f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at,
+  (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
+   WHERE s.function_id = f.id AND t.status <> 'void')::bigint AS sold
+FROM functions f
+WHERE $1::bigint IS NULL OR f.season_id = $1::bigint
+ORDER BY f.starts_at
 `
 
-func (q *Queries) ListFunctions(ctx context.Context, seasonID *int64) ([]Function, error) {
+type ListFunctionsRow struct {
+	ID         int64     `json:"id"`
+	SeasonID   int64     `json:"season_id"`
+	Name       *string   `json:"name"`
+	Venue      string    `json:"venue"`
+	StartsAt   time.Time `json:"starts_at"`
+	Capacity   int32     `json:"capacity"`
+	PriceCents int64     `json:"price_cents"`
+	CreatedAt  time.Time `json:"created_at"`
+	Sold       int64     `json:"sold"`
+}
+
+// Incluye cuantas entradas vivas tiene cada funcion (para barras de progreso
+// de venta). Solo cuenta, no expone plata.
+func (q *Queries) ListFunctions(ctx context.Context, seasonID *int64) ([]ListFunctionsRow, error) {
 	rows, err := q.db.Query(ctx, listFunctions, seasonID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Function{}
+	items := []ListFunctionsRow{}
 	for rows.Next() {
-		var i Function
+		var i ListFunctionsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SeasonID,
@@ -99,6 +117,7 @@ func (q *Queries) ListFunctions(ctx context.Context, seasonID *int64) ([]Functio
 			&i.Capacity,
 			&i.PriceCents,
 			&i.CreatedAt,
+			&i.Sold,
 		); err != nil {
 			return nil, err
 		}

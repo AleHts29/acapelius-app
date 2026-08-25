@@ -2,143 +2,185 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import { api } from '../api/client'
+import type { ShowFunction } from '../api/client'
 import { useSession } from '../auth/session'
 import { formatDateTime, formatMoney } from '../lib/format'
+import { BalanceChip, Chip } from '../ui/StatusChip'
 
-/** Objetivos de venta de la corista: cuantas le asigno Eli y como viene. */
-function SellerAllocationsCard() {
-  const { data } = useQuery({
-    queryKey: ['my-allocations'],
-    queryFn: () => api.myAllocations(),
-  })
+/** Elige la funcion del hero: la proxima; si no hay futuras, la ultima. */
+function heroFunction(functions: ShowFunction[]): ShowFunction | null {
+  if (functions.length === 0) return null
+  const now = Date.now()
+  const upcoming = functions.filter((f) => new Date(f.starts_at).getTime() >= now - 3 * 3600_000)
+  return upcoming[0] ?? functions[functions.length - 1]
+}
 
-  const allocations = data?.allocations ?? []
-  if (allocations.length === 0) return null
+function heroEyebrow(fn: ShowFunction): string {
+  const start = new Date(fn.starts_at)
+  const days = Math.ceil((start.getTime() - Date.now()) / 86400_000)
+  const hour = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  if (days < 0) return 'Última función'
+  if (days === 0) return `Hoy · ${hour}`
+  if (days === 1) return 'Próxima función · mañana'
+  return `Próxima función · en ${days} días`
+}
 
+function Hero({ fn }: { fn: ShowFunction }) {
+  const pct = fn.capacity > 0 ? Math.round((fn.sold / fn.capacity) * 100) : 0
   return (
-    <div className="panel" style={{ marginTop: '1rem' }}>
-      <p className="panel__label">Mis entradas asignadas</p>
-      {allocations.map((a) => (
-        <div key={a.function_id} className="alloc-row">
-          <span>
-            {a.function_name ?? a.venue}
-            <br />
-            <span className="muted" style={{ fontSize: '0.85rem' }}>
-              {formatDateTime(a.starts_at)}
-            </span>
-          </span>
-          <span className={`alloc-progress ${a.sold >= a.assigned ? 'report-summary__ok' : ''}`}>
-            {a.sold} / {a.assigned}
-            {a.sold >= a.assigned && ' ✓'}
-          </span>
+    <Link to="/ventas" style={{ textDecoration: 'none', display: 'block' }}>
+      <div className="hero">
+        <div className="hero__watermark" aria-hidden>♪</div>
+        <div className="eyebrow">{heroEyebrow(fn)}</div>
+        <div className="hero__fn">{fn.name ?? fn.venue}</div>
+        <p className="hero__meta">
+          {formatDateTime(fn.starts_at)} · {fn.venue}
+        </p>
+        <div className="hero__bar" role="img" aria-label={`${fn.sold} de ${fn.capacity} vendidas`}>
+          <i style={{ width: `${Math.min(pct, 100)}%` }} />
         </div>
-      ))}
-    </div>
+        <div className="hero__barlbl">
+          <span>
+            {fn.sold} de {fn.capacity} vendidas
+          </span>
+          <span>{pct}%</span>
+        </div>
+      </div>
+    </Link>
   )
 }
 
-/** Saldo a rendir de la vendedora en la temporada mas nueva (spec §3). */
-function SellerBalanceCard() {
+function CatItem({ to, title, subtitle }: { to: string; title: string; subtitle: string }) {
+  return (
+    <Link className="cat__item" to={to}>
+      <span>
+        <span className="t">{title}</span>
+        <span className="s" style={{ display: 'block' }}>{subtitle}</span>
+      </span>
+      <span className="chev" aria-hidden>›</span>
+    </Link>
+  )
+}
+
+/** Objetivos y saldo de la corista, dentro de la categoria Ventas. */
+function SellerSeasonCard() {
+  const allocations = useQuery({ queryKey: ['my-allocations'], queryFn: () => api.myAllocations() })
   const seasons = useQuery({ queryKey: ['seasons'], queryFn: () => api.listSeasons() })
   const seasonId = seasons.data?.seasons[0]?.id
-
-  const report = useQuery({
+  const balance = useQuery({
     queryKey: ['settlements-report', seasonId],
     queryFn: () => api.settlementsReport(seasonId!),
     enabled: seasonId !== undefined,
   })
 
-  const row = report.data?.rows[0]
-  if (!row || (row.collected_cents === 0 && row.settled_cents === 0)) return null
+  const rows = allocations.data?.allocations ?? []
+  const myRow = balance.data?.rows[0]
+  const hasBalance = myRow && (myRow.collected_cents > 0 || myRow.settled_cents > 0)
+  if (rows.length === 0 && !hasBalance) return null
 
   return (
-    <div className="panel" style={{ marginTop: '1rem' }}>
-      <p className="panel__label">Mi saldo a rendir</p>
-      <p className="report-summary__big" style={{ margin: 0 }}>
-        {row.balance_cents > 0 ? (
-          <span className="report-summary__warn">{formatMoney(row.balance_cents)}</span>
-        ) : (
-          <span className="report-summary__ok">Al dia</span>
+    <div className="cat cat--sales">
+      <div className="cat__edge" />
+      <div className="cat__inner">
+        <div className="cat__head">
+          <b>Mi temporada</b>
+          {myRow && hasBalance && <BalanceChip balanceCents={myRow.balance_cents} />}
+        </div>
+        {rows.map((a) => (
+          <div key={a.function_id} className="cat__item" style={{ minHeight: 34 }}>
+            <span>
+              <span className="t">{a.function_name ?? a.venue}</span>
+              <span className="s" style={{ display: 'block' }}>{formatDateTime(a.starts_at)}</span>
+            </span>
+            <span className={`alloc-progress ${a.sold >= a.assigned ? 'stat-ok' : ''}`}>
+              {a.sold} / {a.assigned}
+              {a.sold >= a.assigned && ' ✓'}
+            </span>
+          </div>
+        ))}
+        {hasBalance && myRow && (
+          <p className="s muted" style={{ margin: '8px 0 0', fontSize: 11 }}>
+            Cobraste {formatMoney(myRow.collected_cents)} y rendiste {formatMoney(myRow.settled_cents)}.
+          </p>
         )}
-      </p>
-      <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.9rem' }}>
-        Cobraste {formatMoney(row.collected_cents)} y rendiste {formatMoney(row.settled_cents)}
-        {row.pending_cents > 0 && <> · te deben {formatMoney(row.pending_cents)}</>}
-      </p>
+      </div>
     </div>
-  )
-}
-
-function NavCard({ to, title, subtitle }: { to: string; title: string; subtitle: string }) {
-  return (
-    <Link className="nav-card" to={to}>
-      <span>
-        <strong>{title}</strong>
-        <br />
-        <span className="muted">{subtitle}</span>
-      </span>
-      <span className="muted">›</span>
-    </Link>
   )
 }
 
 export function HomePage() {
   const { user } = useSession()
+
+  const functions = useQuery({ queryKey: ['functions'], queryFn: () => api.listFunctions() })
+  const sales = useQuery({
+    queryKey: ['sales'],
+    queryFn: () => api.listSales(),
+    enabled: user?.role === 'admin' || user?.role === 'seller',
+  })
+  const seasons = useQuery({
+    queryKey: ['seasons'],
+    queryFn: () => api.listSeasons(),
+    enabled: user?.role === 'admin',
+  })
+  const seasonId = seasons.data?.seasons[0]?.id
+  const settlements = useQuery({
+    queryKey: ['settlements-report', seasonId],
+    queryFn: () => api.settlementsReport(seasonId!),
+    enabled: user?.role === 'admin' && seasonId !== undefined,
+  })
+
   if (!user) return null
 
+  const fn = heroFunction(functions.data?.functions ?? [])
+  const pendingCount = (sales.data?.sales ?? []).filter(
+    (s) => s.voided_at === null && !s.is_comp && s.payment_status === 'pending',
+  ).length
+  const totalOwed = (settlements.data?.rows ?? []).reduce(
+    (acc, r) => acc + Math.max(r.balance_cents, 0),
+    0,
+  )
+
   return (
-    <>
-      <div className="panel">
-        <p className="panel__label">Sesion iniciada</p>
-        <h2>{user.name}</h2>
-        <p className="muted" style={{ margin: '0.25rem 0 0' }}>
-          {user.email}
-        </p>
+    <div className="stack">
+      {fn && <Hero fn={fn} />}
+
+      <div className="cat cat--sales">
+        <div className="cat__edge" />
+        <div className="cat__inner">
+          <div className="cat__head">
+            <b>Ventas</b>
+            {pendingCount > 0 && <Chip tone="blue">{pendingCount} pendiente{pendingCount > 1 ? 's' : ''}</Chip>}
+          </div>
+          <CatItem to="/ventas/nueva" title={user.role === 'admin' ? 'Nueva venta o cortesía' : 'Nueva venta'} subtitle="Registrar y enviar QR" />
+          <CatItem to="/ventas" title={user.role === 'admin' ? 'Ventas' : 'Mis ventas'} subtitle="Pagos, links y reenvíos" />
+        </div>
       </div>
 
-      {user.role === 'seller' && (
-        <>
-          <SellerAllocationsCard />
-          <SellerBalanceCard />
-        </>
-      )}
+      {user.role === 'seller' && <SellerSeasonCard />}
 
-      <nav className="stack" style={{ marginTop: '1rem' }} aria-label="Puerta">
-        <NavCard to="/puerta" title="Modo puerta" subtitle="Escanear QR y marcar ingresos" />
-      </nav>
-
-      {(user.role === 'admin' || user.role === 'seller') && (
-        <nav className="stack" style={{ marginTop: '0.75rem' }} aria-label="Ventas">
-          <NavCard
-            to="/ventas/nueva"
-            title={user.role === 'admin' ? 'Nueva venta o cortesia' : 'Nueva venta'}
-            subtitle="Registrar y mandar la entrada"
-          />
-          <NavCard
-            to="/ventas"
-            title={user.role === 'admin' ? 'Ventas' : 'Mis ventas'}
-            subtitle="Pagos, links y reenvios"
-          />
-        </nav>
-      )}
+      <div className="cat cat--door">
+        <div className="cat__edge" />
+        <div className="cat__inner">
+          <div className="cat__head"><b>Operación</b></div>
+          <CatItem to="/puerta" title="Modo puerta" subtitle="Escanear QR y marcar ingresos" />
+        </div>
+      </div>
 
       {user.role === 'admin' && (
-        <>
-          <nav className="stack" style={{ marginTop: '0.75rem' }} aria-label="Panel">
-            <NavCard to="/panel/ventas" title="Panel de ventas" subtitle="Totales, pagas y pendientes" />
-            <NavCard
-              to="/panel/rendiciones"
-              title="Rendiciones"
-              subtitle="Quien debe cuanto, registrar entregas"
-            />
-            <NavCard to="/panel/asistencia" title="Asistencia" subtitle="Quien entro y a que hora" />
-          </nav>
-          <nav className="stack" style={{ marginTop: '0.75rem' }} aria-label="Administracion">
-            <NavCard to="/temporadas" title="Temporadas y funciones" subtitle="Fechas, cupos y precios" />
-            <NavCard to="/usuarios" title="Usuarios" subtitle="Vendedoras, puerta y direccion" />
-          </nav>
-        </>
+        <div className="cat cat--admin">
+          <div className="cat__edge" />
+          <div className="cat__inner">
+            <div className="cat__head">
+              <b>Administración</b>
+              {totalOwed > 0 && <Chip tone="warn">Debe {formatMoney(totalOwed)}</Chip>}
+            </div>
+            <CatItem to="/panel/rendiciones" title="Rendiciones" subtitle="Quién debe cuánto, registrar entregas" />
+            <CatItem to="/panel/asistencia" title="Asistencia" subtitle="Quién entró y a qué hora" />
+            <CatItem to="/temporadas" title="Temporadas y funciones" subtitle="Fechas, cupos, precios y asignaciones" />
+            <CatItem to="/usuarios" title="Equipo" subtitle="Coristas, puerta y dirección" />
+          </div>
+        </div>
       )}
-    </>
+    </div>
   )
 }

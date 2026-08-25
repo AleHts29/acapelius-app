@@ -6,6 +6,7 @@ import { useSession } from './auth/session'
 import { Layout } from './components/Layout'
 import { AttendancePage } from './pages/AttendancePage'
 import { ChangePasswordPage } from './pages/ChangePasswordPage'
+import { DireccionPage } from './pages/DireccionPage'
 import { DoorPage } from './pages/DoorPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
@@ -45,7 +46,7 @@ function AuthenticatedApp() {
   if (loading) {
     return (
       <div className="centered-screen">
-        <p className="muted">Cargando...</p>
+        <p className="muted">Cargando…</p>
       </div>
     )
   }
@@ -56,14 +57,25 @@ function AuthenticatedApp() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<HomePage />} />
+        <Route
+          index
+          element={user.role === 'door' ? <Navigate to="/puerta" replace /> : <HomePage />}
+        />
+        <Route
+          path="/direccion"
+          element={
+            <RequireAdmin>
+              <DireccionPage />
+            </RequireAdmin>
+          }
+        />
         {/* El modo puerta lo usan door, seller (puede estar en la puerta) y
             admin; el backend aplica la misma regla. */}
         <Route path="/puerta" element={<DoorPage />} />
         <Route
           path="/puerta/:functionId"
           element={
-            <Suspense fallback={<p className="muted">Abriendo el modo puerta...</p>}>
+            <Suspense fallback={<p className="muted">Abriendo el modo puerta…</p>}>
               <DoorModePage />
             </Suspense>
           }

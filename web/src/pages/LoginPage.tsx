@@ -18,7 +18,7 @@ export function LoginPage() {
     try {
       await login(email.trim(), password)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No se pudo iniciar sesion.')
+      setError(err instanceof ApiError ? err.message : 'No se pudo iniciar sesión.')
       setPassword('')
     } finally {
       setSubmitting(false)
@@ -28,7 +28,7 @@ export function LoginPage() {
   return (
     <div className="centered-screen">
       <form className="card" onSubmit={handleSubmit} noValidate>
-        <img className="login-logo" src="/logo-full.png" alt="Acapelius" />
+        <img className="login-logo" src="/logo-full-blue.png" alt="Acapelius" />
         <p className="card__subtitle" style={{ textAlign: 'center' }}>
           Entradas del coro
         </p>
@@ -57,7 +57,7 @@ export function LoginPage() {
         </label>
 
         <label className="field">
-          <span className="field__label">Contrasena</span>
+          <span className="field__label">Contraseña</span>
           <input
             className="field__input"
             type="password"
@@ -70,7 +70,7 @@ export function LoginPage() {
         </label>
 
         <button className="button" type="submit" disabled={submitting}>
-          {submitting ? 'Entrando...' : 'Entrar'}
+          {submitting ? 'Entrando…' : 'Entrar'}
         </button>
       </form>
     </div>

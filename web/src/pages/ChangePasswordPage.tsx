@@ -20,11 +20,11 @@ export function ChangePasswordPage() {
     setError(null)
 
     if (next !== repeat) {
-      setError('Las dos contrasenas nuevas no coinciden.')
+      setError('Las dos contraseñas nuevas no coinciden.')
       return
     }
     if (next.length < MIN_PASSWORD_LENGTH) {
-      setError(`La contrasena nueva necesita al menos ${MIN_PASSWORD_LENGTH} caracteres.`)
+      setError(`La contraseña nueva necesita al menos ${MIN_PASSWORD_LENGTH} caracteres.`)
       return
     }
 
@@ -32,7 +32,7 @@ export function ChangePasswordPage() {
     try {
       await changePassword(current, next)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No se pudo cambiar la contrasena.')
+      setError(err instanceof ApiError ? err.message : 'No se pudo cambiar la contraseña.')
     } finally {
       setSubmitting(false)
     }
@@ -41,9 +41,10 @@ export function ChangePasswordPage() {
   return (
     <div className="centered-screen">
       <form className="card" onSubmit={handleSubmit} noValidate>
-        <h1 className="card__title">Elegi tu contrasena</h1>
+        <img className="login-logo" src="/logo-full-blue.png" alt="Acapelius" />
+        <h1 className="card__title">Elegí tu contraseña</h1>
         <p className="card__subtitle">
-          Hola {user?.name}. Antes de seguir, cambia la contrasena provisoria por una tuya.
+          Hola {user?.name}. Antes de seguir, cambiá la contraseña provisoria por una tuya.
         </p>
 
         {error && (
@@ -57,7 +58,7 @@ export function ChangePasswordPage() {
         <input type="text" name="username" value={user?.email ?? ''} autoComplete="username" hidden readOnly />
 
         <label className="field">
-          <span className="field__label">Contrasena provisoria</span>
+          <span className="field__label">Contraseña provisoria</span>
           <input
             className="field__input"
             type="password"
@@ -70,7 +71,7 @@ export function ChangePasswordPage() {
         </label>
 
         <label className="field">
-          <span className="field__label">Contrasena nueva</span>
+          <span className="field__label">Contraseña nueva</span>
           <input
             className="field__input"
             type="password"
@@ -96,10 +97,10 @@ export function ChangePasswordPage() {
         </label>
 
         <button className="button" type="submit" disabled={submitting}>
-          {submitting ? 'Guardando...' : 'Guardar y entrar'}
+          {submitting ? 'Guardando…' : 'Guardar y entrar'}
         </button>
 
-        <p style={{ marginBottom: 0, marginTop: '1rem', textAlign: 'center' }}>
+        <p style={{ marginBottom: 0, marginTop: 12, textAlign: 'center' }}>
           <button className="button--ghost button" type="button" onClick={() => void logout()}>
             Salir
           </button>

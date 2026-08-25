@@ -43,12 +43,12 @@ function parseForm(values: FunctionFormValues):
 
   const capacity = Number(values.capacity)
   if (!Number.isInteger(capacity) || capacity <= 0) {
-    return { ok: false, message: 'El cupo tiene que ser un numero mayor a cero.' }
+    return { ok: false, message: 'El cupo tiene que ser un número mayor a cero.' }
   }
 
   const priceCents = pesosToCents(values.pricePesos)
   if (priceCents === null) {
-    return { ok: false, message: 'El precio no es valido. Ejemplo: 8000 o 8000,50.' }
+    return { ok: false, message: 'El precio no es válido. Ejemplo: 8000 o 8000,50.' }
   }
 
   return {
@@ -122,7 +122,7 @@ function FunctionFields({
           type="text"
           value={values.name}
           onChange={(e) => set({ name: e.target.value })}
-          placeholder="Funcion de gala"
+          placeholder="Función de gala"
         />
       </label>
     </>
@@ -165,7 +165,7 @@ function FunctionCard({ fn, seasonId }: { fn: ShowFunction; seasonId: number }) 
   if (editing) {
     return (
       <form className="panel" onSubmit={handleSubmit}>
-        <p className="panel__label">Editar funcion</p>
+        <p className="panel__label">Editar función</p>
         {error && (
           <p className="alert" role="alert">
             {error}
@@ -174,7 +174,7 @@ function FunctionCard({ fn, seasonId }: { fn: ShowFunction; seasonId: number }) 
         <FunctionFields values={values} onChange={setValues} />
         <div className="form-row">
           <button className="button" type="submit" disabled={update.isPending}>
-            {update.isPending ? 'Guardando...' : 'Guardar'}
+            {update.isPending ? 'Guardando…' : 'Guardar'}
           </button>
           <button
             className="button button--ghost form-row__action"
@@ -193,10 +193,10 @@ function FunctionCard({ fn, seasonId }: { fn: ShowFunction; seasonId: number }) 
 
   return (
     <div className="panel">
-      <div className="function-card__head">
+      <div className="lrow__head">
         <div>
-          <h3 className="function-card__title">{fn.name ?? fn.venue}</h3>
-          {fn.name && <p className="muted function-card__line">{fn.venue}</p>}
+          <h3 style={{ fontSize: 16 }}>{fn.name ?? fn.venue}</h3>
+          {fn.name && <p className="lrow__sub" style={{ margin: 0 }}>{fn.venue}</p>}
         </div>
         <button
           className="button button--ghost"
@@ -209,14 +209,14 @@ function FunctionCard({ fn, seasonId }: { fn: ShowFunction; seasonId: number }) 
           Editar
         </button>
       </div>
-      <p className="function-card__line">{formatDateTime(fn.starts_at)}</p>
-      <p className="muted function-card__line">
-        Cupo {fn.capacity} · {formatMoney(fn.price_cents)} por entrada
+      <p style={{ margin: '6px 0 0', fontSize: 13 }}>{formatDateTime(fn.starts_at)}</p>
+      <p className="lrow__sub" style={{ margin: '1px 0 0' }}>
+        Cupo {fn.capacity} · {formatMoney(fn.price_cents)} por entrada · {fn.sold} vendidas
       </p>
 
       <button
         className="button button--ghost"
-        style={{ marginTop: '0.75rem' }}
+        style={{ marginTop: 10 }}
         type="button"
         onClick={() => setShowAllocations(!showAllocations)}
       >
@@ -275,7 +275,7 @@ export function SeasonDetailPage() {
   }
 
   if (!Number.isInteger(seasonId)) {
-    return <p className="alert">Temporada invalida.</p>
+    return <p className="alert">Temporada inválida.</p>
   }
 
   return (
@@ -284,7 +284,7 @@ export function SeasonDetailPage() {
 
       {showForm ? (
         <form className="panel" onSubmit={handleSubmit}>
-          <p className="panel__label">Nueva funcion</p>
+          <p className="panel__label">Nueva función</p>
           {error && (
             <p className="alert" role="alert">
               {error}
@@ -293,7 +293,7 @@ export function SeasonDetailPage() {
           <FunctionFields values={values} onChange={setValues} />
           <div className="form-row">
             <button className="button" type="submit" disabled={create.isPending}>
-              {create.isPending ? 'Creando...' : 'Crear funcion'}
+              {create.isPending ? 'Creando…' : 'Crear función'}
             </button>
             <button
               className="button button--ghost form-row__action"
@@ -313,13 +313,13 @@ export function SeasonDetailPage() {
         </button>
       )}
 
-      <div className="stack" style={{ marginTop: '1rem' }}>
+      <div className="stack" style={{ marginTop: 12 }}>
         {functions.isPending ? (
-          <p className="muted">Cargando funciones...</p>
+          <p className="muted">Cargando funciones…</p>
         ) : functions.data && functions.data.functions.length > 0 ? (
           functions.data.functions.map((fn) => <FunctionCard key={fn.id} fn={fn} seasonId={seasonId} />)
         ) : (
-          <p className="muted">Esta temporada todavia no tiene funciones.</p>
+          <p className="muted">Esta temporada todavía no tiene funciones.</p>
         )}
       </div>
     </>

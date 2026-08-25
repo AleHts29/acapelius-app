@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, api, roleLabel } from '../api/client'
 import type { Role, User } from '../api/client'
 import { useSession } from '../auth/session'
+import { Chip } from '../ui/StatusChip'
 
 interface CreatedCredentials {
   name: string
@@ -17,11 +18,11 @@ function CredentialsCard({ credentials }: { credentials: CreatedCredentials }) {
   const [copied, setCopied] = useState(false)
 
   const message = [
-    `Hola ${credentials.name}! Te creamos tu acceso a Acapelius:`,
+    `¡Hola ${credentials.name}! Te creamos tu acceso a Acapelius:`,
     window.location.origin,
     `Email: ${credentials.email}`,
-    `Contrasena: ${credentials.tempPassword}`,
-    'Al entrar te va a pedir elegir tu propia contrasena.',
+    `Contraseña: ${credentials.tempPassword}`,
+    'Al entrar te va a pedir elegir tu propia contraseña.',
   ].join('\n')
 
   async function copy() {
@@ -43,7 +44,7 @@ function CredentialsCard({ credentials }: { credentials: CreatedCredentials }) {
           <strong>{credentials.email}</strong>
         </div>
         <div className="credentials__line">
-          <span className="muted">Contrasena</span>
+          <span className="muted">Contraseña</span>
           <strong>{credentials.tempPassword}</strong>
         </div>
       </div>
@@ -51,7 +52,7 @@ function CredentialsCard({ credentials }: { credentials: CreatedCredentials }) {
         {copied ? 'Copiado ✓' : 'Copiar mensaje para WhatsApp'}
       </button>
       <p className="muted" style={{ margin: '0.6rem 0 0', fontSize: '0.85rem' }}>
-        Copia el mensaje completo con el link, el email y la contrasena. No se vuelve a mostrar.
+        Copiá el mensaje completo con el link, el email y la contraseña. No se vuelve a mostrar.
       </p>
     </div>
   )
@@ -88,11 +89,11 @@ function TeamRow({ user, selfId }: { user: User; selfId: number }) {
           <br />
           <span className="muted" style={{ fontSize: '0.85rem' }}>
             {user.email}
-            {user.must_change_password && user.is_active && ' · todavia no entro'}
+            {user.must_change_password && user.is_active && ' · todavía no entró'}
           </span>
         </span>
         <span style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <span className="badge">{roleLabel(user.role)}</span>
+          <Chip tone="neutral">{roleLabel(user.role)}</Chip>
           <button
             className="button button--ghost"
             type="button"
@@ -181,7 +182,7 @@ function TeamRow({ user, selfId }: { user: User; selfId: number }) {
           </div>
           {user.is_active && !isSelf && (
             <p className="muted" style={{ margin: '0.5rem 0 0', fontSize: '0.82rem' }}>
-              Desactivar no borra nada: sus ventas quedan, pero no puede entrar mas.
+              Desactivar no borra nada: sus ventas quedan, pero no puede entrar más.
             </p>
           )}
         </div>
@@ -280,14 +281,14 @@ export function UsersPage() {
           </select>
         </label>
         <button className="button" type="submit" disabled={createUser.isPending}>
-          {createUser.isPending ? 'Creando...' : 'Crear usuario'}
+          {createUser.isPending ? 'Creando…' : 'Crear usuario'}
         </button>
       </form>
 
       <div className="panel">
         <p className="panel__label">Equipo</p>
         {isPending ? (
-          <p className="muted">Cargando...</p>
+          <p className="muted">Cargando…</p>
         ) : (
           <ul className="list">
             {data?.users.map((user) => <TeamRow key={user.id} user={user} selfId={me?.id ?? 0} />)}
