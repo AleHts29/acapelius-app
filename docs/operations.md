@@ -46,13 +46,13 @@ railway variables --set 'BASE_URL=https://xxx.up.railway.app'
 # 6. Redeploy para tomar las variables:
 railway up
 
-# 7. Crear el admin (una sola vez; el seed es idempotente). Desde tu maquina,
-#    con la URL PUBLICA de la base (dashboard → Postgres → Variables →
-#    DATABASE_PUBLIC_URL):
-DATABASE_URL='<DATABASE_PUBLIC_URL>' \
-  SERVER_SECRET='cualquier-cosa-de-32-bytes-el-seed-no-lo-usa' \
-  SEED_ADMIN_EMAIL='eli@...' \
-  go run ./cmd/seed
+# 7. Crear el admin (una sola vez). La base de Railway no expone URL publica
+#    por defecto; se entra por el tunel SSH del CLI (pide una clave SSH
+#    registrada: `railway ssh keys add`):
+HASH=$(go run ./cmd/hashpw 'una-contrasena-provisoria')
+echo "INSERT INTO users (name, email, password_hash, role, must_change_password)
+      SELECT 'Eli', 'eli@...', '$HASH', 'admin', TRUE
+      WHERE NOT EXISTS (SELECT 1 FROM users);" | railway connect Postgres
 ```
 
 Verificacion: `curl https://<tu-dominio>/api/health` →
@@ -244,19 +244,12 @@ envio, `railway logs` muestra el error exacto (los tipicos: app password
 revocada, o limite diario superado).
 
 **Una vendedora se olvido la contrasena.** No hay reset por email en el MVP.
-Opcion rapida por SQL (genera una provisoria y obliga a cambiarla):
+Se le pone una provisoria por SQL (y el sistema la obliga a cambiarla):
 
 ```bash
-# hash de una contrasena provisoria, p. ej. "cambiame-ya":
-# (correr en el repo)
-go run - <<'EOF'
-package main
-import ("fmt"; "golang.org/x/crypto/bcrypt")
-func main() { h,_ := bcrypt.GenerateFromPassword([]byte("cambiame-ya"), 11); fmt.Println(string(h)) }
-EOF
-# y en psql contra produccion:
-# UPDATE users SET password_hash='<hash>', must_change_password=TRUE
-#   WHERE email='vendedora@...';
+HASH=$(go run ./cmd/hashpw 'cambiame-ya')
+echo "UPDATE users SET password_hash='$HASH', must_change_password=TRUE
+      WHERE email='vendedora@...';" | railway connect Postgres
 ```
 
 **El QR no escanea en la puerta.** 1) ¿La camara tiene permiso y HTTPS?
