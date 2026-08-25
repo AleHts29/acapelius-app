@@ -9,6 +9,7 @@ export interface User {
   email: string
   role: Role
   must_change_password: boolean
+  is_active: boolean
   created_at: string
 }
 
@@ -216,6 +217,35 @@ export interface CheckinResponse {
   by_name?: string
 }
 
+export interface PublicSingleTicket {
+  code: string
+  status: TicketStatus
+  buyer_name: string
+  seller_name: string
+  is_comp: boolean
+  voided: boolean
+  ticket_index: number
+  sale_quantity: number
+  payload?: string
+  function: { name: string | null; venue: string; starts_at: string }
+}
+
+export interface Allocation {
+  function_id: number
+  function_name: string | null
+  venue: string
+  starts_at: string
+  assigned: number
+  sold: number
+}
+
+export interface FunctionAllocation {
+  user_id: number
+  seller_name: string
+  assigned: number
+  sold: number
+}
+
 export type CheckinInput =
   | { function_id: number; method: 'scan'; payload: string; device_id?: string }
   | { function_id: number; method: 'manual'; code: string; device_id?: string }
@@ -288,6 +318,10 @@ export const api = {
   listUsers: () => request<{ users: User[] }>('GET', '/users'),
   createUser: (input: { name: string; email: string; role: Role; password?: string }) =>
     request<{ user: User; temp_password?: string }>('POST', '/users', input),
+  updateUser: (
+    id: number,
+    input: { name: string; email: string; role: Role; is_active: boolean },
+  ) => request<{ user: User }>('PATCH', `/users/${id}`, input),
 
   listSeasons: () => request<{ seasons: Season[] }>('GET', '/seasons'),
   createSeason: (name: string) => request<{ season: Season }>('POST', '/seasons', { name }),
@@ -325,6 +359,17 @@ export const api = {
   voidSale: (id: number) => request<{ sale: Sale }>('POST', `/sales/${id}/void`),
 
   publicSale: (code: string) => request<PublicSale>('GET', `/public/sales/${code}`),
+  publicTicket: (code: string) => request<PublicSingleTicket>('GET', `/public/tickets/${code}`),
+
+  myAllocations: () => request<{ allocations: Allocation[] }>('GET', '/allocations?mine=1'),
+  functionAllocations: (functionId: number) =>
+    request<{ allocations: FunctionAllocation[] }>('GET', `/allocations?function_id=${functionId}`),
+  setAllocation: (userId: number, functionId: number, quantity: number) =>
+    request<unknown>('PUT', '/allocations', {
+      user_id: userId,
+      function_id: functionId,
+      quantity,
+    }),
 
   doorSnapshot: (functionId: number) =>
     request<DoorSnapshot>('GET', `/functions/${functionId}/door-snapshot`),
@@ -363,13 +408,36 @@ export function publicSaleURL(code: string): string {
   return `${window.location.origin}/e/${code}`
 }
 
+/** Link publico de UNA entrada, para reenviarle a cada persona la suya. */
+export function publicTicketURL(code: string): string {
+  return `${window.location.origin}/t/${code}`
+}
+
+/** Compartir con la hoja nativa del celular; si no hay, copia al portapapeles. */
+export async function shareOrCopy(text: string, url: string): Promise<'shared' | 'copied' | 'failed'> {
+  if (navigator.share) {
+    try {
+      await navigator.share({ text, url })
+      return 'shared'
+    } catch {
+      // Cancelado por el usuario o sin permiso: probamos copiar.
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(`${text} ${url}`.trim())
+    return 'copied'
+  } catch {
+    return 'failed'
+  }
+}
+
 /** Etiqueta de rol para mostrar en pantalla. */
 export function roleLabel(role: Role): string {
   switch (role) {
     case 'admin':
       return 'Direccion'
     case 'seller':
-      return 'Vendedora'
+      return 'Corista'
     case 'door':
       return 'Puerta'
   }

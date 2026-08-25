@@ -28,8 +28,10 @@ export function LoginPage() {
   return (
     <div className="centered-screen">
       <form className="card" onSubmit={handleSubmit} noValidate>
-        <h1 className="card__title">Acapelius</h1>
-        <p className="card__subtitle">Entradas del coro</p>
+        <img className="login-logo" src="/logo-full.png" alt="Acapelius" />
+        <p className="card__subtitle" style={{ textAlign: 'center' }}>
+          Entradas del coro
+        </p>
 
         {error && (
           <p className="alert" role="alert">

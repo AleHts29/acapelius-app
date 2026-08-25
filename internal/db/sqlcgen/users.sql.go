@@ -29,7 +29,7 @@ VALUES (
   $4::text,
   $5::boolean
 )
-RETURNING id, name, email, password_hash, role, must_change_password, created_at
+RETURNING id, name, email, password_hash, role, must_change_password, created_at, is_active
 `
 
 type CreateUserParams struct {
@@ -57,12 +57,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Role,
 		&i.MustChangePassword,
 		&i.CreatedAt,
+		&i.IsActive,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, password_hash, role, must_change_password, created_at FROM users WHERE lower(email) = lower($1::text)
+SELECT id, name, email, password_hash, role, must_change_password, created_at, is_active FROM users WHERE lower(email) = lower($1::text)
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -76,12 +77,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Role,
 		&i.MustChangePassword,
 		&i.CreatedAt,
+		&i.IsActive,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, email, password_hash, role, must_change_password, created_at FROM users WHERE id = $1
+SELECT id, name, email, password_hash, role, must_change_password, created_at, is_active FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
@@ -95,12 +97,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.Role,
 		&i.MustChangePassword,
 		&i.CreatedAt,
+		&i.IsActive,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, name, email, password_hash, role, must_change_password, created_at FROM users ORDER BY role, name
+SELECT id, name, email, password_hash, role, must_change_password, created_at, is_active FROM users ORDER BY role, name
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -120,6 +123,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Role,
 			&i.MustChangePassword,
 			&i.CreatedAt,
+			&i.IsActive,
 		); err != nil {
 			return nil, err
 		}
@@ -147,4 +151,44 @@ type SetUserPasswordParams struct {
 func (q *Queries) SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error {
 	_, err := q.db.Exec(ctx, setUserPassword, arg.PasswordHash, arg.MustChangePassword, arg.ID)
 	return err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET name      = $1::text,
+    email     = $2::text,
+    role      = $3::text,
+    is_active = $4::boolean
+WHERE id = $5::bigint
+RETURNING id, name, email, password_hash, role, must_change_password, created_at, is_active
+`
+
+type UpdateUserParams struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
+	IsActive bool   `json:"is_active"`
+	ID       int64  `json:"id"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.Name,
+		arg.Email,
+		arg.Role,
+		arg.IsActive,
+		arg.ID,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.MustChangePassword,
+		&i.CreatedAt,
+		&i.IsActive,
+	)
+	return i, err
 }

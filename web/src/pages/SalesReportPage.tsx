@@ -75,10 +75,10 @@ export function SalesReportPage() {
 
       <div className="panel report-summary">
         <div>
-          <p className="panel__label">Entradas vendidas</p>
+          <p className="panel__label">Vendidas</p>
           <p className="report-summary__big">
             {totals.tickets}
-            {totals.comps > 0 && <span className="muted"> + {totals.comps} cortesias</span>}
+            {totals.comps > 0 && <span className="muted"> +{totals.comps} cort.</span>}
           </p>
         </div>
         <div>
@@ -99,7 +99,7 @@ export function SalesReportPage() {
           className={`door-tab${groupBy === 'seller' ? ' door-tab--active' : ''}`}
           onClick={() => setGroupBy('seller')}
         >
-          Por vendedora
+          Por corista
         </button>
         <button
           type="button"
@@ -130,12 +130,18 @@ export function SalesReportPage() {
                   {group.compTickets > 0 && ` + ${group.compTickets} cort.`}
                 </span>
               </div>
-              <p className="function-card__line">
-                Cobrado <strong>{formatMoney(group.paidCents)}</strong>
+              <div className="report-stat">
+                <span className="report-stat__item">
+                  <span className="muted">Cobrado </span>
+                  <strong className="report-summary__ok">{formatMoney(group.paidCents)}</strong>
+                </span>
                 {group.pendingCents > 0 && (
-                  <span className="muted"> · por cobrar {formatMoney(group.pendingCents)}</span>
+                  <span className="report-stat__item">
+                    <span className="muted">Por cobrar </span>
+                    <strong className="report-summary__warn">{formatMoney(group.pendingCents)}</strong>
+                  </span>
                 )}
-              </p>
+              </div>
             </div>
           ))}
         </div>

@@ -8,6 +8,14 @@ import (
 	"time"
 )
 
+type Allocation struct {
+	ID         int64     `json:"id"`
+	UserID     int64     `json:"user_id"`
+	FunctionID int64     `json:"function_id"`
+	Quantity   int32     `json:"quantity"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
 type Checkin struct {
 	ID        int64     `json:"id"`
 	TicketID  int64     `json:"ticket_id"`
@@ -94,4 +102,5 @@ type User struct {
 	Role               string    `json:"role"`
 	MustChangePassword bool      `json:"must_change_password"`
 	CreatedAt          time.Time `json:"created_at"`
+	IsActive           bool      `json:"is_active"`
 }

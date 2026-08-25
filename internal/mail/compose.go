@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+// Paleta de marca de Acapelius (ver Logos Final / paleta de color).
+const (
+	brandBlue  = "#415DA7"
+	brandCream = "#F8ECDE"
+	brandInk   = "#1D1D1B"
+)
+
 // TicketEmailData es todo lo que necesita el email de la entrada.
 type TicketEmailData struct {
 	BuyerName    string
@@ -39,10 +46,11 @@ func formatStartsAt(t time.Time) string {
 		local.Hour(), local.Minute())
 }
 
-// ComposeTicketEmail arma el mensaje de la entrada (spec §7): datos de la
-// funcion, un QR por entrada y el link a la pagina publica. Los QR van como
-// imagen hosteada (los clientes de mail cargan imagenes remotas) y ademas
-// adjuntos, y el link publico cubre cualquier cliente que bloquee todo.
+// ComposeTicketEmail arma el mensaje de la entrada (spec §7) con la identidad
+// de Acapelius: cabecera azul con el logo, tarjetas crema, una tarjeta por
+// entrada con su QR y su link individual (para reenviarle a cada persona la
+// suya), y el boton a la pagina publica como respaldo universal. Los QR van
+// como imagen hosteada + adjuntos PNG.
 func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, error)) (Message, error) {
 	eventName := "Acapelius"
 	if data.FunctionName != "" {
@@ -57,6 +65,7 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 	}
 	subject := fmt.Sprintf("%s para %s — %s", subjectLead, eventName, formatStartsAt(data.StartsAt))
 
+	// --- Version texto plano -------------------------------------------------
 	var textB strings.Builder
 	fmt.Fprintf(&textB, "Hola %s:\n\n", data.BuyerName)
 	if data.IsComp {
@@ -65,32 +74,63 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 		fmt.Fprintf(&textB, "Aca van tus %d %s para %s.\n", data.Quantity, plural, eventName)
 	}
 	fmt.Fprintf(&textB, "\nCuando:  %s\nDonde:   %s\n", formatStartsAt(data.StartsAt), data.Venue)
-	fmt.Fprintf(&textB, "\nEntrada general, sin numerar.\n")
-	fmt.Fprintf(&textB, "\nTu entrada online (mostrala desde el celular si no te llegan los QR):\n%s\n", data.PublicURL)
+	fmt.Fprintf(&textB, "\nEntrada general, sin numerar. Un QR por persona en la puerta.\n")
+	fmt.Fprintf(&textB, "\nTus entradas online:\n%s\n", data.PublicURL)
+	if len(data.TicketCodes) > 1 {
+		fmt.Fprintf(&textB, "\nPara reenviarle a cada persona la suya:\n")
+		for i, code := range data.TicketCodes {
+			fmt.Fprintf(&textB, "  Entrada %d: %s/t/%s\n", i+1, data.BaseURL, code)
+		}
+	}
 
-	var htmlB strings.Builder
+	// --- Version HTML --------------------------------------------------------
 	esc := html.EscapeString
-	fmt.Fprintf(&htmlB, `<div style="font-family:sans-serif;max-width:32rem;margin:0 auto;color:#222">`)
-	fmt.Fprintf(&htmlB, `<h1 style="font-size:1.3rem">%s</h1>`, esc(eventName))
-	fmt.Fprintf(&htmlB, `<p>Hola %s:</p>`, esc(data.BuyerName))
+	var b strings.Builder
+
+	fmt.Fprintf(&b, `<div style="margin:0;padding:24px 12px;background:%s;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">`, brandCream)
+	fmt.Fprintf(&b, `<div style="max-width:520px;margin:0 auto">`)
+
+	// Cabecera azul con el logo.
+	fmt.Fprintf(&b, `<div style="background:%s;border-radius:16px 16px 0 0;padding:22px 24px;text-align:center">`, brandBlue)
+	fmt.Fprintf(&b, `<img src="%s/email-logo.png" alt="Acapelius" width="200" style="max-width:60%%;height:auto">`, data.BaseURL)
+	fmt.Fprintf(&b, `</div>`)
+
+	// Cuerpo.
+	fmt.Fprintf(&b, `<div style="background:#ffffff;border-radius:0 0 16px 16px;padding:28px 24px;color:%s">`, brandInk)
+	fmt.Fprintf(&b, `<h1 style="margin:0 0 4px;font-size:22px">%s</h1>`, esc(eventName))
+	fmt.Fprintf(&b, `<p style="margin:0 0 18px;color:#666">%s · %s</p>`, esc(formatStartsAt(data.StartsAt)), esc(data.Venue))
+
+	fmt.Fprintf(&b, `<p style="margin:0 0 6px">Hola %s:</p>`, esc(data.BuyerName))
 	if data.IsComp {
-		fmt.Fprintf(&htmlB, `<p>Tenes <strong>%d %s de cortesia</strong>.</p>`, data.Quantity, plural)
+		fmt.Fprintf(&b, `<p style="margin:0 0 18px">Tenes <strong>%d %s de cortesia</strong>. ¡Te esperamos!</p>`, data.Quantity, plural)
 	} else {
-		fmt.Fprintf(&htmlB, `<p>Aca van tus <strong>%d %s</strong>.</p>`, data.Quantity, plural)
+		fmt.Fprintf(&b, `<p style="margin:0 0 18px">Aca %s <strong>%d %s</strong>. ¡Te esperamos!</p>`,
+			map[bool]string{true: "va tu", false: "van tus"}[data.Quantity == 1], data.Quantity, plural)
 	}
-	fmt.Fprintf(&htmlB, `<p><strong>%s</strong><br>%s</p>`, esc(formatStartsAt(data.StartsAt)), esc(data.Venue))
-	fmt.Fprintf(&htmlB, `<p style="color:#666">Entrada general, sin numerar. Presenta un QR por persona en la puerta.</p>`)
+
+	// Una tarjeta por entrada, con su QR y su link individual.
 	for i, code := range data.TicketCodes {
-		fmt.Fprintf(&htmlB, `<p style="text-align:center"><img src="%s/api/public/tickets/%s.png" width="240" height="240" alt="Entrada %d"><br>Entrada %d de %d</p>`,
-			data.BaseURL, esc(code), i+1, i+1, data.Quantity)
+		fmt.Fprintf(&b, `<div style="border:2px solid %s;border-radius:14px;padding:18px 16px;margin:0 0 14px;text-align:center;background:%s">`, brandBlue, brandCream)
+		fmt.Fprintf(&b, `<p style="margin:0 0 10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:%s">Entrada %d de %d</p>`, brandBlue, i+1, data.Quantity)
+		fmt.Fprintf(&b, `<img src="%s/api/public/tickets/%s.png" width="220" height="220" alt="QR de la entrada %d" style="background:#fff;border-radius:10px">`, data.BaseURL, esc(code), i+1)
+		if data.Quantity > 1 {
+			fmt.Fprintf(&b, `<p style="margin:12px 0 0;font-size:13px"><a href="%s/t/%s" style="color:%s">Reenviar solo esta entrada →</a></p>`, data.BaseURL, esc(code), brandBlue)
+		}
+		fmt.Fprintf(&b, `</div>`)
 	}
-	fmt.Fprintf(&htmlB, `<p><a href="%s">Ver mi entrada online</a> — guarda este link: sirve para mostrarla o reenviarla.</p>`, data.PublicURL)
-	fmt.Fprintf(&htmlB, `</div>`)
+
+	// Boton principal.
+	fmt.Fprintf(&b, `<div style="text-align:center;margin:22px 0 8px">`)
+	fmt.Fprintf(&b, `<a href="%s" style="display:inline-block;background:%s;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:12px">Ver mis entradas online</a>`, data.PublicURL, brandBlue)
+	fmt.Fprintf(&b, `</div>`)
+	fmt.Fprintf(&b, `<p style="margin:0;text-align:center;color:#888;font-size:12px">Guarda este email: el boton sirve para mostrar o reenviar las entradas.<br>Entrada general, sin numerar. Un QR por persona en la puerta.</p>`)
+
+	fmt.Fprintf(&b, `</div></div></div>`)
 
 	msg := Message{
 		To:      data.BuyerEmail,
 		Subject: subject,
-		HTML:    htmlB.String(),
+		HTML:    b.String(),
 		Text:    textB.String(),
 	}
 

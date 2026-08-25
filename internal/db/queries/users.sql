@@ -24,5 +24,14 @@ SET password_hash = sqlc.arg(password_hash)::text,
     must_change_password = sqlc.arg(must_change_password)::boolean
 WHERE id = sqlc.arg(id)::bigint;
 
+-- name: UpdateUser :one
+UPDATE users
+SET name      = sqlc.arg(name)::text,
+    email     = sqlc.arg(email)::text,
+    role      = sqlc.arg(role)::text,
+    is_active = sqlc.arg(is_active)::boolean
+WHERE id = sqlc.arg(id)::bigint
+RETURNING *;
+
 -- name: CountUsers :one
 SELECT count(*) FROM users;

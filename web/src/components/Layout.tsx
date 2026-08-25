@@ -14,10 +14,14 @@ export function Layout() {
     <div className="app-shell">
       <header className="app-header">
         {atHome ? (
-          <span className="app-header__brand">Acapelius</span>
+          <span className="app-header__brand">
+            <img className="app-header__logo" src="/logo-mark.png" alt="" />
+            Acapelius
+          </span>
         ) : (
           <Link className="app-header__brand app-header__back" to="/">
-            ‹ Acapelius
+            <img className="app-header__logo" src="/logo-mark.png" alt="" />
+            Acapelius
           </Link>
         )}
         <span className="app-header__user">

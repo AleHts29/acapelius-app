@@ -3,7 +3,39 @@ import { useQuery } from '@tanstack/react-query'
 
 import { api } from '../api/client'
 import { useSession } from '../auth/session'
-import { formatMoney } from '../lib/format'
+import { formatDateTime, formatMoney } from '../lib/format'
+
+/** Objetivos de venta de la corista: cuantas le asigno Eli y como viene. */
+function SellerAllocationsCard() {
+  const { data } = useQuery({
+    queryKey: ['my-allocations'],
+    queryFn: () => api.myAllocations(),
+  })
+
+  const allocations = data?.allocations ?? []
+  if (allocations.length === 0) return null
+
+  return (
+    <div className="panel" style={{ marginTop: '1rem' }}>
+      <p className="panel__label">Mis entradas asignadas</p>
+      {allocations.map((a) => (
+        <div key={a.function_id} className="alloc-row">
+          <span>
+            {a.function_name ?? a.venue}
+            <br />
+            <span className="muted" style={{ fontSize: '0.85rem' }}>
+              {formatDateTime(a.starts_at)}
+            </span>
+          </span>
+          <span className={`alloc-progress ${a.sold >= a.assigned ? 'report-summary__ok' : ''}`}>
+            {a.sold} / {a.assigned}
+            {a.sold >= a.assigned && ' ✓'}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 /** Saldo a rendir de la vendedora en la temporada mas nueva (spec §3). */
 function SellerBalanceCard() {
@@ -64,7 +96,12 @@ export function HomePage() {
         </p>
       </div>
 
-      {user.role === 'seller' && <SellerBalanceCard />}
+      {user.role === 'seller' && (
+        <>
+          <SellerAllocationsCard />
+          <SellerBalanceCard />
+        </>
+      )}
 
       <nav className="stack" style={{ marginTop: '1rem' }} aria-label="Puerta">
         <NavCard to="/puerta" title="Modo puerta" subtitle="Escanear QR y marcar ingresos" />

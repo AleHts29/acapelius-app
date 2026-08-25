@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api } from '../api/client'
 import type { ShowFunction } from '../api/client'
+import { AllocationsEditor } from '../components/AllocationsEditor'
 import { formatDateTime, formatMoney, isoToLocalInput, localInputToISO, pesosToCents } from '../lib/format'
 
 interface FunctionFormValues {
@@ -131,6 +132,7 @@ function FunctionFields({
 function FunctionCard({ fn, seasonId }: { fn: ShowFunction; seasonId: number }) {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState(false)
+  const [showAllocations, setShowAllocations] = useState(false)
   const [values, setValues] = useState<FunctionFormValues>(emptyForm)
   const [error, setError] = useState<string | null>(null)
 
@@ -211,6 +213,16 @@ function FunctionCard({ fn, seasonId }: { fn: ShowFunction; seasonId: number }) 
       <p className="muted function-card__line">
         Cupo {fn.capacity} · {formatMoney(fn.price_cents)} por entrada
       </p>
+
+      <button
+        className="button button--ghost"
+        style={{ marginTop: '0.75rem' }}
+        type="button"
+        onClick={() => setShowAllocations(!showAllocations)}
+      >
+        {showAllocations ? 'Cerrar asignaciones' : 'Asignar entradas a coristas'}
+      </button>
+      {showAllocations && <AllocationsEditor functionId={fn.id} />}
     </div>
   )
 }

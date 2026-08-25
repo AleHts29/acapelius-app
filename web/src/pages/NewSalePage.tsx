@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 
-import { ApiError, api, publicSaleURL } from '../api/client'
+import { ApiError, api, publicSaleURL, shareOrCopy } from '../api/client'
 import type { EmailStatus, Sale } from '../api/client'
 import { useSession } from '../auth/session'
 import { formatDateTime, formatMoney } from '../lib/format'
@@ -14,22 +14,22 @@ interface CreatedSale {
   emailStatus: EmailStatus
 }
 
-function CopyLinkButton({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false)
+function ShareLinkButton({ url, buyerName }: { url: string; buyerName: string }) {
+  const [label, setLabel] = useState<string | null>(null)
 
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // El fallback es seleccionar a mano el texto visible.
+  async function share() {
+    const result = await shareOrCopy(`Entradas de ${buyerName} — Acapelius`, url)
+    if (result === 'copied') {
+      setLabel('Link copiado ✓')
+      setTimeout(() => setLabel(null), 2500)
+    } else if (result === 'failed') {
+      setLabel('No se pudo copiar; toca el link de abajo y copialo a mano')
     }
   }
 
   return (
-    <button className="button" type="button" onClick={() => void copy()}>
-      {copied ? 'Copiado ✓' : 'Copiar link para WhatsApp'}
+    <button className="button" type="button" onClick={() => void share()}>
+      {label ?? 'Compartir por WhatsApp'}
     </button>
   )
 }
@@ -102,18 +102,16 @@ export function NewSalePage() {
         <h1 className="page-title">Venta registrada ✓</h1>
 
         <div className="panel panel--success">
-          <p className="panel__label">Entrada de {created.sale.buyer_name}</p>
-          <p className="credentials">{created.publicURL}</p>
-          <div className="stack">
-            <CopyLinkButton url={created.publicURL} />
+          <p className="panel__label">Entradas de {created.sale.buyer_name}</p>
+          <div className="success-actions">
             {created.emailStatus === 'sent' && (
               <p className="muted" style={{ margin: 0 }}>
-                El email con los QR ya salio para {created.sale.buyer_email}.
+                📧 El email con los QR ya salio para {created.sale.buyer_email}.
               </p>
             )}
             {created.emailStatus === 'failed' && (
-              <p className="alert" style={{ margin: 0 }}>
-                El email no salio. Compartile el link o reintenta desde "Mis ventas".
+              <p className="alert" role="alert">
+                El email no salio. Compartile el link, o reintenta desde "Mis ventas".
               </p>
             )}
             {created.emailStatus === 'none' && (
@@ -121,6 +119,8 @@ export function NewSalePage() {
                 Sin email: compartile el link, o en la puerta la buscan por nombre.
               </p>
             )}
+            <ShareLinkButton url={created.publicURL} buyerName={created.sale.buyer_name} />
+            <span className="link-chip">{created.publicURL}</span>
           </div>
         </div>
 

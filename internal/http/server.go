@@ -91,6 +91,7 @@ func (s *Server) Handler() http.Handler {
 		api.Group(func(pub chi.Router) {
 			pub.Use(httprate.LimitByIP(publicRateLimitRequests, rateLimitWindow))
 			pub.Get("/public/sales/{code}", s.handlePublicSale)
+			pub.Get("/public/tickets/{code}", s.handlePublicTicket)
 			pub.Get("/public/tickets/{code}.png", s.handlePublicTicketPNG)
 		})
 
@@ -123,6 +124,7 @@ func (s *Server) Handler() http.Handler {
 					seller.Get("/sales", s.handleListSales)
 					seller.Patch("/sales/{id}", s.handleUpdateSalePayment)
 					seller.Post("/sales/{id}/resend-email", s.handleResendEmail)
+					seller.Get("/allocations", s.handleListAllocations)
 				})
 
 				// Modo puerta: door es su rol natural, pero una vendedora
@@ -145,6 +147,8 @@ func (s *Server) Handler() http.Handler {
 					admin.Use(auth.RequireRole(domain.RoleAdmin))
 					admin.Post("/users", s.handleCreateUser)
 					admin.Get("/users", s.handleListUsers)
+					admin.Patch("/users/{id}", s.handleUpdateUser)
+					admin.Put("/allocations", s.handleSetAllocation)
 					admin.Post("/seasons", s.handleCreateSeason)
 					admin.Post("/functions", s.handleCreateFunction)
 					admin.Patch("/functions/{id}", s.handleUpdateFunction)

@@ -75,6 +75,12 @@ func (s *Service) Login(ctx context.Context, email, password string) (*domain.Us
 		return nil, ErrInvalidCredentials
 	}
 
+	// Una cuenta desactivada responde igual que una credencial mala: no hay
+	// que revelar que la cuenta existe pero fue dada de baja.
+	if !row.IsActive {
+		return nil, ErrInvalidCredentials
+	}
+
 	if err := s.sessions.RenewToken(ctx); err != nil {
 		return nil, fmt.Errorf("renovar sesion: %w", err)
 	}
@@ -106,6 +112,42 @@ func (s *Service) CurrentUser(ctx context.Context) (*domain.User, error) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("cargar usuario de la sesion: %w", err)
+	}
+	// Desactivada despues de abrir sesion: la sesion muere aca.
+	if !row.IsActive {
+		_ = s.sessions.Destroy(ctx)
+		return nil, nil
+	}
+	user := toDomainUser(row)
+	return &user, nil
+}
+
+// UpdateUser modifica nombre, email, rol y estado de un usuario (CRUD del
+// admin). `actorID` es quien edita: no puede desactivarse ni degradarse a si
+// mismo, para no quedarse afuera de la administracion.
+func (s *Service) UpdateUser(ctx context.Context, actorID, userID int64, name, email string, role domain.Role, isActive bool) (*domain.User, error) {
+	if err := domain.ValidateNewUser(name, email, role); err != nil {
+		return nil, err
+	}
+	if actorID == userID && (!isActive || role != domain.RoleAdmin) {
+		return nil, domain.ErrSelfLockout
+	}
+
+	row, err := s.queries.UpdateUser(ctx, sqlcgen.UpdateUserParams{
+		Name:     name,
+		Email:    domain.NormalizeEmail(email),
+		Role:     string(role),
+		IsActive: isActive,
+		ID:       userID,
+	})
+	if err != nil {
+		if isUniqueViolation(err) {
+			return nil, ErrEmailTaken
+		}
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, fmt.Errorf("actualizar usuario: %w", err)
 	}
 	user := toDomainUser(row)
 	return &user, nil
@@ -194,6 +236,7 @@ func toDomainUser(row sqlcgen.User) domain.User {
 		Email:              row.Email,
 		Role:               domain.Role(row.Role),
 		MustChangePassword: row.MustChangePassword,
+		IsActive:           row.IsActive,
 		CreatedAt:          row.CreatedAt,
 	}
 }

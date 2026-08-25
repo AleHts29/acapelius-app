@@ -15,7 +15,7 @@ import { SalesReportPage } from './pages/SalesReportPage'
 import { SeasonDetailPage } from './pages/SeasonDetailPage'
 import { SeasonsPage } from './pages/SeasonsPage'
 import { SettlementsPage } from './pages/SettlementsPage'
-import { TicketPage } from './pages/TicketPage'
+import { SingleTicketPage, TicketPage } from './pages/TicketPage'
 import { UsersPage } from './pages/UsersPage'
 
 // El modo puerta carga la libreria de escaneo (~350 KB): se baja solo cuando
@@ -141,8 +141,9 @@ function AuthenticatedApp() {
 export function App() {
   return (
     <Routes>
-      {/* La pagina de la entrada es publica: va antes del gate de sesion. */}
+      {/* Las paginas de entradas son publicas: van antes del gate de sesion. */}
       <Route path="/e/:saleCode" element={<TicketPage />} />
+      <Route path="/t/:ticketCode" element={<SingleTicketPage />} />
       <Route path="*" element={<AuthenticatedApp />} />
     </Routes>
   )

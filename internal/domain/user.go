@@ -60,6 +60,7 @@ type User struct {
 	Email              string    `json:"email"`
 	Role               Role      `json:"role"`
 	MustChangePassword bool      `json:"must_change_password"`
+	IsActive           bool      `json:"is_active"`
 	CreatedAt          time.Time `json:"created_at"`
 }
 
@@ -80,6 +81,8 @@ var (
 	ErrPasswordShort = errors.New("la contrasena debe tener al menos 8 caracteres")
 	ErrPasswordLong  = errors.New("la contrasena no puede superar los 72 bytes")
 	ErrPasswordSame  = errors.New("la contrasena nueva tiene que ser distinta de la actual")
+	// ErrSelfLockout evita que el admin se saque a si mismo el acceso.
+	ErrSelfLockout = errors.New("no podes desactivarte ni cambiarte el rol a vos misma")
 )
 
 // NormalizeEmail deja el email en la forma canonica que se guarda y compara.
