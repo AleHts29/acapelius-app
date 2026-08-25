@@ -6,11 +6,12 @@ ventas, rendiciones y asistencia.
 
 La especificacion funcional completa esta en [`docs/spec.md`](docs/spec.md).
 
-**Estado: fase 5 terminada.** Fundaciones, autenticacion, catalogo, ciclo de
-venta, modo puerta offline-first, y el panel de Eli: ventas por funcion y
-vendedora (pagas vs. pendientes), rendiciones con saldo a rendir e historial,
-y asistencia en tiempo real. Cada vendedora ve su propio saldo. Queda el
-pulido y deploy (fase 6).
+**Estado: MVP completo (fases 0 a 6).** Ciclo entero funcionando: catalogo,
+ventas con QR firmado y email, pagina publica, modo puerta offline-first,
+panel de ventas/rendiciones/asistencia, y todo lo necesario para produccion:
+Dockerfile, `fly.toml`, headers de seguridad, rate limiting, PWA instalable y
+backups con restore probado. El deploy paso a paso esta en
+[`docs/operations.md`](docs/operations.md).
 
 ## Arrancar
 
@@ -56,6 +57,7 @@ cambiarlo en `.env` alcanza. Postgres queda en **5433** por el mismo motivo.
 | `make migrate` / `make migrate-new name=...` | Migraciones |
 | `make sqlc` | Regenera las queries tipadas |
 | `make db-shell` / `make db-reset` | psql / base limpia desde cero |
+| `make db-backup` / `make db-restore-check` | Dump local / probar el restore en una base descartable |
 
 ## Como esta armado
 
@@ -200,6 +202,17 @@ conexion un QR de otra funcion se reporta como "invalido" (rojo igual).
 el modo puerta desde un celular en desarrollo hace falta un tunel HTTPS, por
 ejemplo `cloudflared tunnel --url http://localhost:5173`.
 
+**Produccion (fase 6).** `Dockerfile` en tres etapas (frontend → binario Go
+con todo embebido, tzdata incluida → distroless no-root) y `fly.toml` listos;
+el deploy completo esta en [`docs/operations.md`](docs/operations.md), junto
+con el runbook de operacion: temporada nueva, backups/restore (el
+procedimiento se prueba local con `make db-restore-check`), reset de
+contrasenas y los problemas tipicos. El server manda headers de seguridad
+(nosniff, frame deny, permissions-policy con camara solo propia, HSTS cuando
+hay TLS) y rate-limita por IP el login (10/min) y las rutas publicas
+(60/min). La app es una PWA instalable (manifest + icono) y el modo puerta
+mantiene la pantalla prendida (wake lock).
+
 ## Tests
 
 ```bash
@@ -242,4 +255,6 @@ Estan documentadas en [`.env.example`](.env.example). Las que no pueden faltar:
 - [x] **5 — Panel de Eli.** Reportes de ventas agrupables, rendiciones con
       saldo e historial, asistencia con polling; seed de demo realista
       (`make seed-demo`).
-- [ ] **6 — Pulido y deploy.**
+- [x] **6 — Pulido y deploy.** Docker + Fly listos, hardening, rate limits,
+      PWA, wake lock, backups con restore verificado y runbook de operacion.
+      El unico paso pendiente es correr `fly deploy` con una cuenta real.

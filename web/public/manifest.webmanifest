@@ -1,0 +1,19 @@
+{
+  "name": "Acapelius",
+  "short_name": "Acapelius",
+  "description": "Entradas del coro: ventas, envio por email y control de ingreso.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12111a",
+  "theme_color": "#12111a",
+  "lang": "es-AR",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

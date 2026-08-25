@@ -1,0 +1,39 @@
+# Config de Fly.io. Ver docs/operations.md para el deploy paso a paso.
+# Secrets (fly secrets set): DATABASE_URL, SERVER_SECRET, RESEND_API_KEY,
+# BASE_URL, EMAIL_FROM.
+
+app = "acapelius"
+primary_region = "eze" # Buenos Aires
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  APP_ENV = "production"
+  EMAIL_DRIVER = "resend"
+  TZ = "America/Argentina/Buenos_Aires"
+  # Aplica las migraciones pendientes al arrancar. Con una sola maquina es lo
+  # mas simple y seguro; goose es idempotente.
+  AUTO_MIGRATE = "true"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # La app duerme fuera de temporada y despierta con el primer request.
+  # Para las noches de funcion conviene fijar min_machines_running = 1
+  # (ver docs/operations.md).
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

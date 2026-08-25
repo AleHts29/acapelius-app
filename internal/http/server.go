@@ -42,12 +42,32 @@ func New(cfg *config.Config, pool *pgxpool.Pool, authService *auth.Service, sign
 	}
 }
 
-// loginRateLimit acota los intentos de login por IP. Generoso para no trabar a
-// varias vendedoras detras del mismo NAT, pero suficiente contra fuerza bruta.
+// Rate limits por IP. Generosos para no trabar a varias personas detras del
+// mismo NAT, pero suficientes contra fuerza bruta y scraping de codigos.
 const (
-	loginRateLimitRequests = 10
-	loginRateLimitWindow   = time.Minute
+	loginRateLimitRequests  = 10 // intentos de login por minuto
+	publicRateLimitRequests = 60 // pagina publica y PNGs por minuto
+	rateLimitWindow         = time.Minute
 )
+
+// securityHeaders endurece las respuestas. Sin CSP a proposito en el MVP:
+// el scanner (getUserMedia + canvas) es facil de romper con una politica
+// equivocada y el frontend no incrusta contenido de terceros.
+func (s *Server) securityHeaders(next http.Handler) http.Handler {
+	hsts := s.cfg.UsesTLS()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Referrer-Policy", "no-referrer")
+		// La camara solo para la propia app (modo puerta); todo lo demas, no.
+		h.Set("Permissions-Policy", "camera=(self), microphone=(), geolocation=()")
+		if hsts {
+			h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 // Handler devuelve el http.Handler raiz: API bajo /api, entradas publicas bajo
 // /e y el frontend embebido en el resto.
@@ -59,18 +79,23 @@ func (s *Server) Handler() http.Handler {
 	r.Use(RequestLogger())
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(s.securityHeaders)
 	r.Use(s.auth.Sessions().LoadAndSave)
 
 	r.Route("/api", func(api chi.Router) {
 		api.Get("/health", s.handleHealth)
 
 		// Publico, sin sesion: la pagina de la entrada y los PNG de los QR.
-		// El sale_code / ticket_code no adivinable es la autorizacion.
-		api.Get("/public/sales/{code}", s.handlePublicSale)
-		api.Get("/public/tickets/{code}.png", s.handlePublicTicketPNG)
+		// El sale_code / ticket_code no adivinable es la autorizacion; el
+		// rate limit encarece intentar adivinarlos por fuerza bruta.
+		api.Group(func(pub chi.Router) {
+			pub.Use(httprate.LimitByIP(publicRateLimitRequests, rateLimitWindow))
+			pub.Get("/public/sales/{code}", s.handlePublicSale)
+			pub.Get("/public/tickets/{code}.png", s.handlePublicTicketPNG)
+		})
 
 		api.Group(func(pub chi.Router) {
-			pub.Use(httprate.LimitByIP(loginRateLimitRequests, loginRateLimitWindow))
+			pub.Use(httprate.LimitByIP(loginRateLimitRequests, rateLimitWindow))
 			pub.Post("/auth/login", s.handleLogin)
 		})
 

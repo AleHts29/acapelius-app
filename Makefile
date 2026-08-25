@@ -84,6 +84,34 @@ db-reset: ## Borra la base y la vuelve a crear vacia
 db-shell: ## Abre psql contra la base de desarrollo
 	@docker compose exec postgres psql -U acapelius -d acapelius
 
+BACKUP_DIR := backups
+
+.PHONY: db-backup
+db-backup: ## Dump comprimido de la base local a backups/
+	@mkdir -p $(BACKUP_DIR)
+	@docker compose exec -T postgres pg_dump -U acapelius -Fc acapelius \
+		> $(BACKUP_DIR)/acapelius-$$(date +%Y%m%d-%H%M%S).dump
+	@ls -lh $(BACKUP_DIR)/*.dump | tail -1
+
+.PHONY: db-restore-check
+db-restore-check: ## Restaura el ultimo backup en una base descartable y lo verifica
+	@latest=$$(ls -t $(BACKUP_DIR)/*.dump 2>/dev/null | head -1); \
+	test -n "$$latest" || { echo "No hay backups en $(BACKUP_DIR)/. Corre 'make db-backup'."; exit 1; }; \
+	echo "Restaurando $$latest en acapelius_restore_check..."; \
+	docker compose exec -T postgres psql -U acapelius -d postgres \
+		-c "DROP DATABASE IF EXISTS acapelius_restore_check" >/dev/null; \
+	docker compose exec -T postgres psql -U acapelius -d postgres \
+		-c "CREATE DATABASE acapelius_restore_check" >/dev/null; \
+	docker compose exec -T postgres pg_restore -U acapelius -d acapelius_restore_check --no-owner < "$$latest"; \
+	docker compose exec -T postgres psql -U acapelius -d acapelius_restore_check -At -c \
+		"SELECT 'usuarios: ' || count(*) FROM users UNION ALL \
+		 SELECT 'ventas: '   || count(*) FROM sales UNION ALL \
+		 SELECT 'tickets: '  || count(*) FROM tickets UNION ALL \
+		 SELECT 'ingresos: ' || count(*) FROM checkins"; \
+	docker compose exec -T postgres psql -U acapelius -d postgres \
+		-c "DROP DATABASE acapelius_restore_check" >/dev/null; \
+	echo "Restore verificado OK."
+
 .PHONY: migrate
 migrate: $(GOOSE) ## Aplica las migraciones pendientes
 	@$(LOAD_ENV); $(GOOSE) -dir $(MIGRATIONS) postgres "$$DATABASE_URL" up

@@ -18,6 +18,9 @@
 .env
 .env.local
 
+# Backups locales
+/backups/
+
 # Editors / OS
 .DS_Store
 .idea/

@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	_ "time/tzdata" // zona horaria embebida: el container no necesita tzdata
 
 	"github.com/ale-hts/acapelius/internal/auth"
 	"github.com/ale-hts/acapelius/internal/config"

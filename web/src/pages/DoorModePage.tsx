@@ -184,6 +184,31 @@ function ManualSearch({
   )
 }
 
+/** Mantiene la pantalla prendida mientras el modo puerta esta abierto: en
+ * plena fila nadie quiere desbloquear el celular entre escaneo y escaneo. */
+function useWakeLock() {
+  useEffect(() => {
+    let lock: WakeLockSentinel | null = null
+    const acquire = async () => {
+      try {
+        lock = (await navigator.wakeLock?.request('screen')) ?? null
+      } catch {
+        // Denegado o sin soporte: la app funciona igual.
+      }
+    }
+    void acquire()
+    // Al volver de segundo plano el lock se pierde; se vuelve a pedir.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void acquire()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      void lock?.release()
+    }
+  }, [])
+}
+
 export function DoorModePage() {
   const { functionId: raw } = useParams()
   const functionId = Number(raw)
@@ -192,6 +217,7 @@ export function DoorModePage() {
   const [result, setResult] = useState<DisplayResult | null>(null)
 
   const store = useDoorStore(functionId)
+  useWakeLock()
 
   if (!Number.isInteger(functionId)) {
     return <p className="alert">Funcion invalida.</p>
