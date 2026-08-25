@@ -3,12 +3,83 @@
 Runbook para quien administra la app: deploy, temporada nueva, backups y los
 problemas tipicos. Todo lo de desarrollo esta en el [README](../README.md).
 
-## Deploy inicial en Fly.io
+## Deploy en Railway
 
-Requisitos: cuenta en [fly.io](https://fly.io), `flyctl` instalado
-(`brew install flyctl`), y el email configurado — Gmail con app password (ver
-[Email por Gmail](#email-por-gmail)) o una API key de
-[Resend](https://resend.com) con dominio verificado.
+Railway corre la app desde el `Dockerfile` del repo (la config de build y el
+health check estan en `railway.json`). Requisitos: cuenta en
+[railway.com](https://railway.com) (plan Hobby, ~USD 5/mes con uso incluido)
+y el email de Gmail configurado (ver [Email por Gmail](#email-por-gmail)).
+
+### Primera vez
+
+```bash
+# 1. CLI de Railway y login (abre el browser):
+brew install railway
+railway login
+
+# 2. Crear el proyecto y subir el codigo:
+railway init          # nombre: acapelius
+railway up            # sube el repo, compila el Dockerfile y deploya
+
+# 3. Agregar Postgres al proyecto (backups automaticos en el plan pago):
+railway add --database postgres
+
+# 4. Variables del servicio de la app. En el dashboard, servicio de la app →
+#    Variables, o por CLI:
+railway variables \
+  --set 'DATABASE_URL=${{Postgres.DATABASE_URL}}' \
+  --set "SERVER_SECRET=$(openssl rand -hex 32)" \
+  --set 'APP_ENV=production' \
+  --set 'AUTO_MIGRATE=true' \
+  --set 'TZ=America/Argentina/Buenos_Aires' \
+  --set 'EMAIL_DRIVER=smtp' \
+  --set 'SMTP_HOST=smtp.gmail.com' \
+  --set 'SMTP_PORT=587' \
+  --set 'SMTP_USER=acapelius@gmail.com' \
+  --set 'SMTP_PASSWORD=<la app password de 16 letras>' \
+  --set 'EMAIL_FROM=Acapelius <acapelius@gmail.com>'
+
+# 5. Dominio publico: dashboard → servicio de la app → Settings → Networking
+#    → Generate Domain. Con la URL que da (https://xxx.up.railway.app):
+railway variables --set 'BASE_URL=https://xxx.up.railway.app'
+
+# 6. Redeploy para tomar las variables:
+railway up
+
+# 7. Crear el admin (una sola vez; el seed es idempotente). Desde tu maquina,
+#    con la URL PUBLICA de la base (dashboard → Postgres → Variables →
+#    DATABASE_PUBLIC_URL):
+DATABASE_URL='<DATABASE_PUBLIC_URL>' \
+  SERVER_SECRET='cualquier-cosa-de-32-bytes-el-seed-no-lo-usa' \
+  SEED_ADMIN_EMAIL='eli@...' \
+  go run ./cmd/seed
+```
+
+Verificacion: `curl https://<tu-dominio>/api/health` →
+`{"status":"ok","database":"ok"}`.
+
+Notas:
+
+- Railway inyecta `PORT` solo; la app lo lee. No hay que configurarlo.
+- `DATABASE_URL=${{Postgres.DATABASE_URL}}` es una *referencia*: si Railway
+  rota la credencial de Postgres, la app la sigue sola.
+- `BASE_URL` con https habilita la cookie `Secure` y arma los links de los
+  emails: sin el paso 5 los mails salen con links rotos.
+- Deploys siguientes: `railway up` (o conectar el repo de GitHub en el
+  dashboard para que deploye solo con cada push).
+- Logs: `railway logs`, o el dashboard.
+
+### Dominio propio (opcional)
+
+Dashboard → Settings → Networking → Custom Domain, crear el CNAME que indica,
+y actualizar `BASE_URL` al dominio nuevo.
+
+## Alternativa: Fly.io
+
+El repo tambien trae `fly.toml` por si algun dia conviene mudarse (tiene
+servidores en Buenos Aires; Railway corre en us-west/us-east). Requisitos:
+cuenta en [fly.io](https://fly.io), `flyctl` instalado
+(`brew install flyctl`), y el email configurado.
 
 ```bash
 fly auth login
@@ -70,16 +141,11 @@ fly logs            # ver que paso
 fly status          # estado de las maquinas
 ```
 
-### Noches de funcion
+### Noches de funcion (solo Fly)
 
-La app duerme cuando no hay trafico (`min_machines_running = 0`) y despierta
-con el primer request (~1 segundo). Para la puerta eso es aceptable, pero si
-queres cero fricciones las noches de diciembre:
-
-```bash
-fly scale count 1   # y despues de la temporada, si queres ahorrar:
-# (volver a auto-stop no requiere nada; min_machines_running sigue en 0)
-```
+En Fly la app duerme sin trafico y despierta con el primer request (~1s);
+`fly scale count 1` la deja fija. En Railway el servicio queda corriendo
+siempre (es lo que cobra el plan); no hay que hacer nada.
 
 ## Email por Gmail
 
@@ -139,10 +205,10 @@ Notas:
 
 **La regla:** el backup que no se probo restaurar no existe.
 
-### Con Postgres managed (Fly MPG / Neon)
+### Con Postgres managed (Railway / Fly MPG / Neon)
 
-Los dos hacen backups automaticos diarios con restore point-in-time desde su
-consola. Igual conviene un dump logico periodico propio (es lo que te llevas
+Todos hacen backups automaticos desde su consola (en Railway: servicio
+Postgres → Backups, diarios en el plan pago). Igual conviene un dump logico periodico propio (es lo que te llevas
 si cambias de proveedor):
 
 ```bash
@@ -173,8 +239,9 @@ fly secrets set DATABASE_URL="$NUEVA_DATABASE_URL"   # redeploya solo
 **"No me llego el email".** Cada envio queda registrado (tabla
 `email_sends`). Antes de investigar: reenviar desde "Mis ventas" → "Reenviar
 email". Si el email esta mal escrito, la entrada vive igual en el link
-publico — compartilo por WhatsApp ("Copiar link"). Si Resend rebota,
-`fly logs` muestra el error del envio.
+publico — compartilo por WhatsApp ("Copiar link"). Si Gmail rechaza el
+envio, `railway logs` muestra el error exacto (los tipicos: app password
+revocada, o limite diario superado).
 
 **Una vendedora se olvido la contrasena.** No hay reset por email en el MVP.
 Opcion rapida por SQL (genera una provisoria y obliga a cambiarla):
@@ -198,13 +265,13 @@ EOF
 baja solo cuando vuelve la red.
 
 **¿Quien escaneo/anulo/vendio?** Todo queda con autor: `checkins.user_id`,
-`sales.seller_id`, `settlements`. `fly logs` tiene el resto.
+`sales.seller_id`, `settlements`. `railway logs` tiene el resto.
 
 ## Env vars de produccion
 
 | Variable | Valor |
 |---|---|
-| `DATABASE_URL` | secret (attach de Fly o URL de Neon con `sslmode=require`) |
+| `DATABASE_URL` | en Railway: la referencia `${{Postgres.DATABASE_URL}}` |
 | `SERVER_SECRET` | secret, 32+ bytes. **Cambiarlo invalida todos los QR ya emitidos y las sesiones**: no rotarlo en temporada |
 | `SMTP_USER` / `SMTP_PASSWORD` | secret; la cuenta de Gmail y su app password |
 | `EMAIL_FROM` | `Acapelius <acapelius@gmail.com>` (misma cuenta que SMTP_USER) |

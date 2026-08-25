@@ -9,8 +9,9 @@ La especificacion funcional completa esta en [`docs/spec.md`](docs/spec.md).
 **Estado: MVP completo (fases 0 a 6).** Ciclo entero funcionando: catalogo,
 ventas con QR firmado y email, pagina publica, modo puerta offline-first,
 panel de ventas/rendiciones/asistencia, y todo lo necesario para produccion:
-Dockerfile, `fly.toml`, headers de seguridad, rate limiting, PWA instalable y
-backups con restore probado. El deploy paso a paso esta en
+Dockerfile, config de Railway (`railway.json`; `fly.toml` como alternativa),
+headers de seguridad, rate limiting, PWA instalable y backups con restore
+probado. El deploy paso a paso esta en
 [`docs/operations.md`](docs/operations.md).
 
 ## Arrancar
@@ -203,7 +204,8 @@ el modo puerta desde un celular en desarrollo hace falta un tunel HTTPS, por
 ejemplo `cloudflared tunnel --url http://localhost:5173`.
 
 **Produccion (fase 6).** `Dockerfile` en tres etapas (frontend → binario Go
-con todo embebido, tzdata incluida → distroless no-root) y `fly.toml` listos;
+con todo embebido, tzdata incluida → distroless no-root) con `railway.json`
+para Railway (`fly.toml` queda como alternativa);
 el deploy completo esta en [`docs/operations.md`](docs/operations.md), junto
 con el runbook de operacion: temporada nueva, backups/restore (el
 procedimiento se prueba local con `make db-restore-check`), reset de
