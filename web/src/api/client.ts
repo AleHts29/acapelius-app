@@ -220,6 +220,61 @@ export type CheckinInput =
   | { function_id: number; method: 'scan'; payload: string; device_id?: string }
   | { function_id: number; method: 'manual'; code: string; device_id?: string }
 
+export interface SalesReportRow {
+  function_id: number
+  function_venue: string
+  function_starts_at: string
+  function_name: string | null
+  seller_id: number
+  seller_name: string
+  tickets_sold: number
+  comp_tickets: number
+  paid_cents: number
+  pending_cents: number
+}
+
+export interface SettlementReportRow {
+  seller_id: number
+  seller_name: string
+  collected_cents: number
+  pending_cents: number
+  settled_cents: number
+  balance_cents: number
+}
+
+export interface Settlement {
+  id: number
+  seller_id: number
+  season_id: number
+  amount_cents: number
+  method: PaymentMethod
+  notes: string | null
+  created_at: string
+  seller_name: string
+}
+
+export interface AttendanceEntry {
+  buyer_name: string
+  seller_name: string
+  is_comp: boolean
+  created_at: string
+  method: 'scan' | 'manual'
+  by_name: string
+}
+
+export interface AttendanceReport {
+  function: {
+    id: number
+    name: string | null
+    venue: string
+    starts_at: string
+    capacity: number
+  }
+  issued: number
+  entered: number
+  entries: AttendanceEntry[]
+}
+
 export const api = {
   me: () => request<{ user: User }>('GET', '/me'),
   login: (email: string, password: string) =>
@@ -279,6 +334,28 @@ export const api = {
     device_id: string
     checkins: Array<{ payload?: string; code?: string; method: 'scan' | 'manual'; at: string }>
   }) => request<{ results: CheckinResponse[] }>('POST', '/checkins/sync', input),
+
+  salesReport: (opts?: { functionId?: number; sellerId?: number }) => {
+    const params = new URLSearchParams()
+    if (opts?.functionId !== undefined) params.set('function_id', String(opts.functionId))
+    if (opts?.sellerId !== undefined) params.set('seller_id', String(opts.sellerId))
+    const qs = params.toString()
+    return request<{ rows: SalesReportRow[] }>('GET', qs ? `/reports/sales?${qs}` : '/reports/sales')
+  },
+  settlementsReport: (seasonId: number) =>
+    request<{ rows: SettlementReportRow[]; settlements: Settlement[] }>(
+      'GET',
+      `/reports/settlements?season_id=${seasonId}`,
+    ),
+  createSettlement: (input: {
+    seller_id: number
+    season_id: number
+    amount_cents: number
+    method: PaymentMethod
+    notes?: string
+  }) => request<{ settlement: Settlement }>('POST', '/settlements', input),
+  attendanceReport: (functionId: number) =>
+    request<AttendanceReport>('GET', `/reports/attendance?function_id=${functionId}`),
 }
 
 /** Link publico de una venta, para compartir por WhatsApp. */

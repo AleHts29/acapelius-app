@@ -109,6 +109,13 @@ func (s *Server) Handler() http.Handler {
 					door.Post("/checkins/sync", s.handleSyncCheckins)
 				})
 
+				// El reporte de rendiciones tambien lo consulta la vendedora
+				// (ve solo su fila: su saldo a rendir, spec §3).
+				ready.Group(func(sellerReports chi.Router) {
+					sellerReports.Use(auth.RequireRole(domain.RoleSeller))
+					sellerReports.Get("/reports/settlements", s.handleSettlementsReport)
+				})
+
 				ready.Group(func(admin chi.Router) {
 					admin.Use(auth.RequireRole(domain.RoleAdmin))
 					admin.Post("/users", s.handleCreateUser)
@@ -118,6 +125,9 @@ func (s *Server) Handler() http.Handler {
 					admin.Patch("/functions/{id}", s.handleUpdateFunction)
 					admin.Post("/sales/{id}/void", s.handleVoidSale)
 					admin.Post("/tickets/{id}/void", s.handleVoidTicket)
+					admin.Get("/reports/sales", s.handleSalesReport)
+					admin.Get("/reports/attendance", s.handleAttendanceReport)
+					admin.Post("/settlements", s.handleCreateSettlement)
 				})
 			})
 		})

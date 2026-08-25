@@ -4,14 +4,17 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { useSession } from './auth/session'
 import { Layout } from './components/Layout'
+import { AttendancePage } from './pages/AttendancePage'
 import { ChangePasswordPage } from './pages/ChangePasswordPage'
 import { DoorPage } from './pages/DoorPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NewSalePage } from './pages/NewSalePage'
 import { SalesPage } from './pages/SalesPage'
+import { SalesReportPage } from './pages/SalesReportPage'
 import { SeasonDetailPage } from './pages/SeasonDetailPage'
 import { SeasonsPage } from './pages/SeasonsPage'
+import { SettlementsPage } from './pages/SettlementsPage'
 import { TicketPage } from './pages/TicketPage'
 import { UsersPage } from './pages/UsersPage'
 
@@ -102,6 +105,30 @@ function AuthenticatedApp() {
           element={
             <RequireAdmin>
               <UsersPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/panel/ventas"
+          element={
+            <RequireAdmin>
+              <SalesReportPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/panel/rendiciones"
+          element={
+            <RequireAdmin>
+              <SettlementsPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/panel/asistencia"
+          element={
+            <RequireAdmin>
+              <AttendancePage />
             </RequireAdmin>
           }
         />

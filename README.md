@@ -6,11 +6,11 @@ ventas, rendiciones y asistencia.
 
 La especificacion funcional completa esta en [`docs/spec.md`](docs/spec.md).
 
-**Estado: fase 4 terminada.** Fundaciones, autenticacion, catalogo, ciclo de
-venta completo y el modo puerta **offline-first**: el snapshot vive en
-IndexedDB, cada escaneo se valida localmente sin tocar la red, los ingresos se
-encolan y se sincronizan solos al volver la conexion. Queda el panel de Eli
-(fase 5) y el deploy (fase 6).
+**Estado: fase 5 terminada.** Fundaciones, autenticacion, catalogo, ciclo de
+venta, modo puerta offline-first, y el panel de Eli: ventas por funcion y
+vendedora (pagas vs. pendientes), rendiciones con saldo a rendir e historial,
+y asistencia en tiempo real. Cada vendedora ve su propio saldo. Queda el
+pulido y deploy (fase 6).
 
 ## Arrancar
 
@@ -46,6 +46,7 @@ cambiarlo en `.env` alcanza. Postgres queda en **5433** por el mismo motivo.
 | Comando | Que hace |
 |---|---|
 | `make dev` | Postgres, API y frontend juntos |
+| `make seed-demo` | Temporada de demo: ventas, ingresos y rendiciones para recorrer el panel |
 | `make dev-api` / `make dev-web` | Cada uno por separado |
 | `make test` | Tests unitarios de Go (no necesitan Postgres) |
 | `make test-integration` | Tests de handlers contra un Postgres real |
@@ -135,6 +136,11 @@ GET    /api/public/tickets/{code}.png  # sin auth: QR como imagen (email)
 GET    /api/functions/{id}/door-snapshot  # door/seller: tickets + checkins
 POST   /api/checkins                # door/seller: scan o manual
 POST   /api/checkins/sync           # batch idempotente de la cola offline
+
+GET    /api/reports/sales?function_id=&seller_id=   # admin
+GET    /api/reports/settlements?season_id=  # admin todas; seller su fila
+GET    /api/reports/attendance?function_id= # admin; la UI hace polling
+POST   /api/settlements             # admin: registrar una rendicion
 ```
 
 Las lecturas del catalogo estan abiertas a todos los roles porque la vendedora
@@ -167,6 +173,13 @@ idempotencia del sync offline (fase 4). El snapshot de puerta no incluye
 montos ni datos de contacto (el rol door no ve plata). Ademas del rol `door`,
 una vendedora puede operar la puerta (spec §3). Una funcion con ingresos
 registrados ya no se puede editar ni anular sus ventas ingresadas.
+
+**La plata (fase 5).** Dos estados independientes (spec §4): el comprador le
+pago a la vendedora (`sales.payment_status`) y la vendedora le rindio a Eli
+(`settlements`). El **saldo a rendir** = ventas pagas de la temporada (sin
+cortesias ni anuladas) − rendido. Las rendiciones son montos libres,
+parciales, no atadas venta por venta; se puede rendir de mas y el saldo queda
+a favor. Las ventas anuladas no cuentan ni en reportes ni en saldos.
 
 **Offline en la puerta (fase 4).** El modo puerta es offline-first: al abrirse
 con conexion guarda el snapshot en IndexedDB y **todos** los escaneos se
@@ -226,5 +239,7 @@ Estan documentadas en [`.env.example`](.env.example). Las que no pueden faltar:
 - [x] **4 — Offline en la puerta.** Snapshot en IndexedDB, validacion local,
       cola con sync idempotente, conflicto entre dispositivos resuelto por el
       primero que sincroniza, service worker para la shell.
-- [ ] **5 — Panel de Eli.**
+- [x] **5 — Panel de Eli.** Reportes de ventas agrupables, rendiciones con
+      saldo e historial, asistencia con polling; seed de demo realista
+      (`make seed-demo`).
 - [ ] **6 — Pulido y deploy.**

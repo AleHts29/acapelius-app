@@ -1,10 +1,13 @@
 // Command seed crea el primer usuario admin. Es idempotente: si ya hay
-// usuarios en la base, no hace nada.
+// usuarios en la base, no hace nada. Con -demo carga ademas una temporada
+// realista (funciones, vendedoras, ventas, ingresos y rendiciones) para
+// probar el panel.
 package main
 
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -17,7 +20,10 @@ import (
 	"github.com/ale-hts/acapelius/internal/domain"
 )
 
+var demoFlag = flag.Bool("demo", false, "cargar tambien datos de demo (temporada, ventas, ingresos)")
+
 func main() {
+	flag.Parse()
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 	if err := run(); err != nil {
 		slog.Error("seed fallido", "error", err)
@@ -50,7 +56,10 @@ func run() error {
 		return fmt.Errorf("contar usuarios: %w", err)
 	}
 	if count > 0 {
-		slog.Info("ya hay usuarios cargados, no se hace nada", "usuarios", count)
+		slog.Info("ya hay usuarios cargados, se conserva lo que hay", "usuarios", count)
+		if *demoFlag {
+			return seedDemo(ctx, queries)
+		}
 		return nil
 	}
 
@@ -90,6 +99,10 @@ func run() error {
 		fmt.Print("  (generada al azar; anotala, no se vuelve a mostrar)\n")
 	}
 	fmt.Print("  Se pide cambiarla en el primer ingreso.\n\n")
+
+	if *demoFlag {
+		return seedDemo(ctx, queries)
+	}
 	return nil
 }
 

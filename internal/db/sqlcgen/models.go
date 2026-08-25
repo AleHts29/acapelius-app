@@ -68,6 +68,16 @@ type Session struct {
 	Expiry time.Time `json:"expiry"`
 }
 
+type Settlement struct {
+	ID          int64     `json:"id"`
+	SellerID    int64     `json:"seller_id"`
+	SeasonID    int64     `json:"season_id"`
+	AmountCents int64     `json:"amount_cents"`
+	Method      string    `json:"method"`
+	Notes       *string   `json:"notes"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type Ticket struct {
 	ID        int64     `json:"id"`
 	SaleID    int64     `json:"sale_id"`

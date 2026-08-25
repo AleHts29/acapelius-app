@@ -109,6 +109,10 @@ sqlc: $(SQLC) ## Regenera el codigo de las queries
 seed: ## Crea el primer admin si la base esta vacia
 	@$(LOAD_ENV); $(GO) run ./cmd/seed
 
+.PHONY: seed-demo
+seed-demo: ## Admin + temporada de demo (ventas, ingresos, rendiciones)
+	@$(LOAD_ENV); $(GO) run ./cmd/seed -demo
+
 # --- Desarrollo -------------------------------------------------------------
 
 .PHONY: dev

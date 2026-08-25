@@ -491,6 +491,56 @@ a.list__item:hover {
   color: var(--text-muted);
 }
 
+/* --- Panel ---------------------------------------------------------------- */
+
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.report-summary__big {
+  font-size: 1.25rem;
+  font-weight: 750;
+  margin: 0;
+}
+
+.report-summary__ok {
+  color: var(--ok);
+}
+
+.report-summary__warn {
+  color: #fbbf24;
+}
+
+.settlement-balance {
+  font-weight: 700;
+  color: var(--ok);
+  white-space: nowrap;
+}
+
+.settlement-balance--owes {
+  color: #fbbf24;
+}
+
+.settlement-form {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.attendance-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.attendance-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
 .door-status {
   display: flex;
   align-items: center;
