@@ -76,3 +76,21 @@ export function daysAgo(iso: string): string {
   if (days === 1) return 'ayer'
   return `hace ${days} días`
 }
+
+/** ISO → "Hoy · mar 25 ago" / "Ayer · lun 24 ago" / "Jue 21 ago". */
+export function dayLabel(iso: string): string {
+  const date = new Date(iso)
+  const strip = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const diff = Math.round((strip(new Date()) - strip(date)) / 86400_000)
+  const base = date
+    .toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Argentina/Buenos_Aires' })
+    .replace(/[.,]/g, '')
+  if (diff === 0) return `Hoy · ${base}`
+  if (diff === 1) return `Ayer · ${base}`
+  return base.charAt(0).toUpperCase() + base.slice(1)
+}
+
+/** ISO → "19:02" (hora compacta del historial). */
+export function timeShort(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+}

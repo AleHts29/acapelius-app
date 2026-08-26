@@ -115,6 +115,39 @@ func (s *Server) handleSettlementsReport(w http.ResponseWriter, r *http.Request)
 	httpx.JSON(w, http.StatusOK, settlementsReportResponse{Rows: out, Settlements: settlements})
 }
 
+// handleListSettlements: GET /api/settlements?season_id=&seller_id= — el
+// historial cronologico descendente (C5). Con seller_id filtra a una corista
+// (misma query con y sin filtro); una corista solo ve el propio.
+func (s *Server) handleListSettlements(w http.ResponseWriter, r *http.Request) {
+	seasonIDPtr, ok := parseOptionalID(w, r, "season_id")
+	if !ok {
+		return
+	}
+	if seasonIDPtr == nil {
+		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "Falta season_id.")
+		return
+	}
+
+	sellerID, ok := parseOptionalID(w, r, "seller_id")
+	if !ok {
+		return
+	}
+	user := auth.MustUserFrom(r.Context())
+	if user.Role != domain.RoleAdmin {
+		sellerID = &user.ID
+	}
+
+	settlements, err := s.queries.ListSettlements(r.Context(), sqlcgen.ListSettlementsParams{
+		SeasonID: *seasonIDPtr,
+		SellerID: sellerID,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string][]sqlcgen.ListSettlementsRow{"settlements": settlements})
+}
+
 type createSettlementRequest struct {
 	SellerID    int64  `json:"seller_id"`
 	SeasonID    int64  `json:"season_id"`

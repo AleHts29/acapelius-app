@@ -16,7 +16,7 @@ import { SalesPage } from './pages/SalesPage'
 import { SalesReportPage } from './pages/SalesReportPage'
 import { SeasonDetailPage } from './pages/SeasonDetailPage'
 import { SeasonsPage } from './pages/SeasonsPage'
-import { SettlementsPage } from './pages/SettlementsPage'
+import { SettlementDetailPage, SettlementsHistoryPage, SettlementsPage } from './pages/SettlementsPage'
 import { SingleTicketPage, TicketPage } from './pages/TicketPage'
 import { UsersPage } from './pages/UsersPage'
 
@@ -142,6 +142,22 @@ function AuthenticatedApp() {
           element={
             <RequireAdmin>
               <SettlementsPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/panel/rendiciones/historial"
+          element={
+            <RequireAdmin>
+              <SettlementsHistoryPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/panel/rendiciones/:sellerId"
+          element={
+            <RequireAdmin>
+              <SettlementDetailPage />
             </RequireAdmin>
           }
         />

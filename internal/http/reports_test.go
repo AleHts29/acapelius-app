@@ -211,3 +211,47 @@ func TestReporteDeVentasExcluyeAnuladas(t *testing.T) {
 		t.Fatalf("el cobrado no puede incluir anuladas: %v", carolinaRow)
 	}
 }
+
+// TestHistorialDeRendiciones cubre C5: GET /api/settlements con y sin
+// seller_id (misma query), orden descendente y scoping por rol.
+func TestHistorialDeRendiciones(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	setupCatalog(t, admin, 50)
+	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	createSellerClient(t, env, admin, "Valeria", "vale@acapelius.test")
+
+	admin.post("/api/settlements", map[string]any{
+		"seller_id": 2, "season_id": 1, "amount_cents": 100000, "method": "cash", "notes": "primera",
+	})
+	admin.post("/api/settlements", map[string]any{
+		"seller_id": 3, "season_id": 1, "amount_cents": 200000, "method": "transfer",
+	})
+	admin.post("/api/settlements", map[string]any{
+		"seller_id": 2, "season_id": 1, "amount_cents": 50000, "method": "transfer", "notes": "segunda",
+	})
+
+	// General: 3 filas, la mas nueva primero.
+	all := admin.get("/api/settlements?season_id=1")
+	assertStatus(t, all, http.StatusOK)
+	rows := all.Body["settlements"].([]any)
+	if len(rows) != 3 {
+		t.Fatalf("historial general: %d filas", len(rows))
+	}
+	if rows[0].(map[string]any)["amount_cents"].(float64) != 50000 {
+		t.Fatalf("orden descendente: %v", rows[0])
+	}
+
+	// Filtrado por corista: mismas filas que su timeline.
+	caroOnly := admin.get("/api/settlements?season_id=1&seller_id=2")
+	if got := len(caroOnly.Body["settlements"].([]any)); got != 2 {
+		t.Fatalf("filtro por corista: %d", got)
+	}
+
+	// La corista ve solo lo suyo aunque pida otro seller_id.
+	own := carolina.get("/api/settlements?season_id=1&seller_id=3")
+	ownRows := own.Body["settlements"].([]any)
+	if len(ownRows) != 2 || ownRows[0].(map[string]any)["seller_id"].(float64) != 2 {
+		t.Fatalf("scoping de corista roto: %v", ownRows)
+	}
+}

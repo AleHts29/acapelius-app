@@ -141,6 +141,7 @@ func (s *Server) Handler() http.Handler {
 				ready.Group(func(sellerReports chi.Router) {
 					sellerReports.Use(auth.RequireRole(domain.RoleSeller))
 					sellerReports.Get("/reports/settlements", s.handleSettlementsReport)
+					sellerReports.Get("/settlements", s.handleListSettlements)
 				})
 
 				ready.Group(func(admin chi.Router) {

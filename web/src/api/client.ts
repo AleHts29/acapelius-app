@@ -437,6 +437,11 @@ export const api = {
       'GET',
       `/reports/settlements?season_id=${seasonId}`,
     ),
+  listSettlements: (seasonId: number, sellerId?: number) =>
+    request<{ settlements: Settlement[] }>(
+      'GET',
+      `/settlements?season_id=${seasonId}${sellerId !== undefined ? `&seller_id=${sellerId}` : ''}`,
+    ),
   createSettlement: (input: {
     seller_id: number
     season_id: number

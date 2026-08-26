@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatDateTime, formatMoney, isoToLocalInput, localInputToISO, pesosToCents } from './format'
+import { dayLabel, daysAgo, formatDateTime, formatMoney, isoToLocalInput, localInputToISO, pesosToCents } from './format'
 
 describe('formatMoney', () => {
   it('muestra centavos como pesos argentinos', () => {
@@ -47,5 +47,27 @@ describe('fechas en hora de Buenos Aires', () => {
     expect(localInputToISO('2026-12-05T21:00')).toBe('2026-12-05T21:00:00-03:00')
     // Ida y vuelta: el instante es el mismo.
     expect(new Date(localInputToISO(isoToLocalInput(iso))).getTime()).toBe(new Date(iso).getTime())
+  })
+})
+
+describe('dayLabel y daysAgo (historial C5)', () => {
+  it('hoy y ayer llevan prefijo', () => {
+    const now = new Date()
+    expect(dayLabel(now.toISOString())).toMatch(/^Hoy · /)
+    const ayer = new Date(now.getTime() - 86400_000)
+    expect(dayLabel(ayer.toISOString())).toMatch(/^Ayer · /)
+  })
+
+  it('dias anteriores: "Jue 21 ago" capitalizado y sin puntuacion', () => {
+    const label = dayLabel('2026-08-20T12:00:00-03:00')
+    expect(label[0]).toBe(label[0].toUpperCase())
+    expect(label).not.toMatch(/[.,]/)
+    expect(label).toContain('20')
+  })
+
+  it('daysAgo relata en castellano', () => {
+    expect(daysAgo(new Date().toISOString())).toBe('hoy')
+    expect(daysAgo(new Date(Date.now() - 86400_000).toISOString())).toBe('ayer')
+    expect(daysAgo(new Date(Date.now() - 3 * 86400_000).toISOString())).toBe('hace 3 días')
   })
 })
