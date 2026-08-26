@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Propuesta: listado de Ventas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:#EFE6D6; color:#1D1D1B; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:44px 20px 80px; }
+  .wrap h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(26px,4vw,36px); }
+  .wrap h1 span { color:#415DA7; }
+  .wrap p.lead { margin-top:10px; max-width:760px; font-size:14.5px; line-height:1.65; color:#4C4A44; }
+  .phones { margin-top:26px; display:flex; gap:22px; overflow-x:auto; padding:6px 2px 18px; scroll-snap-type:x mandatory; }
+  .phone { flex:0 0 302px; scroll-snap-align:start; }
+  .screen { width:302px; height:640px; border-radius:34px; overflow:hidden; border:6px solid #1D1D1B; box-shadow:0 18px 40px rgba(29,29,27,.22); display:flex; flex-direction:column; background:#F8ECDE; position:relative; }
+  .cap { margin-top:10px; text-align:center; font-size:12.5px; font-weight:600; color:#6B675E; }
+
+  :root { --azul:#415DA7; --crema:#F8ECDE; --tinta:#1D1D1B; --mut:#8B8578; --line:#EADFCB;
+          --ok:#2F7D5B; --ok-s:#E4F0EA; --warn:#B7791F; --warn-s:#F7ECD7; --blue-s:#E8EDF8; --bad:#C24A4A; --bad-s:#F7E3E3; }
+
+  .top { padding:14px 18px 10px; display:flex; align-items:center; justify-content:space-between; }
+  .brand { font-family:'Archivo',sans-serif; font-weight:800; font-size:13px; letter-spacing:0.22em; }
+  .avatar { width:28px; height:28px; border-radius:50%; background:var(--azul); color:var(--crema); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  h2.pg { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; padding:0 18px; }
+
+  /* resumen compacto */
+  .sum { margin:10px 18px 0; background:#fff; border:1px solid var(--line); border-radius:14px; padding:10px 14px; display:flex; justify-content:space-between; }
+  .sum div b { font-family:'Archivo',sans-serif; font-size:15px; font-weight:800; display:block; }
+  .sum div span { font-size:9.5px; color:var(--mut); font-weight:700; letter-spacing:0.06em; }
+  .sum .g b { color:var(--ok); } .sum .y b { color:var(--warn); }
+
+  /* búsqueda + filtros sticky */
+  .sticky { position:sticky; top:0; background:var(--crema); padding:10px 18px 8px; z-index:5; }
+  .search { display:flex; align-items:center; gap:8px; background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; font-size:13.5px; color:var(--mut); }
+  .search b { color:var(--tinta); font-weight:500; }
+  .search .cursor { display:inline-block; width:1.5px; height:15px; background:var(--azul); vertical-align:middle; }
+  .filters { display:flex; gap:6px; margin-top:8px; overflow-x:auto; }
+  .f { flex-shrink:0; font-size:11px; font-weight:800; padding:6px 11px; border-radius:99px; border:1.5px solid var(--line); background:#fff; color:#55524A; }
+  .f.on { background:var(--tinta); border-color:var(--tinta); color:var(--crema); }
+  .f.warnf.on { background:var(--warn); border-color:var(--warn); }
+  .f small { font-weight:700; opacity:.7; }
+
+  .list { flex:1; overflow:hidden; padding:2px 18px 0; }
+  .ghead { display:flex; align-items:center; gap:8px; margin:12px 0 6px; }
+  .ghead b { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .ghead::after { content:""; flex:1; height:1px; background:var(--line); }
+  .ghead span { font-size:10px; color:var(--mut); font-weight:700; }
+
+  .row { background:#fff; border:1px solid var(--line); border-radius:13px; padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+  .row .ini { width:34px; height:34px; border-radius:10px; background:var(--blue-s); color:var(--azul); font-family:'Archivo',sans-serif; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .row .mid { flex:1; min-width:0; }
+  .row .mid b { font-size:13.5px; font-weight:700; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .mid span { font-size:10.5px; color:var(--mut); }
+  .pill { font-size:10px; font-weight:800; padding:4px 8px; border-radius:99px; white-space:nowrap; flex-shrink:0; }
+  .pill.debt { background:var(--warn-s); color:var(--warn); }
+  .pill.ok { background:var(--ok-s); color:var(--ok); }
+  .pill.comp { background:var(--blue-s); color:var(--azul); }
+  .row .dots { color:var(--mut); font-weight:800; letter-spacing:1px; padding-left:2px; }
+  .hl { background:#F3E3C3; border-radius:3px; padding:0 1px; }
+
+  .fab { position:absolute; right:16px; bottom:76px; background:var(--azul); color:var(--crema); border-radius:14px; padding:12px 16px; font-weight:800; font-size:13px; box-shadow:0 8px 20px rgba(65,93,167,.35); }
+  .tabs { border-top:1px solid var(--line); background:#fff; display:grid; grid-template-columns:repeat(4,1fr); padding:8px 6px 12px; }
+  .tab { text-align:center; font-size:9.5px; font-weight:700; color:var(--mut); }
+  .tab .i { font-size:16px; display:block; margin-bottom:2px; }
+  .tab.on { color:var(--azul); }
+
+  /* bottom sheet */
+  .dim { position:absolute; inset:0; background:rgba(29,29,27,.45); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:#fff; border-radius:22px 22px 0 0; padding:10px 18px 20px; }
+  .sheet .grip { width:36px; height:4px; border-radius:99px; background:var(--line); margin:0 auto 12px; }
+  .sheet .who { display:flex; align-items:center; gap:10px; padding-bottom:12px; border-bottom:1px solid var(--line); }
+  .sheet .who .ini { width:38px; height:38px; border-radius:11px; background:var(--blue-s); color:var(--azul); font-family:'Archivo',sans-serif; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .sheet .who b { font-size:15px; font-weight:800; display:block; }
+  .sheet .who span { font-size:11px; color:var(--mut); }
+  .sheet .act { display:flex; align-items:center; gap:11px; padding:13px 2px; border-bottom:1px solid var(--line); font-size:14px; font-weight:700; }
+  .sheet .act:last-child { border-bottom:0; }
+  .sheet .act .ic { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:14px; background:var(--crema); }
+  .sheet .act.pri .ic { background:var(--ok-s); }
+  .sheet .act.danger { color:var(--bad); }
+  .sheet .act.danger .ic { background:var(--bad-s); }
+  .sheet .act small { margin-left:auto; font-size:10.5px; color:var(--mut); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ventas como <span>listado operable</span></h1>
+  <p class="lead">Propuesta para cuando haya 100+ ventas: <b>búsqueda instantánea + filtros de un tap + agrupado por función + una acción por fila</b>. La fila muestra solo lo esencial (quién, cuánto, estado) y todas las acciones viven en un bottom sheet — así el listado escanea rápido y no se llena de botones. El buscador matchea comprador Y vendedora, porque en la puerta y en la vida real se busca por los dos ("le compré a Carolina").</p>
+
+  <div class="phones">
+
+    <!-- LISTADO -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <h2 class="pg">Ventas</h2>
+        <div class="sum">
+          <div><b>131</b><span>ENTRADAS</span></div>
+          <div class="g"><b>$405.000</b><span>COBRADO</span></div>
+          <div class="y"><b>$180.000</b><span>POR COBRAR</span></div>
+        </div>
+        <div class="sticky">
+          <div class="search">🔍 <span>Buscar comprador o vendedora…</span></div>
+          <div class="filters">
+            <div class="f on">Todas <small>· 58</small></div>
+            <div class="f warnf">Deben <small>· 12</small></div>
+            <div class="f">Pagas</div>
+            <div class="f">Cortesías</div>
+            <div class="f">Gala · 4 dic ▾</div>
+          </div>
+        </div>
+        <div class="list">
+          <div class="ghead"><b>Función de gala · vie 4 dic</b><span>41 ventas</span></div>
+          <div class="row"><div class="ini">MD</div><div class="mid"><b>María Dutra</b><span>2 entradas · vendió Carolina</span></div><span class="pill debt">Debe $90.000</span><span class="dots">⋮</span></div>
+          <div class="row"><div class="ini">AH</div><div class="mid"><b>Alejandro Huertas</b><span>3 entradas · vendió Eli</span></div><span class="pill ok">Pagó</span><span class="dots">⋮</span></div>
+          <div class="row"><div class="ini">JP</div><div class="mid"><b>Julia Peralta</b><span>1 entrada · vendió Virginia</span></div><span class="pill ok">Pagó</span><span class="dots">⋮</span></div>
+          <div class="row"><div class="ini">PB</div><div class="mid"><b>Padre Benítez</b><span>2 entradas · emitió Eli</span></div><span class="pill comp">Cortesía</span><span class="dots">⋮</span></div>
+          <div class="ghead"><b>2da función · sáb 5 dic</b><span>17 ventas</span></div>
+          <div class="row"><div class="ini">RS</div><div class="mid"><b>Rosa Suárez</b><span>4 entradas · vendió Carolina</span></div><span class="pill debt">Debe $180.000</span><span class="dots">⋮</span></div>
+        </div>
+        <div class="fab">＋ Nueva venta</div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab on"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Listado: resumen + búsqueda y filtros sticky + grupos por función</div>
+    </div>
+
+    <!-- BÚSQUEDA ACTIVA -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <h2 class="pg">Ventas</h2>
+        <div class="sticky" style="margin-top:6px;">
+          <div class="search" style="border-color:var(--azul); box-shadow:0 0 0 3px rgba(65,93,167,.12);">🔍 <b>caro</b><span class="cursor"></span></div>
+          <div class="filters"><div class="f on">Todas</div><div class="f warnf">Deben</div><div class="f">Pagas</div><div class="f">Cortesías</div></div>
+        </div>
+        <div class="list">
+          <div class="ghead"><b>Vendidas por Carolina</b><span>3</span></div>
+          <div class="row"><div class="ini">MD</div><div class="mid"><b>María Dutra</b><span>2 entradas · vendió <span class="hl">Caro</span>lina</span></div><span class="pill debt">Debe $90.000</span><span class="dots">⋮</span></div>
+          <div class="row"><div class="ini">RS</div><div class="mid"><b>Rosa Suárez</b><span>4 entradas · vendió <span class="hl">Caro</span>lina</span></div><span class="pill debt">Debe $180.000</span><span class="dots">⋮</span></div>
+          <div class="row"><div class="ini">LM</div><div class="mid"><b>Lucía Molina</b><span>2 entradas · vendió <span class="hl">Caro</span>lina</span></div><span class="pill ok">Pagó</span><span class="dots">⋮</span></div>
+          <div class="ghead"><b>Compradoras</b><span>1</span></div>
+          <div class="row"><div class="ini">CV</div><div class="mid"><b><span class="hl">Caro</span>la Vega</b><span>1 entrada · vendió Josefina</span></div><span class="pill ok">Pagó</span><span class="dots">⋮</span></div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab on"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Búsqueda: matchea comprador y vendedora, con resalte</div>
+    </div>
+
+    <!-- BOTTOM SHEET -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <h2 class="pg">Ventas</h2>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grip"></div>
+          <div class="who">
+            <div class="ini">MD</div>
+            <div><b>María Dutra</b><span>2 entradas · Gala vie 4 dic · vendió Carolina · $90.000</span></div>
+          </div>
+          <div class="act pri"><div class="ic">💵</div> Marcar pagó — efectivo</div>
+          <div class="act pri"><div class="ic">🏦</div> Marcar pagó — transferencia</div>
+          <div class="act"><div class="ic">🔗</div> Copiar link de la entrada</div>
+          <div class="act"><div class="ic">✉️</div> Reenviar email <small>enviado hace 2 días</small></div>
+          <div class="act danger"><div class="ic">✕</div> Anular venta</div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab on"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Acciones por venta: bottom sheet, no botonera en la fila</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

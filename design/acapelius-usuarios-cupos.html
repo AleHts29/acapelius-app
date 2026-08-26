@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Propuestas: Usuarios y Cupos asignados</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:#EFE6D6; color:#1D1D1B; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1320px; margin:0 auto; padding:44px 20px 80px; }
+  .wrap h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(26px,4vw,36px); }
+  .wrap h1 span { color:#415DA7; }
+  .wrap p.lead { margin-top:10px; max-width:800px; font-size:14.5px; line-height:1.65; color:#4C4A44; }
+  .phones { margin-top:26px; display:flex; gap:22px; overflow-x:auto; padding:6px 2px 18px; scroll-snap-type:x mandatory; }
+  .phone { flex:0 0 302px; scroll-snap-align:start; }
+  .screen { width:302px; height:640px; border-radius:34px; overflow:hidden; border:6px solid #1D1D1B; box-shadow:0 18px 40px rgba(29,29,27,.22); display:flex; flex-direction:column; background:#F8ECDE; position:relative; }
+  .cap { margin-top:10px; text-align:center; font-size:12.5px; font-weight:600; color:#6B675E; }
+
+  :root { --azul:#415DA7; --crema:#F8ECDE; --tinta:#1D1D1B; --mut:#8B8578; --line:#EADFCB;
+          --ok:#2F7D5B; --ok-s:#E4F0EA; --warn:#B7791F; --warn-s:#F7ECD7; --blue-s:#E8EDF8; --bad:#C24A4A; --bad-s:#F7E3E3; }
+
+  .top { padding:14px 18px 8px; display:flex; align-items:center; justify-content:space-between; }
+  .brand { font-family:'Archivo',sans-serif; font-weight:800; font-size:13px; letter-spacing:0.22em; }
+  .avatar { width:28px; height:28px; border-radius:50%; background:var(--azul); color:var(--crema); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .back { font-size:13px; font-weight:700; }
+  .pgrow { padding:0 18px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  h2.pg { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .body { flex:1; overflow:hidden; padding:0 18px; }
+  .eyebrow { font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.13em; text-transform:uppercase; color:var(--mut); }
+
+  .fab { position:absolute; right:16px; bottom:76px; background:var(--azul); color:var(--crema); border-radius:14px; padding:12px 16px; font-weight:800; font-size:13px; box-shadow:0 8px 20px rgba(65,93,167,.35); }
+  .tabs { border-top:1px solid var(--line); background:#fff; display:grid; grid-template-columns:repeat(4,1fr); padding:8px 6px 12px; }
+  .tab { text-align:center; font-size:9.5px; font-weight:700; color:var(--mut); }
+  .tab .i { font-size:16px; display:block; margin-bottom:2px; }
+  .tab.on { color:var(--tinta); }
+
+  /* usuarios */
+  .ghead { display:flex; align-items:center; gap:8px; margin:12px 0 7px; }
+  .ghead b { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .ghead::after { content:""; flex:1; height:1px; background:var(--line); }
+  .u { background:#fff; border:1px solid var(--line); border-radius:13px; padding:11px 12px; margin-bottom:7px; display:flex; align-items:center; gap:10px; }
+  .u .ini { width:36px; height:36px; border-radius:11px; background:var(--blue-s); color:var(--azul); font-family:'Archivo',sans-serif; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .u .mid { flex:1; min-width:0; }
+  .u .mid b { font-size:13.5px; font-weight:700; display:block; }
+  .u .mid span { font-size:10.5px; color:var(--mut); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+  .pill { font-size:10px; font-weight:800; padding:4px 8px; border-radius:99px; white-space:nowrap; flex-shrink:0; }
+  .pill.dir { background:var(--tinta); color:var(--crema); }
+  .pill.cor { background:var(--blue-s); color:var(--azul); }
+  .pill.pue { background:var(--ok-s); color:var(--ok); }
+  .pill.pend { background:var(--warn-s); color:var(--warn); }
+  .u .chev { color:var(--mut); }
+
+  /* sheet nuevo usuario */
+  .dim { position:absolute; inset:0; background:rgba(29,29,27,.45); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:#fff; border-radius:22px 22px 0 0; padding:10px 18px 18px; }
+  .sheet .grip { width:36px; height:4px; border-radius:99px; background:var(--line); margin:0 auto 12px; }
+  .sheet h3 { font-family:'Archivo',sans-serif; font-size:16px; font-weight:800; }
+  .sheet label { display:block; margin-top:12px; font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .inp { margin-top:6px; border:1.5px solid var(--line); border-radius:12px; padding:11px 13px; font-size:13.5px; background:#FDFAF5; color:var(--mut); }
+  .inp.f { border-color:var(--azul); box-shadow:0 0 0 3px rgba(65,93,167,.12); background:#fff; color:var(--tinta); }
+  .seg3 { margin-top:6px; display:grid; grid-template-columns:1fr 1fr 1fr; border:1.5px solid var(--line); border-radius:12px; overflow:hidden; }
+  .seg3 div { padding:10px 4px; text-align:center; font-size:11.5px; font-weight:800; background:#FDFAF5; color:var(--mut); }
+  .seg3 div.on { background:var(--azul); color:var(--crema); }
+  .sheet .cta { margin-top:14px; background:var(--azul); color:var(--crema); border-radius:12px; padding:13px; text-align:center; font-size:14px; font-weight:800; }
+  .sheet .hint { margin-top:8px; text-align:center; font-size:10.5px; color:var(--mut); }
+
+  /* asignación de cupos */
+  .alloc-sum { margin-top:10px; background:#fff; border:1px solid var(--line); border-radius:15px; padding:12px 14px; }
+  .alloc-sum .r1 { display:flex; justify-content:space-between; align-items:baseline; }
+  .alloc-sum b.n { font-family:'Archivo',sans-serif; font-size:20px; font-weight:800; }
+  .alloc-sum span.lbl { font-size:9.5px; font-weight:800; letter-spacing:0.1em; color:var(--mut); }
+  .stack { margin-top:9px; height:8px; border-radius:99px; overflow:hidden; display:flex; background:var(--line); }
+  .stack i.a { background:var(--azul); width:55%; }
+  .stack i.b { background:#8FA3D0; width:20%; }
+  .alloc-sum .leg { margin-top:7px; display:flex; gap:12px; font-size:10px; color:var(--mut); font-weight:600; flex-wrap:wrap; }
+  .alloc-sum .leg i { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:4px; }
+
+  .arow { background:#fff; border:1px solid var(--line); border-radius:13px; padding:10px 12px; margin-bottom:7px; display:flex; align-items:center; gap:9px; }
+  .arow .mid { flex:1; min-width:0; }
+  .arow .mid b { font-size:13px; font-weight:700; display:block; }
+  .arow .mid span { font-size:10px; color:var(--mut); }
+  .arow .mid span.warn { color:var(--warn); font-weight:700; }
+  .step { display:flex; align-items:center; border:1.5px solid var(--line); border-radius:10px; overflow:hidden; background:#FDFAF5; flex-shrink:0; }
+  .step i { width:30px; height:32px; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:var(--azul); }
+  .step i.off { color:var(--line); }
+  .step b { width:30px; text-align:center; font-family:'Archivo',sans-serif; font-size:14px; font-weight:800; }
+  .savebar { margin:6px 0 12px; background:var(--azul); color:var(--crema); border-radius:12px; padding:12px; text-align:center; font-size:13.5px; font-weight:800; }
+
+  /* vender con cupo */
+  .quota { margin-top:10px; background:var(--blue-s); border:1px solid #CBD6EE; border-radius:13px; padding:10px 13px; display:flex; align-items:center; justify-content:space-between; }
+  .quota b { font-family:'Archivo',sans-serif; font-size:13px; font-weight:800; color:var(--azul); }
+  .quota span { font-size:10px; color:var(--azul); font-weight:700; opacity:.8; }
+  .formcard { margin-top:10px; background:#fff; border:1px solid var(--line); border-radius:16px; padding:14px; }
+  .fld { margin-top:11px; } .fld:first-child { margin-top:0; }
+  .fld label { font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .qty { display:flex; align-items:center; gap:12px; margin-top:6px; }
+  .qty .stepper { display:flex; align-items:center; border:1.5px solid var(--warn); border-radius:12px; overflow:hidden; background:#FDFAF5; }
+  .qty .stepper i { width:40px; height:40px; display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:800; color:var(--azul); }
+  .qty .stepper i.max { color:var(--line); }
+  .qty .stepper b { width:40px; text-align:center; font-family:'Archivo',sans-serif; font-size:16px; font-weight:800; }
+  .qty .total { font-size:11px; color:var(--mut); }
+  .qty .total b { color:var(--tinta); font-size:13.5px; }
+  .maxnote { margin-top:7px; font-size:10.5px; color:var(--warn); font-weight:700; }
+  .cta { margin-top:12px; background:var(--azul); color:var(--crema); border-radius:12px; padding:13px; text-align:center; font-size:13.5px; font-weight:800; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Usuarios renovada + <span>cupos asignados por Eli</span></h1>
+  <p class="lead"><b>Usuarios:</b> lista primero (lo que se consulta seguido), creación por botón "＋" que abre un sheet, chip "Invitación pendiente" para quien nunca entró, y tap en cada persona para editar. <b>Cupos:</b> desde la función, Eli reparte entradas entre coristas con steppers y ve asignado vs. sin asignar; la corista ve su cupo restante en Vender y el stepper se frena en su límite con un mensaje claro — modo estricto: sin cupo no se vende.</p>
+
+  <div class="phones">
+
+    <!-- 1. USUARIOS LISTA -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <div class="pgrow"><h2 class="pg">Equipo</h2></div>
+        <div class="body">
+          <div class="ghead"><b>Dirección · 1</b></div>
+          <div class="u"><div class="ini" style="background:var(--tinta); color:var(--crema);">E</div><div class="mid"><b>Eli</b><span>acapelius@gmail.com</span></div><span class="pill dir">Dirección</span><span class="chev">›</span></div>
+          <div class="ghead"><b>Coristas · 4</b></div>
+          <div class="u"><div class="ini">C</div><div class="mid"><b>Carolina</b><span>carolina@gmail.com</span></div><span class="pill cor">Corista</span><span class="chev">›</span></div>
+          <div class="u"><div class="ini">V</div><div class="mid"><b>Virginia</b><span>virginia@gmail.com</span></div><span class="pill cor">Corista</span><span class="chev">›</span></div>
+          <div class="u"><div class="ini">A</div><div class="mid"><b>Alejandro</b><span>alejo29h@gmail.com</span></div><span class="pill cor">Corista</span><span class="chev">›</span></div>
+          <div class="u"><div class="ini">J</div><div class="mid"><b>Josefina</b><span>josefina@gmail.com</span></div><span class="pill pend">Invitación pendiente</span><span class="chev">›</span></div>
+          <div class="ghead"><b>Puerta · 1</b></div>
+          <div class="u"><div class="ini" style="background:var(--ok-s); color:var(--ok);">M</div><div class="mid"><b>Marta</b><span>marta@gmail.com</span></div><span class="pill pue">Puerta</span><span class="chev">›</span></div>
+        </div>
+        <div class="fab">＋ Nuevo usuario</div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Equipo: lista agrupada por rol, alta con "＋"</div>
+    </div>
+
+    <!-- 2. SHEET NUEVO USUARIO -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <div class="pgrow"><h2 class="pg">Equipo</h2></div>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grip"></div>
+          <h3>Nuevo usuario</h3>
+          <label>Nombre</label>
+          <div class="inp f">Josefina</div>
+          <label>Email</label>
+          <div class="inp">josefina@gmail.com</div>
+          <label>Rol</label>
+          <div class="seg3"><div class="on">Corista</div><div>Puerta</div><div>Dirección</div></div>
+          <div class="cta">Crear y enviar invitación</div>
+          <div class="hint">Le llega un email con acceso y contraseña temporal</div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Alta en sheet: rol como segmento, invitación por email</div>
+    </div>
+
+    <!-- 3. ASIGNAR CUPOS -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="back">‹ Función de gala</div><div class="avatar">E</div></div>
+        <div class="pgrow"><h2 class="pg">Asignar entradas</h2></div>
+        <div class="body">
+          <div class="alloc-sum">
+            <div class="r1"><b class="n">60 <span style="font-size:13px; color:var(--mut); font-weight:600;">de 80 asignadas</span></b><span class="lbl">QUEDAN 20</span></div>
+            <div class="stack"><i class="a"></i><i class="b"></i></div>
+            <div class="leg">
+              <span><i style="background:var(--azul);"></i>Asignadas 60</span>
+              <span><i style="background:#8FA3D0;"></i>Ya vendidas 16</span>
+              <span><i style="background:var(--line);"></i>Sin asignar 20</span>
+            </div>
+          </div>
+          <div class="ghead"><b>Coristas</b></div>
+          <div class="arow"><div class="mid"><b>Carolina</b><span>Vendió 9 de 20</span></div><div class="step"><i>−</i><b>20</b><i>+</i></div></div>
+          <div class="arow"><div class="mid"><b>Virginia</b><span>Vendió 5 de 15</span></div><div class="step"><i>−</i><b>15</b><i>+</i></div></div>
+          <div class="arow"><div class="mid"><b>Alejandro</b><span>Vendió 2 de 10</span></div><div class="step"><i>−</i><b>10</b><i>+</i></div></div>
+          <div class="arow"><div class="mid"><b>Josefina</b><span class="warn">Vendió 15 de 15 · no podés bajar de 15</span></div><div class="step"><i class="off">−</i><b>15</b><i>+</i></div></div>
+          <div class="savebar">Guardar asignación</div>
+        </div>
+      </div>
+      <div class="cap">Eli reparte con steppers · barra asignado/vendido/libre</div>
+    </div>
+
+    <!-- 4. VENDER CON CUPO -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">C</div></div>
+        <div class="pgrow"><h2 class="pg">Nueva venta</h2></div>
+        <div class="body">
+          <div class="quota"><b>Te quedan 2 de 20 para la Gala</b><span>Asignadas por dirección</span></div>
+          <div class="formcard">
+            <div class="fld"><label>Función</label><div class="inp" style="color:var(--tinta);">Gala · vie 4 dic, 20:00 ▾</div></div>
+            <div class="fld"><label>Quién compra</label><div class="inp f">Rosa Suárez</div></div>
+            <div class="fld"><label>Cantidad</label>
+              <div class="qty">
+                <div class="stepper"><i>−</i><b>2</b><i class="max">+</i></div>
+                <div class="total">Total<br><b>$90.000</b></div>
+              </div>
+              <div class="maxnote">Llegaste a tu cupo. Si necesitás más, pedile a Eli.</div>
+            </div>
+            <div class="cta">Registrar venta y enviar QR</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab on"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Corista: su cupo visible, stepper frenado en el límite</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

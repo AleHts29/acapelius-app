@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Propuesta: Asistencia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:#EFE6D6; color:#1D1D1B; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:44px 20px 80px; }
+  .wrap h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(26px,4vw,36px); }
+  .wrap h1 span { color:#415DA7; }
+  .wrap p.lead { margin-top:10px; max-width:780px; font-size:14.5px; line-height:1.65; color:#4C4A44; }
+  .phones { margin-top:26px; display:flex; gap:22px; overflow-x:auto; padding:6px 2px 18px; scroll-snap-type:x mandatory; }
+  .phone { flex:0 0 302px; scroll-snap-align:start; }
+  .screen { width:302px; height:640px; border-radius:34px; overflow:hidden; border:6px solid #1D1D1B; box-shadow:0 18px 40px rgba(29,29,27,.22); display:flex; flex-direction:column; background:#F8ECDE; position:relative; }
+  .cap { margin-top:10px; text-align:center; font-size:12.5px; font-weight:600; color:#6B675E; }
+
+  :root { --azul:#415DA7; --crema:#F8ECDE; --tinta:#1D1D1B; --mut:#8B8578; --line:#EADFCB;
+          --ok:#2F7D5B; --ok-s:#E4F0EA; --warn:#B7791F; --warn-s:#F7ECD7; --blue-s:#E8EDF8; --bad:#C24A4A; }
+
+  .top { padding:14px 18px 8px; display:flex; align-items:center; justify-content:space-between; }
+  .brand { font-family:'Archivo',sans-serif; font-weight:800; font-size:13px; letter-spacing:0.22em; }
+  .avatar { width:28px; height:28px; border-radius:50%; background:var(--azul); color:var(--crema); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .pgrow { padding:0 18px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  h2.pg { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .fnsel { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:800; color:var(--tinta); border:1.5px solid var(--line); background:#fff; border-radius:99px; padding:6px 10px; white-space:nowrap; }
+  .fnsel span { color:var(--mut); font-weight:700; }
+  .body { flex:1; overflow:hidden; padding:0 18px; }
+
+  /* KPI con progreso y vivo */
+  .live { margin-top:10px; background:#fff; border:1px solid var(--line); border-radius:15px; padding:12px 14px; }
+  .live .r1 { display:flex; align-items:baseline; justify-content:space-between; }
+  .live .n { font-family:'Archivo',sans-serif; font-size:26px; font-weight:800; color:var(--ok); }
+  .live .n span { font-size:14px; color:var(--mut); font-weight:600; }
+  .live .dot { display:flex; align-items:center; gap:5px; font-size:9.5px; font-weight:800; letter-spacing:0.1em; color:var(--ok); }
+  .live .dot i { width:7px; height:7px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 3px var(--ok-s); }
+  .live .bar { margin-top:9px; height:7px; border-radius:99px; background:var(--line); overflow:hidden; }
+  .live .bar i { display:block; height:100%; width:70%; background:var(--ok); }
+  .live .leg { margin-top:7px; display:flex; justify-content:space-between; font-size:10.5px; color:var(--mut); font-weight:600; }
+  .live .leg b { color:var(--tinta); }
+
+  /* búsqueda + toggle */
+  .sticky { position:sticky; top:0; background:var(--crema); padding:10px 0 8px; }
+  .search { display:flex; align-items:center; gap:8px; background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:9px 12px; font-size:13px; color:var(--mut); }
+  .toggle { margin-top:8px; display:grid; grid-template-columns:1fr 1fr; border:1.5px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+  .toggle div { padding:9px; text-align:center; font-size:12px; font-weight:800; color:var(--mut); }
+  .toggle div.on { background:var(--tinta); color:var(--crema); }
+  .toggle div small { font-weight:700; opacity:.7; }
+
+  .ghead { font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); margin:10px 0 6px; }
+
+  /* fila por comprador con contador de entradas */
+  .row { background:#fff; border:1px solid var(--line); border-radius:13px; padding:10px 12px; margin-bottom:7px; display:flex; align-items:center; gap:10px; }
+  .row .ini { width:34px; height:34px; border-radius:10px; background:var(--ok-s); color:var(--ok); font-family:'Archivo',sans-serif; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .row.pending .ini { background:var(--warn-s); color:var(--warn); }
+  .row .mid { flex:1; min-width:0; }
+  .row .mid b { font-size:13.5px; font-weight:700; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .mid span { font-size:10.5px; color:var(--mut); }
+  .cnt { font-family:'Archivo',sans-serif; font-size:11px; font-weight:800; padding:4px 8px; border-radius:99px; flex-shrink:0; }
+  .cnt.full { background:var(--ok-s); color:var(--ok); }
+  .cnt.part { background:var(--warn-s); color:var(--warn); }
+  .row .when { font-size:10px; color:var(--mut); font-weight:700; flex-shrink:0; text-align:right; }
+  .row .m { font-size:11px; flex-shrink:0; }
+
+  /* fila expandida */
+  .xrow { background:#fff; border:1.5px solid var(--azul); border-radius:13px; padding:10px 12px; margin-bottom:7px; }
+  .xrow .h { display:flex; align-items:center; gap:10px; }
+  .xrow .tks { margin-top:9px; border-top:1px solid var(--line); padding-top:4px; }
+  .tk { display:flex; align-items:center; justify-content:space-between; padding:6px 2px; font-size:11.5px; }
+  .tk .l { display:flex; align-items:center; gap:7px; }
+  .tk .st { width:17px; height:17px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; }
+  .tk .st.in { background:var(--ok-s); color:var(--ok); }
+  .tk .st.no { background:var(--line); color:var(--mut); }
+  .tk .meta { color:var(--mut); font-size:10px; font-weight:600; }
+
+  .tabs { border-top:1px solid var(--line); background:#fff; display:grid; grid-template-columns:repeat(4,1fr); padding:8px 6px 12px; }
+  .tab { text-align:center; font-size:9.5px; font-weight:700; color:var(--mut); }
+  .tab .i { font-size:16px; display:block; margin-bottom:2px; }
+  .tab.on { color:var(--tinta); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Asistencia: <span>por comprador, no por entrada</span></h1>
+  <p class="lead">El cambio de fondo: la captura muestra <b>una fila por entrada</b> (Alejandro aparece 2 veces) — con 80 entradas es ruido puro. La propuesta agrupa <b>una fila por comprador</b> con contador "2/3 ingresaron"; tocándola se expande el detalle de cada entrada con hora y quién escaneó. Arriba, el toggle <b>Ingresaron / Faltan</b>: la pestaña "Faltan" es oro para Eli — responde "¿llegó el padre?" y a quién esperar, con la vendedora a mano para avisarle. Búsqueda sticky, contador vivo con barra de ocupación, y el ícono ✋ marca los ingresos manuales (vs. 📷 escaneados).</p>
+
+  <div class="phones">
+
+    <!-- 1. INGRESARON -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <div class="pgrow"><h2 class="pg">Asistencia</h2><div class="fnsel">Gala · vie 4 <span>▾</span></div></div>
+        <div class="body">
+          <div class="live">
+            <div class="r1"><div class="n">56<span> / 80</span></div><div class="dot"><i></i>EN VIVO</div></div>
+            <div class="bar"><i></i></div>
+            <div class="leg"><span><b>21</b> de 32 compradores completos</span><span>70%</span></div>
+          </div>
+          <div class="sticky">
+            <div class="search">🔍 <span>Buscar comprador o vendedora…</span></div>
+            <div class="toggle"><div class="on">Ingresaron <small>· 24</small></div><div>Faltan <small>· 8</small></div></div>
+          </div>
+          <div class="ghead">Últimos ingresos</div>
+          <div class="row"><div class="ini">MD</div><div class="mid"><b>María Dutra</b><span>vendió Carolina</span></div><span class="cnt full">2/2</span><span class="m">📷</span><div class="when">20:47</div></div>
+          <div class="row"><div class="ini">AH</div><div class="mid"><b>Alejandro Huertas</b><span>vendió Eli</span></div><span class="cnt part">2/3</span><span class="m">📷</span><div class="when">20:44</div></div>
+          <div class="row"><div class="ini">PB</div><div class="mid"><b>Padre Benítez</b><span>cortesía · emitió Eli</span></div><span class="cnt full">2/2</span><span class="m">✋</span><div class="when">20:41</div></div>
+          <div class="row"><div class="ini">JP</div><div class="mid"><b>Julia Peralta</b><span>vendió Virginia</span></div><span class="cnt full">1/1</span><span class="m">📷</span><div class="when">20:38</div></div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Una fila por comprador, contador N/M, método 📷/✋</div>
+    </div>
+
+    <!-- 2. FALTAN -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <div class="pgrow"><h2 class="pg">Asistencia</h2><div class="fnsel">Gala · vie 4 <span>▾</span></div></div>
+        <div class="body">
+          <div class="sticky" style="margin-top:8px;">
+            <div class="search">🔍 <span>Buscar comprador o vendedora…</span></div>
+            <div class="toggle"><div>Ingresaron <small>· 24</small></div><div class="on">Faltan <small>· 8</small></div></div>
+          </div>
+          <div class="ghead">Sin ingresar aún · 24 entradas</div>
+          <div class="row pending"><div class="ini">RS</div><div class="mid"><b>Rosa Suárez</b><span>vendió Carolina · 4 entradas</span></div><span class="cnt part">0/4</span></div>
+          <div class="row pending"><div class="ini">AH</div><div class="mid"><b>Alejandro Huertas</b><span>vendió Eli · falta 1 de 3</span></div><span class="cnt part">2/3</span></div>
+          <div class="row pending"><div class="ini">LM</div><div class="mid"><b>Lucía Molina</b><span>vendió Carolina · 2 entradas</span></div><span class="cnt part">0/2</span></div>
+          <div class="row pending"><div class="ini">GT</div><div class="mid"><b>Graciela Torres</b><span>vendió Josefina · 1 entrada</span></div><span class="cnt part">0/1</span></div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">"Faltan": a quién esperar, con su vendedora a mano</div>
+    </div>
+
+    <!-- 3. EXPANDIDO -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <div class="pgrow"><h2 class="pg">Asistencia</h2><div class="fnsel">Gala · vie 4 <span>▾</span></div></div>
+        <div class="body">
+          <div class="ghead" style="margin-top:12px;">Últimos ingresos</div>
+          <div class="row"><div class="ini">MD</div><div class="mid"><b>María Dutra</b><span>vendió Carolina</span></div><span class="cnt full">2/2</span><span class="m">📷</span><div class="when">20:47</div></div>
+
+          <div class="xrow">
+            <div class="h"><div class="ini" style="background:var(--warn-s); color:var(--warn);">AH</div><div class="mid"><b>Alejandro Huertas</b><span>vendió Eli · 3 entradas</span></div><span class="cnt part">2/3</span></div>
+            <div class="tks">
+              <div class="tk"><div class="l"><span class="st in">✓</span> Entrada 1</div><span class="meta">📷 20:44 · escaneó Eli</span></div>
+              <div class="tk"><div class="l"><span class="st in">✓</span> Entrada 2</div><span class="meta">✋ 20:45 · manual · Eli</span></div>
+              <div class="tk"><div class="l"><span class="st no">–</span> Entrada 3</div><span class="meta">sin ingresar</span></div>
+            </div>
+          </div>
+
+          <div class="row"><div class="ini">PB</div><div class="mid"><b>Padre Benítez</b><span>cortesía · emitió Eli</span></div><span class="cnt full">2/2</span><span class="m">✋</span><div class="when">20:41</div></div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Tap en la fila: detalle por entrada con hora y quién escaneó</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

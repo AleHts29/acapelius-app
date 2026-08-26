@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Propuesta: panel de Dirección</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:#EFE6D6; color:#1D1D1B; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:44px 20px 80px; }
+  .wrap h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(26px,4vw,36px); }
+  .wrap h1 span { color:#415DA7; }
+  .wrap p.lead { margin-top:10px; max-width:800px; font-size:14.5px; line-height:1.65; color:#4C4A44; }
+  .phones { margin-top:26px; display:flex; gap:22px; overflow-x:auto; padding:6px 2px 18px; scroll-snap-type:x mandatory; }
+  .phone { flex:0 0 302px; scroll-snap-align:start; }
+  .screen { width:302px; height:640px; border-radius:34px; overflow:hidden; border:6px solid #1D1D1B; box-shadow:0 18px 40px rgba(29,29,27,.22); display:flex; flex-direction:column; background:#F8ECDE; position:relative; }
+  .cap { margin-top:10px; text-align:center; font-size:12.5px; font-weight:600; color:#6B675E; }
+
+  :root { --azul:#415DA7; --crema:#F8ECDE; --tinta:#1D1D1B; --mut:#8B8578; --line:#EADFCB;
+          --ok:#2F7D5B; --ok-s:#E4F0EA; --warn:#B7791F; --warn-s:#F7ECD7; --blue-s:#E8EDF8; --bad:#C24A4A; }
+
+  .top { padding:14px 18px 8px; display:flex; align-items:center; justify-content:space-between; }
+  .brand { font-family:'Archivo',sans-serif; font-weight:800; font-size:13px; letter-spacing:0.22em; }
+  .avatar { width:28px; height:28px; border-radius:50%; background:var(--azul); color:var(--crema); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .pgrow { padding:0 18px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  h2.pg { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .season { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:800; border:1.5px solid var(--line); background:#fff; border-radius:99px; padding:6px 10px; white-space:nowrap; }
+  .season span { color:var(--mut); }
+  .body { flex:1; overflow:hidden; padding:0 18px; }
+
+  /* KPIs compactos en tira 2x2 apretada */
+  .kpis { margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .kpi { background:#fff; border:1px solid var(--line); border-radius:13px; padding:10px 12px; }
+  .kpi b { font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; display:block; }
+  .kpi span { font-size:9.5px; color:var(--mut); font-weight:700; letter-spacing:0.05em; }
+  .kpi b.g { color:var(--ok); } .kpi b.y { color:var(--warn); } .kpi b.b { color:var(--azul); }
+  .kpi .sub { font-size:9px; color:var(--mut); margin-top:2px; }
+
+  .ghead { display:flex; align-items:center; gap:8px; margin:13px 0 7px; }
+  .ghead b { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .ghead::after { content:""; flex:1; height:1px; background:var(--line); }
+  .ghead .n { font-size:10px; font-weight:800; color:var(--warn); }
+
+  /* alertas accionables */
+  .alert { background:#fff; border:1px solid var(--line); border-left:4px solid var(--warn); border-radius:13px; padding:11px 13px; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+  .alert .ic { width:32px; height:32px; border-radius:10px; background:var(--warn-s); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  .alert .mid { flex:1; min-width:0; }
+  .alert .mid b { font-size:12.5px; font-weight:700; display:block; }
+  .alert .mid span { font-size:10.5px; color:var(--mut); }
+  .alert .go { font-size:11px; font-weight:800; color:var(--azul); white-space:nowrap; }
+  .alert.blue { border-left-color:var(--azul); }
+  .alert.blue .ic { background:var(--blue-s); }
+
+  /* todo en orden */
+  .allok { background:#fff; border:1px solid var(--line); border-left:4px solid var(--ok); border-radius:13px; padding:13px; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+  .allok .ic { width:32px; height:32px; border-radius:50%; background:var(--ok-s); color:var(--ok); display:flex; align-items:center; justify-content:center; font-weight:800; }
+  .allok b { font-size:12.5px; font-weight:700; display:block; }
+  .allok span { font-size:10.5px; color:var(--mut); }
+
+  /* funciones: mini cards con progreso */
+  .fn { background:#fff; border:1px solid var(--line); border-radius:14px; padding:11px 13px; margin-bottom:8px; }
+  .fn .h { display:flex; align-items:center; justify-content:space-between; }
+  .fn .h b { font-size:13px; font-weight:800; }
+  .fn .h span.date { font-size:10px; color:var(--mut); font-weight:700; }
+  .pill { font-size:9.5px; font-weight:800; padding:3px 8px; border-radius:99px; }
+  .pill.hoy { background:var(--ok); color:#fff; }
+  .pill.hecha { background:var(--line); color:var(--mut); }
+  .fn .bar { margin-top:8px; height:6px; border-radius:99px; background:var(--line); overflow:hidden; }
+  .fn .bar i { display:block; height:100%; background:var(--azul); }
+  .fn .leg { margin-top:6px; display:flex; justify-content:space-between; font-size:10px; color:var(--mut); font-weight:600; }
+  .fn .leg b { color:var(--tinta); }
+  .fn .leg b.g { color:var(--ok); }
+
+  /* ritmo de ventas mini chart */
+  .chart { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 13px; margin-bottom:8px; }
+  .chart .h { display:flex; justify-content:space-between; align-items:baseline; }
+  .chart .h b { font-size:12px; font-weight:800; }
+  .chart .h span { font-size:10px; color:var(--ok); font-weight:800; }
+  .bars { margin-top:9px; display:flex; align-items:flex-end; gap:4px; height:44px; }
+  .bars i { flex:1; background:var(--blue-s); border-radius:3px 3px 0 0; }
+  .bars i.hot { background:var(--azul); }
+
+  /* accesos grid */
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+  .acc { background:#fff; border:1px solid var(--line); border-radius:13px; padding:11px 12px; }
+  .acc .ic { font-size:15px; }
+  .acc b { display:block; margin-top:6px; font-size:12px; font-weight:800; }
+  .acc span { font-size:9.5px; color:var(--mut); }
+
+  .tabs { border-top:1px solid var(--line); background:#fff; display:grid; grid-template-columns:repeat(4,1fr); padding:8px 6px 12px; }
+  .tab { text-align:center; font-size:9.5px; font-weight:700; color:var(--mut); }
+  .tab .i { font-size:16px; display:block; margin-bottom:2px; }
+  .tab.on { color:var(--tinta); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Dirección: <span>de tablero estático a asistente</span></h1>
+  <p class="lead">Tres movimientos: <b>(1) "Necesita tu atención"</b> reemplaza la card suelta de rendiciones — junta en un solo lugar todo lo accionable (deudas, cupos sin asignar, invitaciones pendientes) con link directo, y desaparece lo resuelto mostrando un "todo en orden" verde; <b>(2) la temporada por función</b>: mini-cards con barra de venta, ingresos y estado (hoy / hecha / próxima) — el pulso real de la temporada que los 4 KPI globales no cuentan; <b>(3)</b> KPIs más compactos con contexto ("$90.000 en manos de 2 coristas") y los accesos de administración como grid de 2 columnas, mitad de scroll.</p>
+
+  <div class="phones">
+
+    <!-- 1. CON PENDIENTES -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <div class="pgrow"><h2 class="pg">Dirección</h2><div class="season">Temporada 2026 <span>▾</span></div></div>
+        <div class="body">
+          <div class="kpis">
+            <div class="kpi"><b class="g">$405.000</b><span>RECAUDADO</span></div>
+            <div class="kpi"><b class="y">$90.000</b><span>POR RENDIR</span><div class="sub">en manos de 1 corista</div></div>
+            <div class="kpi"><b class="b">131 <span style="font-size:11px; color:var(--mut);">/ 160</span></b><span>VENDIDAS</span></div>
+            <div class="kpi"><b>2/5</b><span>FUNCIONES HECHAS</span></div>
+          </div>
+
+          <div class="ghead"><b>Necesita tu atención</b><span class="n">3</span></div>
+          <div class="alert">
+            <div class="ic">💰</div>
+            <div class="mid"><b>Carolina debe rendir $90.000</b><span>Cobró hace 12 días</span></div>
+            <div class="go">Registrar ›</div>
+          </div>
+          <div class="alert">
+            <div class="ic">🎟</div>
+            <div class="mid"><b>2da función: 20 entradas sin asignar</b><span>Sáb 5 dic · cupo 80</span></div>
+            <div class="go">Asignar ›</div>
+          </div>
+          <div class="alert blue">
+            <div class="ic">✉️</div>
+            <div class="mid"><b>Josefina nunca entró a la app</b><span>Invitada hace 5 días</span></div>
+            <div class="go">Reenviar ›</div>
+          </div>
+
+          <div class="ghead"><b>Administración</b></div>
+          <div class="grid2">
+            <div class="acc"><div class="ic">📈</div><b>Panel de ventas</b><span>Por corista y función</span></div>
+            <div class="acc"><div class="ic">👥</div><b>Asistencia</b><span>Quién entró</span></div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">"Necesita tu atención": todo lo accionable, con link directo</div>
+    </div>
+
+    <!-- 2. TEMPORADA POR FUNCIÓN -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <div class="pgrow"><h2 class="pg">Dirección</h2><div class="season">Temporada 2026 <span>▾</span></div></div>
+        <div class="body">
+          <div class="ghead" style="margin-top:10px;"><b>La temporada, función por función</b></div>
+
+          <div class="fn">
+            <div class="h"><b>Función de gala</b><span class="pill hoy">HOY</span></div>
+            <div class="bar"><i style="width:64%"></i></div>
+            <div class="leg"><span><b>51/80</b> vendidas</span><span>Recaudó <b class="g">$180.000</b></span></div>
+          </div>
+
+          <div class="fn">
+            <div class="h"><b>2da función</b><span class="h"><span class="date">sáb 5 dic</span></span></div>
+            <div class="bar"><i style="width:38%"></i></div>
+            <div class="leg"><span><b>30/80</b> vendidas · 20 sin asignar</span><span><b class="g">$95.000</b></span></div>
+          </div>
+
+          <div class="fn" style="opacity:.75;">
+            <div class="h"><b>Ensayo abierto</b><span class="pill hecha">HECHA</span></div>
+            <div class="bar"><i style="width:88%; background:var(--ok);"></i></div>
+            <div class="leg"><span><b>44/50</b> vendidas · <b class="g">41</b> ingresaron</span><span><b class="g">$130.000</b></span></div>
+          </div>
+
+          <div class="chart">
+            <div class="h"><b>Ritmo de ventas · últimas 2 semanas</b><span>↑ 23</span></div>
+            <div class="bars">
+              <i style="height:20%"></i><i style="height:12%"></i><i style="height:28%"></i><i style="height:16%"></i><i style="height:35%"></i><i style="height:24%"></i><i style="height:40%"></i><i style="height:30%"></i><i style="height:55%"></i><i style="height:44%"></i><i style="height:62%"></i><i class="hot" style="height:78%"></i><i class="hot" style="height:70%"></i><i class="hot" style="height:100%"></i>
+            </div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">El pulso por función: barra de venta, recaudación y estado</div>
+    </div>
+
+    <!-- 3. TODO EN ORDEN -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <div class="pgrow"><h2 class="pg">Dirección</h2><div class="season">Temporada 2026 <span>▾</span></div></div>
+        <div class="body">
+          <div class="kpis">
+            <div class="kpi"><b class="g">$585.000</b><span>RECAUDADO</span></div>
+            <div class="kpi"><b class="g">$0</b><span>POR RENDIR</span><div class="sub">todas al día</div></div>
+            <div class="kpi"><b class="b">160 <span style="font-size:11px; color:var(--mut);">/ 160</span></b><span>VENDIDAS</span></div>
+            <div class="kpi"><b>5/5</b><span>FUNCIONES HECHAS</span></div>
+          </div>
+
+          <div class="ghead"><b>Necesita tu atención</b></div>
+          <div class="allok">
+            <div class="ic">✓</div>
+            <div><b>Todo en orden</b><span>Sin rendiciones pendientes ni tareas abiertas. ¡Gran temporada!</span></div>
+          </div>
+
+          <div class="ghead"><b>Administración</b></div>
+          <div class="grid2">
+            <div class="acc"><div class="ic">📈</div><b>Panel de ventas</b><span>Por corista y función</span></div>
+            <div class="acc"><div class="ic">👥</div><b>Asistencia</b><span>Quién entró</span></div>
+            <div class="acc"><div class="ic">📅</div><b>Temporadas</b><span>Funciones y cupos</span></div>
+            <div class="acc"><div class="ic">🎤</div><b>Equipo</b><span>Coristas y roles</span></div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Sin pendientes: estado "todo en orden" + accesos en grid</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

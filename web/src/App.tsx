@@ -6,6 +6,7 @@ import { useSession } from './auth/session'
 import { Layout } from './components/Layout'
 import { AttendancePage } from './pages/AttendancePage'
 import { ChangePasswordPage } from './pages/ChangePasswordPage'
+import { DevUIPage } from './pages/DevUIPage'
 import { DireccionPage } from './pages/DireccionPage'
 import { DoorPage } from './pages/DoorPage'
 import { HomePage } from './pages/HomePage'
@@ -60,6 +61,14 @@ function AuthenticatedApp() {
         <Route
           index
           element={user.role === 'door' ? <Navigate to="/puerta" replace /> : <HomePage />}
+        />
+        <Route
+          path="/dev/ui"
+          element={
+            <RequireAdmin>
+              <DevUIPage />
+            </RequireAdmin>
+          }
         />
         <Route
           path="/direccion"

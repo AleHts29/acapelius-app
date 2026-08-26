@@ -27,3 +27,18 @@ export function BalanceChip({ balanceCents }: { balanceCents: number }) {
   if (balanceCents < 0) return <Chip tone="ok">A favor {formatMoney(-balanceCents)}</Chip>
   return <Chip tone="ok">Al día</Chip>
 }
+
+/** CounterChip k/N: verde completo, ámbar parcial, neutro en cero (C10). */
+export function CounterChip({ count, total }: { count: number; total: number }) {
+  const tone = count >= total && total > 0 ? 'ok' : count > 0 ? 'warn' : 'neutral'
+  return (
+    <Chip tone={tone}>
+      {count}/{total}
+    </Chip>
+  )
+}
+
+/** Chip de invitacion pendiente (C7): nunca hizo login. */
+export function PendingInviteChip() {
+  return <Chip tone="warn">Invitación pendiente</Chip>
+}

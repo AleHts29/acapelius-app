@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Rendiciones v2: historial por corista</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:#EFE6D6; color:#1D1D1B; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:44px 20px 80px; }
+  .wrap h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(26px,4vw,36px); }
+  .wrap h1 span { color:#415DA7; }
+  .wrap p.lead { margin-top:10px; max-width:780px; font-size:14.5px; line-height:1.65; color:#4C4A44; }
+  .phones { margin-top:26px; display:flex; gap:22px; overflow-x:auto; padding:6px 2px 18px; scroll-snap-type:x mandatory; }
+  .phone { flex:0 0 302px; scroll-snap-align:start; }
+  .screen { width:302px; height:640px; border-radius:34px; overflow:hidden; border:6px solid #1D1D1B; box-shadow:0 18px 40px rgba(29,29,27,.22); display:flex; flex-direction:column; background:#F8ECDE; position:relative; }
+  .cap { margin-top:10px; text-align:center; font-size:12.5px; font-weight:600; color:#6B675E; }
+
+  :root { --azul:#415DA7; --crema:#F8ECDE; --tinta:#1D1D1B; --mut:#8B8578; --line:#EADFCB;
+          --ok:#2F7D5B; --ok-s:#E4F0EA; --warn:#B7791F; --warn-s:#F7ECD7; --blue-s:#E8EDF8; }
+
+  .top { padding:14px 18px 10px; display:flex; align-items:center; justify-content:space-between; }
+  .brand { font-family:'Archivo',sans-serif; font-weight:800; font-size:13px; letter-spacing:0.22em; }
+  .avatar { width:28px; height:28px; border-radius:50%; background:var(--azul); color:var(--crema); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .back { font-size:13px; font-weight:700; color:var(--tinta); }
+  .pgrow { padding:0 18px; display:flex; align-items:center; justify-content:space-between; }
+  h2.pg { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .hbtn { display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:800; color:var(--azul); border:1.5px solid var(--line); background:#fff; border-radius:99px; padding:7px 12px; }
+  .body { flex:1; overflow:hidden; padding:0 18px; }
+
+  .sum { margin-top:10px; background:#fff; border:1px solid var(--line); border-radius:15px; padding:12px 14px; }
+  .sum .big { display:flex; align-items:baseline; justify-content:space-between; }
+  .sum .big b { font-family:'Archivo',sans-serif; font-size:22px; font-weight:800; color:var(--warn); }
+  .sum .big span { font-size:10px; font-weight:800; letter-spacing:0.1em; color:var(--mut); }
+  .sum .bar { margin-top:9px; height:7px; border-radius:99px; background:var(--warn-s); overflow:hidden; }
+  .sum .bar i { display:block; height:100%; background:var(--ok); width:60%; }
+  .sum .leg { margin-top:7px; display:flex; justify-content:space-between; font-size:10.5px; color:var(--mut); font-weight:600; }
+  .sum .leg b.g { color:var(--ok); }
+
+  .ghead { display:flex; align-items:center; gap:8px; margin:14px 0 7px; }
+  .ghead b { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .ghead::after { content:""; flex:1; height:1px; background:var(--line); }
+
+  .debt-card { background:#fff; border:1px solid var(--line); border-left:4px solid var(--warn); border-radius:14px; padding:12px 14px; margin-bottom:9px; }
+  .debt-card .h { display:flex; align-items:center; justify-content:space-between; }
+  .debt-card .h b { font-size:14.5px; font-weight:800; }
+  .pill { font-size:10.5px; font-weight:800; padding:4px 9px; border-radius:99px; white-space:nowrap; }
+  .pill.debt { background:var(--warn-s); color:var(--warn); }
+  .pill.ok { background:var(--ok-s); color:var(--ok); }
+  .debt-card .det { margin-top:5px; font-size:11px; color:var(--mut); }
+  .debt-card .det b { color:var(--tinta); font-weight:700; }
+  .debt-card .cta { margin-top:10px; background:var(--azul); color:var(--crema); border-radius:11px; padding:11px; text-align:center; font-size:13px; font-weight:800; }
+
+  .okrow { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin-bottom:7px; display:flex; align-items:center; justify-content:space-between; }
+  .okrow .l b { font-size:13px; font-weight:700; display:block; }
+  .okrow .l span { font-size:10.5px; color:var(--mut); }
+  .okrow .r { display:flex; align-items:center; gap:8px; }
+  .okrow .chev { color:var(--mut); }
+
+  .tabs { border-top:1px solid var(--line); background:#fff; display:grid; grid-template-columns:repeat(4,1fr); padding:8px 6px 12px; }
+  .tab { text-align:center; font-size:9.5px; font-weight:700; color:var(--mut); }
+  .tab .i { font-size:16px; display:block; margin-bottom:2px; }
+  .tab.on { color:var(--tinta); }
+
+  /* detalle corista */
+  .profile { margin-top:8px; background:#fff; border:1px solid var(--line); border-radius:16px; padding:14px; }
+  .profile .h { display:flex; align-items:center; gap:11px; }
+  .profile .ini { width:42px; height:42px; border-radius:12px; background:var(--blue-s); color:var(--azul); font-family:'Archivo',sans-serif; font-weight:800; font-size:16px; display:flex; align-items:center; justify-content:center; }
+  .profile .h b { font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; display:block; }
+  .profile .h span.role { font-size:10.5px; color:var(--mut); }
+  .profile .h .pill { margin-left:auto; }
+  .kpis3 { margin-top:12px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; }
+  .k { background:#FDFAF5; border:1px solid var(--line); border-radius:11px; padding:8px 9px; }
+  .k b { font-family:'Archivo',sans-serif; font-size:13.5px; font-weight:800; display:block; }
+  .k span { font-size:8.5px; color:var(--mut); font-weight:800; letter-spacing:0.06em; }
+  .k b.y { color:var(--warn); } .k b.g { color:var(--ok); }
+  .profile .cta { margin-top:12px; background:var(--azul); color:var(--crema); border-radius:11px; padding:12px; text-align:center; font-size:13px; font-weight:800; }
+  .profile .note { margin-top:7px; font-size:10.5px; color:var(--mut); text-align:center; }
+
+  .hrow { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 13px; margin-bottom:7px; display:flex; gap:10px; align-items:flex-start; }
+  .hrow .ic { width:30px; height:30px; border-radius:9px; background:var(--ok-s); color:var(--ok); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .hrow .mid { flex:1; min-width:0; }
+  .hrow .mid b { font-size:12.5px; font-weight:700; }
+  .hrow .mid .amt { font-family:'Archivo',sans-serif; font-weight:800; }
+  .hrow .mid .note { font-size:10.5px; color:var(--mut); margin-top:2px; font-style:italic; }
+  .hrow .when { font-size:9.5px; color:var(--mut); font-weight:700; text-align:right; flex-shrink:0; line-height:1.4; }
+  .empty-hint { text-align:center; font-size:10.5px; color:var(--mut); margin-top:4px; }
+
+  /* historial general: filtro por corista */
+  .fchips { display:flex; gap:6px; margin-top:10px; overflow-x:auto; padding-bottom:2px; }
+  .f { flex-shrink:0; font-size:11px; font-weight:800; padding:6px 11px; border-radius:99px; border:1.5px solid var(--line); background:#fff; color:#55524A; }
+  .f.on { background:var(--tinta); border-color:var(--tinta); color:var(--crema); }
+  .dg { font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); margin:12px 0 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Rendiciones v2: <span>historial en su propia vista</span></h1>
+  <p class="lead">El listado principal queda limpio (deudoras + al día) con un botón <b>"Historial"</b> junto al título. Tocar cualquier corista abre <b>su detalle</b>: perfil con sus números, su timeline personal y el botón "Registrar rendición" siempre disponible ahí (cubre correcciones aunque esté al día). El botón Historial lleva al <b>libro general</b> de la temporada, cronológico, filtrable por corista con chips — misma query, con y sin filtro.</p>
+
+  <div class="phones">
+
+    <!-- 1. LISTADO -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="brand">ACAPELIUS</div><div class="avatar">E</div></div>
+        <div class="pgrow">
+          <h2 class="pg">Rendiciones</h2>
+          <div class="hbtn">🕐 Historial</div>
+        </div>
+        <div class="body">
+          <div class="sum">
+            <div class="big"><b>$90.000</b><span>POR RENDIR</span></div>
+            <div class="bar"><i></i></div>
+            <div class="leg"><span>Rendido <b class="g">$135.000</b></span><span>Cobrado <b>$225.000</b></span></div>
+          </div>
+          <div class="ghead"><b>Deben rendir · 1</b></div>
+          <div class="debt-card">
+            <div class="h"><b>Carolina</b><span class="pill debt">Debe $90.000</span></div>
+            <div class="det">Cobró <b>$135.000</b> · rindió <b>$45.000</b></div>
+            <div class="cta">Registrar rendición</div>
+          </div>
+          <div class="ghead"><b>Al día · 3</b></div>
+          <div class="okrow"><div class="l"><b>Eli</b><span>Cobró $135.000 · rindió $135.000</span></div><div class="r"><span class="pill ok">Al día</span><span class="chev">›</span></div></div>
+          <div class="okrow"><div class="l"><b>Virginia</b><span>Cobró $90.000 · rindió $90.000</span></div><div class="r"><span class="pill ok">Al día</span><span class="chev">›</span></div></div>
+          <div class="okrow"><div class="l"><b>Alejandro</b><span>Todavía no cobró ventas</span></div><div class="r"><span class="pill ok">Al día</span><span class="chev">›</span></div></div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Listado limpio + botón "Historial" junto al título</div>
+    </div>
+
+    <!-- 2. DETALLE CORISTA -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="back">‹ Rendiciones</div><div class="avatar">E</div></div>
+        <div class="body">
+          <div class="profile">
+            <div class="h">
+              <div class="ini">C</div>
+              <div><b>Carolina</b><span class="role">Corista · 9 ventas esta temporada</span></div>
+              <span class="pill debt">Debe $90.000</span>
+            </div>
+            <div class="kpis3">
+              <div class="k"><b>$135.000</b><span>COBRÓ</span></div>
+              <div class="k"><b class="g">$45.000</b><span>RINDIÓ</span></div>
+              <div class="k"><b class="y">$90.000</b><span>DEBE</span></div>
+            </div>
+            <div class="cta">Registrar rendición</div>
+            <div class="note">Aparte, compradores le deben $45.000 (no exigible aún)</div>
+          </div>
+
+          <div class="ghead"><b>Su historial</b></div>
+          <div class="hrow">
+            <div class="ic">✓</div>
+            <div class="mid"><b>Rindió <span class="amt">$45.000</span> · efectivo</b><div class="note">"En el ensayo del jueves"</div></div>
+            <div class="when">21 AGO<br>19:02</div>
+          </div>
+          <div class="empty-hint">Una sola rendición hasta ahora</div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Detalle por corista: sus números, su timeline, CTA siempre</div>
+    </div>
+
+    <!-- 3. HISTORIAL GENERAL -->
+    <div class="phone">
+      <div class="screen">
+        <div class="top"><div class="back">‹ Rendiciones</div><div class="avatar">E</div></div>
+        <div class="pgrow"><h2 class="pg">Historial</h2></div>
+        <div class="body">
+          <div class="fchips">
+            <div class="f on">Todas</div><div class="f">Carolina</div><div class="f">Eli</div><div class="f">Virginia</div><div class="f">Josefina</div>
+          </div>
+
+          <div class="dg">Hoy · mar 25 ago</div>
+          <div class="hrow">
+            <div class="ic">✓</div>
+            <div class="mid"><b>Eli rindió <span class="amt">$135.000</span> · transferencia</b><div class="note">"Me enviaron por MercadoPago"</div></div>
+            <div class="when">22:15</div>
+          </div>
+
+          <div class="dg">Jue 21 ago</div>
+          <div class="hrow">
+            <div class="ic">✓</div>
+            <div class="mid"><b>Carolina rindió <span class="amt">$45.000</span> · efectivo</b><div class="note">"En el ensayo del jueves"</div></div>
+            <div class="when">19:02</div>
+          </div>
+          <div class="hrow">
+            <div class="ic">✓</div>
+            <div class="mid"><b>Virginia rindió <span class="amt">$50.000</span> · efectivo</b></div>
+            <div class="when">19:00</div>
+          </div>
+
+          <div class="dg">Jue 14 ago</div>
+          <div class="hrow">
+            <div class="ic">✓</div>
+            <div class="mid"><b>Virginia rindió <span class="amt">$40.000</span> · efectivo</b></div>
+            <div class="when">18:47</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><span class="i">♪</span>Inicio</div>
+          <div class="tab"><span class="i">🎟</span>Vender</div>
+          <div class="tab"><span class="i">📷</span>Puerta</div>
+          <div class="tab on"><span class="i">📊</span>Dirección</div>
+        </div>
+      </div>
+      <div class="cap">Historial general: cronológico, agrupado por día, filtro por corista</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

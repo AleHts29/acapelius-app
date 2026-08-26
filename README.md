@@ -199,9 +199,23 @@ conexion. La firma HMAC se verifica en el server al sincronizar; localmente
 alcanza con que el codigo exista en el snapshot (spec §6.2), por lo que sin
 conexion un QR de otra funcion se reporta como "invalido" (rojo igual).
 
-**Escaneo en el celular.** La camara requiere HTTPS (o localhost). Para probar
-el modo puerta desde un celular en desarrollo hace falta un tunel HTTPS, por
-ejemplo `cloudflared tunnel --url http://localhost:5173`.
+**Escaneo en el celular (HTTPS en dev).** `getUserMedia` solo funciona en
+HTTPS o en `localhost`; ademas la camara se enciende **por tap** (iOS bloquea
+el arranque automatico). Para probar el modo puerta desde un celular en
+desarrollo:
+
+```bash
+# opcion 1 (recomendada): tunel HTTPS efimero hacia Vite
+cloudflared tunnel --url http://localhost:5173
+
+# opcion 2: certificado local confiable
+#   npm --prefix web install -D vite-plugin-mkcert   y agregarlo a plugins
+#   en vite.config.ts; despues abrir https://<ip-de-tu-mac>:5173
+```
+
+Si la camara no aparece, el viewfinder siempre dice por que (sin permiso /
+sin HTTPS / sin camara) y la busqueda por nombre sigue funcionando como
+camino principal. En produccion ya hay HTTPS.
 
 **Produccion (fase 6).** `Dockerfile` en tres etapas (frontend → binario Go
 con todo embebido, tzdata incluida → distroless no-root) con `railway.json`

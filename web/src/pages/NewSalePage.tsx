@@ -7,6 +7,7 @@ import { ApiError, api, publicSaleURL, shareOrCopy } from '../api/client'
 import type { EmailStatus, Sale } from '../api/client'
 import { useSession } from '../auth/session'
 import { formatDateTime, formatMoney } from '../lib/format'
+import { Stepper } from '../ui/controls'
 
 interface CreatedSale {
   sale: Sale
@@ -34,7 +35,7 @@ function ShareLinkButton({ url, buyerName }: { url: string; buyerName: string })
   )
 }
 
-/** Stepper de cantidad con total en vivo (design system §3.5). */
+/** Stepper comun (C10) + total en vivo (design system §3.5). */
 function QtyStepper({
   value,
   onChange,
@@ -48,15 +49,7 @@ function QtyStepper({
 }) {
   return (
     <div className="qty">
-      <div className="stepper">
-        <button type="button" aria-label="Una entrada menos" disabled={value <= 1} onClick={() => onChange(value - 1)}>
-          −
-        </button>
-        <b aria-live="polite">{value}</b>
-        <button type="button" aria-label="Una entrada más" onClick={() => onChange(value + 1)}>
-          +
-        </button>
-      </div>
+      <Stepper value={value} onChange={onChange} min={1} />
       <div className="qty__total">
         Total
         <b>{isComp ? 'Cortesía' : formatMoney(totalCents)}</b>
