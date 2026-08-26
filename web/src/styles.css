@@ -2671,3 +2671,198 @@ div.alertcard {
   margin-top: 6px;
   user-select: all;
 }
+
+/* ============ C9: Panel de Dirección ============ */
+
+/* KPIs mas apretados, con una segunda lectura de contexto. */
+.kpis--tight {
+  gap: 8px;
+}
+
+.kpis--tight .kpi {
+  padding: 10px 12px;
+}
+
+.kpis--tight .kpi b {
+  font-size: 17px;
+}
+
+.kpi__sub {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.kpi__of {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Mini-card de funcion: barra de venta y cifras al pie. */
+.fncard {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 11px 13px;
+  margin-bottom: 8px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.fncard--done {
+  opacity: 0.75;
+}
+
+.fncard__h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.fncard__h b {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fncard__date {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.fnpill {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.fnpill--hoy {
+  background: var(--ok);
+  color: #fff;
+}
+
+.fnpill--hecha {
+  background: var(--line);
+  color: var(--muted);
+}
+
+.fncard__leg {
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.fncard__leg b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.fncard__leg b.g {
+  color: var(--ok);
+}
+
+/* Ritmo de ventas: barras por dia, sin libreria de charts. */
+.rhythm {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 13px;
+  margin-bottom: 8px;
+}
+
+.rhythm__h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.rhythm__h b {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rhythm__h span {
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rhythm__h span.g {
+  color: var(--ok);
+}
+
+.rhythm__h span.y {
+  color: var(--warn);
+}
+
+.rhythm__bars {
+  margin-top: 9px;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 44px;
+}
+
+.rhythm__bars i {
+  flex: 1;
+  background: var(--blue-soft);
+  border-radius: 3px 3px 0 0;
+}
+
+.rhythm__bars i.hot {
+  background: var(--brand-blue);
+}
+
+/* Accesos de administracion en dos columnas. */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.acc {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 11px 12px;
+  text-decoration: none;
+  color: var(--ink);
+  display: block;
+}
+
+.acc__ic {
+  color: var(--brand-blue);
+  display: block;
+}
+
+.acc b {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.acc span {
+  font-size: 9.5px;
+  color: var(--muted);
+}
+
+/* Tarjeta traida por una alerta (?fn=): se distingue de las demas. */
+.panel--focused {
+  border-color: var(--brand-blue);
+  box-shadow: var(--focus-ring);
+}

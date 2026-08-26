@@ -322,6 +322,51 @@ export interface Settlement {
   seller_name: string
 }
 
+/**
+ * Alerta del panel de Dirección (C9). El server decide cuáles hay y con qué
+ * datos; el texto, el ícono y el destino los pone la UI.
+ */
+export type AlertKind = 'settlement' | 'allocation' | 'invite'
+
+export interface Alert {
+  kind: AlertKind
+  name: string
+  /** settlement */
+  seller_id?: number
+  amount_cents?: number
+  /** allocation */
+  function_id?: number
+  missing?: number
+  capacity?: number
+  starts_at?: string
+  /** invite */
+  user_id?: number
+  role?: Role
+  /** Referencia temporal del pendiente: último cobro o alta. */
+  since?: string
+}
+
+/** Una función con su avance de venta, lo recaudado y lo asignado (C9). */
+export interface FunctionSummary {
+  id: number
+  name: string | null
+  venue: string
+  starts_at: string
+  capacity: number
+  price_cents: number
+  sold: number
+  collected_cents: number
+  assigned: number
+  entered: number
+}
+
+export interface SalesTimeline {
+  days: Array<{ day: string; tickets: number }>
+  /** Entradas de la última semana menos las de la anterior. */
+  delta: number
+  total: number
+}
+
 export interface AttendanceCheckin {
   at: string
   method: 'scan' | 'manual'
@@ -465,6 +510,15 @@ export const api = {
       'GET',
       `/reports/settlements?season_id=${seasonId}`,
     ),
+  attention: (seasonId: number) =>
+    request<{ alerts: Alert[] }>('GET', `/reports/attention?season_id=${seasonId}`),
+  functionsSummary: (seasonId: number) =>
+    request<{ functions: FunctionSummary[] }>(
+      'GET',
+      `/reports/functions-summary?season_id=${seasonId}`,
+    ),
+  salesTimeline: (seasonId: number, days = 14) =>
+    request<SalesTimeline>('GET', `/reports/sales-timeline?season_id=${seasonId}&days=${days}`),
   listSettlements: (seasonId: number, sellerId?: number) =>
     request<{ settlements: Settlement[] }>(
       'GET',

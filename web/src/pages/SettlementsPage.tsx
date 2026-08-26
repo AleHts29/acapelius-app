@@ -66,6 +66,9 @@ function RegisterSheet({
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['settlements-report', seasonId] })
       void queryClient.invalidateQueries({ queryKey: ['settlements-history'] })
+      // La alerta "debe rendir" del panel de Dirección (C9) sale de la misma
+      // plata: si no se invalida, queda mostrando una deuda ya saldada.
+      void queryClient.invalidateQueries({ queryKey: ['attention'] })
       onClose()
     },
     onError: (err) =>

@@ -58,3 +58,21 @@ cubrian el caso o entraban en tension con el codigo ya existente.
   ya mande el email: mientras el SMTP de produccion este bloqueado es el unico
   camino real, y sirve igual de plan B cuando el envio falla (la tarjeta
   cambia de tono y lo dice). Nunca se guarda en claro ni se puede reconsultar.
+- **Las alertas de Direccion (C9) las calcula el server, la copy la pone la
+  UI**: `GET /api/reports/attention` devuelve `kind` + los datos (nombres,
+  montos, ids, timestamps) y el frontend arma titulo, icono, etiqueta de
+  accion y destino. Asi la logica de "que esta pendiente" vive en un solo
+  lugar consultable, pero el server no conoce rutas del cliente ni duplica
+  textos del design system. Los links llevan estado en la query
+  (`/temporadas/{id}?fn=N`, `/usuarios?u=N`) para caer en la pantalla ya
+  enfocada; cada pantalla limpia el parametro despues de usarlo.
+- **"Cobro hace N dias" se aproxima con la venta paga mas reciente**: no
+  guardamos fecha de cobro (marcar como paga no sella `paid_at`), asi que la
+  alerta dice "ultima venta cobrada hace N dias", que es lo que el dato
+  sostiene. Si en algun momento hace falta la fecha real, es una columna
+  nueva en `sales`, no un cambio de la alerta.
+- **El dia del ritmo de ventas se corta en la zona horaria de la app**
+  (`AT TIME ZONE $tz` con el mismo `cfg.TZ` que usa el handler para la
+  ventana): en UTC las ventas de la noche caerian en el dia siguiente y el
+  grafico mostraria un ritmo que nadie vivio. El handler completa los dias
+  sin ventas en cero para que las barras no mientan sobre el ritmo.

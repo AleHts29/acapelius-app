@@ -73,6 +73,164 @@ func (q *Queries) AttendanceBySale(ctx context.Context, functionID int64) ([]Att
 	return items, nil
 }
 
+const attentionPendingInvites = `-- name: AttentionPendingInvites :many
+SELECT id AS user_id, name, role, created_at
+FROM users
+WHERE is_active AND last_login_at IS NULL
+ORDER BY created_at
+`
+
+type AttentionPendingInvitesRow struct {
+	UserID    int64     `json:"user_id"`
+	Name      string    `json:"name"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// Gente del equipo que nunca entro a la app (C7 + C9).
+func (q *Queries) AttentionPendingInvites(ctx context.Context) ([]AttentionPendingInvitesRow, error) {
+	rows, err := q.db.Query(ctx, attentionPendingInvites)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AttentionPendingInvitesRow{}
+	for rows.Next() {
+		var i AttentionPendingInvitesRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Name,
+			&i.Role,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const attentionSettlements = `-- name: AttentionSettlements :many
+WITH collected AS (
+  SELECT s.seller_id,
+         COALESCE(SUM(s.amount_cents) FILTER (WHERE s.payment_status = 'paid'), 0)::bigint AS paid_cents,
+         COALESCE(MAX(s.created_at) FILTER (WHERE s.payment_status = 'paid'), '0001-01-01'::timestamptz) AS last_paid_at
+  FROM sales s
+  JOIN functions f ON s.function_id = f.id
+  WHERE f.season_id = $1::bigint
+    AND NOT s.is_comp
+    AND s.voided_at IS NULL
+  GROUP BY s.seller_id
+), settled AS (
+  SELECT seller_id, COALESCE(SUM(amount_cents), 0)::bigint AS cents
+  FROM settlements
+  WHERE season_id = $1::bigint
+  GROUP BY seller_id
+)
+SELECT
+  u.id AS seller_id,
+  u.name AS seller_name,
+  (c.paid_cents - COALESCE(st.cents, 0))::bigint AS balance_cents,
+  c.last_paid_at::timestamptz AS last_paid_at
+FROM collected c
+JOIN users u ON u.id = c.seller_id
+LEFT JOIN settled st ON st.seller_id = c.seller_id
+WHERE c.paid_cents - COALESCE(st.cents, 0) > 0
+ORDER BY (c.paid_cents - COALESCE(st.cents, 0)) DESC
+`
+
+type AttentionSettlementsRow struct {
+	SellerID     int64     `json:"seller_id"`
+	SellerName   string    `json:"seller_name"`
+	BalanceCents int64     `json:"balance_cents"`
+	LastPaidAt   time.Time `json:"last_paid_at"`
+}
+
+// Coristas con saldo a rendir (C9). `last_paid_at` es la venta paga mas
+// reciente: no guardamos fecha de cobro, asi que es la mejor referencia
+// temporal disponible. Centinela año 1 = todavia no cobro nada.
+func (q *Queries) AttentionSettlements(ctx context.Context, seasonID int64) ([]AttentionSettlementsRow, error) {
+	rows, err := q.db.Query(ctx, attentionSettlements, seasonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AttentionSettlementsRow{}
+	for rows.Next() {
+		var i AttentionSettlementsRow
+		if err := rows.Scan(
+			&i.SellerID,
+			&i.SellerName,
+			&i.BalanceCents,
+			&i.LastPaidAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const attentionUnassigned = `-- name: AttentionUnassigned :many
+SELECT
+  f.id AS function_id,
+  f.name,
+  f.venue,
+  f.starts_at,
+  f.capacity,
+  COALESCE(SUM(a.quantity), 0)::bigint AS assigned
+FROM functions f
+LEFT JOIN allocations a ON a.function_id = f.id
+WHERE f.season_id = $1::bigint
+  AND f.starts_at > now()
+GROUP BY f.id
+HAVING f.capacity > COALESCE(SUM(a.quantity), 0)
+ORDER BY f.starts_at
+`
+
+type AttentionUnassignedRow struct {
+	FunctionID int64     `json:"function_id"`
+	Name       *string   `json:"name"`
+	Venue      string    `json:"venue"`
+	StartsAt   time.Time `json:"starts_at"`
+	Capacity   int32     `json:"capacity"`
+	Assigned   int64     `json:"assigned"`
+}
+
+// Funciones que todavia no pasaron con entradas sin repartir entre coristas.
+func (q *Queries) AttentionUnassigned(ctx context.Context, seasonID int64) ([]AttentionUnassignedRow, error) {
+	rows, err := q.db.Query(ctx, attentionUnassigned, seasonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AttentionUnassignedRow{}
+	for rows.Next() {
+		var i AttentionUnassignedRow
+		if err := rows.Scan(
+			&i.FunctionID,
+			&i.Name,
+			&i.Venue,
+			&i.StartsAt,
+			&i.Capacity,
+			&i.Assigned,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createSettlement = `-- name: CreateSettlement :one
 INSERT INTO settlements (seller_id, season_id, amount_cents, method, notes)
 VALUES (
@@ -112,6 +270,76 @@ func (q *Queries) CreateSettlement(ctx context.Context, arg CreateSettlementPara
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const functionsSummary = `-- name: FunctionsSummary :many
+SELECT
+  f.id,
+  f.name,
+  f.venue,
+  f.starts_at,
+  f.capacity,
+  f.price_cents,
+  (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
+   WHERE s.function_id = f.id AND t.status <> 'void')::bigint AS sold,
+  (SELECT COALESCE(SUM(s.amount_cents), 0) FROM sales s
+   WHERE s.function_id = f.id AND s.payment_status = 'paid'
+     AND NOT s.is_comp AND s.voided_at IS NULL)::bigint AS collected_cents,
+  (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
+   WHERE a.function_id = f.id)::bigint AS assigned,
+  (SELECT count(*) FROM checkins c
+   JOIN tickets t ON c.ticket_id = t.id
+   JOIN sales s ON t.sale_id = s.id
+   WHERE s.function_id = f.id)::bigint AS entered
+FROM functions f
+WHERE f.season_id = $1::bigint
+ORDER BY f.starts_at
+`
+
+type FunctionsSummaryRow struct {
+	ID             int64     `json:"id"`
+	Name           *string   `json:"name"`
+	Venue          string    `json:"venue"`
+	StartsAt       time.Time `json:"starts_at"`
+	Capacity       int32     `json:"capacity"`
+	PriceCents     int64     `json:"price_cents"`
+	Sold           int64     `json:"sold"`
+	CollectedCents int64     `json:"collected_cents"`
+	Assigned       int64     `json:"assigned"`
+	Entered        int64     `json:"entered"`
+}
+
+// El pulso de la temporada funcion por funcion (C9): vendidas sobre cupo,
+// recaudado, asignado y cuantos ingresaron. Todo derivado, sin contadores.
+func (q *Queries) FunctionsSummary(ctx context.Context, seasonID int64) ([]FunctionsSummaryRow, error) {
+	rows, err := q.db.Query(ctx, functionsSummary, seasonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FunctionsSummaryRow{}
+	for rows.Next() {
+		var i FunctionsSummaryRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Venue,
+			&i.StartsAt,
+			&i.Capacity,
+			&i.PriceCents,
+			&i.Sold,
+			&i.CollectedCents,
+			&i.Assigned,
+			&i.Entered,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listSettlements = `-- name: ListSettlements :many
@@ -232,6 +460,55 @@ func (q *Queries) SalesReport(ctx context.Context, arg SalesReportParams) ([]Sal
 			&i.PaidCents,
 			&i.PendingCents,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const salesTimeline = `-- name: SalesTimeline :many
+SELECT
+  to_char(s.created_at AT TIME ZONE $1::text, 'YYYY-MM-DD') AS day,
+  count(t.id)::bigint AS tickets
+FROM tickets t
+JOIN sales s ON t.sale_id = s.id
+JOIN functions f ON s.function_id = f.id
+WHERE f.season_id = $2::bigint
+  AND t.status <> 'void'
+  AND s.voided_at IS NULL
+  AND s.created_at >= $3::timestamptz
+GROUP BY 1
+ORDER BY 1
+`
+
+type SalesTimelineParams struct {
+	Tz       string    `json:"tz"`
+	SeasonID int64     `json:"season_id"`
+	Since    time.Time `json:"since"`
+}
+
+type SalesTimelineRow struct {
+	Day     string `json:"day"`
+	Tickets int64  `json:"tickets"`
+}
+
+// Entradas vendidas por dia (C9). El dia se corta en la zona horaria de la
+// app (la misma que usa el handler para la ventana), no en UTC: si no, las
+// ventas de la noche caerian en el dia siguiente.
+func (q *Queries) SalesTimeline(ctx context.Context, arg SalesTimelineParams) ([]SalesTimelineRow, error) {
+	rows, err := q.db.Query(ctx, salesTimeline, arg.Tz, arg.SeasonID, arg.Since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SalesTimelineRow{}
+	for rows.Next() {
+		var i SalesTimelineRow
+		if err := rows.Scan(&i.Day, &i.Tickets); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

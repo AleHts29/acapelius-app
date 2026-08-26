@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -335,4 +336,223 @@ func (s *Server) handleAttendanceReport(w http.ResponseWriter, r *http.Request) 
 	}
 
 	httpx.JSON(w, http.StatusOK, resp)
+}
+
+// ============================================================================
+// Panel de Direccion v2 (C9)
+// ============================================================================
+
+// requireSeasonID lee season_id obligatorio. ok=false: ya se respondio.
+func requireSeasonID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	seasonID, ok := parseOptionalID(w, r, "season_id")
+	if !ok {
+		return 0, false
+	}
+	if seasonID == nil {
+		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "Falta season_id.")
+		return 0, false
+	}
+	return *seasonID, true
+}
+
+// handleFunctionsSummary: la temporada funcion por funcion (C9).
+func (s *Server) handleFunctionsSummary(w http.ResponseWriter, r *http.Request) {
+	seasonID, ok := requireSeasonID(w, r)
+	if !ok {
+		return
+	}
+	rows, err := s.queries.FunctionsSummary(r.Context(), seasonID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string][]sqlcgen.FunctionsSummaryRow{"functions": rows})
+}
+
+// timelineDay es un dia del ritmo de ventas, con cero incluido.
+type timelineDay struct {
+	Day     string `json:"day"` // YYYY-MM-DD en hora de Buenos Aires
+	Tickets int64  `json:"tickets"`
+}
+
+type salesTimelineResponse struct {
+	Days []timelineDay `json:"days"`
+	// Delta = entradas de la ultima semana menos las de la anterior. Es la
+	// lectura que le importa a Eli: ¿se esta vendiendo mas o menos?
+	Delta int64 `json:"delta"`
+	Total int64 `json:"total"`
+}
+
+const (
+	timelineDefaultDays = 14
+	timelineMaxDays     = 90
+)
+
+// handleSalesTimeline: entradas vendidas por dia, con los dias vacios en cero
+// para que el grafico de barras no mienta sobre el ritmo.
+func (s *Server) handleSalesTimeline(w http.ResponseWriter, r *http.Request) {
+	seasonID, ok := requireSeasonID(w, r)
+	if !ok {
+		return
+	}
+
+	days := timelineDefaultDays
+	if raw := r.URL.Query().Get("days"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 1 || parsed > timelineMaxDays {
+			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest,
+				fmt.Sprintf("days tiene que ser un numero entre 1 y %d.", timelineMaxDays))
+			return
+		}
+		days = parsed
+	}
+
+	// La ventana se calcula en hora de Buenos Aires, igual que el corte del
+	// dia en la query: si no, el primer y el ultimo dia quedarian partidos.
+	loc, err := time.LoadLocation(s.cfg.TZ)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	now := time.Now().In(loc)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	since := today.AddDate(0, 0, -(days - 1))
+
+	rows, err := s.queries.SalesTimeline(r.Context(), sqlcgen.SalesTimelineParams{
+		SeasonID: seasonID,
+		Since:    since,
+		Tz:       s.cfg.TZ,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	byDay := make(map[string]int64, len(rows))
+	for _, row := range rows {
+		byDay[row.Day] = row.Tickets
+	}
+
+	resp := salesTimelineResponse{Days: make([]timelineDay, 0, days)}
+	for i := 0; i < days; i++ {
+		key := since.AddDate(0, 0, i).Format("2006-01-02")
+		tickets := byDay[key]
+		resp.Days = append(resp.Days, timelineDay{Day: key, Tickets: tickets})
+		resp.Total += tickets
+		// Ultima mitad menos primera mitad de la ventana.
+		if i >= days-days/2 {
+			resp.Delta += tickets
+		} else if i >= days-2*(days/2) {
+			resp.Delta -= tickets
+		}
+	}
+
+	httpx.JSON(w, http.StatusOK, resp)
+}
+
+// Tipos de alerta del panel. El server decide *cuales* hay y con que datos;
+// el texto, el icono y el destino los pone el frontend (mismo criterio que el
+// resto del design system: la copy vive con la UI).
+const (
+	alertSettlement = "settlement" // corista con saldo a rendir
+	alertAllocation = "allocation" // funcion con entradas sin asignar
+	alertInvite     = "invite"     // alguien que nunca entro a la app
+)
+
+// attentionAlert es una tarea abierta. Los campos que no aplican al tipo van
+// en cero: el frontend usa solo los de su `kind`.
+type attentionAlert struct {
+	Kind string `json:"kind"`
+	Name string `json:"name"` // corista, funcion o persona
+	// settlement
+	SellerID    int64 `json:"seller_id,omitempty"`
+	AmountCents int64 `json:"amount_cents,omitempty"`
+	// allocation
+	FunctionID int64      `json:"function_id,omitempty"`
+	Missing    int64      `json:"missing,omitempty"`
+	Capacity   int32      `json:"capacity,omitempty"`
+	StartsAt   *time.Time `json:"starts_at,omitempty"`
+	// invite
+	UserID int64 `json:"user_id,omitempty"`
+	Role   string `json:"role,omitempty"`
+	// Since: referencia temporal del pendiente (ultimo cobro / alta).
+	Since *time.Time `json:"since,omitempty"`
+}
+
+type attentionResponse struct {
+	Alerts []attentionAlert `json:"alerts"`
+}
+
+// handleAttention: todo lo accionable de la temporada en una sola lista (C9),
+// en orden de urgencia: primero la plata, despues los cupos sin repartir de
+// la funcion mas proxima, por ultimo las invitaciones sin usar.
+func (s *Server) handleAttention(w http.ResponseWriter, r *http.Request) {
+	seasonID, ok := requireSeasonID(w, r)
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+
+	debts, err := s.queries.AttentionSettlements(ctx, seasonID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	unassigned, err := s.queries.AttentionUnassigned(ctx, seasonID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	invites, err := s.queries.AttentionPendingInvites(ctx)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	alerts := make([]attentionAlert, 0, len(debts)+len(unassigned)+len(invites))
+	for _, row := range debts {
+		alerts = append(alerts, attentionAlert{
+			Kind:        alertSettlement,
+			Name:        row.SellerName,
+			SellerID:    row.SellerID,
+			AmountCents: row.BalanceCents,
+			Since:       sentinelTime(row.LastPaidAt),
+		})
+	}
+	for _, row := range unassigned {
+		startsAt := row.StartsAt
+		name := row.Venue
+		if row.Name != nil {
+			name = *row.Name
+		}
+		alerts = append(alerts, attentionAlert{
+			Kind:       alertAllocation,
+			Name:       name,
+			FunctionID: row.FunctionID,
+			Missing:    int64(row.Capacity) - row.Assigned,
+			Capacity:   row.Capacity,
+			StartsAt:   &startsAt,
+		})
+	}
+	for _, row := range invites {
+		createdAt := row.CreatedAt
+		alerts = append(alerts, attentionAlert{
+			Kind:   alertInvite,
+			Name:   row.Name,
+			UserID: row.UserID,
+			Role:   row.Role,
+			Since:  &createdAt,
+		})
+	}
+
+	httpx.JSON(w, http.StatusOK, attentionResponse{Alerts: alerts})
+}
+
+// sentinelTime convierte el centinela año 1 de SQL en null (mismo criterio
+// que last_email_at en el listado de ventas).
+func sentinelTime(t time.Time) *time.Time {
+	if t.Year() <= 1 {
+		return nil
+	}
+	return &t
 }

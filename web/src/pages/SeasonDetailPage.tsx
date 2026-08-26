@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api } from '../api/client'
@@ -129,10 +129,25 @@ function FunctionFields({
   )
 }
 
-function FunctionCard({ fn, seasonId }: { fn: ShowFunction; seasonId: number }) {
+function FunctionCard({
+  fn,
+  seasonId,
+  focused,
+}: {
+  fn: ShowFunction
+  seasonId: number
+  /** Llegó desde una alerta de Dirección (C9): abre las asignaciones sola. */
+  focused?: boolean
+}) {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState(false)
-  const [showAllocations, setShowAllocations] = useState(false)
+  const [showAllocations, setShowAllocations] = useState(focused ?? false)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  // Si vino enfocada desde una alerta, se trae la tarjeta a la vista.
+  useEffect(() => {
+    if (focused) cardRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [focused])
   const [values, setValues] = useState<FunctionFormValues>(emptyForm)
   const [error, setError] = useState<string | null>(null)
 
@@ -192,7 +207,7 @@ function FunctionCard({ fn, seasonId }: { fn: ShowFunction; seasonId: number }) 
   }
 
   return (
-    <div className="panel">
+    <div className={`panel ${focused ? 'panel--focused' : ''}`} ref={cardRef}>
       <div className="lrow__head">
         <div>
           <h3 style={{ fontSize: 16 }}>{fn.name ?? fn.venue}</h3>
@@ -230,6 +245,9 @@ function FunctionCard({ fn, seasonId }: { fn: ShowFunction; seasonId: number }) 
 export function SeasonDetailPage() {
   const { seasonId: rawSeasonId } = useParams()
   const seasonId = Number(rawSeasonId)
+  // ?fn=N llega de las alertas de Dirección: esa función abre asignaciones.
+  const [searchParams] = useSearchParams()
+  const focusFunctionId = Number(searchParams.get('fn')) || undefined
   const queryClient = useQueryClient()
 
   const [values, setValues] = useState<FunctionFormValues>(emptyForm)
@@ -317,7 +335,9 @@ export function SeasonDetailPage() {
         {functions.isPending ? (
           <p className="muted">Cargando funciones…</p>
         ) : functions.data && functions.data.functions.length > 0 ? (
-          functions.data.functions.map((fn) => <FunctionCard key={fn.id} fn={fn} seasonId={seasonId} />)
+          functions.data.functions.map((fn) => (
+            <FunctionCard key={fn.id} fn={fn} seasonId={seasonId} focused={fn.id === focusFunctionId} />
+          ))
         ) : (
           <p className="muted">Esta temporada todavía no tiene funciones.</p>
         )}

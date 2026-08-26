@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRight, Copy, KeyRound, Mail, UserMinus, UserPlus } from 'lucide-react'
 
@@ -116,6 +117,7 @@ function NewUserSheet({
     mutationFn: () => api.createUser({ name: name.trim(), email: email.trim(), role }),
     onSuccess: (access) => {
       void queryClient.invalidateQueries({ queryKey: ['users'] })
+      void queryClient.invalidateQueries({ queryKey: ['attention'] })
       onCreated(access)
       onClose()
     },
@@ -242,7 +244,11 @@ function UserSheet({
   const [error, setError] = useState<string | null>(null)
   const [confirmOff, setConfirmOff] = useState(false)
 
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['users'] })
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ['users'] })
+    // Las invitaciones pendientes son una alerta del panel (C9).
+    void queryClient.invalidateQueries({ queryKey: ['attention'] })
+  }
   const fail = (err: unknown, fallback: string) =>
     setError(err instanceof ApiError ? err.message : fallback)
 
@@ -406,6 +412,18 @@ export function UsersPage() {
 
   const { data, isPending } = useQuery({ queryKey: ['users'], queryFn: () => api.listUsers() })
   const users = data?.users ?? []
+
+  // ?u=N llega de una alerta de Dirección: abre el detalle de esa persona.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const focusId = Number(searchParams.get('u')) || undefined
+  useEffect(() => {
+    if (focusId === undefined) return
+    const user = users.find((u) => u.id === focusId)
+    if (user) {
+      setDetailFor(user)
+      setSearchParams({}, { replace: true })
+    }
+  }, [focusId, users, setSearchParams])
 
   return (
     <>

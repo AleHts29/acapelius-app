@@ -32,6 +32,9 @@ export function AllocationsEditor({ fn }: { fn: ShowFunction }) {
       setTimeout(() => setSaved(false), 2500)
       void queryClient.invalidateQueries({ queryKey: ['function-allocations', fn.id] })
       void queryClient.invalidateQueries({ queryKey: ['my-allocations'] })
+      // Repartir el cupo puede cerrar la alerta de Dirección (C9).
+      void queryClient.invalidateQueries({ queryKey: ['attention'] })
+      void queryClient.invalidateQueries({ queryKey: ['functions-summary'] })
     },
     onError: (err) =>
       setError(err instanceof ApiError ? err.message : 'No se pudieron guardar las asignaciones.'),
