@@ -23,7 +23,7 @@ const TABS: Tab[] = [
     roles: ['admin', 'seller'],
   },
   {
-    to: '/ventas/nueva',
+    to: '/ventas',
     label: 'Vender',
     icon: Ticket,
     activeClass: 'on-blue',

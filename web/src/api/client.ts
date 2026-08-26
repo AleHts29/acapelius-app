@@ -147,14 +147,36 @@ export interface Ticket {
   created_at: string
 }
 
-/** Fila del listado de ventas, con los datos de la funcion y la vendedora. */
-export interface SaleRow extends Sale {
+/** Fila del listado de ventas (C3), con funcion, corista y ultimo envio. */
+export interface SaleListItem {
+  id: number
+  code: string
+  buyer_name: string
+  buyer_email: string | null
+  quantity: number
+  amount_cents: number
+  payment_status: PaymentStatus
+  payment_method: PaymentMethod | null
+  is_comp: boolean
+  voided_at: string | null
+  created_at: string
+  function_id: number
   function_venue: string
   function_starts_at: string
   function_name: string | null
   seller_name: string
-  active_tickets: number
+  last_email_at: string | null
 }
+
+export interface SalesSummary {
+  tickets_sold: number
+  paid_cents: number
+  pending_cents: number
+  total_count: number
+  pending_count: number
+}
+
+export type SaleStatusFilter = 'pending' | 'paid' | 'comp'
 
 export interface NewSaleInput {
   function_id: number
@@ -344,12 +366,24 @@ export const api = {
       '/sales',
       input,
     ),
-  listSales: (opts?: { mine?: boolean; functionId?: number }) => {
+  listSales: (opts?: {
+    mine?: boolean
+    functionId?: number
+    q?: string
+    status?: SaleStatusFilter
+    cursor?: string
+  }) => {
     const params = new URLSearchParams()
     if (opts?.mine) params.set('mine', '1')
     if (opts?.functionId !== undefined) params.set('function_id', String(opts.functionId))
+    if (opts?.q) params.set('q', opts.q)
+    if (opts?.status) params.set('status', opts.status)
+    if (opts?.cursor) params.set('cursor', opts.cursor)
     const qs = params.toString()
-    return request<{ sales: SaleRow[] }>('GET', qs ? `/sales?${qs}` : '/sales')
+    return request<{ sales: SaleListItem[]; summary: SalesSummary; next_cursor?: string }>(
+      'GET',
+      qs ? `/sales?${qs}` : '/sales',
+    )
   },
   updateSalePayment: (id: number, status: PaymentStatus, method?: PaymentMethod) =>
     request<{ sale: Sale }>('PATCH', `/sales/${id}`, {

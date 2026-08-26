@@ -132,9 +132,7 @@ export function HomePage() {
   if (!user) return null
 
   const fn = heroFunction(functions.data?.functions ?? [])
-  const pendingCount = (sales.data?.sales ?? []).filter(
-    (s) => s.voided_at === null && !s.is_comp && s.payment_status === 'pending',
-  ).length
+  const pendingCount = sales.data?.summary.pending_count ?? 0
   const totalOwed = (settlements.data?.rows ?? []).reduce(
     (acc, r) => acc + Math.max(r.balance_cents, 0),
     0,

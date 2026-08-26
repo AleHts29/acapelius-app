@@ -68,3 +68,11 @@ export function isoToLocalInput(iso: string): string {
 export function localInputToISO(value: string): string {
   return `${value}:00-03:00`
 }
+
+/** ISO → "hoy" / "ayer" / "hace N días" (para "enviado hace…"). */
+export function daysAgo(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400_000)
+  if (days <= 0) return 'hoy'
+  if (days === 1) return 'ayer'
+  return `hace ${days} días`
+}

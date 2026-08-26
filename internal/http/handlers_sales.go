@@ -221,21 +221,63 @@ func (s *Server) sendTicketEmail(ctx context.Context, sale sqlcgen.Sale, functio
 	return status
 }
 
-type listSalesResponse struct {
-	Sales []sqlcgen.ListSalesDetailedRow `json:"sales"`
+// saleListItem es la fila del listado con last_email_at ya como puntero.
+type saleListItem struct {
+	sqlcgen.ListSalesPageRow
+	LastEmailAt *time.Time `json:"last_email_at"`
 }
 
+type listSalesResponse struct {
+	Sales      []saleListItem          `json:"sales"`
+	Summary    sqlcgen.SalesSummaryRow `json:"summary"`
+	NextCursor string                  `json:"next_cursor,omitempty"`
+}
+
+// Paginado del listado (C3). 50 filas por pagina alcanza para scrollear
+// fluido; el cursor keyset mantiene los grupos por funcion contiguos.
+const salesPageSize = 50
+
+// encodeSalesCursor / decodeSalesCursor: keyset (starts_at, sale_id).
+func encodeSalesCursor(startsAt time.Time, id int64) string {
+	return fmt.Sprintf("v1:%d:%d", startsAt.UnixNano(), id)
+}
+
+func decodeSalesCursor(raw string) (startsAt *time.Time, id *int64, ok bool) {
+	if raw == "" {
+		return nil, nil, true
+	}
+	var nanos, saleID int64
+	if _, err := fmt.Sscanf(raw, "v1:%d:%d", &nanos, &saleID); err != nil {
+		return nil, nil, false
+	}
+	t := time.Unix(0, nanos)
+	return &t, &saleID, true
+}
+
+// escapeLike neutraliza los comodines de LIKE en la busqueda del usuario.
+func escapeLike(q string) string {
+	q = strings.ReplaceAll(q, `\`, `\\`)
+	q = strings.ReplaceAll(q, `%`, `\%`)
+	q = strings.ReplaceAll(q, `_`, `\_`)
+	return q
+}
+
+// handleListSales: listado escalable (C3) — q busca por comprador y por
+// corista (sin distinguir mayusculas ni acentos), status filtra
+// pending|paid|comp, y la respuesta trae el resumen del alcance y el cursor
+// de la pagina siguiente.
 func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 	user := auth.MustUserFrom(r.Context())
+	query := r.URL.Query()
 
 	var sellerID *int64
-	// La vendedora solo ve lo suyo; el admin ve todo, o lo suyo con ?mine=1.
-	if user.Role != domain.RoleAdmin || r.URL.Query().Get("mine") == "1" {
+	// La corista solo ve lo suyo; el admin ve todo, o lo suyo con ?mine=1.
+	if user.Role != domain.RoleAdmin || query.Get("mine") == "1" {
 		sellerID = &user.ID
 	}
 
 	var functionID *int64
-	if raw := r.URL.Query().Get("function_id"); raw != "" {
+	if raw := query.Get("function_id"); raw != "" {
 		id, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
 			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "function_id tiene que ser un numero.")
@@ -244,15 +286,68 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 		functionID = &id
 	}
 
-	sales, err := s.queries.ListSalesDetailed(r.Context(), sqlcgen.ListSalesDetailedParams{
-		SellerID:   sellerID,
-		FunctionID: functionID,
+	var status *string
+	switch raw := query.Get("status"); raw {
+	case "":
+	case "pending", "paid", "comp":
+		status = &raw
+	default:
+		httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "status tiene que ser pending, paid o comp.")
+		return
+	}
+
+	var q *string
+	if raw := strings.TrimSpace(query.Get("q")); raw != "" {
+		escaped := escapeLike(raw)
+		q = &escaped
+	}
+
+	cursorStarts, cursorID, ok := decodeSalesCursor(query.Get("cursor"))
+	if !ok {
+		httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "cursor invalido.")
+		return
+	}
+
+	rows, err := s.queries.ListSalesPage(r.Context(), sqlcgen.ListSalesPageParams{
+		SellerID:     sellerID,
+		FunctionID:   functionID,
+		Status:       status,
+		Q:            q,
+		CursorStarts: cursorStarts,
+		CursorID:     cursorID,
+		PageSize:     salesPageSize,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, listSalesResponse{Sales: sales})
+
+	summary, err := s.queries.SalesSummary(r.Context(), sqlcgen.SalesSummaryParams{
+		SellerID:   sellerID,
+		FunctionID: functionID,
+		Q:          q,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	items := make([]saleListItem, 0, len(rows))
+	for _, row := range rows {
+		item := saleListItem{ListSalesPageRow: row}
+		if row.LastEmailAt.Year() > 1 {
+			at := row.LastEmailAt
+			item.LastEmailAt = &at
+		}
+		items = append(items, item)
+	}
+
+	resp := listSalesResponse{Sales: items, Summary: summary}
+	if len(rows) == salesPageSize {
+		last := rows[len(rows)-1]
+		resp.NextCursor = encodeSalesCursor(last.FunctionStartsAt, last.ID)
+	}
+	httpx.JSON(w, http.StatusOK, resp)
 }
 
 // loadOwnedSale carga una venta y verifica que el usuario pueda operarla:

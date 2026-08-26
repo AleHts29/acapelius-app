@@ -27,3 +27,13 @@ cubrian el caso o entraban en tension con el codigo ya existente.
 - **`GET /api/functions` ahora incluye `sold`** (entradas vivas): lo necesita
   la barra de progreso del hero y no expone montos.
 - **Rol `door` entra directo a /puerta** y no ve tab bar (su unica area).
+- **Busqueda sin acentos con `translate()` en SQL** (C3), no con la extension
+  `unaccent`: cero dependencias del servidor Postgres (funciona igual en el
+  docker local, el de test y Railway). El mismo mapa de caracteres vive en
+  `normalizeText` del frontend para el resaltado de matches.
+- **Cursor keyset `(function_starts_at, sale_id)`** para paginar ventas: los
+  grupos por funcion quedan contiguos entre paginas, que es lo que el listado
+  agrupado necesita. El contador por grupo solo se muestra cuando ya se cargo
+  todo (con paginas pendientes seria mentirle al usuario).
+- **`last_email_at` con centinela año 1** en SQL (COALESCE) porque sqlc no
+  puede inferir la nulabilidad de la subquery; el handler lo convierte a null.

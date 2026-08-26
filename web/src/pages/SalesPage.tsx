@@ -1,222 +1,405 @@
-import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useWindowVirtualizer } from '@tanstack/react-virtual'
+import { Banknote, Landmark, Link2, Mail, PartyPopper, RotateCcw, X } from 'lucide-react'
 
 import { ApiError, api, publicSaleURL } from '../api/client'
-import type { PaymentMethod, SaleRow } from '../api/client'
+import type { PaymentMethod, SaleListItem, SaleStatusFilter } from '../api/client'
 import { useSession } from '../auth/session'
-import { formatDateTime } from '../lib/format'
+import { daysAgo, formatDateTime, formatMoney } from '../lib/format'
+import { normalizeText } from '../lib/search'
+import { BottomSheet, SheetAction } from '../ui/BottomSheet'
+import { EmptyState, FAB, FilterChips, SearchBar } from '../ui/controls'
 import { SaleChip } from '../ui/StatusChip'
 
 const salesQueryKey = ['sales'] as const
 
-function SaleCard({ sale, isAdmin }: { sale: SaleRow; isAdmin: boolean }) {
+/** Filtro de URL (C2) ↔ status de la API (C3). */
+type UIFilter = 'todas' | 'deben' | 'pagas' | 'cortesias'
+const FILTER_TO_STATUS: Record<UIFilter, SaleStatusFilter | undefined> = {
+  todas: undefined,
+  deben: 'pending',
+  pagas: 'paid',
+  cortesias: 'comp',
+}
+
+function parseFilter(raw: string | null): UIFilter {
+  return raw === 'deben' || raw === 'pagas' || raw === 'cortesias' ? raw : 'todas'
+}
+
+/** Iniciales para el avatar de la fila ("María Dutra" → "MD"). */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?'
+}
+
+/** Resalta el match de la busqueda dentro de un texto. */
+function Hl({ text, q }: { text: string; q: string }) {
+  if (q.trim() === '') return <>{text}</>
+  const idx = normalizeText(text).indexOf(normalizeText(q))
+  if (idx < 0) return <>{text}</>
+  const end = idx + q.trim().length
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="hl">{text.slice(idx, end)}</mark>
+      {text.slice(end)}
+    </>
+  )
+}
+
+/** Item plano para virtualizar: cabecera de grupo o venta. */
+type FlatItem =
+  | { kind: 'header'; key: string; title: string; count?: number }
+  | { kind: 'sale'; key: string; sale: SaleListItem }
+
+function groupByFunction(sales: SaleListItem[], complete: boolean): FlatItem[] {
+  const out: FlatItem[] = []
+  let current = -1
+  let headerIdx = -1
+  for (const sale of sales) {
+    if (sale.function_id !== current) {
+      current = sale.function_id
+      headerIdx = out.length
+      out.push({
+        kind: 'header',
+        key: `f${sale.function_id}`,
+        title: `${sale.function_name ?? sale.function_venue} · ${formatDateTime(sale.function_starts_at)}`,
+        count: 0,
+      })
+    }
+    out.push({ kind: 'sale', key: `s${sale.id}`, sale })
+    const header = out[headerIdx]
+    if (header.kind === 'header' && complete) header.count = (header.count ?? 0) + 1
+  }
+  if (!complete) for (const item of out) if (item.kind === 'header') item.count = undefined
+  return out
+}
+
+/** Con busqueda activa: grupos por tipo de match (corista / compradora). */
+function groupByMatch(sales: SaleListItem[], q: string): FlatItem[] {
+  const nq = normalizeText(q)
+  const bySeller = new Map<string, SaleListItem[]>()
+  const byBuyer: SaleListItem[] = []
+  for (const sale of sales) {
+    if (normalizeText(sale.seller_name).includes(nq)) {
+      const list = bySeller.get(sale.seller_name) ?? []
+      list.push(sale)
+      bySeller.set(sale.seller_name, list)
+    } else {
+      byBuyer.push(sale)
+    }
+  }
+  const out: FlatItem[] = []
+  for (const [seller, list] of bySeller) {
+    out.push({ kind: 'header', key: `ms-${seller}`, title: `Vendidas por ${seller}`, count: list.length })
+    for (const sale of list) out.push({ kind: 'sale', key: `s${sale.id}`, sale })
+  }
+  if (byBuyer.length > 0) {
+    out.push({ kind: 'header', key: 'mb', title: 'Compradoras', count: byBuyer.length })
+    for (const sale of byBuyer) out.push({ kind: 'sale', key: `s${sale.id}`, sale })
+  }
+  return out
+}
+
+/** Sheet de acciones de una venta (C3.4): nada de botones en la fila. */
+function SaleSheet({
+  sale,
+  isAdmin,
+  onClose,
+}: {
+  sale: SaleListItem
+  isAdmin: boolean
+  onClose: () => void
+}) {
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [confirmVoid, setConfirmVoid] = useState(false)
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: salesQueryKey })
-  const onError = (err: unknown, fallback: string) =>
+  const fail = (err: unknown, fallback: string) =>
     setError(err instanceof ApiError ? err.message : fallback)
 
   const setPayment = useMutation({
     mutationFn: ({ paid, method }: { paid: boolean; method?: PaymentMethod }) =>
       api.updateSalePayment(sale.id, paid ? 'paid' : 'pending', method),
     onSuccess: () => {
-      setError(null)
       refresh()
+      onClose()
     },
-    onError: (err) => onError(err, 'No se pudo actualizar el pago.'),
+    onError: (err) => fail(err, 'No se pudo actualizar el pago.'),
   })
 
   const resend = useMutation({
     mutationFn: () => api.resendSaleEmail(sale.id),
     onSuccess: ({ email_status }) => {
-      setError(email_status === 'sent' ? null : 'El email no salió. Probá de nuevo.')
+      refresh()
+      if (email_status === 'sent') setNotice('Email enviado ✓')
+      else setError('El email no salió. Probá de nuevo.')
     },
-    onError: (err) => onError(err, 'No se pudo reenviar el email.'),
+    onError: (err) => fail(err, 'No se pudo reenviar el email.'),
   })
 
   const voidSale = useMutation({
     mutationFn: () => api.voidSale(sale.id),
     onSuccess: () => {
-      setError(null)
       refresh()
+      onClose()
     },
-    onError: (err) => onError(err, 'No se pudo anular la venta.'),
+    onError: (err) => fail(err, 'No se pudo anular la venta.'),
   })
 
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(publicSaleURL(sale.code))
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setNotice('Link copiado ✓')
     } catch {
-      setError('No se pudo copiar; abrí la entrada y compartila desde ahí.')
+      setError('No se pudo copiar el link.')
     }
   }
 
-  const voided = sale.voided_at !== null
+  const pendingPayment = sale.voided_at === null && !sale.is_comp && sale.payment_status === 'pending'
+  const paid = sale.voided_at === null && !sale.is_comp && sale.payment_status === 'paid'
 
   return (
-    <div className={`lrow${voided ? ' panel--voided' : ''}`}>
-      <div className="lrow__head">
+    <BottomSheet open onClose={onClose} label={`Acciones de la venta de ${sale.buyer_name}`}>
+      <div className="sheet-head">
+        <span className="ini">{initials(sale.buyer_name)}</span>
         <span>
           <b>{sale.buyer_name}</b>
-          <span className="lrow__sub" style={{ display: 'block' }}>
+          <span>
             {sale.quantity} {sale.quantity === 1 ? 'entrada' : 'entradas'} ·{' '}
-            {formatDateTime(sale.function_starts_at)}
-            {isAdmin && <> · vendió {sale.seller_name}</>}
+            {sale.function_name ?? sale.function_venue} · vendió {sale.seller_name}
+            {!sale.is_comp && <> · {formatMoney(sale.amount_cents)}</>}
           </span>
         </span>
-        <SaleChip sale={sale} />
       </div>
 
-      {error && (
-        <p className="alert" role="alert" style={{ marginTop: 10 }}>
-          {error}
-        </p>
+      {error && <p className="alert" role="alert" style={{ margin: '10px 0 0' }}>{error}</p>}
+      {notice && <p className="muted" style={{ margin: '10px 0 0', fontWeight: 700, color: 'var(--ok)' }}>{notice}</p>}
+
+      {pendingPayment && (
+        <>
+          <SheetAction icon={<Banknote size={15} />} tone="ok" disabled={setPayment.isPending}
+            onClick={() => setPayment.mutate({ paid: true, method: 'cash' })}>
+            Marcar pagó — efectivo
+          </SheetAction>
+          <SheetAction icon={<Landmark size={15} />} tone="ok" disabled={setPayment.isPending}
+            onClick={() => setPayment.mutate({ paid: true, method: 'transfer' })}>
+            Marcar pagó — transferencia
+          </SheetAction>
+        </>
       )}
-
-      {!voided && (
-        <div className="sale-actions">
-          {!sale.is_comp &&
-            (sale.payment_status === 'pending' ? (
-              <>
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  disabled={setPayment.isPending}
-                  onClick={() => setPayment.mutate({ paid: true, method: 'cash' })}
-                >
-                  Pagó en efectivo
-                </button>
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  disabled={setPayment.isPending}
-                  onClick={() => setPayment.mutate({ paid: true, method: 'transfer' })}
-                >
-                  Pagó por transferencia
-                </button>
-              </>
-            ) : (
-              <button
-                className="button button--ghost"
-                type="button"
-                disabled={setPayment.isPending}
-                onClick={() => setPayment.mutate({ paid: false })}
-              >
-                Volver a pendiente
-              </button>
-            ))}
-
-          <button className="button button--ghost" type="button" onClick={() => void copyLink()}>
-            {copied ? 'Copiado ✓' : 'Copiar link'}
-          </button>
-
-          {sale.buyer_email && (
-            <button
-              className="button button--ghost"
-              type="button"
-              disabled={resend.isPending}
-              onClick={() => resend.mutate()}
-            >
-              {resend.isPending ? 'Enviando…' : 'Reenviar email'}
-            </button>
-          )}
-
-          {isAdmin && (
-            <button
-              className="button button--ghost button--danger"
-              type="button"
-              disabled={voidSale.isPending}
-              onClick={() => {
-                if (window.confirm(`¿Anular la venta de ${sale.buyer_name}? Libera el cupo.`)) {
-                  voidSale.mutate()
-                }
-              }}
-            >
-              Anular
-            </button>
-          )}
-        </div>
+      {paid && (
+        <SheetAction icon={<RotateCcw size={15} />} disabled={setPayment.isPending}
+          onClick={() => setPayment.mutate({ paid: false })}>
+          Volver a pendiente
+        </SheetAction>
       )}
-    </div>
+      {sale.voided_at === null && (
+        <SheetAction icon={<Link2 size={15} />} onClick={() => void copyLink()}>
+          Copiar link de la entrada
+        </SheetAction>
+      )}
+      {sale.voided_at === null && sale.buyer_email && (
+        <SheetAction
+          icon={<Mail size={15} />}
+          hint={sale.last_email_at ? `enviado ${daysAgo(sale.last_email_at)}` : 'nunca se envió'}
+          disabled={resend.isPending}
+          onClick={() => resend.mutate()}
+        >
+          {resend.isPending ? 'Enviando…' : 'Reenviar email'}
+        </SheetAction>
+      )}
+      {isAdmin && sale.voided_at === null && (
+        <SheetAction icon={<X size={15} />} tone="danger" disabled={voidSale.isPending}
+          onClick={() => {
+            if (confirmVoid) voidSale.mutate()
+            else setConfirmVoid(true)
+          }}>
+          {confirmVoid ? '¿Seguro? Anular definitivamente (libera el cupo)' : 'Anular venta'}
+        </SheetAction>
+      )}
+    </BottomSheet>
   )
-}
-
-/** Filtros del listado (C2/C3); llegan preaplicados via ?filtro=. */
-export type SalesFilter = 'todas' | 'deben' | 'pagas' | 'cortesias'
-
-export function matchesFilter(sale: SaleRow, filter: SalesFilter): boolean {
-  switch (filter) {
-    case 'deben':
-      return sale.voided_at === null && !sale.is_comp && sale.payment_status === 'pending'
-    case 'pagas':
-      return sale.voided_at === null && !sale.is_comp && sale.payment_status === 'paid'
-    case 'cortesias':
-      return sale.voided_at === null && sale.is_comp
-    case 'todas':
-      return true
-  }
-}
-
-function parseFilter(raw: string | null): SalesFilter {
-  return raw === 'deben' || raw === 'pagas' || raw === 'cortesias' ? raw : 'todas'
 }
 
 export function SalesPage() {
   const { user } = useSession()
   const isAdmin = user?.role === 'admin'
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const filter = parseFilter(searchParams.get('filtro'))
 
-  const { data, isPending } = useQuery({
-    queryKey: salesQueryKey,
-    queryFn: () => api.listSales(),
+  const filter = parseFilter(searchParams.get('filtro'))
+  const [q, setQ] = useState('')
+  const [debouncedQ, setDebouncedQ] = useState('')
+  const [functionId, setFunctionId] = useState<number | undefined>(undefined)
+  const [selected, setSelected] = useState<SaleListItem | null>(null)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(q), 300)
+    return () => clearTimeout(timer)
+  }, [q])
+
+  const functions = useQuery({ queryKey: ['functions'], queryFn: () => api.listFunctions() })
+
+  const list = useInfiniteQuery({
+    queryKey: [...salesQueryKey, { filter, q: debouncedQ, functionId }],
+    queryFn: ({ pageParam }) =>
+      api.listSales({
+        status: FILTER_TO_STATUS[filter],
+        q: debouncedQ || undefined,
+        functionId,
+        cursor: pageParam || undefined,
+      }),
+    initialPageParam: '',
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
   })
 
-  const visible = (data?.sales ?? []).filter((sale) => matchesFilter(sale, filter))
+  const sales = useMemo(() => (list.data?.pages ?? []).flatMap((p) => p.sales), [list.data])
+  const summary = list.data?.pages[0]?.summary
+  const searching = debouncedQ.trim() !== ''
+  const flat = useMemo(
+    () => (searching ? groupByMatch(sales, debouncedQ) : groupByFunction(sales, !list.hasNextPage)),
+    [sales, searching, debouncedQ, list.hasNextPage],
+  )
+
+  // Virtualizacion sobre el scroll de la ventana (C3.3).
+  const listRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useWindowVirtualizer({
+    count: flat.length,
+    estimateSize: (i) => (flat[i].kind === 'header' ? 36 : 68),
+    overscan: 10,
+    scrollMargin: listRef.current?.offsetTop ?? 0,
+  })
+
+  // Pedir la proxima pagina cuando el final entra en pantalla.
+  const virtualItems = virtualizer.getVirtualItems()
+  const lastIndex = virtualItems.at(-1)?.index ?? 0
+  useEffect(() => {
+    if (flat.length > 0 && lastIndex >= flat.length - 5 && list.hasNextPage && !list.isFetchingNextPage) {
+      void list.fetchNextPage()
+    }
+  }, [lastIndex, flat.length, list])
 
   return (
     <>
-      <div className="page-head">
-        <h1 className="page-title">{isAdmin ? 'Ventas' : 'Mis ventas'}</h1>
-        <Link className="button" style={{ width: 'auto', textDecoration: 'none', display: 'inline-block' }} to="/ventas/nueva">
-          Nueva venta
-        </Link>
+      <h1 className="page-title">{isAdmin ? 'Ventas' : 'Mis ventas'}</h1>
+
+      {summary && (
+        <div className="sumstrip">
+          <div>
+            <b>{summary.tickets_sold}</b>
+            <span>Entradas</span>
+          </div>
+          <div className="g">
+            <b>{formatMoney(summary.paid_cents)}</b>
+            <span>Cobrado</span>
+          </div>
+          <div className="y">
+            <b>{formatMoney(summary.pending_cents)}</b>
+            <span>Por cobrar</span>
+          </div>
+        </div>
+      )}
+
+      <div className="sticky-bar">
+        <SearchBar value={q} onChange={setQ} placeholder="Buscar comprador o vendedora…" />
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <FilterChips<UIFilter>
+            value={filter}
+            onChange={(next) => setSearchParams(next === 'todas' ? {} : { filtro: next })}
+            options={[
+              { value: 'todas', label: 'Todas', count: summary?.total_count },
+              { value: 'deben', label: 'Deben', count: summary?.pending_count, tone: 'warn' },
+              { value: 'pagas', label: 'Pagas' },
+              { value: 'cortesias', label: 'Cortesías' },
+            ]}
+          />
+          <select
+            className="fchip"
+            style={{ marginTop: 8, maxWidth: 130 }}
+            aria-label="Filtrar por función"
+            value={functionId ?? ''}
+            onChange={(e) => setFunctionId(e.target.value ? Number(e.target.value) : undefined)}
+          >
+            <option value="">Todas las funciones</option>
+            {functions.data?.functions.map((fn) => (
+              <option key={fn.id} value={fn.id}>
+                {fn.name ?? fn.venue}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {filter !== 'todas' && (
-        <p className="muted" style={{ margin: '0 0 10px', fontSize: 12.5 }}>
-          Filtrado: <strong>{filter === 'deben' ? 'Deben' : filter === 'pagas' ? 'Pagas' : 'Cortesías'}</strong>{' '}
-          ·{' '}
-          <button
-            type="button"
-            onClick={() => setSearchParams({})}
-            style={{ border: 'none', background: 'none', color: 'var(--brand-blue)', fontWeight: 700, cursor: 'pointer', font: 'inherit' }}
-          >
-            Ver todas
-          </button>
-        </p>
-      )}
-
-      {isPending ? (
+      {list.isPending ? (
         <p className="muted">Cargando…</p>
-      ) : visible.length > 0 ? (
-        <div className="stack">
-          {visible.map((sale) => (
-            <SaleCard key={sale.id} sale={sale} isAdmin={isAdmin} />
-          ))}
-        </div>
+      ) : flat.length === 0 ? (
+        searching ? (
+          <p className="muted">Nada para “{debouncedQ}”. Probá con menos letras.</p>
+        ) : filter === 'deben' ? (
+          <EmptyState icon={<PartyPopper size={18} />} title="Nadie debe nada">
+            Todo lo vendido está cobrado. ¡Gran trabajo!
+          </EmptyState>
+        ) : (
+          <p className="muted">Todavía no hay ventas acá.</p>
+        )
       ) : (
-        <p className="muted">
-          {filter === 'deben'
-            ? 'Nadie debe nada. ¡Todo cobrado!'
-            : 'Todavía no hay ventas acá.'}
-        </p>
+        <div ref={listRef} style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+          {virtualItems.map((vi) => {
+            const item = flat[vi.index]
+            return (
+              <div
+                key={item.key}
+                data-index={vi.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  transform: `translateY(${vi.start - virtualizer.options.scrollMargin}px)`,
+                }}
+              >
+                {item.kind === 'header' ? (
+                  <div className="ghead">
+                    <b>{item.title}</b>
+                    {item.count !== undefined && (
+                      <span>{item.count} {item.count === 1 ? 'venta' : 'ventas'}</span>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    className={`mrow${item.sale.voided_at ? ' panel--voided' : ''}`}
+                    type="button"
+                    onClick={() => setSelected(item.sale)}
+                  >
+                    <span className="ini">{initials(item.sale.buyer_name)}</span>
+                    <span className="mrow__mid">
+                      <b><Hl text={item.sale.buyer_name} q={debouncedQ} /></b>
+                      <span>
+                        {item.sale.quantity} {item.sale.quantity === 1 ? 'entrada' : 'entradas'} ·{' '}
+                        {item.sale.is_comp ? 'emitió' : 'vendió'}{' '}
+                        <Hl text={item.sale.seller_name} q={debouncedQ} />
+                      </span>
+                    </span>
+                    <SaleChip sale={item.sale} />
+                    <span className="mrow__dots" aria-hidden>⋮</span>
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
+      {list.isFetchingNextPage && <p className="muted" style={{ textAlign: 'center' }}>Cargando más…</p>}
+
+      {selected && <SaleSheet sale={selected} isAdmin={isAdmin} onClose={() => setSelected(null)} />}
+
+      <FAB onClick={() => navigate('/ventas/nueva')}>Nueva venta</FAB>
     </>
   )
 }
