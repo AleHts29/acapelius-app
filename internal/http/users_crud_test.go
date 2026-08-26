@@ -68,67 +68,12 @@ func TestCRUDDeCoristas(t *testing.T) {
 	}), http.StatusForbidden, "forbidden")
 }
 
-func TestAsignaciones(t *testing.T) {
-	env := newTestEnv(t)
-	admin := loginAdmin(t, env)
-	fnID := setupCatalog(t, admin, 100)
-	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
-
-	// Eli le asigna 10 entradas a Carolina para la funcion.
-	set := admin.do(http.MethodPut, "/api/allocations", map[string]any{
-		"user_id": 2, "function_id": fnID, "quantity": 10,
-	})
-	assertStatus(t, set, http.StatusOK)
-
-	// Carolina vende 4 y ve su avance.
-	assertStatus(t, carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Maria", "quantity": 4,
-	}), http.StatusCreated)
-
-	mine := carolina.get("/api/allocations?mine=1")
-	assertStatus(t, mine, http.StatusOK)
-	rows := mine.Body["allocations"].([]any)
-	if len(rows) != 1 {
-		t.Fatalf("Carolina tendria que ver 1 asignacion: %v", mine.Body)
-	}
-	row := rows[0].(map[string]any)
-	if row["assigned"].(float64) != 10 || row["sold"].(float64) != 4 {
-		t.Fatalf("avance mal calculado: %v", row)
-	}
-
-	// El admin ve el tablero por funcion.
-	board := admin.get(fmt.Sprintf("/api/allocations?function_id=%.0f", fnID))
-	assertStatus(t, board, http.StatusOK)
-	boardRow := board.Body["allocations"].([]any)[0].(map[string]any)
-	if boardRow["seller_name"] != "Carolina" || boardRow["sold"].(float64) != 4 {
-		t.Fatalf("tablero incorrecto: %v", boardRow)
-	}
-
-	// Actualizar (upsert) y borrar con quantity 0.
-	assertStatus(t, admin.do(http.MethodPut, "/api/allocations", map[string]any{
-		"user_id": 2, "function_id": fnID, "quantity": 12,
-	}), http.StatusOK)
-	assertStatus(t, admin.do(http.MethodPut, "/api/allocations", map[string]any{
-		"user_id": 2, "function_id": fnID, "quantity": 0,
-	}), http.StatusNoContent)
-	empty := carolina.get("/api/allocations?mine=1")
-	if got := len(empty.Body["allocations"].([]any)); got != 0 {
-		t.Fatalf("la asignacion tendria que haberse borrado: %d", got)
-	}
-
-	// Una corista no asigna; y no ve el tablero por funcion de otras.
-	assertErrorCode(t, carolina.do(http.MethodPut, "/api/allocations", map[string]any{
-		"user_id": 2, "function_id": fnID, "quantity": 99,
-	}), http.StatusForbidden, "forbidden")
-	assertErrorCode(t, carolina.get(fmt.Sprintf("/api/allocations?function_id=%.0f", fnID)),
-		http.StatusForbidden, "forbidden")
-}
-
 func TestEntradaIndividualPublica(t *testing.T) {
 	env := newTestEnv(t)
 	admin := loginAdmin(t, env)
 	fnID := setupCatalog(t, admin, 100)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 10)
 
 	codes := sellTickets(t, seller, fnID, "Maria Dutra", 3)
 	anonymous := env.client(t)

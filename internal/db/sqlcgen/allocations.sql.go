@@ -10,38 +10,54 @@ import (
 	"time"
 )
 
-const allocationsByFunction = `-- name: AllocationsByFunction :many
+const deleteAllocation = `-- name: DeleteAllocation :exec
+DELETE FROM allocations
+WHERE user_id = $1::bigint AND function_id = $2::bigint
+`
+
+type DeleteAllocationParams struct {
+	UserID     int64 `json:"user_id"`
+	FunctionID int64 `json:"function_id"`
+}
+
+func (q *Queries) DeleteAllocation(ctx context.Context, arg DeleteAllocationParams) error {
+	_, err := q.db.Exec(ctx, deleteAllocation, arg.UserID, arg.FunctionID)
+	return err
+}
+
+const functionAllocationBoard = `-- name: FunctionAllocationBoard :many
 SELECT
-  a.user_id,
+  u.id AS user_id,
   u.name AS seller_name,
-  a.quantity AS assigned,
-  (SELECT COALESCE(SUM(s.quantity), 0) FROM sales s
-   WHERE s.seller_id = a.user_id AND s.function_id = a.function_id
-     AND s.voided_at IS NULL AND NOT s.is_comp)::bigint AS sold
-FROM allocations a
-JOIN users u ON a.user_id = u.id
-WHERE a.function_id = $1::bigint
+  COALESCE(a.quantity, 0)::integer AS assigned,
+  (SELECT COUNT(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
+   WHERE s.seller_id = u.id AND s.function_id = $1::bigint
+     AND NOT s.is_comp AND t.status <> 'void')::bigint AS sold
+FROM users u
+LEFT JOIN allocations a ON a.user_id = u.id AND a.function_id = $1::bigint
+WHERE u.role = 'seller' AND u.is_active
 ORDER BY u.name
 `
 
-type AllocationsByFunctionRow struct {
+type FunctionAllocationBoardRow struct {
 	UserID     int64  `json:"user_id"`
 	SellerName string `json:"seller_name"`
 	Assigned   int32  `json:"assigned"`
 	Sold       int64  `json:"sold"`
 }
 
-// Asignaciones de una funcion con lo vendido por cada corista (cortesias y
-// anuladas no cuentan).
-func (q *Queries) AllocationsByFunction(ctx context.Context, functionID int64) ([]AllocationsByFunctionRow, error) {
-	rows, err := q.db.Query(ctx, allocationsByFunction, functionID)
+// Tablero de asignacion (C8): todas las coristas activas con su cupo y lo
+// vendido. "Vendido" = tickets vivos de sus ventas no-cortesia: anular
+// devuelve el cupo automaticamente, sin contador desnormalizado.
+func (q *Queries) FunctionAllocationBoard(ctx context.Context, functionID int64) ([]FunctionAllocationBoardRow, error) {
+	rows, err := q.db.Query(ctx, functionAllocationBoard, functionID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []AllocationsByFunctionRow{}
+	items := []FunctionAllocationBoardRow{}
 	for rows.Next() {
-		var i AllocationsByFunctionRow
+		var i FunctionAllocationBoardRow
 		if err := rows.Scan(
 			&i.UserID,
 			&i.SellerName,
@@ -58,19 +74,21 @@ func (q *Queries) AllocationsByFunction(ctx context.Context, functionID int64) (
 	return items, nil
 }
 
-const deleteAllocation = `-- name: DeleteAllocation :exec
-DELETE FROM allocations
+const getAllocationQty = `-- name: GetAllocationQty :one
+SELECT quantity FROM allocations
 WHERE user_id = $1::bigint AND function_id = $2::bigint
 `
 
-type DeleteAllocationParams struct {
+type GetAllocationQtyParams struct {
 	UserID     int64 `json:"user_id"`
 	FunctionID int64 `json:"function_id"`
 }
 
-func (q *Queries) DeleteAllocation(ctx context.Context, arg DeleteAllocationParams) error {
-	_, err := q.db.Exec(ctx, deleteAllocation, arg.UserID, arg.FunctionID)
-	return err
+func (q *Queries) GetAllocationQty(ctx context.Context, arg GetAllocationQtyParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getAllocationQty, arg.UserID, arg.FunctionID)
+	var quantity int32
+	err := row.Scan(&quantity)
+	return quantity, err
 }
 
 const getPublicTicket = `-- name: GetPublicTicket :one
@@ -134,9 +152,9 @@ SELECT
   f.venue,
   f.starts_at,
   a.quantity AS assigned,
-  (SELECT COALESCE(SUM(s.quantity), 0) FROM sales s
+  (SELECT COUNT(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
    WHERE s.seller_id = a.user_id AND s.function_id = a.function_id
-     AND s.voided_at IS NULL AND NOT s.is_comp)::bigint AS sold
+     AND NOT s.is_comp AND t.status <> 'void')::bigint AS sold
 FROM allocations a
 JOIN functions f ON a.function_id = f.id
 WHERE a.user_id = $1::bigint
@@ -152,7 +170,7 @@ type MyAllocationsRow struct {
 	Sold         int64     `json:"sold"`
 }
 
-// Las asignaciones de una corista, con la funcion y su avance de venta.
+// Cupo y avance de la corista logueada, por funcion (C8: /api/me/allocations).
 func (q *Queries) MyAllocations(ctx context.Context, userID int64) ([]MyAllocationsRow, error) {
 	rows, err := q.db.Query(ctx, myAllocations, userID)
 	if err != nil {
@@ -178,6 +196,40 @@ func (q *Queries) MyAllocations(ctx context.Context, userID int64) ([]MyAllocati
 		return nil, err
 	}
 	return items, nil
+}
+
+const soldBySellerInFunction = `-- name: SoldBySellerInFunction :one
+SELECT COUNT(*) FROM tickets t
+JOIN sales s ON t.sale_id = s.id
+WHERE s.seller_id = $1::bigint
+  AND s.function_id = $2::bigint
+  AND NOT s.is_comp
+  AND t.status <> 'void'
+`
+
+type SoldBySellerInFunctionParams struct {
+	SellerID   int64 `json:"seller_id"`
+	FunctionID int64 `json:"function_id"`
+}
+
+// Base del cupo consumido: tickets vivos de ventas no-cortesia.
+func (q *Queries) SoldBySellerInFunction(ctx context.Context, arg SoldBySellerInFunctionParams) (int64, error) {
+	row := q.db.QueryRow(ctx, soldBySellerInFunction, arg.SellerID, arg.FunctionID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const sumAllocations = `-- name: SumAllocations :one
+SELECT COALESCE(SUM(quantity), 0)::bigint FROM allocations
+WHERE function_id = $1::bigint
+`
+
+func (q *Queries) SumAllocations(ctx context.Context, functionID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, sumAllocations, functionID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const upsertAllocation = `-- name: UpsertAllocation :one

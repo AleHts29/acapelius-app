@@ -24,6 +24,9 @@ const (
 	CodePasswordChangeNeeded = "password_change_required"
 	CodeInternal             = "internal_error"
 	CodeTooManyRequests      = "too_many_requests"
+	CodeNoAllocation         = "no_allocation"
+	CodeAllocationExceeded   = "allocation_exceeded"
+	CodeAllocationBelowSold  = "allocation_below_sold"
 	CodeUnsupportedMediaType = "unsupported_media_type"
 	CodePayloadTooLarge      = "payload_too_large"
 )

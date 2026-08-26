@@ -37,3 +37,10 @@ cubrian el caso o entraban en tension con el codigo ya existente.
   todo (con paginas pendientes seria mentirle al usuario).
 - **`last_email_at` con centinela año 1** en SQL (COALESCE) porque sqlc no
   puede inferir la nulabilidad de la subquery; el handler lo convierte a null.
+- **C8 endurece las allocations existentes** (antes eran "objetivo de venta"
+  blando de una iteracion previa): misma tabla, sin migracion; ahora son cupo
+  obligatorio validado en la transaccion de venta. "Vendido" se deriva de
+  tickets vivos (anular un ticket suelto tambien devuelve cupo), sin contador
+  desnormalizado. Se sumo el invariante simetrico: reducir el capacity de una
+  funcion por debajo de la suma asignada tambien falla con
+  allocation_exceeded.

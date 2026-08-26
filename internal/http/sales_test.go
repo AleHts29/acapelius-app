@@ -8,6 +8,15 @@ import (
 	"testing"
 )
 
+// assignQuota le asigna cupo a una corista para una funcion (C8: sin cupo,
+// una corista no puede vender).
+func assignQuota(t *testing.T, admin *testClient, fnID float64, userID, qty int) {
+	t.Helper()
+	resp := admin.do(http.MethodPut, fmt.Sprintf("/api/functions/%.0f/allocations", fnID),
+		map[string]any{"allocations": []map[string]any{{"user_id": userID, "quantity": qty}}})
+	assertStatus(t, resp, http.StatusOK)
+}
+
 // setupCatalog crea una temporada con una funcion y devuelve el id de la
 // funcion. Requiere un admin logueado.
 func setupCatalog(t *testing.T, admin *testClient, capacity int) float64 {
@@ -36,6 +45,7 @@ func TestAceptacionFase2(t *testing.T) {
 	admin := loginAdmin(t, env)
 	fnID := setupCatalog(t, admin, 5)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 5)
 
 	// 1. La vendedora registra una venta de 3 con email.
 	created := seller.post("/api/sales", map[string]any{
@@ -134,6 +144,7 @@ func TestCupoBajoConcurrencia(t *testing.T) {
 	admin := loginAdmin(t, env)
 	fnID := setupCatalog(t, admin, 5)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 5)
 
 	// Dos ventas de 3 sobre un cupo de 5, disparadas a la vez: exactamente
 	// una tiene que entrar.
@@ -172,6 +183,7 @@ func TestPagosDeVenta(t *testing.T) {
 	admin := loginAdmin(t, env)
 	fnID := setupCatalog(t, admin, 10)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 10)
 
 	created := seller.post("/api/sales", map[string]any{
 		"function_id": fnID, "buyer_name": "Maria", "quantity": 2,
@@ -216,6 +228,7 @@ func TestReenvioDeEmail(t *testing.T) {
 	admin := loginAdmin(t, env)
 	fnID := setupCatalog(t, admin, 10)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 10)
 
 	// Venta sin email: reenviar da 400.
 	noEmail := seller.post("/api/sales", map[string]any{
@@ -252,6 +265,7 @@ func TestAnulaciones(t *testing.T) {
 	admin := loginAdmin(t, env)
 	fnID := setupCatalog(t, admin, 3)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 3)
 
 	created := seller.post("/api/sales", map[string]any{
 		"function_id": fnID, "buyer_name": "Maria", "quantity": 3,
@@ -311,6 +325,7 @@ func TestAutorizacionDeVentas(t *testing.T) {
 
 	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	valeria := createSellerClient(t, env, admin, "Valeria", "vale@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 5)
 
 	sale := carolina.post("/api/sales", map[string]any{
 		"function_id": fnID, "buyer_name": "Maria", "quantity": 1,
@@ -366,6 +381,7 @@ func TestCupoDeFuncionNoBajaDeLoVendido(t *testing.T) {
 	admin := loginAdmin(t, env)
 	fnID := setupCatalog(t, admin, 10)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 4)
 
 	assertStatus(t, seller.post("/api/sales", map[string]any{
 		"function_id": fnID, "buyer_name": "Maria", "quantity": 4,

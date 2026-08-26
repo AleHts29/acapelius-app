@@ -117,6 +117,44 @@ func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cupo personal en modo estricto (C8): una corista solo vende lo que
+	// direccion le asigno para esta funcion. El admin vende sin cupo personal
+	// y las cortesias no consumen cupo (ya validaron capacity). Corre dentro
+	// de la misma transaccion con la funcion lockeada: dos ventas
+	// concurrentes de la misma corista no pueden superar su cupo.
+	if !req.IsComp && user.Role != domain.RoleAdmin {
+		allocation, err := q.GetAllocationQty(ctx, sqlcgen.GetAllocationQtyParams{
+			UserID:     user.ID,
+			FunctionID: req.FunctionID,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				httpx.Error(w, http.StatusConflict, httpx.CodeNoAllocation,
+					"No tenés cupo asignado para esta función. Pedile a dirección que te asigne entradas.")
+				return
+			}
+			httpx.Internal(w, r, err)
+			return
+		}
+		sold, err := q.SoldBySellerInFunction(ctx, sqlcgen.SoldBySellerInFunctionParams{
+			SellerID:   user.ID,
+			FunctionID: req.FunctionID,
+		})
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		if sold+int64(req.Quantity) > int64(allocation) {
+			remaining := int64(allocation) - sold
+			if remaining < 0 {
+				remaining = 0
+			}
+			httpx.Error(w, http.StatusConflict, httpx.CodeAllocationExceeded,
+				fmt.Sprintf("Llegaste a tu cupo: te quedan %d de %d asignadas. Si necesitás más, pedile a Eli.", remaining, allocation))
+			return
+		}
+	}
+
 	sale, err := q.CreateSale(ctx, sqlcgen.CreateSaleParams{
 		FunctionID:  req.FunctionID,
 		SellerID:    user.ID,

@@ -2,106 +2,121 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api } from '../api/client'
+import type { ShowFunction } from '../api/client'
+import { StackedBar, Stepper } from '../ui/controls'
 
 /**
- * Editor de asignaciones de una funcion: cuantas entradas le toca vender a
- * cada corista. Es un objetivo de venta (el tope real sigue siendo el cupo);
- * poner 0 borra la asignacion.
+ * Tablero de asignacion de cupos de una funcion (C8, mockup
+ * acapelius-usuarios-cupos pantallas 3-4): barra apilada vendidas /
+ * asignadas / sin asignar, una fila por corista activa con stepper, y
+ * guardado en batch. El "−" se frena en lo ya vendido.
  */
-export function AllocationsEditor({ functionId }: { functionId: number }) {
+export function AllocationsEditor({ fn }: { fn: ShowFunction }) {
   const queryClient = useQueryClient()
-  const [drafts, setDrafts] = useState<Record<number, string>>({})
+  const [drafts, setDrafts] = useState<Record<number, number>>({})
   const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
 
-  const users = useQuery({ queryKey: ['users'], queryFn: () => api.listUsers() })
-  const allocations = useQuery({
-    queryKey: ['function-allocations', functionId],
-    queryFn: () => api.functionAllocations(functionId),
+  const board = useQuery({
+    queryKey: ['function-allocations', fn.id],
+    queryFn: () => api.functionAllocations(fn.id),
   })
 
   const save = useMutation({
-    mutationFn: ({ userId, quantity }: { userId: number; quantity: number }) =>
-      api.setAllocation(userId, functionId, quantity),
+    mutationFn: (entries: Array<{ user_id: number; quantity: number }>) =>
+      api.putAllocations(fn.id, entries),
     onSuccess: () => {
       setError(null)
-      void queryClient.invalidateQueries({ queryKey: ['function-allocations', functionId] })
+      setDrafts({})
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+      void queryClient.invalidateQueries({ queryKey: ['function-allocations', fn.id] })
+      void queryClient.invalidateQueries({ queryKey: ['my-allocations'] })
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : 'No se pudo guardar.'),
+    onError: (err) =>
+      setError(err instanceof ApiError ? err.message : 'No se pudieron guardar las asignaciones.'),
   })
 
-  if (users.isPending || allocations.isPending) {
-    return <p className="muted">Cargando coristas...</p>
-  }
+  if (board.isPending) return <p className="muted">Cargando coristas…</p>
+  if (!board.data) return <p className="alert">No se pudo cargar el tablero.</p>
 
-  const sellers = (users.data?.users ?? []).filter((u) => u.role === 'seller' && u.is_active)
-  const byUser = new Map(
-    (allocations.data?.allocations ?? []).map((a) => [a.user_id, a]),
-  )
-
-  if (sellers.length === 0) {
+  const rows = board.data.allocations
+  if (rows.length === 0) {
     return <p className="muted">No hay coristas activas para asignar.</p>
   }
 
+  const value = (userId: number, assigned: number) => drafts[userId] ?? assigned
+  const totalAssigned = rows.reduce((acc, r) => acc + value(r.user_id, r.assigned), 0)
+  const totalSold = rows.reduce((acc, r) => acc + r.sold, 0)
+  const unassigned = Math.max(fn.capacity - totalAssigned, 0)
+  const dirty = Object.entries(drafts).some(
+    ([userId, qty]) => rows.find((r) => r.user_id === Number(userId))?.assigned !== qty,
+  )
+  const overCapacity = totalAssigned > fn.capacity
+
   return (
     <div className="team-edit">
+      <StackedBar
+        label={`${totalSold} vendidas, ${totalAssigned - totalSold} asignadas sin vender, ${unassigned} sin asignar`}
+        total={fn.capacity}
+        segments={[
+          { value: totalSold, tone: 'ok' },
+          { value: Math.max(totalAssigned - totalSold, 0), tone: 'blue' },
+          { value: unassigned, tone: 'line' },
+        ]}
+      />
+      <p className="eyebrow" style={{ margin: '6px 0 4px', color: overCapacity ? 'var(--danger)' : undefined }}>
+        {overCapacity
+          ? `Te pasaste por ${totalAssigned - fn.capacity} del cupo de ${fn.capacity}`
+          : `Quedan ${unassigned} sin asignar · cupo ${fn.capacity}`}
+      </p>
+
       {error && (
         <p className="alert" role="alert">
           {error}
         </p>
       )}
-      {sellers.map((seller) => {
-        const current = byUser.get(seller.id)
-        const draft = drafts[seller.id] ?? (current ? String(current.assigned) : '')
-        const changed = draft !== (current ? String(current.assigned) : '')
+
+      {rows.map((row) => {
+        const current = value(row.user_id, row.assigned)
         return (
-          <div key={seller.id} className="alloc-row">
+          <div key={row.user_id} className="alloc-row">
             <span>
-              {seller.name}
-              {current && (
-                <>
-                  <br />
-                  <span className="muted alloc-progress" style={{ fontSize: '0.85rem' }}>
-                    vendio {current.sold} de {current.assigned}
-                    {current.sold >= current.assigned && ' ✓'}
-                  </span>
-                </>
-              )}
+              {row.seller_name}
+              <br />
+              <span className="muted" style={{ fontSize: 11 }}>
+                Vendió {row.sold} de {current}
+              </span>
             </span>
-            <span style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <input
-                className="alloc-row__input"
-                type="number"
-                min={0}
-                inputMode="numeric"
-                placeholder="0"
-                value={draft}
-                onChange={(e) => setDrafts({ ...drafts, [seller.id]: e.target.value })}
-                aria-label={`Entradas asignadas a ${seller.name}`}
-              />
-              {changed && (
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  disabled={save.isPending}
-                  onClick={() => {
-                    const quantity = Number(draft || '0')
-                    if (!Number.isInteger(quantity) || quantity < 0) {
-                      setError('La cantidad tiene que ser un numero.')
-                      return
-                    }
-                    save.mutate({ userId: seller.id, quantity })
-                  }}
-                >
-                  Guardar
-                </button>
-              )}
-            </span>
+            <Stepper
+              value={current}
+              min={row.sold}
+              onChange={(n) => setDrafts({ ...drafts, [row.user_id]: n })}
+              maxReason={undefined}
+            />
           </div>
         )
       })}
-      <p className="muted" style={{ margin: '0.6rem 0 0', fontSize: '0.82rem' }}>
-        Es un objetivo de venta, no un limite. Con 0 se borra la asignacion.
+      <p className="muted" style={{ margin: '6px 0 0', fontSize: 10.5 }}>
+        El − se frena en lo ya vendido: no podés bajar un cupo por debajo de eso.
       </p>
+
+      <button
+        className="button"
+        style={{ marginTop: 10 }}
+        type="button"
+        disabled={!dirty || overCapacity || save.isPending}
+        onClick={() =>
+          save.mutate(
+            Object.entries(drafts).map(([userId, qty]) => ({
+              user_id: Number(userId),
+              quantity: qty,
+            })),
+          )
+        }
+      >
+        {save.isPending ? 'Guardando…' : saved ? 'Guardado ✓' : 'Guardar asignaciones'}
+      </button>
     </div>
   )
 }

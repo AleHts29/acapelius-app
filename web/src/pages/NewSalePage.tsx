@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api, publicSaleURL, shareOrCopy } from '../api/client'
 import type { EmailStatus, Sale } from '../api/client'
@@ -35,32 +35,10 @@ function ShareLinkButton({ url, buyerName }: { url: string; buyerName: string })
   )
 }
 
-/** Stepper comun (C10) + total en vivo (design system §3.5). */
-function QtyStepper({
-  value,
-  onChange,
-  totalCents,
-  isComp,
-}: {
-  value: number
-  onChange: (n: number) => void
-  totalCents: number
-  isComp: boolean
-}) {
-  return (
-    <div className="qty">
-      <Stepper value={value} onChange={onChange} min={1} />
-      <div className="qty__total">
-        Total
-        <b>{isComp ? 'Cortesía' : formatMoney(totalCents)}</b>
-      </div>
-    </div>
-  )
-}
-
 export function NewSalePage() {
   const { user } = useSession()
   const isAdmin = user?.role === 'admin'
+  const queryClient = useQueryClient()
 
   const [functionId, setFunctionId] = useState('')
   const [buyerName, setBuyerName] = useState('')
@@ -72,6 +50,12 @@ export function NewSalePage() {
   const [created, setCreated] = useState<CreatedSale | null>(null)
 
   const functions = useQuery({ queryKey: ['functions'], queryFn: () => api.listFunctions() })
+  // Cupos asignados por direccion (C8): la corista solo vende lo suyo.
+  const myAllocations = useQuery({
+    queryKey: ['my-allocations'],
+    queryFn: () => api.myAllocations(),
+    enabled: !isAdmin,
+  })
 
   const create = useMutation({
     mutationFn: (input: Parameters<typeof api.createSale>[0]) => api.createSale(input),
@@ -82,6 +66,10 @@ export function NewSalePage() {
         emailStatus: result.email_status,
       })
       setError(null)
+      // El cupo, el progreso del hero y el listado cambiaron.
+      void queryClient.invalidateQueries({ queryKey: ['my-allocations'] })
+      void queryClient.invalidateQueries({ queryKey: ['functions'] })
+      void queryClient.invalidateQueries({ queryKey: ['sales'] })
     },
     onError: (err) =>
       setError(err instanceof ApiError ? err.message : 'No se pudo registrar la venta.'),
@@ -98,6 +86,10 @@ export function NewSalePage() {
       setError('Falta el nombre de quien compra.')
       return
     }
+    if (!isAdmin && !isComp && !allocationFor(fnID)) {
+      setError('No tenés cupo asignado para esta función. Pedile a dirección que te asigne entradas.')
+      return
+    }
     create.mutate({
       function_id: fnID,
       buyer_name: buyerName.trim(),
@@ -110,6 +102,22 @@ export function NewSalePage() {
 
   const selectedFunction = functions.data?.functions.find((f) => f.id === Number(functionId))
   const total = selectedFunction ? selectedFunction.price_cents * quantity : 0
+
+  const allocationFor = (fnId: number) =>
+    myAllocations.data?.allocations.find((a) => a.function_id === fnId)
+  const selectedAllocation = selectedFunction ? allocationFor(selectedFunction.id) : undefined
+  const remainingCapacity = selectedFunction
+    ? Math.max(selectedFunction.capacity - selectedFunction.sold, 0)
+    : undefined
+  // Tope del stepper: cupo personal (corista, salvo cortesia) y capacity.
+  const maxQty = selectedFunction
+    ? isAdmin || isComp
+      ? remainingCapacity
+      : Math.min(selectedAllocation?.remaining ?? 0, remainingCapacity ?? 0)
+    : undefined
+  const quotaLimited =
+    !isAdmin && !isComp && selectedAllocation !== undefined &&
+    (selectedAllocation.remaining ?? 0) <= (remainingCapacity ?? Infinity)
 
   if (created) {
     return (
@@ -181,13 +189,24 @@ export function NewSalePage() {
             onChange={(e) => setFunctionId(e.target.value)}
           >
             <option value="">Elegí la función…</option>
-            {functions.data?.functions.map((fn) => (
-              <option key={fn.id} value={fn.id}>
-                {fn.name ?? fn.venue} · {formatDateTime(fn.starts_at)}
-              </option>
-            ))}
+            {functions.data?.functions.map((fn) => {
+              const noQuota = !isAdmin && !allocationFor(fn.id)
+              return (
+                <option key={fn.id} value={fn.id} disabled={noQuota}>
+                  {fn.name ?? fn.venue} · {formatDateTime(fn.starts_at)}
+                  {noQuota ? ' · Sin cupo asignado' : ''}
+                </option>
+              )
+            })}
           </select>
         </label>
+
+        {!isAdmin && selectedAllocation && !isComp && (
+          <div className="quota-banner">
+            Te quedan <b>{selectedAllocation.remaining}</b> de {selectedAllocation.assigned} para{' '}
+            {selectedFunction?.name ?? selectedFunction?.venue} · Asignadas por dirección
+          </div>
+        )}
 
         <label className="field">
           <span className="field__label">Quién compra</span>
@@ -230,7 +249,23 @@ export function NewSalePage() {
 
         <div className="field">
           <span className="field__label">Cantidad</span>
-          <QtyStepper value={quantity} onChange={setQuantity} totalCents={total} isComp={isComp} />
+          <div className="qty">
+            <Stepper
+              value={quantity}
+              onChange={setQuantity}
+              min={1}
+              max={maxQty}
+              maxReason={
+                quotaLimited
+                  ? 'Llegaste a tu cupo. Si necesitás más, pedile a Eli.'
+                  : 'No queda más cupo en la función.'
+              }
+            />
+            <div className="qty__total">
+              Total
+              <b>{isComp ? 'Cortesía' : formatMoney(total)}</b>
+            </div>
+          </div>
         </div>
 
         <button className="button" style={{ marginTop: 16 }} type="submit" disabled={create.isPending}>

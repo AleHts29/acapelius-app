@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -57,35 +58,20 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]domain.User{"user": *updated})
 }
 
-type setAllocationRequest struct {
-	UserID     int64 `json:"user_id"`
-	FunctionID int64 `json:"function_id"`
-	// Quantity 0 borra la asignacion.
-	Quantity int32 `json:"quantity"`
-}
+// ============================================================================
+// Cupos de venta (C8, modo estricto)
+// ============================================================================
 
-// handleSetAllocation: Eli le asigna a una corista cuantas entradas de una
-// funcion le toca vender. Es un objetivo, no un limite: el unico tope duro
-// sigue siendo el cupo de la funcion.
-func (s *Server) handleSetAllocation(w http.ResponseWriter, r *http.Request) {
-	var req setAllocationRequest
-	if !httpx.DecodeJSON(w, r, &req) {
+// handleFunctionAllocationBoard: GET /api/functions/{id}/allocations — todas
+// las coristas activas con su cupo asignado y lo vendido (admin).
+func (s *Server) handleFunctionAllocationBoard(w http.ResponseWriter, r *http.Request) {
+	functionID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrFunctionNotFound)
 		return
 	}
-	if req.Quantity < 0 {
-		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "La cantidad no puede ser negativa.")
-		return
-	}
-
-	if _, err := s.queries.GetUserByID(r.Context(), req.UserID); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			mapDomainError(w, domain.ErrUserNotFound)
-			return
-		}
-		httpx.Internal(w, r, err)
-		return
-	}
-	if _, err := s.queries.GetFunction(r.Context(), req.FunctionID); err != nil {
+	function, err := s.queries.GetFunction(r.Context(), functionID)
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrFunctionNotFound)
 			return
@@ -94,65 +80,179 @@ func (s *Server) handleSetAllocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Quantity == 0 {
-		if err := s.queries.DeleteAllocation(r.Context(), sqlcgen.DeleteAllocationParams{
-			UserID:     req.UserID,
-			FunctionID: req.FunctionID,
-		}); err != nil {
-			httpx.Internal(w, r, err)
-			return
-		}
-		httpx.NoContent(w)
-		return
-	}
-
-	allocation, err := s.queries.UpsertAllocation(r.Context(), sqlcgen.UpsertAllocationParams{
-		UserID:     req.UserID,
-		FunctionID: req.FunctionID,
-		Quantity:   req.Quantity,
-	})
+	rows, err := s.queries.FunctionAllocationBoard(r.Context(), functionID)
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]sqlcgen.Allocation{"allocation": allocation})
+
+	var totalAssigned int64
+	for _, row := range rows {
+		totalAssigned += int64(row.Assigned)
+	}
+
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"capacity":       function.Capacity,
+		"total_assigned": totalAssigned,
+		"allocations":    rows,
+	})
 }
 
-// handleListAllocations: con ?function_id= (admin) lista las asignaciones de
-// esa funcion con el avance de cada corista; con ?mine=1, las de quien
-// pregunta (la corista ve su objetivo).
-func (s *Server) handleListAllocations(w http.ResponseWriter, r *http.Request) {
-	user := auth.MustUserFrom(r.Context())
+type putAllocationsRequest struct {
+	Allocations []struct {
+		UserID   int64 `json:"user_id"`
+		Quantity int32 `json:"quantity"`
+	} `json:"allocations"`
+}
 
-	if r.URL.Query().Get("mine") == "1" {
-		rows, err := s.queries.MyAllocations(r.Context(), user.ID)
+// handlePutAllocations: PUT /api/functions/{id}/allocations — upsert batch
+// con los invariantes del modo estricto, validados en transaccion con la
+// funcion lockeada (la misma serializacion que usa el capacity de ventas):
+//  1. SUM(allocations) <= capacity                (allocation_exceeded)
+//  2. cada cupo >= lo ya vendido por esa corista  (allocation_below_sold)
+//
+// Cantidad 0 borra la asignacion.
+func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
+	functionID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrFunctionNotFound)
+		return
+	}
+
+	var req putAllocationsRequest
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+	for _, entry := range req.Allocations {
+		if entry.Quantity < 0 {
+			httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "Las cantidades no pueden ser negativas.")
+			return
+		}
+	}
+
+	ctx := r.Context()
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	q := s.queries.WithTx(tx)
+
+	function, err := q.GetFunctionForUpdate(ctx, functionID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrFunctionNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	// Invariante 2: ningun cupo por debajo de lo vendido por esa corista.
+	for _, entry := range req.Allocations {
+		seller, err := q.GetUserByID(ctx, entry.UserID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				mapDomainError(w, domain.ErrUserNotFound)
+				return
+			}
+			httpx.Internal(w, r, err)
+			return
+		}
+		sold, err := q.SoldBySellerInFunction(ctx, sqlcgen.SoldBySellerInFunctionParams{
+			SellerID:   entry.UserID,
+			FunctionID: functionID,
+		})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
-		httpx.JSON(w, http.StatusOK, map[string][]sqlcgen.MyAllocationsRow{"allocations": rows})
-		return
+		if int64(entry.Quantity) < sold {
+			httpx.Error(w, http.StatusConflict, httpx.CodeAllocationBelowSold,
+				fmt.Sprintf("%s ya vendió %d: no podés bajar de %d.", seller.Name, sold, sold))
+			return
+		}
 	}
 
-	// Por funcion: solo admin (expone el avance de todas).
-	if user.Role != domain.RoleAdmin {
-		httpx.Error(w, http.StatusForbidden, httpx.CodeForbidden, "No tenes permiso para hacer esto.")
-		return
+	// Aplicar el batch y despues validar el invariante 1 sobre el resultado.
+	for _, entry := range req.Allocations {
+		if entry.Quantity == 0 {
+			if err := q.DeleteAllocation(ctx, sqlcgen.DeleteAllocationParams{
+				UserID:     entry.UserID,
+				FunctionID: functionID,
+			}); err != nil {
+				httpx.Internal(w, r, err)
+				return
+			}
+			continue
+		}
+		if _, err := q.UpsertAllocation(ctx, sqlcgen.UpsertAllocationParams{
+			UserID:     entry.UserID,
+			FunctionID: functionID,
+			Quantity:   entry.Quantity,
+		}); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
 	}
-	functionID, ok := parseOptionalID(w, r, "function_id")
-	if !ok {
-		return
-	}
-	if functionID == nil {
-		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "Falta function_id (o usa mine=1).")
-		return
-	}
-	rows, err := s.queries.AllocationsByFunction(r.Context(), *functionID)
+
+	totalAssigned, err := q.SumAllocations(ctx, functionID)
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string][]sqlcgen.AllocationsByFunctionRow{"allocations": rows})
+	if totalAssigned > int64(function.Capacity) {
+		// El rollback del defer descarta el batch completo.
+		httpx.Error(w, http.StatusConflict, httpx.CodeAllocationExceeded,
+			fmt.Sprintf("Las asignaciones suman %d y el cupo de la función es %d.", totalAssigned, function.Capacity))
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"total_assigned": totalAssigned,
+		"remaining":      int64(function.Capacity) - totalAssigned,
+	})
+}
+
+// handleMyAllocations: GET /api/me/allocations — el cupo de la corista
+// logueada por funcion, con vendido y restante (?function_id= filtra).
+func (s *Server) handleMyAllocations(w http.ResponseWriter, r *http.Request) {
+	user := auth.MustUserFrom(r.Context())
+
+	rows, err := s.queries.MyAllocations(r.Context(), user.ID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	functionID, ok := parseOptionalID(w, r, "function_id")
+	if !ok {
+		return
+	}
+
+	type myAllocation struct {
+		sqlcgen.MyAllocationsRow
+		Remaining int64 `json:"remaining"`
+	}
+	out := make([]myAllocation, 0, len(rows))
+	for _, row := range rows {
+		if functionID != nil && row.FunctionID != *functionID {
+			continue
+		}
+		remaining := int64(row.Assigned) - row.Sold
+		if remaining < 0 {
+			remaining = 0
+		}
+		out = append(out, myAllocation{MyAllocationsRow: row, Remaining: remaining})
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"allocations": out})
 }
 
 // handlePublicTicket: la pagina publica de UNA entrada (/t/{code}), para que

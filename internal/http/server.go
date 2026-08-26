@@ -124,7 +124,7 @@ func (s *Server) Handler() http.Handler {
 					seller.Get("/sales", s.handleListSales)
 					seller.Patch("/sales/{id}", s.handleUpdateSalePayment)
 					seller.Post("/sales/{id}/resend-email", s.handleResendEmail)
-					seller.Get("/allocations", s.handleListAllocations)
+					seller.Get("/me/allocations", s.handleMyAllocations)
 				})
 
 				// Modo puerta: door es su rol natural, pero una vendedora
@@ -148,7 +148,8 @@ func (s *Server) Handler() http.Handler {
 					admin.Post("/users", s.handleCreateUser)
 					admin.Get("/users", s.handleListUsers)
 					admin.Patch("/users/{id}", s.handleUpdateUser)
-					admin.Put("/allocations", s.handleSetAllocation)
+					admin.Get("/functions/{id}/allocations", s.handleFunctionAllocationBoard)
+					admin.Put("/functions/{id}/allocations", s.handlePutAllocations)
 					admin.Post("/seasons", s.handleCreateSeason)
 					admin.Post("/functions", s.handleCreateFunction)
 					admin.Patch("/functions/{id}", s.handleUpdateFunction)

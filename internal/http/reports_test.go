@@ -23,6 +23,8 @@ func TestAceptacionFase5(t *testing.T) {
 	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	valeria := createSellerClient(t, env, admin, "Valeria", "vale@acapelius.test")
 	door := createDoorClient(t, env, admin)
+	assignQuota(t, admin, fnID, 2, 50)
+	assignQuota(t, admin, fnID, 3, 50)
 
 	// Carolina: 3 pagas + 2 pagas + 1 pendiente = 6 vendidas, $40.000 cobrado.
 	sale1 := carolina.post("/api/sales", map[string]any{
@@ -176,6 +178,7 @@ func TestReporteDeVentasExcluyeAnuladas(t *testing.T) {
 	admin := loginAdmin(t, env)
 	fnID := setupCatalog(t, admin, 50)
 	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 10)
 
 	keep := carolina.post("/api/sales", map[string]any{
 		"function_id": fnID, "buyer_name": "Queda", "quantity": 2,

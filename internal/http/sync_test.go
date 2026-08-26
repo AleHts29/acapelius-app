@@ -16,6 +16,7 @@ func TestSyncOffline(t *testing.T) {
 	fnID := setupCatalog(t, admin, 50)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	door := createDoorClient(t, env, admin)
+	assignQuota(t, admin, fnID, 2, 50)
 
 	maria := sellTickets(t, seller, fnID, "Maria Dutra", 2)
 	pedro := sellTickets(t, seller, fnID, "Pedro Gomez", 1)
@@ -86,6 +87,7 @@ func TestSyncDosDispositivosMismoTicket(t *testing.T) {
 	fnID := setupCatalog(t, admin, 50)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	door := createDoorClient(t, env, admin)
+	assignQuota(t, admin, fnID, 2, 50)
 
 	codes := sellTickets(t, seller, fnID, "Maria Dutra", 1)
 	payload := env.signer.Payload(codes[0])
@@ -132,6 +134,7 @@ func TestSyncValidaCadaItem(t *testing.T) {
 	fnID := setupCatalog(t, admin, 50)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	door := createDoorClient(t, env, admin)
+	assignQuota(t, admin, fnID, 2, 50)
 
 	codes := sellTickets(t, seller, fnID, "Maria", 1)
 

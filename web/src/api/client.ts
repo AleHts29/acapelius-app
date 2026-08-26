@@ -27,6 +27,9 @@ export type ApiErrorCode =
   | 'too_many_requests'
   | 'unsupported_media_type'
   | 'payload_too_large'
+  | 'no_allocation'
+  | 'allocation_exceeded'
+  | 'allocation_below_sold'
   | 'network_error'
 
 export class ApiError extends Error {
@@ -254,16 +257,19 @@ export interface PublicSingleTicket {
   function: { name: string | null; venue: string; starts_at: string }
 }
 
-export interface Allocation {
+/** Cupo de la corista logueada en una funcion (C8). */
+export interface MyAllocation {
   function_id: number
   function_name: string | null
   venue: string
   starts_at: string
   assigned: number
   sold: number
+  remaining: number
 }
 
-export interface FunctionAllocation {
+/** Fila del tablero de asignacion de una funcion (C8, admin). */
+export interface AllocationBoardRow {
   user_id: number
   seller_name: string
   assigned: number
@@ -397,15 +403,18 @@ export const api = {
   publicSale: (code: string) => request<PublicSale>('GET', `/public/sales/${code}`),
   publicTicket: (code: string) => request<PublicSingleTicket>('GET', `/public/tickets/${code}`),
 
-  myAllocations: () => request<{ allocations: Allocation[] }>('GET', '/allocations?mine=1'),
+  myAllocations: () => request<{ allocations: MyAllocation[] }>('GET', '/me/allocations'),
   functionAllocations: (functionId: number) =>
-    request<{ allocations: FunctionAllocation[] }>('GET', `/allocations?function_id=${functionId}`),
-  setAllocation: (userId: number, functionId: number, quantity: number) =>
-    request<unknown>('PUT', '/allocations', {
-      user_id: userId,
-      function_id: functionId,
-      quantity,
-    }),
+    request<{ capacity: number; total_assigned: number; allocations: AllocationBoardRow[] }>(
+      'GET',
+      `/functions/${functionId}/allocations`,
+    ),
+  putAllocations: (functionId: number, entries: Array<{ user_id: number; quantity: number }>) =>
+    request<{ total_assigned: number; remaining: number }>(
+      'PUT',
+      `/functions/${functionId}/allocations`,
+      { allocations: entries },
+    ),
 
   doorSnapshot: (functionId: number) =>
     request<DoorSnapshot>('GET', `/functions/${functionId}/door-snapshot`),

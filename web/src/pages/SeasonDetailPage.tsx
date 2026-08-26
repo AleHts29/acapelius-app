@@ -222,7 +222,7 @@ function FunctionCard({ fn, seasonId }: { fn: ShowFunction; seasonId: number }) 
       >
         {showAllocations ? 'Cerrar asignaciones' : 'Asignar entradas a coristas'}
       </button>
-      {showAllocations && <AllocationsEditor functionId={fn.id} />}
+      {showAllocations && <AllocationsEditor fn={fn} />}
     </div>
   )
 }

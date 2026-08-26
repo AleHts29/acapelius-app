@@ -9,32 +9,50 @@ RETURNING *;
 DELETE FROM allocations
 WHERE user_id = sqlc.arg(user_id)::bigint AND function_id = sqlc.arg(function_id)::bigint;
 
--- name: AllocationsByFunction :many
--- Asignaciones de una funcion con lo vendido por cada corista (cortesias y
--- anuladas no cuentan).
+-- name: FunctionAllocationBoard :many
+-- Tablero de asignacion (C8): todas las coristas activas con su cupo y lo
+-- vendido. "Vendido" = tickets vivos de sus ventas no-cortesia: anular
+-- devuelve el cupo automaticamente, sin contador desnormalizado.
 SELECT
-  a.user_id,
+  u.id AS user_id,
   u.name AS seller_name,
-  a.quantity AS assigned,
-  (SELECT COALESCE(SUM(s.quantity), 0) FROM sales s
-   WHERE s.seller_id = a.user_id AND s.function_id = a.function_id
-     AND s.voided_at IS NULL AND NOT s.is_comp)::bigint AS sold
-FROM allocations a
-JOIN users u ON a.user_id = u.id
-WHERE a.function_id = sqlc.arg(function_id)::bigint
+  COALESCE(a.quantity, 0)::integer AS assigned,
+  (SELECT COUNT(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
+   WHERE s.seller_id = u.id AND s.function_id = sqlc.arg(function_id)::bigint
+     AND NOT s.is_comp AND t.status <> 'void')::bigint AS sold
+FROM users u
+LEFT JOIN allocations a ON a.user_id = u.id AND a.function_id = sqlc.arg(function_id)::bigint
+WHERE u.role = 'seller' AND u.is_active
 ORDER BY u.name;
 
+-- name: SoldBySellerInFunction :one
+-- Base del cupo consumido: tickets vivos de ventas no-cortesia.
+SELECT COUNT(*) FROM tickets t
+JOIN sales s ON t.sale_id = s.id
+WHERE s.seller_id = sqlc.arg(seller_id)::bigint
+  AND s.function_id = sqlc.arg(function_id)::bigint
+  AND NOT s.is_comp
+  AND t.status <> 'void';
+
+-- name: GetAllocationQty :one
+SELECT quantity FROM allocations
+WHERE user_id = sqlc.arg(user_id)::bigint AND function_id = sqlc.arg(function_id)::bigint;
+
+-- name: SumAllocations :one
+SELECT COALESCE(SUM(quantity), 0)::bigint FROM allocations
+WHERE function_id = sqlc.arg(function_id)::bigint;
+
 -- name: MyAllocations :many
--- Las asignaciones de una corista, con la funcion y su avance de venta.
+-- Cupo y avance de la corista logueada, por funcion (C8: /api/me/allocations).
 SELECT
   a.function_id,
   f.name AS function_name,
   f.venue,
   f.starts_at,
   a.quantity AS assigned,
-  (SELECT COALESCE(SUM(s.quantity), 0) FROM sales s
+  (SELECT COUNT(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
    WHERE s.seller_id = a.user_id AND s.function_id = a.function_id
-     AND s.voided_at IS NULL AND NOT s.is_comp)::bigint AS sold
+     AND NOT s.is_comp AND t.status <> 'void')::bigint AS sold
 FROM allocations a
 JOIN functions f ON a.function_id = f.id
 WHERE a.user_id = sqlc.arg(user_id)::bigint

@@ -15,6 +15,7 @@ func TestListadoEscalable(t *testing.T) {
 	fnID := setupCatalog(t, admin, 500)
 	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	createSellerClient(t, env, admin, "Josefina", "jose@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 200)
 
 	// 55 ventas de Carolina (fuerza una segunda pagina con page size 50)...
 	for i := range 55 {

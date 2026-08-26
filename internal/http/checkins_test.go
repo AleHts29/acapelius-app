@@ -52,6 +52,7 @@ func TestAceptacionFase3(t *testing.T) {
 	fnID := setupCatalog(t, admin, 50)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	door := createDoorClient(t, env, admin)
+	assignQuota(t, admin, fnID, 2, 50)
 
 	codes := sellTickets(t, seller, fnID, "Maria Dutra", 2)
 
@@ -128,6 +129,7 @@ func TestCheckinRechazaQRAjenos(t *testing.T) {
 	fnID := setupCatalog(t, admin, 50)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	door := createDoorClient(t, env, admin)
+	assignQuota(t, admin, fnID, 2, 50)
 
 	codes := sellTickets(t, seller, fnID, "Maria", 1)
 
@@ -170,6 +172,7 @@ func TestCheckinOtraFuncionYAnulados(t *testing.T) {
 		"starts_at": "2026-12-11T21:00:00-03:00", "capacity": 50, "price_cents": 800000,
 	})
 	fn2ID := fn2.Body["function"].(map[string]any)["id"].(float64)
+	assignQuota(t, admin, fnID, 2, 50)
 
 	codes := sellTickets(t, seller, fnID, "Maria", 1)
 	payload := env.signer.Payload(codes[0])
@@ -204,6 +207,7 @@ func TestCheckinConcurrenteDelMismoTicket(t *testing.T) {
 	fnID := setupCatalog(t, admin, 50)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	door := createDoorClient(t, env, admin)
+	assignQuota(t, admin, fnID, 2, 50)
 
 	codes := sellTickets(t, seller, fnID, "Maria", 1)
 	payload := env.signer.Payload(codes[0])
@@ -235,6 +239,7 @@ func TestCheckinBloqueaAnulacionYEdicion(t *testing.T) {
 	fnID := setupCatalog(t, admin, 50)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	door := createDoorClient(t, env, admin)
+	assignQuota(t, admin, fnID, 2, 50)
 
 	created := seller.post("/api/sales", map[string]any{
 		"function_id": fnID, "buyer_name": "Maria", "quantity": 1,
@@ -261,6 +266,7 @@ func TestSnapshotSinMontosYAutorizacion(t *testing.T) {
 	fnID := setupCatalog(t, admin, 50)
 	seller := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
 	door := createDoorClient(t, env, admin)
+	assignQuota(t, admin, fnID, 2, 50)
 	sellTickets(t, seller, fnID, "Maria", 1)
 
 	// El snapshot no expone plata ni contacto.

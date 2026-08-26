@@ -161,7 +161,8 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// El cupo no puede quedar por debajo de lo ya vendido.
+	// El cupo no puede quedar por debajo de lo ya vendido, ni de la suma de
+	// asignaciones vigentes (invariante 1 de C8): primero se bajan cupos.
 	if capacity < current.Capacity {
 		active, err := s.queries.CountActiveTickets(r.Context(), id)
 		if err != nil {
@@ -171,6 +172,16 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 		if int64(capacity) < active {
 			httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
 				fmt.Sprintf("Ya hay %d entradas emitidas: el cupo no puede ser menor.", active))
+			return
+		}
+		assigned, err := s.queries.SumAllocations(r.Context(), id)
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		if int64(capacity) < assigned {
+			httpx.Error(w, http.StatusConflict, httpx.CodeAllocationExceeded,
+				fmt.Sprintf("Hay %d entradas asignadas a coristas: bajá las asignaciones antes de reducir el cupo.", assigned))
 			return
 		}
 	}
