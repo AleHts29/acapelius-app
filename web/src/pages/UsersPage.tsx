@@ -255,10 +255,7 @@ function UserSheet({
   const update = useMutation({
     mutationFn: (input: { name: string; email: string; role: Role; is_active: boolean }) =>
       api.updateUser(user.id, input),
-    onSuccess: () => {
-      refresh()
-      onClose()
-    },
+    onSuccess: refresh,
     onError: (err) => fail(err, 'No se pudo guardar.'),
   })
 
@@ -276,6 +273,28 @@ function UserSheet({
   const pending = user.last_login_at === null
   const dirty = name.trim() !== user.name || email.trim() !== user.email || role !== user.role
   const busy = update.isPending || access.isPending
+
+  /**
+   * Guarda lo editado y recien despues sigue. Las acciones (reenviar, resetear)
+   * no pueden descartar en silencio un cambio de nombre o de rol que la persona
+   * ya escribio: si el guardado falla, la accion no se ejecuta y queda el error.
+   */
+  async function guardarY(despues?: () => void) {
+    setError(null)
+    if (dirty) {
+      try {
+        await update.mutateAsync({
+          name: name.trim(),
+          email: email.trim(),
+          role,
+          is_active: user.is_active,
+        })
+      } catch {
+        return // el error ya quedo a la vista
+      }
+    }
+    despues?.()
+  }
 
   return (
     <BottomSheet open onClose={onClose} label={`Editar a ${user.name}`}>
@@ -337,14 +356,7 @@ function UserSheet({
         style={{ margin: '12px 0 4px' }}
         type="button"
         disabled={!dirty || busy}
-        onClick={() =>
-          update.mutate({
-            name: name.trim(),
-            email: email.trim(),
-            role,
-            is_active: user.is_active,
-          })
-        }
+        onClick={() => void guardarY(onClose)}
       >
         {update.isPending ? 'Guardando…' : 'Guardar cambios'}
       </button>
@@ -353,8 +365,8 @@ function UserSheet({
         <SheetAction
           icon={<Mail size={15} />}
           disabled={busy}
-          hint="genera una clave nueva"
-          onClick={() => access.mutate('invite')}
+          hint={dirty ? 'guarda y reenvía' : 'genera una clave nueva'}
+          onClick={() => void guardarY(() => access.mutate('invite'))}
         >
           Reenviar invitación
         </SheetAction>
@@ -364,8 +376,8 @@ function UserSheet({
         <SheetAction
           icon={<KeyRound size={15} />}
           disabled={busy}
-          hint="se la mandamos por email"
-          onClick={() => access.mutate('reset')}
+          hint={dirty ? 'guarda y resetea' : 'se la mandamos por email'}
+          onClick={() => void guardarY(() => access.mutate('reset'))}
         >
           Resetear contraseña
         </SheetAction>
@@ -377,13 +389,21 @@ function UserSheet({
           tone={user.is_active ? 'danger' : 'ok'}
           disabled={busy}
           onClick={() => {
-            if (!user.is_active) {
-              update.mutate({ name: name.trim(), email: email.trim(), role, is_active: true })
-            } else if (confirmOff) {
-              update.mutate({ name: name.trim(), email: email.trim(), role, is_active: false })
-            } else {
+            if (user.is_active && !confirmOff) {
               setConfirmOff(true)
+              return
             }
+            // Guarda tambien lo editado: la baja no es excusa para perder un
+            // cambio de nombre o de rol que ya estaba escrito.
+            update.mutate(
+              {
+                name: name.trim(),
+                email: email.trim(),
+                role,
+                is_active: !user.is_active,
+              },
+              { onSuccess: onClose },
+            )
           }}
         >
           {!user.is_active

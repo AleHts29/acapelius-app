@@ -51,7 +51,33 @@ function toDisplay(resp: CheckinResponse): DisplayResult {
 }
 
 /** Estados del viewfinder (CAMBIOS_V2 §C4): nunca fallar en silencio. */
-export type CamState = 'idle' | 'starting' | 'active' | 'denied' | 'unavailable'
+export type CamState = 'idle' | 'starting' | 'active' | 'denied' | 'unavailable' | 'blank'
+
+/** Espera a que el navegador pinte: dos frames alcanzan para que el layout
+ * quede firme despues de un cambio de estado de React. */
+function afterLayout(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  })
+}
+
+/**
+ * Espera a que el video de la camara tenga imagen de verdad. html5-qrcode
+ * resuelve start() apenas arranca el track, pero si midio el contenedor en
+ * cero el video queda de 0px: la promesa dice "listo" y la pantalla queda
+ * vacia. Esto lo detecta para poder mostrarlo en vez de fingir que anda.
+ */
+async function videoPinta(timeoutMs = 3500): Promise<boolean> {
+  const limit = Date.now() + timeoutMs
+  while (Date.now() < limit) {
+    const video = document.querySelector<HTMLVideoElement>('#door-scanner video')
+    if (video && video.videoWidth > 0 && video.clientWidth > 0 && video.clientHeight > 0) {
+      return true
+    }
+    await afterLayout()
+  }
+  return false
+}
 
 /**
  * Maneja la camara con html5-qrcode. La camara se enciende SOLO por tap
@@ -69,6 +95,16 @@ function useCamera(onScan: (payload: string) => void, enabled: boolean) {
   onScanRef.current = onScan
   const lastRef = useRef<{ payload: string; at: number } | null>(null)
 
+  async function stopScanner() {
+    const scanner = scannerRef.current
+    if (!scanner) return
+    try {
+      await scanner.stop()
+    } catch {
+      // Ya estaba frenada: no hay nada que hacer.
+    }
+  }
+
   async function startCamera() {
     if (camState === 'starting' || camState === 'active') return
     if (!window.isSecureContext) {
@@ -76,8 +112,14 @@ function useCamera(onScan: (payload: string) => void, enabled: boolean) {
       return
     }
     setCamState('starting')
+    // Un reintento parte de una camara ya arrancada: primero se la frena.
+    await stopScanner()
+    // html5-qrcode mide el contenedor al arrancar. Si se lo llama en el mismo
+    // tick en que se cierra la busqueda, mide el layout viejo (o cero) y el
+    // video queda invisible aunque la camara este andando: por eso se espera
+    // a que el navegador pinte antes de medir.
+    await afterLayout()
     try {
-      // El contenedor #door-scanner ya esta montado y con dimensiones reales.
       scannerRef.current ??= new Html5Qrcode('door-scanner', { verbose: false })
       await scannerRef.current.start(
         { facingMode: 'environment' },
@@ -92,7 +134,15 @@ function useCamera(onScan: (payload: string) => void, enabled: boolean) {
         },
         () => {}, // frames sin QR: ruido normal
       )
-      setCamState('active')
+      // La camara arranco, pero eso no garantiza que se vea: si el video no
+      // pinta, se frena y se dice, en vez de dejar el recuadro vacio.
+      if (await videoPinta()) {
+        setCamState('active')
+      } else {
+        console.error('[puerta] la camara arranco pero el video no pinta')
+        await stopScanner()
+        setCamState('blank')
+      }
     } catch (err) {
       console.error('[puerta] no se pudo iniciar la camara:', err)
       const message = err instanceof Error ? `${err.name} ${err.message}` : String(err)
@@ -147,6 +197,20 @@ function CameraStage({
             iPhone: Ajustes → Safari → Cámara → Permitir.
             <br />
             Android: candado en la barra de dirección → Permisos → Cámara.
+          </p>
+          <button className="camstate__start" type="button" onClick={onStart}>
+            Reintentar
+          </button>
+        </div>
+      )}
+      {camState === 'blank' && (
+        <div className="camstate" role="alert">
+          <p className="camstate__title">La cámara no se ve</p>
+          <p className="camstate__hint">
+            Se encendió pero no llega imagen. Probá de nuevo; si sigue igual,
+            cerrá y volvé a abrir la app.
+            <br />
+            Mientras tanto usá <strong>Buscar nombre</strong>.
           </p>
           <button className="camstate__start" type="button" onClick={onStart}>
             Reintentar
@@ -378,7 +442,9 @@ export function DoorModePage() {
           onClick={() => {
             clearResult()
             setSheetOpen(false)
-            if (camState === 'idle' || camState === 'denied') void startCamera()
+            if (camState === 'idle' || camState === 'denied' || camState === 'blank') {
+              void startCamera()
+            }
           }}
         >
           {result
