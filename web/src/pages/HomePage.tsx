@@ -144,15 +144,30 @@ export function HomePage() {
     <div className="stack">
       {fn && <Hero fn={fn} />}
 
+      {/* C1: sin "Nueva venta" aca — la pestaña Vender es el acceso canonico.
+          C2: la card se centra en el listado, con accesos por accion. */}
       <div className="cat cat--sales">
         <div className="cat__edge" />
         <div className="cat__inner">
           <div className="cat__head">
             <b>Ventas</b>
-            {pendingCount > 0 && <Chip tone="blue">{pendingCount} pendiente{pendingCount > 1 ? 's' : ''}</Chip>}
+            {pendingCount > 0 && <Chip tone="warn">{pendingCount} pendiente{pendingCount > 1 ? 's' : ''}</Chip>}
           </div>
-          <CatItem to="/ventas/nueva" title={user.role === 'admin' ? 'Nueva venta o cortesía' : 'Nueva venta'} subtitle="Registrar y enviar QR" />
-          <CatItem to="/ventas" title={user.role === 'admin' ? 'Ventas' : 'Mis ventas'} subtitle="Pagos, links y reenvíos" />
+          <CatItem
+            to="/ventas?filtro=deben"
+            title="Pagos pendientes"
+            subtitle="Cobrar lo que todavía deben"
+          />
+          <CatItem
+            to="/ventas"
+            title="Links y reenvíos"
+            subtitle="Compartir entradas y reenviar emails"
+          />
+          <CatItem
+            to="/ventas"
+            title={user.role === 'admin' ? 'Todas las ventas' : 'Mis ventas'}
+            subtitle="El listado completo"
+          />
         </div>
       </div>
 
