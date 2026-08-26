@@ -313,13 +313,28 @@ export interface Settlement {
   seller_name: string
 }
 
-export interface AttendanceEntry {
+export interface AttendanceCheckin {
+  at: string
+  method: 'scan' | 'manual'
+  by_name: string
+}
+
+export interface AttendanceTicket {
+  ticket_id: number
+  checkin: AttendanceCheckin | null
+}
+
+/** Una fila por comprador (C6): sus entradas y el estado de cada una. */
+export interface AttendanceSale {
+  sale_id: number
   buyer_name: string
   seller_name: string
   is_comp: boolean
-  created_at: string
-  method: 'scan' | 'manual'
-  by_name: string
+  total: number
+  entered: number
+  last_checkin_at: string | null
+  last_method: 'scan' | 'manual' | null
+  tickets: AttendanceTicket[]
 }
 
 export interface AttendanceReport {
@@ -332,7 +347,9 @@ export interface AttendanceReport {
   }
   issued: number
   entered: number
-  entries: AttendanceEntry[]
+  buyers_total: number
+  buyers_complete: number
+  sales: AttendanceSale[]
 }
 
 export const api = {

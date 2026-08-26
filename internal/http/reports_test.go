@@ -116,13 +116,90 @@ func TestAceptacionFase5(t *testing.T) {
 	if attendance.Body["issued"].(float64) != 10 { // 6+2+2 (cortesias cuentan)
 		t.Fatalf("emitidas 10: %v", attendance.Body["issued"])
 	}
-	entries := attendance.Body["entries"].([]any)
-	if len(entries) != 4 {
-		t.Fatalf("la lista tendria que tener 4 ingresos: %d", len(entries))
+	// C6: una fila por comprador, no por entrada. 5 ventas vivas.
+	sales := attendance.Body["sales"].([]any)
+	if len(sales) != 5 {
+		t.Fatalf("se esperaba una fila por comprador (5): %d", len(sales))
 	}
-	first := entries[0].(map[string]any)
-	if first["by_name"] != "Recepcion" || first["created_at"] == nil {
-		t.Fatalf("cada ingreso dice quien y cuando: %v", first)
+	// El ultimo ingreso primero: Jorge entro (manual) despues de los de Maria.
+	first := sales[0].(map[string]any)
+	if first["buyer_name"] != "Jorge Alvarez" || first["entered"].(float64) != 1 ||
+		first["total"].(float64) != 2 || first["last_method"] != "manual" {
+		t.Fatalf("la primera fila tendria que ser Jorge 1/2 manual: %v", first)
+	}
+}
+
+// TestAsistenciaPorComprador cubre la aceptacion de C6: un comprador con 3
+// entradas y 2 ingresos aparece una sola vez como 2/3, con el detalle por
+// entrada (hora, metodo, quien registro) y el null de la que falta.
+func TestAsistenciaPorComprador(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	fnID := setupCatalog(t, admin, 100)
+	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	door := createDoorClient(t, env, admin)
+	assignQuota(t, admin, fnID, 2, 10)
+
+	alejandro := carolina.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Alejandro Huertas", "quantity": 3,
+	})
+	julia := carolina.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Julia Peralta", "quantity": 1,
+	})
+
+	// Entran 2 de las 3 de Alejandro (escaneo y manual) y despues Julia.
+	tickets := alejandro.Body["tickets"].([]any)
+	door.post("/api/checkins", map[string]any{
+		"function_id": fnID, "method": "scan",
+		"payload": env.signer.Payload(tickets[0].(map[string]any)["code"].(string)),
+	})
+	door.post("/api/checkins", map[string]any{
+		"function_id": fnID, "method": "manual",
+		"code": tickets[1].(map[string]any)["code"].(string),
+	})
+	door.post("/api/checkins", map[string]any{
+		"function_id": fnID, "method": "scan",
+		"payload": env.signer.Payload(julia.Body["tickets"].([]any)[0].(map[string]any)["code"].(string)),
+	})
+
+	report := admin.get(fmt.Sprintf("/api/reports/attendance?function_id=%.0f", fnID))
+	assertStatus(t, report, http.StatusOK)
+	if report.Body["issued"].(float64) != 4 || report.Body["entered"].(float64) != 3 {
+		t.Fatalf("esperaba 3 de 4 entradas: %v", report.Body)
+	}
+	if report.Body["buyers_total"].(float64) != 2 || report.Body["buyers_complete"].(float64) != 1 {
+		t.Fatalf("esperaba 1 de 2 compradores completos: %v", report.Body)
+	}
+
+	sales := report.Body["sales"].([]any)
+	if len(sales) != 2 {
+		t.Fatalf("una fila por comprador (2): %d", len(sales))
+	}
+	// Julia entro ultima: va primera. Alejandro una sola vez, como 2/3.
+	if sales[0].(map[string]any)["buyer_name"] != "Julia Peralta" {
+		t.Fatalf("el ultimo ingreso va primero: %v", sales[0])
+	}
+	row := sales[1].(map[string]any)
+	if row["buyer_name"] != "Alejandro Huertas" || row["entered"].(float64) != 2 ||
+		row["total"].(float64) != 3 || row["last_method"] != "manual" {
+		t.Fatalf("Alejandro tendria que aparecer una vez como 2/3 manual: %v", row)
+	}
+
+	// Detalle por entrada: dos con checkin completo, la tercera en null.
+	detail := row["tickets"].([]any)
+	if len(detail) != 3 {
+		t.Fatalf("3 entradas en el detalle: %d", len(detail))
+	}
+	first := detail[0].(map[string]any)["checkin"].(map[string]any)
+	if first["method"] != "scan" || first["by_name"] != "Recepcion" || first["at"] == nil {
+		t.Fatalf("el checkin dice hora, metodo y quien: %v", first)
+	}
+	second := detail[1].(map[string]any)["checkin"].(map[string]any)
+	if second["method"] != "manual" {
+		t.Fatalf("la segunda entrada fue manual: %v", second)
+	}
+	if detail[2].(map[string]any)["checkin"] != nil {
+		t.Fatalf("la entrada sin usar va con checkin null: %v", detail[2])
 	}
 }
 

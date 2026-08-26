@@ -2399,3 +2399,199 @@ div.alertcard {
   font-weight: 700;
   color: var(--ok);
 }
+
+/* ============ C6: Asistencia por comprador ============ */
+
+/* Pill selectora de función junto al título (mockup .fnsel). */
+.att-fnsel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--ink);
+  flex-shrink: 0;
+  max-width: 55%;
+}
+
+.att-fnsel select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+  padding: 7px 16px 7px 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.att-fnsel svg {
+  position: absolute;
+  right: 9px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Card viva: N/M grande, punto EN VIVO y barra de ocupación. */
+.att-live {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 12px 14px;
+  margin-bottom: 4px;
+}
+
+.att-live__r1 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.att-live__n {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
+}
+
+.att-live__n span {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.att-live__leg {
+  margin-top: 7px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.att-live__leg b {
+  color: var(--ink);
+}
+
+/* Avatar de iniciales: verde completo, ámbar con entradas pendientes. */
+.att-ini {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.att-ini--ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.att-ini--warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.att-when {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  flex-shrink: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.att-m {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* Fila expandida: borde azul y detalle por entrada. */
+.att-x {
+  background: var(--surface);
+  border: 1.5px solid var(--brand-blue);
+  border-radius: 13px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.att-x__h {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.att-x__tks {
+  margin-top: 9px;
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+}
+
+.att-tk {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 2px;
+  font-size: 11.5px;
+}
+
+.att-tk__l {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+}
+
+.att-tk__st {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.att-tk__st.in {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.att-tk__st.no {
+  background: var(--line);
+  color: var(--muted);
+}
+
+.att-tk__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

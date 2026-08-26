@@ -5,6 +5,23 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Plus, Search, X } from 'lucide-react'
 
+import { normalizeText } from '../lib/search'
+
+/** Resalta el match de la busqueda dentro de un texto (C3/C6). */
+export function Hl({ text, q }: { text: string; q: string }) {
+  if (q.trim() === '') return <>{text}</>
+  const idx = normalizeText(text).indexOf(normalizeText(q))
+  if (idx < 0) return <>{text}</>
+  const end = idx + q.trim().length
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="hl">{text.slice(idx, end)}</mark>
+      {text.slice(end)}
+    </>
+  )
+}
+
 /** FAB: accion principal flotante sobre un listado. */
 export function FAB({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (

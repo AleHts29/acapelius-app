@@ -8,9 +8,9 @@ import { ApiError, api, publicSaleURL } from '../api/client'
 import type { PaymentMethod, SaleListItem, SaleStatusFilter } from '../api/client'
 import { useSession } from '../auth/session'
 import { daysAgo, formatDateTime, formatMoney } from '../lib/format'
-import { normalizeText } from '../lib/search'
+import { initials, normalizeText } from '../lib/search'
 import { BottomSheet, SheetAction } from '../ui/BottomSheet'
-import { EmptyState, FAB, FilterChips, SearchBar } from '../ui/controls'
+import { EmptyState, FAB, FilterChips, Hl, SearchBar } from '../ui/controls'
 import { SaleChip } from '../ui/StatusChip'
 
 const salesQueryKey = ['sales'] as const
@@ -26,27 +26,6 @@ const FILTER_TO_STATUS: Record<UIFilter, SaleStatusFilter | undefined> = {
 
 function parseFilter(raw: string | null): UIFilter {
   return raw === 'deben' || raw === 'pagas' || raw === 'cortesias' ? raw : 'todas'
-}
-
-/** Iniciales para el avatar de la fila ("María Dutra" → "MD"). */
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?'
-}
-
-/** Resalta el match de la busqueda dentro de un texto. */
-function Hl({ text, q }: { text: string; q: string }) {
-  if (q.trim() === '') return <>{text}</>
-  const idx = normalizeText(text).indexOf(normalizeText(q))
-  if (idx < 0) return <>{text}</>
-  const end = idx + q.trim().length
-  return (
-    <>
-      {text.slice(0, idx)}
-      <mark className="hl">{text.slice(idx, end)}</mark>
-      {text.slice(end)}
-    </>
-  )
 }
 
 /** Item plano para virtualizar: cabecera de grupo o venta. */

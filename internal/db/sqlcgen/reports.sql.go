@@ -10,49 +10,58 @@ import (
 	"time"
 )
 
-const attendanceEntries = `-- name: AttendanceEntries :many
+const attendanceBySale = `-- name: AttendanceBySale :many
 SELECT
+  s.id AS sale_id,
   s.buyer_name,
   seller.name AS seller_name,
   s.is_comp,
-  c.created_at,
-  c.method,
-  checker.name AS by_name
-FROM checkins c
-JOIN tickets t ON c.ticket_id = t.id
-JOIN sales s ON t.sale_id = s.id
+  t.id AS ticket_id,
+  c.created_at AS checkin_at,
+  c.method AS checkin_method,
+  checker.name AS checkin_by
+FROM sales s
 JOIN users seller ON s.seller_id = seller.id
-JOIN users checker ON c.user_id = checker.id
+JOIN tickets t ON t.sale_id = s.id
+LEFT JOIN checkins c ON c.ticket_id = t.id
+LEFT JOIN users checker ON c.user_id = checker.id
 WHERE s.function_id = $1::bigint
-ORDER BY c.created_at DESC
+  AND s.voided_at IS NULL
+  AND t.status <> 'void'
+ORDER BY s.id, t.id
 `
 
-type AttendanceEntriesRow struct {
-	BuyerName  string    `json:"buyer_name"`
-	SellerName string    `json:"seller_name"`
-	IsComp     bool      `json:"is_comp"`
-	CreatedAt  time.Time `json:"created_at"`
-	Method     string    `json:"method"`
-	ByName     string    `json:"by_name"`
+type AttendanceBySaleRow struct {
+	SaleID        int64      `json:"sale_id"`
+	BuyerName     string     `json:"buyer_name"`
+	SellerName    string     `json:"seller_name"`
+	IsComp        bool       `json:"is_comp"`
+	TicketID      int64      `json:"ticket_id"`
+	CheckinAt     *time.Time `json:"checkin_at"`
+	CheckinMethod *string    `json:"checkin_method"`
+	CheckinBy     *string    `json:"checkin_by"`
 }
 
-// Quien entro y a que hora, lo mas nuevo primero.
-func (q *Queries) AttendanceEntries(ctx context.Context, functionID int64) ([]AttendanceEntriesRow, error) {
-	rows, err := q.db.Query(ctx, attendanceEntries, functionID)
+// Asistencia por comprador (C6): una fila por entrada viva de la funcion con
+// su check-in (o NULL si todavia no entro). El handler agrupa por venta.
+func (q *Queries) AttendanceBySale(ctx context.Context, functionID int64) ([]AttendanceBySaleRow, error) {
+	rows, err := q.db.Query(ctx, attendanceBySale, functionID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []AttendanceEntriesRow{}
+	items := []AttendanceBySaleRow{}
 	for rows.Next() {
-		var i AttendanceEntriesRow
+		var i AttendanceBySaleRow
 		if err := rows.Scan(
+			&i.SaleID,
 			&i.BuyerName,
 			&i.SellerName,
 			&i.IsComp,
-			&i.CreatedAt,
-			&i.Method,
-			&i.ByName,
+			&i.TicketID,
+			&i.CheckinAt,
+			&i.CheckinMethod,
+			&i.CheckinBy,
 		); err != nil {
 			return nil, err
 		}

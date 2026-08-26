@@ -74,19 +74,24 @@ WHERE st.season_id = sqlc.arg(season_id)::bigint
   AND (sqlc.narg(seller_id)::bigint IS NULL OR st.seller_id = sqlc.narg(seller_id)::bigint)
 ORDER BY st.created_at DESC;
 
--- name: AttendanceEntries :many
--- Quien entro y a que hora, lo mas nuevo primero.
+-- name: AttendanceBySale :many
+-- Asistencia por comprador (C6): una fila por entrada viva de la funcion con
+-- su check-in (o NULL si todavia no entro). El handler agrupa por venta.
 SELECT
+  s.id AS sale_id,
   s.buyer_name,
   seller.name AS seller_name,
   s.is_comp,
-  c.created_at,
-  c.method,
-  checker.name AS by_name
-FROM checkins c
-JOIN tickets t ON c.ticket_id = t.id
-JOIN sales s ON t.sale_id = s.id
+  t.id AS ticket_id,
+  c.created_at AS checkin_at,
+  c.method AS checkin_method,
+  checker.name AS checkin_by
+FROM sales s
 JOIN users seller ON s.seller_id = seller.id
-JOIN users checker ON c.user_id = checker.id
+JOIN tickets t ON t.sale_id = s.id
+LEFT JOIN checkins c ON c.ticket_id = t.id
+LEFT JOIN users checker ON c.user_id = checker.id
 WHERE s.function_id = sqlc.arg(function_id)::bigint
-ORDER BY c.created_at DESC;
+  AND s.voided_at IS NULL
+  AND t.status <> 'void'
+ORDER BY s.id, t.id;
