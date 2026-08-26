@@ -62,7 +62,12 @@ type User struct {
 	MustChangePassword bool      `json:"must_change_password"`
 	IsActive           bool      `json:"is_active"`
 	CreatedAt          time.Time `json:"created_at"`
+	// LastLoginAt en nil = nunca entro: la invitacion sigue pendiente (C7).
+	LastLoginAt *time.Time `json:"last_login_at"`
 }
+
+// InvitePending indica que la persona todavia no uso su acceso.
+func (u User) InvitePending() bool { return u.LastLoginAt == nil }
 
 // MinPasswordLength es el minimo para cualquier password elegida por una
 // persona. Corto a proposito: las vendedoras entran de noche desde el celular.

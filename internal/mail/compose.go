@@ -148,3 +148,74 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 	}
 	return msg, nil
 }
+
+// InviteEmailData es lo que necesita el email de acceso al equipo (C7).
+type InviteEmailData struct {
+	Name         string
+	Email        string
+	RoleLabel    string // "Corista", "Puerta", "Direccion"
+	TempPassword string
+	BaseURL      string
+	// Reset distingue el reseteo de contrasena de la invitacion inicial: el
+	// cuerpo es casi el mismo, lo que cambia es el motivo.
+	Reset bool
+}
+
+// ComposeInviteEmail arma la invitacion al equipo: quien la manda, con que
+// email entra, la contrasena provisoria y el boton para entrar. Sin adjuntos
+// ni QR — es un email de texto con la identidad de Acapelius.
+func ComposeInviteEmail(data InviteEmailData) Message {
+	subject := "Tu acceso a Acapelius"
+	lead := fmt.Sprintf("Te damos acceso a Acapelius como <strong>%s</strong>. Con estos datos entras la primera vez:",
+		html.EscapeString(data.RoleLabel))
+	leadText := fmt.Sprintf("Te damos acceso a Acapelius como %s. Con estos datos entras la primera vez:", data.RoleLabel)
+	if data.Reset {
+		subject = "Tu nueva contrasena de Acapelius"
+		lead = "Te generamos una contrasena provisoria nueva. Con estos datos entras:"
+		leadText = "Te generamos una contrasena provisoria nueva. Con estos datos entras:"
+	}
+
+	// --- Version texto plano -------------------------------------------------
+	var textB strings.Builder
+	fmt.Fprintf(&textB, "Hola %s:\n\n%s\n\n", data.Name, leadText)
+	fmt.Fprintf(&textB, "  Direccion: %s\n  Email:     %s\n  Clave:     %s\n",
+		data.BaseURL, data.Email, data.TempPassword)
+	fmt.Fprintf(&textB, "\nApenas entres te va a pedir elegir tu propia contrasena.\n")
+	fmt.Fprintf(&textB, "Esta clave es provisoria: no se la pases a nadie.\n")
+
+	// --- Version HTML --------------------------------------------------------
+	esc := html.EscapeString
+	var b strings.Builder
+
+	fmt.Fprintf(&b, `<div style="margin:0;padding:24px 12px;background:%s;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">`, brandCream)
+	fmt.Fprintf(&b, `<div style="max-width:520px;margin:0 auto">`)
+
+	fmt.Fprintf(&b, `<div style="background:%s;border-radius:16px 16px 0 0;padding:22px 24px;text-align:center">`, brandBlue)
+	fmt.Fprintf(&b, `<img src="%s/email-logo.png" alt="Acapelius" width="200" style="max-width:60%%;height:auto">`, data.BaseURL)
+	fmt.Fprintf(&b, `</div>`)
+
+	fmt.Fprintf(&b, `<div style="background:#ffffff;border-radius:0 0 16px 16px;padding:28px 24px;color:%s">`, brandInk)
+	fmt.Fprintf(&b, `<h1 style="margin:0 0 14px;font-size:22px">Hola %s:</h1>`, esc(data.Name))
+	fmt.Fprintf(&b, `<p style="margin:0 0 18px">%s</p>`, lead)
+
+	// Tarjeta con las credenciales, en monoespaciada para que se lean bien.
+	fmt.Fprintf(&b, `<div style="border:2px solid %s;border-radius:14px;padding:18px 16px;margin:0 0 18px;background:%s">`, brandBlue, brandCream)
+	fmt.Fprintf(&b, `<p style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:%s">Tus datos de acceso</p>`, brandBlue)
+	fmt.Fprintf(&b, `<p style="margin:0 0 6px;font-size:14px">Email<br><strong style="font-family:ui-monospace,Menlo,Consolas,monospace">%s</strong></p>`, esc(data.Email))
+	fmt.Fprintf(&b, `<p style="margin:0;font-size:14px">Contrasena provisoria<br><strong style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:18px;letter-spacing:.04em">%s</strong></p>`, esc(data.TempPassword))
+	fmt.Fprintf(&b, `</div>`)
+
+	fmt.Fprintf(&b, `<div style="text-align:center;margin:22px 0 8px">`)
+	fmt.Fprintf(&b, `<a href="%s" style="display:inline-block;background:%s;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:12px">Entrar a Acapelius</a>`, data.BaseURL, brandBlue)
+	fmt.Fprintf(&b, `</div>`)
+	fmt.Fprintf(&b, `<p style="margin:0;text-align:center;color:#888;font-size:12px">Apenas entres te va a pedir elegir tu propia contrasena.<br>Esta clave es provisoria: no se la pases a nadie.</p>`)
+
+	fmt.Fprintf(&b, `</div></div></div>`)
+
+	return Message{
+		To:      data.Email,
+		Subject: subject,
+		HTML:    b.String(),
+		Text:    textB.String(),
+	}
+}

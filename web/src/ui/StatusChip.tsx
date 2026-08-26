@@ -5,7 +5,7 @@
 import type { Sale } from '../api/client'
 import { formatMoney } from '../lib/format'
 
-export type ChipTone = 'ok' | 'warn' | 'blue' | 'danger' | 'neutral'
+export type ChipTone = 'ok' | 'warn' | 'blue' | 'danger' | 'neutral' | 'ink'
 
 export function Chip({ tone, children }: { tone: ChipTone; children: React.ReactNode }) {
   return <span className={`chip chip--${tone}`}>{children}</span>

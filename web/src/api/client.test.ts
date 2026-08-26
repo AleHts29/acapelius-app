@@ -87,7 +87,7 @@ describe('api', () => {
 
 describe('roleLabel', () => {
   it('traduce los roles a lo que se muestra en pantalla', () => {
-    expect(roleLabel('admin')).toBe('Direccion')
+    expect(roleLabel('admin')).toBe('Dirección')
     expect(roleLabel('seller')).toBe('Corista')
     expect(roleLabel('door')).toBe('Puerta')
   })

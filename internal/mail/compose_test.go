@@ -98,3 +98,48 @@ func TestLogDriverEscribeElEmail(t *testing.T) {
 		}
 	}
 }
+
+func TestComposeInviteEmail(t *testing.T) {
+	t.Parallel()
+
+	invite := mail.ComposeInviteEmail(mail.InviteEmailData{
+		Name:         "Josefina",
+		Email:        "jose@gmail.com",
+		RoleLabel:    "Corista",
+		TempPassword: "ab12cd34",
+		BaseURL:      "https://acapelius.test",
+	})
+
+	if invite.To != "jose@gmail.com" {
+		t.Fatalf("destinatario: %q", invite.To)
+	}
+	if invite.Subject != "Tu acceso a Acapelius" {
+		t.Fatalf("asunto de la invitacion: %q", invite.Subject)
+	}
+	if len(invite.Attachments) != 0 {
+		t.Fatalf("la invitacion no lleva adjuntos: %d", len(invite.Attachments))
+	}
+	// Las dos versiones tienen que traer con que entrar.
+	for _, body := range []string{invite.HTML, invite.Text} {
+		for _, want := range []string{"Josefina", "jose@gmail.com", "ab12cd34", "https://acapelius.test"} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("falta %q en el cuerpo:\n%s", want, body)
+			}
+		}
+	}
+	if !strings.Contains(invite.HTML, "Corista") {
+		t.Fatalf("la invitacion dice con que rol entra")
+	}
+
+	// El reseteo reusa el cuerpo pero cambia el motivo.
+	reset := mail.ComposeInviteEmail(mail.InviteEmailData{
+		Name: "Josefina", Email: "jose@gmail.com", RoleLabel: "Corista",
+		TempPassword: "zz99yy88", BaseURL: "https://acapelius.test", Reset: true,
+	})
+	if reset.Subject != "Tu nueva contrasena de Acapelius" {
+		t.Fatalf("asunto del reseteo: %q", reset.Subject)
+	}
+	if !strings.Contains(reset.Text, "provisoria nueva") {
+		t.Fatalf("el reseteo explica que la clave es nueva:\n%s", reset.Text)
+	}
+}

@@ -44,3 +44,17 @@ cubrian el caso o entraban en tension con el codigo ya existente.
   desnormalizado. Se sumo el invariante simetrico: reducir el capacity de una
   funcion por debajo de la suma asignada tambien falla con
   allocation_exceeded.
+- **La invitacion pendiente se mide con `users.last_login_at`** (C7), no con
+  `must_change_password`: ese flag tambien queda en true despues de un reseteo
+  de contrasena, asi que alguien que ya usa la app volveria a figurar como
+  "nunca entro". El sello lo pone el propio login; si esa escritura falla, se
+  registra pero no tumba el ingreso.
+- **`reset-password` y `resend-invite` son el mismo mecanismo** (clave
+  provisoria nueva + `must_change_password`) con dos textos distintos: uno es
+  "todavia no entraste", el otro "te la olvidaste". El server rechaza reenviar
+  la invitacion a alguien que ya entro, para que la UI no ofrezca las dos
+  cosas a la vez.
+- **La contrasena provisoria se sigue mostrando en pantalla** aunque el alta
+  ya mande el email: mientras el SMTP de produccion este bloqueado es el unico
+  camino real, y sirve igual de plan B cuando el envio falla (la tarjeta
+  cambia de tono y lo dice). Nunca se guarda en claro ni se puede reconsultar.

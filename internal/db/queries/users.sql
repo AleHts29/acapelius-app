@@ -33,5 +33,9 @@ SET name      = sqlc.arg(name)::text,
 WHERE id = sqlc.arg(id)::bigint
 RETURNING *;
 
+-- name: TouchUserLogin :exec
+-- Sella el ingreso: a partir de aca la invitacion deja de estar pendiente.
+UPDATE users SET last_login_at = now() WHERE id = sqlc.arg(id)::bigint;
+
 -- name: CountUsers :one
 SELECT count(*) FROM users;

@@ -29,7 +29,7 @@ VALUES (
   $4::text,
   $5::boolean
 )
-RETURNING id, name, email, password_hash, role, must_change_password, created_at, is_active
+RETURNING id, name, email, password_hash, role, must_change_password, created_at, is_active, last_login_at
 `
 
 type CreateUserParams struct {
@@ -58,12 +58,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.MustChangePassword,
 		&i.CreatedAt,
 		&i.IsActive,
+		&i.LastLoginAt,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, password_hash, role, must_change_password, created_at, is_active FROM users WHERE lower(email) = lower($1::text)
+SELECT id, name, email, password_hash, role, must_change_password, created_at, is_active, last_login_at FROM users WHERE lower(email) = lower($1::text)
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -78,12 +79,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.MustChangePassword,
 		&i.CreatedAt,
 		&i.IsActive,
+		&i.LastLoginAt,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, email, password_hash, role, must_change_password, created_at, is_active FROM users WHERE id = $1
+SELECT id, name, email, password_hash, role, must_change_password, created_at, is_active, last_login_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
@@ -98,12 +100,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.MustChangePassword,
 		&i.CreatedAt,
 		&i.IsActive,
+		&i.LastLoginAt,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, name, email, password_hash, role, must_change_password, created_at, is_active FROM users ORDER BY role, name
+SELECT id, name, email, password_hash, role, must_change_password, created_at, is_active, last_login_at FROM users ORDER BY role, name
 `
 
 func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
@@ -124,6 +127,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.MustChangePassword,
 			&i.CreatedAt,
 			&i.IsActive,
+			&i.LastLoginAt,
 		); err != nil {
 			return nil, err
 		}
@@ -153,6 +157,16 @@ func (q *Queries) SetUserPassword(ctx context.Context, arg SetUserPasswordParams
 	return err
 }
 
+const touchUserLogin = `-- name: TouchUserLogin :exec
+UPDATE users SET last_login_at = now() WHERE id = $1::bigint
+`
+
+// Sella el ingreso: a partir de aca la invitacion deja de estar pendiente.
+func (q *Queries) TouchUserLogin(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, touchUserLogin, id)
+	return err
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET name      = $1::text,
@@ -160,7 +174,7 @@ SET name      = $1::text,
     role      = $3::text,
     is_active = $4::boolean
 WHERE id = $5::bigint
-RETURNING id, name, email, password_hash, role, must_change_password, created_at, is_active
+RETURNING id, name, email, password_hash, role, must_change_password, created_at, is_active, last_login_at
 `
 
 type UpdateUserParams struct {
@@ -189,6 +203,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.MustChangePassword,
 		&i.CreatedAt,
 		&i.IsActive,
+		&i.LastLoginAt,
 	)
 	return i, err
 }

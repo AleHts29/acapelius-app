@@ -2595,3 +2595,79 @@ div.alertcard {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+/* ============ C7: Equipo ============ */
+
+/* Avatar tintado por rol. */
+.ini--blue {
+  background: var(--blue-soft);
+  color: var(--brand-blue);
+}
+
+.ini--ink {
+  background: var(--ink);
+  color: var(--brand-cream);
+}
+
+.ini--ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.chip--ink {
+  background: var(--ink);
+  color: var(--brand-cream);
+}
+
+/* Fila de persona: como .mrow pero con chevron y estado inactivo. */
+.urow {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 11px 12px;
+  margin-bottom: 7px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-body);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+}
+
+.urow--off {
+  opacity: 0.55;
+}
+
+.urow .mrow__mid span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tarjeta del acceso recien generado. */
+.accesscard {
+  background: var(--surface);
+  border: 1px solid var(--ok);
+  border-left-width: 4px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.accesscard--warn {
+  border-color: var(--warn);
+}
+
+.accesscard__pw {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  display: block;
+  margin-top: 6px;
+  user-select: all;
+}

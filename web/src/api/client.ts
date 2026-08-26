@@ -11,6 +11,15 @@ export interface User {
   must_change_password: boolean
   is_active: boolean
   created_at: string
+  /** null = nunca entró: la invitación sigue pendiente (C7). */
+  last_login_at: string | null
+}
+
+/** Respuesta del alta, del reenvío de invitación y del reseteo (C7). */
+export interface UserAccessResponse {
+  user: User
+  temp_password?: string
+  email_status: 'sent' | 'failed' | 'none'
 }
 
 /** Codigos de error que el frontend discrimina. Ver internal/httpx/respond.go. */
@@ -364,11 +373,13 @@ export const api = {
     }),
   listUsers: () => request<{ users: User[] }>('GET', '/users'),
   createUser: (input: { name: string; email: string; role: Role; password?: string }) =>
-    request<{ user: User; temp_password?: string }>('POST', '/users', input),
+    request<UserAccessResponse>('POST', '/users', input),
   updateUser: (
     id: number,
     input: { name: string; email: string; role: Role; is_active: boolean },
   ) => request<{ user: User }>('PATCH', `/users/${id}`, input),
+  resendInvite: (id: number) => request<UserAccessResponse>('POST', `/users/${id}/resend-invite`),
+  resetPassword: (id: number) => request<UserAccessResponse>('POST', `/users/${id}/reset-password`),
 
   listSeasons: () => request<{ seasons: Season[] }>('GET', '/seasons'),
   createSeason: (name: string) => request<{ season: Season }>('POST', '/seasons', { name }),
@@ -502,7 +513,7 @@ export async function shareOrCopy(text: string, url: string): Promise<'shared' |
 export function roleLabel(role: Role): string {
   switch (role) {
     case 'admin':
-      return 'Direccion'
+      return 'Dirección'
     case 'seller':
       return 'Corista'
     case 'door':

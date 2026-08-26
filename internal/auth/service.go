@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -85,6 +86,15 @@ func (s *Service) Login(ctx context.Context, email, password string) (*domain.Us
 		return nil, fmt.Errorf("renovar sesion: %w", err)
 	}
 	s.sessions.Put(ctx, sessionUserKey, row.ID)
+
+	// Sella el ingreso (C7): con esto la invitacion deja de estar pendiente.
+	// Un fallo aca no puede tumbar un login valido; se registra y sigue.
+	if err := s.queries.TouchUserLogin(ctx, row.ID); err != nil {
+		slog.ErrorContext(ctx, "no se pudo registrar el ultimo ingreso", "user_id", row.ID, "error", err)
+	} else {
+		now := time.Now()
+		row.LastLoginAt = &now
+	}
 
 	user := toDomainUser(row)
 	return &user, nil
@@ -216,6 +226,39 @@ func (s *Service) CreateUser(ctx context.Context, name, email string, role domai
 	return &user, nil
 }
 
+// ResetPassword genera una password provisoria nueva para un usuario y la
+// devuelve una sola vez (C7). Deja `must_change_password` en true: la persona
+// elige la suya al entrar. Sirve tanto para reenviar la invitacion de quien
+// nunca entro como para el "me olvide la contrasena" de quien ya usaba la app.
+func (s *Service) ResetPassword(ctx context.Context, userID int64) (*domain.User, string, error) {
+	row, err := s.queries.GetUserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, "", domain.ErrUserNotFound
+		}
+		return nil, "", fmt.Errorf("cargar usuario: %w", err)
+	}
+
+	password, err := GenerateTempPassword()
+	if err != nil {
+		return nil, "", err
+	}
+	hash, err := HashPassword(password)
+	if err != nil {
+		return nil, "", err
+	}
+	if err := s.queries.SetUserPassword(ctx, sqlcgen.SetUserPasswordParams{
+		PasswordHash:       hash,
+		MustChangePassword: true,
+		ID:                 userID,
+	}); err != nil {
+		return nil, "", fmt.Errorf("guardar password provisoria: %w", err)
+	}
+
+	user := toDomainUser(row)
+	return &user, password, nil
+}
+
 // ListUsers devuelve todos los usuarios ordenados por rol y nombre.
 func (s *Service) ListUsers(ctx context.Context) ([]domain.User, error) {
 	rows, err := s.queries.ListUsers(ctx)
@@ -238,5 +281,6 @@ func toDomainUser(row sqlcgen.User) domain.User {
 		MustChangePassword: row.MustChangePassword,
 		IsActive:           row.IsActive,
 		CreatedAt:          row.CreatedAt,
+		LastLoginAt:        row.LastLoginAt,
 	}
 }

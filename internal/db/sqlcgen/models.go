@@ -95,12 +95,13 @@ type Ticket struct {
 }
 
 type User struct {
-	ID                 int64     `json:"id"`
-	Name               string    `json:"name"`
-	Email              string    `json:"email"`
-	PasswordHash       string    `json:"password_hash"`
-	Role               string    `json:"role"`
-	MustChangePassword bool      `json:"must_change_password"`
-	CreatedAt          time.Time `json:"created_at"`
-	IsActive           bool      `json:"is_active"`
+	ID                 int64      `json:"id"`
+	Name               string     `json:"name"`
+	Email              string     `json:"email"`
+	PasswordHash       string     `json:"password_hash"`
+	Role               string     `json:"role"`
+	MustChangePassword bool       `json:"must_change_password"`
+	CreatedAt          time.Time  `json:"created_at"`
+	IsActive           bool       `json:"is_active"`
+	LastLoginAt        *time.Time `json:"last_login_at"`
 }
