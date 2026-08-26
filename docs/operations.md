@@ -190,16 +190,47 @@ Todo desde la UI, como admin:
 1. **Temporadas y funciones** → crear "Temporada 2027".
 2. Dentro de la temporada, **Agregar funcion** por cada fecha: lugar,
    fecha/hora, cupo y precio.
-3. **Usuarios** → dar de alta a las vendedoras nuevas (rol Vendedora) y a la
-   gente de puerta (rol Puerta). A cada una pasale por WhatsApp la contrasena
-   provisoria que muestra la pantalla — se ve una sola vez.
-4. Las vendedoras entran, eligen su contrasena y ya pueden vender.
+3. **Equipo** → "＋ Nuevo usuario" por cada corista nueva (rol Corista) y por
+   la gente de puerta (rol Puerta). A cada una le llega un email con su acceso;
+   la contrasena provisoria tambien queda en pantalla para pasarla por
+   WhatsApp — se ve una sola vez.
+4. En cada funcion, **Asignar entradas a coristas**: sin cupo asignado nadie
+   puede registrar ventas de esa funcion (modo estricto).
+5. Las coristas entran, eligen su contrasena y ya pueden vender.
 
 Notas:
 - El precio se congela en cada venta: se puede cambiar el precio de la
   funcion a mitad de temporada sin tocar lo ya vendido.
 - Una funcion con ingresos registrados ya no se puede editar.
 - El saldo a rendir es por temporada: la temporada nueva arranca en cero.
+
+## Datos de prueba
+
+`cmd/seeddemo` imprime el SQL de una temporada completa para recorrer la app:
+10 coristas, una persona en la puerta, cuatro funciones (dos pasadas con
+ingresos, una hoy y una futura), cupos asignados, ventas repartidas en las
+ultimas dos semanas, cortesias y rendiciones parciales.
+
+```bash
+# Local (borra y recarga la base de desarrollo):
+make seed-demo
+
+# Produccion, por el tunel de Railway:
+go run ./cmd/seeddemo | railway connect Postgres
+
+# O revisar el SQL antes de correrlo:
+go run ./cmd/seeddemo > /tmp/demo.sql
+```
+
+Que borra y que no: se lleva la temporada entera (funciones, ventas, entradas,
+ingresos, cupos, rendiciones) y **solo** los usuarios del dominio de prueba
+`@demo.acapelius.local`. La direccion y cualquier cuenta real quedan intactas,
+con su contrasena; a las coristas reales que sobreviven se les da un cupo en la
+ultima funcion para que puedan probar una venta.
+
+Las cuentas de prueba entran con `acapelius-demo`
+(`<nombre.apellido>@demo.acapelius.local`, `puerta@demo.acapelius.local`). Dos
+coristas quedan sin entrar nunca, para ver el chip de invitacion pendiente.
 
 ## Backups y restore
 
