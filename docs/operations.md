@@ -147,18 +147,63 @@ En Fly la app duerme sin trafico y despierta con el primer request (~1s);
 `fly scale count 1` la deja fija. En Railway el servicio queda corriendo
 siempre (es lo que cobra el plan); no hay que hacer nada.
 
-## Email por Gmail
+## Email
 
-La app manda los emails de las entradas desde `acapelius@gmail.com` por SMTP.
-Configuracion, una sola vez:
+**Railway bloquea el SMTP saliente** en todos los planes menos Pro: la app
+corriendo ahi no puede hablar con smtp.gmail.com (la conexion muere con
+`i/o timeout` antes de llegar). Por eso produccion manda por **Resend**, que
+es una API HTTPS y sale sin problema. El driver de Gmail sigue existiendo y
+sirve para desarrollo local, donde el 587 esta abierto.
 
-1. Entrar a la cuenta y activar la **verificacion en 2 pasos**
-   (myaccount.google.com → Seguridad). Sin esto Google no deja crear
-   contrasenas de aplicacion.
+### Produccion: Resend con dominio propio
+
+Una vez, al configurar:
+
+1. Crear la cuenta en <https://resend.com> (plan gratis: 3.000 emails por mes,
+   100 por dia).
+2. **Domains → Add Domain**: conviene un subdominio dedicado al correo
+   (`envios.tudominio.com`), no la raiz. Aisla la reputacion de envio, y deja
+   la raiz y los demas subdominios libres para el sitio.
+3. Resend muestra los registros DNS a cargar en el proveedor del dominio: un
+   MX y dos TXT (SPF y DKIM). Son los que le dan permiso a Resend para firmar
+   correo en nombre del dominio; sin ellos Gmail lo manda a spam.
+   En **Cloudflare**: escribir en el campo Name solo la parte izquierda (el
+   panel agrega la zona solo), y dejar el proxy en **DNS only** (nube gris).
+4. Esperar el estado **Verified** (minutos).
+5. **API Keys → Create API Key** con permiso *Sending access*.
+6. Cargar las variables en el servicio:
+
+   ```
+   EMAIL_DRIVER=resend
+   RESEND_API_KEY=re_...
+   EMAIL_FROM="Acapelius <entradas@envios.tudominio.com>"
+   ```
+
+   ```bash
+   railway variables --service acapelius \
+     --set "EMAIL_DRIVER=resend" \
+     --set "RESEND_API_KEY=re_..." \
+     --set "EMAIL_FROM=Acapelius <entradas@envios.tudominio.com>"
+   ```
+
+   Cambiar variables reinicia el servicio solo. En el arranque, el log tiene
+   que decir `email_driver="resend"`.
+
+`EMAIL_FROM` **tiene que usar el dominio verificado**: Resend rechaza el envio
+si el remitente es de otro dominio.
+
+### Desarrollo local: Gmail o el driver log
+
+Por defecto `EMAIL_DRIVER=log` escribe el email en la consola y no manda nada:
+alcanza para ver el contenido. Para probar un envio real desde la maquina
+(donde el 587 si sale), con una cuenta de Gmail:
+
+1. Activar la **verificacion en 2 pasos** en la cuenta
+   (myaccount.google.com → Seguridad).
 2. Crear una **contrasena de aplicacion** en
-   <https://myaccount.google.com/apppasswords> (nombre: "Acapelius"). Google
-   muestra 16 caracteres una sola vez: esa es `SMTP_PASSWORD`.
-3. Configurar (en `.env` local o `fly secrets set` en produccion):
+   <https://myaccount.google.com/apppasswords>. Son 16 caracteres que Google
+   muestra una sola vez.
+3. En `.env`:
 
    ```
    EMAIL_DRIVER=smtp
@@ -167,21 +212,18 @@ Configuracion, una sola vez:
    EMAIL_FROM="Acapelius <acapelius@gmail.com>"
    ```
 
-   `SMTP_HOST`/`SMTP_PORT` ya tienen los valores de Gmail por defecto.
+   `SMTP_HOST`/`SMTP_PORT` ya vienen con los valores de Gmail.
 
-A tener en cuenta:
+Con Gmail, `EMAIL_FROM` debe ser la misma direccion de la cuenta: Gmail
+reescribe cualquier otro remitente. El limite gratuito es de ~500 envios por
+dia.
 
-- **`EMAIL_FROM` debe usar la misma direccion de la cuenta**: Gmail reescribe
-  cualquier otro remitente.
-- **Limite de ~500 destinatarios por dia** en cuentas gratuitas. Para un coro
-  (cientos de entradas por temporada, no por dia) alcanza de sobra; si un dia
-  se pasa, Gmail bloquea el envio 24 hs — el link publico de cada entrada
-  sigue funcionando y se puede compartir por WhatsApp.
-- Si se cambia la contrasena de la cuenta o se revoca la app password, los
-  envios empiezan a fallar con "autenticacion SMTP": generar una nueva y
-  actualizar el secret.
-- Los envios fallidos quedan en `email_sends` y se reintentan con "Reenviar
-  email" desde la pantalla de ventas.
+### Cuando un envio falla
+
+Todo envio queda registrado en `email_sends` con su estado y el error. Un
+fallo no anula nada: la venta se registra igual, la pantalla lo dice, y desde
+el listado de ventas esta **Reenviar email**. El link publico de cada entrada
+funciona siempre y se puede pasar por WhatsApp como respaldo.
 
 ## Alta de una temporada nueva
 
