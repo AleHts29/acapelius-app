@@ -182,3 +182,35 @@ que no hay parpadeo al cargar ni estado duplicado.
 El modo puerta no participa: es táctil y a pantalla completa se use donde se
 use, así que no lleva navegación alrededor y en escritorio se centra en el
 ancho de una tablet.
+
+## Escritorio: una sola app, no dos
+
+C11 se resolvió con media queries y un solo juego de componentes y rutas. Se
+descartó una interfaz aparte para escritorio: el celular es donde se vende y
+donde se abre la puerta, y mantener dos capas de pantallas en sincronía cuesta
+el doble por cada cambio.
+
+Casi todo es CSS. `useIsDesktop()` existe sólo para los tres lugares donde el
+tamaño cambia **qué se monta**, no cómo se ve: la puerta no monta html5-qrcode
+en una notebook, y Rendiciones y Asistencia eligen entre master-detail y una
+sola columna.
+
+Los agrupadores que sólo tienen sentido en escritorio (`.attngrid`, `.dirrow2`,
+`.md`) son `display: contents` en celular: existen en el DOM pero no en el
+layout, así que el markup es uno solo y el flujo de celular queda intacto.
+
+Decisiones puntuales:
+
+- **El sheet y el cajón son el mismo componente.** Se mantuvo el nombre
+  `BottomSheet`: lo usan cinco pantallas y el comportamiento no cambia, sólo la
+  presentación.
+- **El FAB no existe en escritorio.** La acción se declara una vez en
+  `PageHead`, que renderiza el botón del header y el FAB; el CSS muestra el que
+  corresponde. Declararla dos veces por pantalla era la forma segura de que se
+  desincronizaran.
+- **Una sola URL para el master-detail.** `/panel/rendiciones/:id` abre lista +
+  detalle en escritorio y sólo el detalle en el celular. Un link que alguien
+  manda por WhatsApp abre lo mismo de los dos lados.
+- **La puerta en escritorio no tiene cámara.** Nadie escanea un QR con la webcam
+  de una notebook; la mesa de entrada resuelve búsquedas con el teclado y lo
+  dice al pie. De paso, una superficie menos que probar contra webcams raras.

@@ -2979,7 +2979,9 @@ div.alertcard {
 /* --- C11 · Dirección: agrupadores que sólo existen en escritorio --------- */
 .attngrid,
 .dirrow2,
-.dirrow2__accs {
+.dirrow2__accs,
+.md,
+.md__list {
   display: contents;
 }
 
@@ -3447,10 +3449,218 @@ div.alertcard {
     max-width: 560px;
   }
 
-  /* El modo puerta se queda sin lateral y en el ancho de una tablet. */
+  /* --- Master-detail: Rendiciones (frame 4) ----------------------------- */
+  .md {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .md__list {
+    display: block;
+    width: 330px;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+
+  /* La barra de búsqueda del master-detail no se pega: la columna es corta y
+     el sticky la dejaría flotando sobre la lista. */
+  .md__list .sticky-bar {
+    position: static;
+  }
+
+  .mrow--sel {
+    border-color: var(--brand-blue);
+    box-shadow: 0 0 0 3px rgba(65, 93, 167, 0.1);
+  }
+
+  .att-detail__h {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .att-detail__h b {
+    display: block;
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  /* La lista embebida vuelve a una columna: la card grid es para la vista
+     de ancho completo. */
+  .md__list .cardgrid {
+    grid-template-columns: 1fr;
+  }
+
+  /* En el master-detail la fila es para elegir; el "Registrar rendición" vive
+     en el panel de la derecha, que es donde está el contexto completo. */
+  .md__list .debt-card > .button {
+    display: none;
+  }
+
+  .md__list .debt-card {
+    padding-bottom: 10px;
+  }
+
+  .md__detail {
+    flex: 1;
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+
+  /* Adentro del panel el perfil ya tiene su marco. */
+  .md__detail .profile {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .md__detail .kpis3 {
+    max-width: 440px;
+  }
+
+  .md__detail .button {
+    width: auto;
+  }
+
+  .debt-card--sel,
+  .okrow--sel {
+    border-color: var(--brand-blue);
+    box-shadow: 0 0 0 3px rgba(65, 93, 167, 0.1);
+  }
+
+  /* --- Modo puerta en escritorio: la mesa de entrada (frame 5) ---------- */
   .app-shell--puerta .app-main {
     max-width: none;
     padding: 22px 28px 28px;
+  }
+
+  .app-shell--puerta .door {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .desk__search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 2px solid var(--brand-blue);
+    border-radius: 14px;
+    box-shadow: 0 0 0 4px rgba(65, 93, 167, 0.12);
+    color: var(--brand-blue);
+  }
+
+  .desk__search input,
+  .desk__search input:focus-visible {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    box-shadow: none;
+    background: none;
+    font-family: var(--font-body);
+    font-size: 16px;
+    color: var(--ink);
+  }
+
+  .desk__row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-top: 9px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 13px;
+  }
+
+  .desk__row--on {
+    border-color: var(--brand-blue);
+    box-shadow: 0 0 0 3px rgba(65, 93, 167, 0.1);
+  }
+
+  .desk__mid {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .desk__mid b {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .desk__mid > span {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .desk__row .mark-btn {
+    flex-shrink: 0;
+    background: var(--brand-blue);
+    color: var(--brand-cream);
+    border: none;
+    border-radius: 10px;
+    min-height: 40px;
+    padding: 0 14px;
+    font-weight: 800;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .desk__row .mark-btn:disabled {
+    background: var(--line);
+    color: var(--muted);
+    cursor: default;
+  }
+
+  .desk__kbd {
+    margin: 10px 0 0;
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+
+  .desk__kbd kbd {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 5px;
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .desk__last {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 4px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12.5px;
+  }
+
+  .desk__last:last-of-type {
+    border-bottom: 0;
+  }
+
+  .desk__tip {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
   }
 }
 

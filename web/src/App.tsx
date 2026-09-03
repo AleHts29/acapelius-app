@@ -15,7 +15,7 @@ import { SalesPage } from './pages/SalesPage'
 import { SalesReportPage } from './pages/SalesReportPage'
 import { SeasonDetailPage } from './pages/SeasonDetailPage'
 import { SeasonsPage } from './pages/SeasonsPage'
-import { SettlementDetailPage, SettlementsHistoryPage, SettlementsPage } from './pages/SettlementsPage'
+import { SettlementsHistoryPage, SettlementsScreen } from './pages/SettlementsPage'
 import { SingleTicketPage, TicketPage } from './pages/TicketPage'
 import { UsersPage } from './pages/UsersPage'
 
@@ -152,7 +152,7 @@ function AuthenticatedApp() {
           path="/panel/rendiciones"
           element={
             <RequireAdmin>
-              <SettlementsPage />
+              <SettlementsScreen />
             </RequireAdmin>
           }
         />
@@ -168,7 +168,7 @@ function AuthenticatedApp() {
           path="/panel/rendiciones/:sellerId"
           element={
             <RequireAdmin>
-              <SettlementDetailPage />
+              <SettlementsScreen />
             </RequireAdmin>
           }
         />

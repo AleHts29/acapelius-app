@@ -5,6 +5,7 @@ import { Check, ChevronDown, Hand, Minus, PartyPopper, ScanLine, Search, Theater
 import { api } from '../api/client'
 import type { AttendanceSale } from '../api/client'
 import { initials, normalizeText } from '../lib/search'
+import { useIsDesktop } from '../lib/viewport'
 import { EmptyState, Hl, LiveDot, ProgressBar, SearchBar, SegmentedToggle } from '../ui/controls'
 import { CounterChip } from '../ui/StatusChip'
 
@@ -58,12 +59,14 @@ function BuyerRow({
   q,
   tab,
   expanded,
+  selected,
   onToggle,
 }: {
   sale: AttendanceSale
   q: string
   tab: 'ingresaron' | 'faltan'
   expanded: boolean
+  selected?: boolean
   onToggle: () => void
 }) {
   const complete = sale.entered >= sale.total
@@ -88,7 +91,13 @@ function BuyerRow({
 
   if (!expanded) {
     return (
-      <button className="mrow" type="button" aria-expanded={false} onClick={onToggle}>
+      <button
+        className={`mrow${selected ? ' mrow--sel' : ''}`}
+        type="button"
+        aria-expanded={false}
+        aria-current={selected ? 'true' : undefined}
+        onClick={onToggle}
+      >
         {header}
       </button>
     )
@@ -99,31 +108,39 @@ function BuyerRow({
       <button className="att-x__h" type="button" aria-expanded onClick={onToggle}>
         {header}
       </button>
-      <div className="att-x__tks">
-        {sale.tickets.map((ticket, i) => (
-          <div key={ticket.ticket_id} className="att-tk">
-            <span className="att-tk__l">
-              <i className={`att-tk__st ${ticket.checkin ? 'in' : 'no'}`} aria-hidden>
-                {ticket.checkin ? <Check size={10} strokeWidth={3} /> : <Minus size={10} strokeWidth={3} />}
-              </i>
-              Entrada {i + 1}
+      <TicketBreakdown sale={sale} />
+    </div>
+  )
+}
+
+/** Entrada por entrada de una compra: quién entró, cuándo y con qué método. */
+function TicketBreakdown({ sale }: { sale: AttendanceSale }) {
+  return (
+    <div className="att-x__tks">
+      {sale.tickets.map((ticket, i) => (
+        <div key={ticket.ticket_id} className="att-tk">
+          <span className="att-tk__l">
+            <i className={`att-tk__st ${ticket.checkin ? 'in' : 'no'}`} aria-hidden>
+              {ticket.checkin ? <Check size={10} strokeWidth={3} /> : <Minus size={10} strokeWidth={3} />}
+            </i>
+            Entrada {i + 1}
+          </span>
+          {ticket.checkin ? (
+            <span className="att-tk__meta">
+              <MethodIcon method={ticket.checkin.method} /> {timeOf(ticket.checkin.at)} ·{' '}
+              {ticket.checkin.method === 'scan' ? 'escaneó' : 'manual ·'} {ticket.checkin.by_name}
             </span>
-            {ticket.checkin ? (
-              <span className="att-tk__meta">
-                <MethodIcon method={ticket.checkin.method} /> {timeOf(ticket.checkin.at)} ·{' '}
-                {ticket.checkin.method === 'scan' ? 'escaneó' : 'manual ·'} {ticket.checkin.by_name}
-              </span>
-            ) : (
-              <span className="att-tk__meta">sin ingresar</span>
-            )}
-          </div>
-        ))}
-      </div>
+          ) : (
+            <span className="att-tk__meta">sin ingresar</span>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
 
 export function AttendancePage() {
+  const escritorio = useIsDesktop()
   const [functionId, setFunctionId] = useState<number | null>(null)
   const [tab, setTab] = useState<'ingresaron' | 'faltan'>('ingresaron')
   const [q, setQ] = useState('')
@@ -165,6 +182,7 @@ export function AttendancePage() {
   const occupancy = data && data.issued > 0 ? Math.round((data.entered / data.issued) * 100) : 0
 
   const rows = tab === 'ingresaron' ? entered : missing
+  const seleccionada = rows.find((sale) => sale.sale_id === expandedId)
 
   return (
     <>
@@ -214,6 +232,8 @@ export function AttendancePage() {
             </div>
           </div>
 
+          <div className="md">
+          <div className="md__list">
           <div className="sticky-bar">
             <SearchBar value={q} onChange={setQ} placeholder="Buscar comprador o vendedora…" />
             <div style={{ marginTop: 8 }}>
@@ -259,11 +279,40 @@ export function AttendancePage() {
                 sale={sale}
                 q={q}
                 tab={tab}
-                expanded={expandedId === sale.sale_id}
+                /* En escritorio la fila no se despliega: el desglose vive en el
+                   panel de la derecha y no empuja el resto de la lista. */
+                expanded={!escritorio && expandedId === sale.sale_id}
+                selected={escritorio && expandedId === sale.sale_id}
                 onToggle={() => setExpandedId(expandedId === sale.sale_id ? null : sale.sale_id)}
               />
             ))
           )}
+          </div>
+          {escritorio && (
+            <div className="md__detail">
+              {seleccionada ? (
+                <>
+                  <div className="att-detail__h">
+                    <span className="att-ini att-ini--warn" aria-hidden>
+                      {initials(seleccionada.buyer_name)}
+                    </span>
+                    <span>
+                      <b>{seleccionada.buyer_name}</b>
+                      <SellerLine sale={seleccionada} q="" />
+                    </span>
+                    <CounterChip count={seleccionada.entered} total={seleccionada.total} />
+                  </div>
+                  <TicketBreakdown sale={seleccionada} />
+                </>
+              ) : (
+                <p className="muted" style={{ margin: 0 }}>
+                  Elegí un comprador de la lista para ver entrada por entrada quién entró y a qué
+                  hora.
+                </p>
+              )}
+            </div>
+          )}
+          </div>
         </>
       )}
     </>

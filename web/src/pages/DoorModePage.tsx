@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft, Moon, Sun } from 'lucide-react'
+import { ChevronLeft, Moon, Search, Sun } from 'lucide-react'
 import { Html5Qrcode } from 'html5-qrcode'
 
-import type { CheckinResponse, DoorTicket } from '../api/client'
+import type { CheckinResponse, DoorCheckin, DoorTicket } from '../api/client'
 import type { CheckinAttempt } from '../door/useDoorStore'
 import { useDoorStore } from '../door/useDoorStore'
-import { doorCounter, effectiveTickets } from '../door/logic'
-import { filterTickets, groupByBuyer } from '../lib/search'
+import { doorCounter, effectiveCheckins, effectiveTickets } from '../door/logic'
+import { filterTickets, groupByBuyer, initials } from '../lib/search'
+import { useIsDesktop } from '../lib/viewport'
+import { Hl } from '../ui/controls'
+import { CounterChip } from '../ui/StatusChip'
 
 // Preferencia por dispositivo del modo nocturno (design system §3.7).
 const NIGHT_KEY = 'acapelius-door-night'
@@ -332,6 +336,155 @@ function useWakeLock() {
   }, [])
 }
 
+/**
+ * La mesa de entrada (C11, frame 5): el modo puerta en escritorio. No hay
+ * cámara —nadie escanea un QR con la webcam de una notebook— así que
+ * html5-qrcode ni se monta. Todo gira alrededor de la búsqueda, pensada para
+ * teclado: se escribe, se baja con las flechas y se marca con Enter, sin
+ * soltar las manos.
+ */
+function EntryDesk({
+  tickets,
+  checkins,
+  onCheckin,
+}: {
+  tickets: DoorTicket[]
+  checkins: DoorCheckin[]
+  onCheckin: (codes: string[]) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [cursor, setCursor] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const grupos = groupByBuyer(filterTickets(tickets, query)).slice(0, 8)
+  // Si la lista se acorta al seguir escribiendo, el cursor no puede quedar afuera.
+  const activo = Math.min(cursor, Math.max(grupos.length - 1, 0))
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  // Nombre del comprador por código, para los últimos ingresos.
+  const porCodigo = new Map(tickets.map((t) => [t.code, t]))
+  const ultimos = [...checkins]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 6)
+
+  function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (grupos.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setCursor((c) => Math.min(c + 1, grupos.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setCursor((c) => Math.max(c - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const grupo = grupos[activo]
+      if (grupo && grupo.pending.length > 0) {
+        onCheckin(grupo.pending.map((t) => t.code))
+        setQuery('')
+        setCursor(0)
+      }
+    }
+  }
+
+  return (
+    <div className="desk">
+      <div className="desk__search">
+        <Search size={20} aria-hidden />
+        <input
+          ref={inputRef}
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setCursor(0)
+          }}
+          onKeyDown={onKeyDown}
+          placeholder="Nombre de quien compró, o de la corista"
+          aria-label="Buscar entrada"
+        />
+      </div>
+
+      {query.trim() !== '' && grupos.length === 0 && (
+        <p className="muted" style={{ padding: '12px 2px' }}>
+          No aparece. Probá con menos letras, o solo el apellido.
+        </p>
+      )}
+
+      {grupos.map((grupo, i) => {
+        const faltan = grupo.pending.length
+        return (
+          <div
+            key={grupo.key}
+            className={`desk__row${i === activo ? ' desk__row--on' : ''}`}
+            onMouseEnter={() => setCursor(i)}
+          >
+            <span className={`ini${faltan === 0 ? ' ini--ok' : ''}`}>{initials(grupo.buyerName)}</span>
+            <span className="desk__mid">
+              <b>
+                <Hl text={grupo.buyerName} q={query} />
+              </b>
+              <span>
+                le vendió {grupo.sellerName} · {grupo.total}{' '}
+                {grupo.total === 1 ? 'entrada' : 'entradas'}
+                {faltan > 0 && faltan < grupo.total && ` · falta${faltan === 1 ? '' : 'n'} ${faltan}`}
+              </span>
+            </span>
+            <CounterChip count={grupo.entered} total={grupo.total} />
+            <button
+              className="mark-btn"
+              type="button"
+              disabled={faltan === 0}
+              onClick={() => {
+                onCheckin(grupo.pending.map((t) => t.code))
+                setQuery('')
+                setCursor(0)
+              }}
+            >
+              {faltan === 0
+                ? 'Ya ingresó'
+                : faltan === 1
+                  ? 'Marcar ingreso'
+                  : `Marcar ${faltan === grupo.total ? 'las' : 'las otras'} ${faltan}`}
+            </button>
+          </div>
+        )
+      })}
+
+      {grupos.length > 0 && (
+        <p className="desk__kbd">
+          <kbd>↑</kbd> <kbd>↓</kbd> para moverte · <kbd>Enter</kbd> marca el ingreso
+        </p>
+      )}
+
+      {ultimos.length > 0 && (
+        <>
+          <div className="ghead">
+            <b>Últimos ingresos</b>
+          </div>
+          {ultimos.map((c) => (
+            <div key={c.ticket_code + c.created_at} className="desk__last">
+              <span>
+                <b>{porCodigo.get(c.ticket_code)?.buyer_name ?? 'Entrada'}</b>{' '}
+                <span className="muted">
+                  {c.method === 'scan' ? 'escaneo' : 'manual'} · {c.by_name}
+                </span>
+              </span>
+              <span className="muted">{timeOf(c.created_at)}</span>
+            </div>
+          ))}
+        </>
+      )}
+
+      <p className="desk__tip">
+        Para escanear QRs usá el celular — esta mesa resuelve búsquedas e ingresos manuales.
+      </p>
+    </div>
+  )
+}
+
 export function DoorModePage() {
   const { functionId: raw } = useParams()
   const functionId = Number(raw)
@@ -343,11 +496,15 @@ export function DoorModePage() {
   const timerRef = useRef<number | null>(null)
 
   const store = useDoorStore(functionId)
+  const escritorio = useIsDesktop()
   useWakeLock()
 
+  // En escritorio la cámara no se enciende nunca: `enabled` en false deja el
+  // hook inerte y el botón de escanear no se renderiza, así que html5-qrcode
+  // no llega a montarse (C11).
   const { camState, startCamera } = useCamera(
     (payload) => void attempt({ method: 'scan', payload }),
-    result === null && !sheetOpen,
+    !escritorio && result === null && !sheetOpen,
   )
 
   function toggleNight() {
@@ -458,6 +615,14 @@ export function DoorModePage() {
         <div className="st">INGRESARON</div>
       </div>
 
+      {escritorio ? (
+        <EntryDesk
+          tickets={tickets}
+          checkins={snapshot ? effectiveCheckins(snapshot, store.pending) : []}
+          onCheckin={(codes) => void attemptGroup(codes)}
+        />
+      ) : (
+      <>
       <div className="door__stage">
         <CameraStage camState={camState} onStart={() => void startCamera()} />
         {result && (
@@ -511,6 +676,8 @@ export function DoorModePage() {
                   : 'Escanear'}
         </button>
       </div>
+      </>
+      )}
     </div>
   )
 }

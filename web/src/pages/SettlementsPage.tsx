@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, History } from 'lucide-react'
 
 import { ApiError, activeSeason, api } from '../api/client'
+import { useIsDesktop } from '../lib/viewport'
 import type { PaymentMethod, Settlement, SettlementReportRow } from '../api/client'
 import { dayLabel, formatMoney, pesosToCents, timeShort } from '../lib/format'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -204,7 +205,14 @@ function groupByDay(settlements: Settlement[]): Array<{ label: string; items: Se
  * 1. Listado principal
  * ========================================================================== */
 
-export function SettlementsPage() {
+export function SettlementsPage({
+  embedded = false,
+  selectedId,
+}: {
+  /** Dentro del master-detail de escritorio: el encabezado lo pone la pantalla. */
+  embedded?: boolean
+  selectedId?: number
+} = {}) {
   const navigate = useNavigate()
   const season = useSeason()
   const report = useReport(season?.id)
@@ -220,12 +228,14 @@ export function SettlementsPage() {
 
   return (
     <>
-      <div className="page-head">
-        <h1 className="page-title">Rendiciones</h1>
-        <Link className="hbtn" to="/panel/rendiciones/historial">
-          <History size={13} aria-hidden /> Historial
-        </Link>
-      </div>
+      {!embedded && (
+        <div className="page-head">
+          <h1 className="page-title">Rendiciones</h1>
+          <Link className="hbtn" to="/panel/rendiciones/historial">
+            <History size={13} aria-hidden /> Historial
+          </Link>
+        </div>
+      )}
 
       {report.isPending ? (
         <p className="muted">Cargando…</p>
@@ -252,7 +262,10 @@ export function SettlementsPage() {
               <div className="ghead"><b>Deben rendir · {debtors.length}</b></div>
               <div className="cardgrid">
               {debtors.map((row) => (
-                <div key={row.seller_id} className="debt-card">
+                <div
+                  key={row.seller_id}
+                  className={`debt-card${row.seller_id === selectedId ? ' debt-card--sel' : ''}`}
+                >
                   <button
                     style={{ all: 'unset', display: 'block', width: '100%', cursor: 'pointer' }}
                     type="button"
@@ -291,7 +304,7 @@ export function SettlementsPage() {
               {upToDate.map((row) => (
                 <button
                   key={row.seller_id}
-                  className="okrow"
+                  className={`okrow${row.seller_id === selectedId ? ' okrow--sel' : ''}`}
                   type="button"
                   onClick={() => navigate(`/panel/rendiciones/${row.seller_id}`)}
                 >
@@ -332,9 +345,16 @@ export function SettlementsPage() {
  * 2. Detalle por corista
  * ========================================================================== */
 
-export function SettlementDetailPage() {
+export function SettlementDetailPage({
+  sellerId: sellerIdProp,
+  embedded = false,
+}: {
+  sellerId?: number
+  /** En el master-detail el "‹ Rendiciones" sobra: la lista está al lado. */
+  embedded?: boolean
+} = {}) {
   const { sellerId: raw } = useParams()
-  const sellerId = Number(raw)
+  const sellerId = sellerIdProp ?? Number(raw)
   const season = useSeason()
   const report = useReport(season?.id)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -357,11 +377,13 @@ export function SettlementDetailPage() {
 
   return (
     <>
-      <p style={{ margin: '0 0 8px' }}>
-        <Link to="/panel/rendiciones" style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'none', fontSize: 13 }}>
-          ‹ Rendiciones
-        </Link>
-      </p>
+      {!embedded && (
+        <p style={{ margin: '0 0 8px' }}>
+          <Link to="/panel/rendiciones" style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'none', fontSize: 13 }}>
+            ‹ Rendiciones
+          </Link>
+        </p>
+      )}
 
       <div className="profile">
         <div className="profile__head">
@@ -472,6 +494,52 @@ export function SettlementsHistoryPage() {
           </div>
         ))
       )}
+    </>
+  )
+}
+
+/* ========================================================================== *
+ * 4. La pantalla de rendiciones (C11)
+ * ========================================================================== */
+
+/**
+ * Una sola URL para las dos formas. En escritorio `/panel/rendiciones/:id` es
+ * lista + detalle lado a lado, y sin id la lista con una invitación a elegir;
+ * en celular esa misma URL es la vista de detalle sola, como siempre. Un solo
+ * juego de rutas: el link que alguien manda por WhatsApp abre lo mismo en los
+ * dos lados.
+ */
+export function SettlementsScreen() {
+  const { sellerId: raw } = useParams()
+  const sellerId = raw ? Number(raw) : undefined
+  const escritorio = useIsDesktop()
+
+  if (!escritorio) {
+    return sellerId !== undefined ? <SettlementDetailPage /> : <SettlementsPage />
+  }
+
+  return (
+    <>
+      <div className="page-head">
+        <h1 className="page-title">Rendiciones</h1>
+        <Link className="hbtn" to="/panel/rendiciones/historial">
+          <History size={13} aria-hidden /> Historial general
+        </Link>
+      </div>
+      <div className="md">
+        <div className="md__list">
+          <SettlementsPage embedded selectedId={sellerId} />
+        </div>
+        <div className="md__detail">
+          {sellerId !== undefined ? (
+            <SettlementDetailPage sellerId={sellerId} embedded />
+          ) : (
+            <p className="muted" style={{ margin: 0 }}>
+              Elegí una corista de la lista para ver su detalle y su historial.
+            </p>
+          )}
+        </div>
+      </div>
     </>
   )
 }

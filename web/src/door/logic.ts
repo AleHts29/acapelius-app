@@ -92,13 +92,21 @@ export function effectiveTickets(snapshot: DoorSnapshot, pending: QueuedCheckin[
   )
 }
 
-/** La lista de check-ins con los pendientes locales al final. */
+/**
+ * La lista de check-ins con los pendientes locales al final. Un ticket aparece
+ * una sola vez: entre que la cola se sincroniza y el snapshot se refresca hay
+ * un instante en que el mismo ingreso está en los dos lados, y en la mesa de
+ * entrada eso se veía como dos filas iguales.
+ */
 export function effectiveCheckins(snapshot: DoorSnapshot, pending: QueuedCheckin[]): DoorCheckin[] {
-  const local: DoorCheckin[] = pending.map((q) => ({
-    ticket_code: q.code,
-    created_at: q.at,
-    method: q.method,
-    by_name: 'este dispositivo',
-  }))
+  const yaEstan = new Set(snapshot.checkins.map((c) => c.ticket_code))
+  const local: DoorCheckin[] = pending
+    .filter((q) => !yaEstan.has(q.code))
+    .map((q) => ({
+      ticket_code: q.code,
+      created_at: q.at,
+      method: q.method,
+      by_name: 'este dispositivo',
+    }))
   return [...snapshot.checkins, ...local]
 }

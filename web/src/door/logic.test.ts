@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import type { DoorSnapshot } from '../api/client'
+import type { DoorCheckin, DoorSnapshot } from '../api/client'
 import type { QueuedCheckin } from './db'
 import {
   codeFromPayload,
   doorCounter,
+  effectiveCheckins,
   effectiveTickets,
   enteredCodes,
   validateLocally,
@@ -91,5 +92,31 @@ describe('contador y vistas', () => {
     const tickets = effectiveTickets(snapshot(), [queued('T1')])
     expect(tickets.find((t) => t.code === 'T1')?.status).toBe('checked_in')
     expect(tickets.find((t) => t.code === 'T2')?.status).toBe('issued')
+  })
+})
+
+describe('effectiveCheckins (mesa de entrada)', () => {
+  const snap = (checkins: DoorCheckin[]): DoorSnapshot => ({
+    function: { id: 1, name: 'F', venue: 'V', starts_at: '2026-09-03T21:00:00-03:00', capacity: 10 },
+    tickets: [],
+    checkins,
+  })
+
+  it('no repite un ingreso que ya volvió del server pero sigue en la cola', () => {
+    const servidor = snap([
+      { ticket_code: 'T1', created_at: '2026-09-03T21:10:00-03:00', method: 'manual', by_name: 'Recepción' },
+    ])
+    const cola = [{ functionId: 1, code: 'T1', method: 'manual' as const, at: '2026-09-03T21:10:00-03:00' }]
+    const salida = effectiveCheckins(servidor, cola)
+    expect(salida).toHaveLength(1)
+    expect(salida[0].by_name).toBe('Recepción')
+  })
+
+  it('los pendientes que el server todavía no tiene se muestran igual', () => {
+    const salida = effectiveCheckins(snap([]), [
+      { functionId: 1, code: 'T9', method: 'scan' as const, at: '2026-09-03T21:12:00-03:00' },
+    ])
+    expect(salida.map((c) => c.ticket_code)).toEqual(['T9'])
+    expect(salida[0].by_name).toBe('este dispositivo')
   })
 })
