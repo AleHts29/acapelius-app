@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { activeSeason, api } from '../api/client'
 import type { ShowFunction } from '../api/client'
 import { useSession } from '../auth/session'
-import { formatDateTime, formatMoney } from '../lib/format'
+import { calendarDaysUntil, formatDateTime, formatMoney } from '../lib/format'
 import { BalanceChip, Chip } from '../ui/StatusChip'
 
 /** Elige la funcion del hero: la proxima; si no hay futuras, la ultima. */
@@ -17,7 +17,7 @@ function heroFunction(functions: ShowFunction[]): ShowFunction | null {
 
 function heroEyebrow(fn: ShowFunction): string {
   const start = new Date(fn.starts_at)
-  const days = Math.ceil((start.getTime() - Date.now()) / 86400_000)
+  const days = calendarDaysUntil(fn.starts_at)
   const hour = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
   if (days < 0) return 'Última función'
   if (days === 0) return `Hoy · ${hour}`

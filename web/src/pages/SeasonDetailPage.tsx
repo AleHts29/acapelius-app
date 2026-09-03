@@ -131,11 +131,9 @@ function FunctionFields({
 
 function FunctionCard({
   fn,
-  seasonId,
   focused,
 }: {
   fn: ShowFunction
-  seasonId: number
   /** Llegó desde una alerta de Dirección (C9): abre las asignaciones sola. */
   focused?: boolean
 }) {
@@ -156,7 +154,11 @@ function FunctionCard({
     onSuccess: () => {
       setEditing(false)
       setError(null)
-      void queryClient.invalidateQueries({ queryKey: ['functions', seasonId] })
+      // ['functions'] a secas: por prefijo alcanza también a ['functions', id],
+      // que es la de esta pantalla. Al revés no: invalidar la de la temporada
+      // dejaba con datos viejos a Vender, Ventas, Puerta, Asistencia e Inicio,
+      // que piden la lista completa.
+      void queryClient.invalidateQueries({ queryKey: ['functions'] })
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : 'No se pudo guardar.'),
   })
@@ -269,7 +271,11 @@ export function SeasonDetailPage() {
       setValues(emptyForm)
       setShowForm(false)
       setError(null)
-      void queryClient.invalidateQueries({ queryKey: ['functions', seasonId] })
+      // ['functions'] a secas: por prefijo alcanza también a ['functions', id],
+      // que es la de esta pantalla. Al revés no: invalidar la de la temporada
+      // dejaba con datos viejos a Vender, Ventas, Puerta, Asistencia e Inicio,
+      // que piden la lista completa.
+      void queryClient.invalidateQueries({ queryKey: ['functions'] })
     },
     onError: (err) =>
       setError(err instanceof ApiError ? err.message : 'No se pudo crear la funcion.'),
@@ -336,7 +342,7 @@ export function SeasonDetailPage() {
           <p className="muted">Cargando funciones…</p>
         ) : functions.data && functions.data.functions.length > 0 ? (
           functions.data.functions.map((fn) => (
-            <FunctionCard key={fn.id} fn={fn} seasonId={seasonId} focused={fn.id === focusFunctionId} />
+            <FunctionCard key={fn.id} fn={fn} focused={fn.id === focusFunctionId} />
           ))
         ) : (
           <p className="muted">Esta temporada todavía no tiene funciones.</p>

@@ -77,11 +77,21 @@ export function daysAgo(iso: string): string {
   return `hace ${days} días`
 }
 
+/**
+ * Días de calendario entre hoy y `iso`: negativo si ya pasó, 0 si es hoy.
+ * Cuenta días, no horas: una función de hoy a las 21:00 mirada a las 14:00
+ * está a 0 días, no a "casi 1". Con la resta de horas, la pantalla de Inicio
+ * anunciaba "mañana" una función que era esa misma noche.
+ */
+export function calendarDaysUntil(iso: string): number {
+  const strip = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  return Math.round((strip(new Date(iso)) - strip(new Date())) / 86400_000)
+}
+
 /** ISO → "Hoy · mar 25 ago" / "Ayer · lun 24 ago" / "Jue 21 ago". */
 export function dayLabel(iso: string): string {
   const date = new Date(iso)
-  const strip = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-  const diff = Math.round((strip(new Date()) - strip(date)) / 86400_000)
+  const diff = -calendarDaysUntil(iso)
   const base = date
     .toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Argentina/Buenos_Aires' })
     .replace(/[.,]/g, '')

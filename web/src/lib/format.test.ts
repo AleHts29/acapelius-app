@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { dayLabel, daysAgo, formatDateTime, formatMoney, isoToLocalInput, localInputToISO, pesosToCents } from './format'
+import { calendarDaysUntil, dayLabel, daysAgo, formatDateTime, formatMoney, isoToLocalInput, localInputToISO, pesosToCents } from './format'
 
 describe('formatMoney', () => {
   it('muestra centavos como pesos argentinos', () => {
@@ -69,5 +69,35 @@ describe('dayLabel y daysAgo (historial C5)', () => {
     expect(daysAgo(new Date().toISOString())).toBe('hoy')
     expect(daysAgo(new Date(Date.now() - 86400_000).toISOString())).toBe('ayer')
     expect(daysAgo(new Date(Date.now() - 3 * 86400_000).toISOString())).toBe('hace 3 días')
+  })
+})
+
+describe('calendarDaysUntil (rótulo del hero en Inicio)', () => {
+  /** Un ISO de hoy a la hora que se pida, en la zona del navegador. */
+  const hoyALas = (hora: number) => {
+    const d = new Date()
+    d.setHours(hora, 0, 0, 0)
+    return d.toISOString()
+  }
+
+  it('la función de esta noche está a 0 días, no a 1', () => {
+    // El bug: con la resta de horas, una función a las 21:00 mirada a la
+    // tarde daba 0,x y Math.ceil la mandaba a "mañana".
+    expect(calendarDaysUntil(hoyALas(21))).toBe(0)
+    expect(calendarDaysUntil(hoyALas(1))).toBe(0)
+  })
+
+  it('ayer es -1 aunque hayan pasado pocas horas', () => {
+    const anoche = new Date()
+    anoche.setDate(anoche.getDate() - 1)
+    anoche.setHours(23, 30, 0, 0)
+    expect(calendarDaysUntil(anoche.toISOString())).toBe(-1)
+  })
+
+  it('mañana es 1 aunque falte menos de un día entero', () => {
+    const manana = new Date()
+    manana.setDate(manana.getDate() + 1)
+    manana.setHours(0, 30, 0, 0)
+    expect(calendarDaysUntil(manana.toISOString())).toBe(1)
   })
 })
