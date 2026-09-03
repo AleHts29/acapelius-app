@@ -22,12 +22,53 @@ export function Hl({ text, q }: { text: string; q: string }) {
   )
 }
 
-/** FAB: accion principal flotante sobre un listado. */
+/**
+ * FAB: accion principal flotante sobre un listado. En escritorio no existe
+ * (C11): un botón flotante en la esquina de un monitor de 27" está lejos de
+ * todo. El CSS lo oculta y la misma acción viaja al header de página vía
+ * `PageHead action=`.
+ */
 export function FAB({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
     <button className="fab" type="button" onClick={onClick}>
       <Plus size={16} aria-hidden strokeWidth={2.6} /> {children}
     </button>
+  )
+}
+
+/**
+ * Encabezado de página: título a la izquierda, y a la derecha los selectores
+ * de contexto y la acción primaria (C11). La acción se declara una sola vez y
+ * se renderiza dos veces —botón del header y FAB—; cada breakpoint muestra la
+ * suya. Declararla dos veces en cada pantalla sería la forma segura de que se
+ * desincronicen.
+ */
+export function PageHead({
+  title,
+  action,
+  children,
+}: {
+  title: ReactNode
+  action?: { label: string; onClick: () => void }
+  children?: ReactNode
+}) {
+  return (
+    <>
+      <div className="page-head">
+        <h1 className="page-title">{title}</h1>
+        {(children || action) && (
+          <div className="page-head__right">
+            {children}
+            {action && (
+              <button className="button page-head__cta" type="button" onClick={action.onClick}>
+                <Plus size={15} aria-hidden strokeWidth={2.6} /> {action.label}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      {action && <FAB onClick={action.onClick}>{action.label}</FAB>}
+    </>
   )
 }
 
@@ -180,7 +221,9 @@ export function AlertCard({
     <>
       <span className={`alertcard__ic alertcard__ic--${tone}`} aria-hidden>{icon}</span>
       <span className="alertcard__mid">
-        <b>{title}</b>
+        {/* En dos columnas el título puede no entrar: se corta con ellipsis y
+            el texto completo queda en el tooltip (C11). */}
+        <b title={title}>{title}</b>
         {context && <span>{context}</span>}
       </span>
       {actionLabel && <span className="alertcard__go">{actionLabel} ›</span>}

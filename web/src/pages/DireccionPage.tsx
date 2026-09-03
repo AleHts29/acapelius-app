@@ -281,20 +281,22 @@ export function DireccionPage() {
           context="Sin rendiciones pendientes ni tareas abiertas. ¡Gran temporada!"
         />
       ) : (
-        alerts.map((alert, i) => {
-          const props = alertProps(alert, season.id)
-          return (
-            <AlertCard
-              key={`${alert.kind}-${alert.seller_id ?? alert.function_id ?? alert.user_id ?? i}`}
-              tone={props.tone}
-              icon={props.icon}
-              title={props.title}
-              context={props.context}
-              actionLabel={props.actionLabel}
-              onAction={() => navigate(props.href)}
-            />
-          )
-        })
+        <div className="attngrid">
+          {alerts.map((alert, i) => {
+            const props = alertProps(alert, season.id)
+            return (
+              <AlertCard
+                key={`${alert.kind}-${alert.seller_id ?? alert.function_id ?? alert.user_id ?? i}`}
+                tone={props.tone}
+                icon={props.icon}
+                title={props.title}
+                context={props.context}
+                actionLabel={props.actionLabel}
+                onAction={() => navigate(props.href)}
+              />
+            )
+          })}
+        </div>
       )}
 
       {fns.length > 0 && (
@@ -307,10 +309,14 @@ export function DireccionPage() {
               <FunctionCard key={fn.id} fn={fn} seasonId={season.id} />
             ))}
           </div>
-          <SalesRhythm seasonId={season.id} />
         </>
       )}
 
+      {/* Ritmo y accesos lado a lado en escritorio; en celular `display:
+          contents` deja el orden y el flujo exactamente como estaban. */}
+      <div className="dirrow2">
+        {fns.length > 0 && <SalesRhythm seasonId={season.id} />}
+        <div className="dirrow2__accs">
       <div className="ghead">
         <b>Administración</b>
       </div>
@@ -345,6 +351,8 @@ export function DireccionPage() {
           title="Equipo"
           subtitle="Coristas y roles"
         />
+        </div>
+        </div>
       </div>
     </>
   )

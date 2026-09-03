@@ -10,7 +10,7 @@ import { useSession } from '../auth/session'
 import { dayLabel, daysAgo, formatDateTime, formatMoney, pesosToCents } from '../lib/format'
 import { initials, normalizeText } from '../lib/search'
 import { BottomSheet, SheetAction } from '../ui/BottomSheet'
-import { EmptyState, FAB, FilterChips, Hl, SearchBar, SegmentedToggle } from '../ui/controls'
+import { EmptyState, FilterChips, Hl, PageHead, SearchBar, SegmentedToggle } from '../ui/controls'
 import { SaleChip } from '../ui/StatusChip'
 
 const salesQueryKey = ['sales'] as const
@@ -402,8 +402,12 @@ export function SalesPage() {
 
   return (
     <>
-      <h1 className="page-title">{isAdmin ? 'Ventas' : 'Mis ventas'}</h1>
+      <PageHead
+        title={isAdmin ? 'Ventas' : 'Mis ventas'}
+        action={{ label: 'Nueva venta', onClick: () => navigate('/ventas/nueva') }}
+      />
 
+      <div className="salesbar">
       {summary && (
         <div className="sumstrip">
           <div>
@@ -450,6 +454,22 @@ export function SalesPage() {
           </select>
         </div>
       </div>
+      </div>
+
+      {/* En escritorio esto es una tabla: encabezado fijo arriba y filas de
+          46px adentro de una sola tarjeta. En celular no se renderiza. */}
+      {flat.length > 0 && (
+        <div className="thead" aria-hidden>
+          <span />
+          <span>Comprador</span>
+          <span>Función</span>
+          <span>Vendedora</span>
+          <span>Entr.</span>
+          <span>Total</span>
+          <span>Estado</span>
+          <span />
+        </div>
+      )}
 
       {list.isPending ? (
         <p className="muted">Cargando…</p>
@@ -464,7 +484,11 @@ export function SalesPage() {
           <p className="muted">Todavía no hay ventas acá.</p>
         )
       ) : (
-        <div ref={listRef} style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+        <div
+          className="stable"
+          ref={listRef}
+          style={{ height: virtualizer.getTotalSize(), position: 'relative' }}
+        >
           {virtualItems.map((vi) => {
             const item = flat[vi.index]
             return (
@@ -489,18 +513,32 @@ export function SalesPage() {
                   </div>
                 ) : (
                   <button
-                    className={`mrow${item.sale.voided_at ? ' panel--voided' : ''}`}
+                    className={`mrow srow${item.sale.voided_at ? ' panel--voided' : ''}${
+                      selected?.id === item.sale.id ? ' srow--sel' : ''
+                    }`}
                     type="button"
                     onClick={() => setSelected(item.sale)}
                   >
                     <span className="ini">{initials(item.sale.buyer_name)}</span>
                     <span className="mrow__mid">
                       <b><Hl text={item.sale.buyer_name} q={debouncedQ} /></b>
-                      <span>
+                      {/* El subtítulo es de celular: en la tabla esos datos
+                          tienen su propia columna. */}
+                      <span className="srow__sub">
                         {item.sale.quantity} {item.sale.quantity === 1 ? 'entrada' : 'entradas'} ·{' '}
                         {item.sale.is_comp ? 'emitió' : 'vendió'}{' '}
                         <Hl text={item.sale.seller_name} q={debouncedQ} />
                       </span>
+                    </span>
+                    <span className="srow__col srow__fn" title={item.sale.function_name ?? item.sale.function_venue}>
+                      {item.sale.function_name ?? item.sale.function_venue}
+                    </span>
+                    <span className="srow__col srow__seller" title={item.sale.seller_name}>
+                      <Hl text={item.sale.seller_name} q={debouncedQ} />
+                    </span>
+                    <span className="srow__col srow__qty">{item.sale.quantity}</span>
+                    <span className="srow__col srow__total">
+                      {item.sale.is_comp ? '—' : formatMoney(item.sale.amount_cents)}
                     </span>
                     <SaleChip sale={item.sale} />
                     <span className="mrow__dots" aria-hidden>⋮</span>
@@ -515,7 +553,6 @@ export function SalesPage() {
 
       {selected && <SaleSheet sale={selected} isAdmin={isAdmin} onClose={() => setSelected(null)} />}
 
-      <FAB onClick={() => navigate('/ventas/nueva')}>Nueva venta</FAB>
     </>
   )
 }

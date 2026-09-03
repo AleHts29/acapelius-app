@@ -9,7 +9,7 @@ import { useSession } from '../auth/session'
 import { daysAgo } from '../lib/format'
 import { initials } from '../lib/search'
 import { BottomSheet, SheetAction } from '../ui/BottomSheet'
-import { EmptyState, FAB } from '../ui/controls'
+import { EmptyState, PageHead } from '../ui/controls'
 import { Chip, PendingInviteChip } from '../ui/StatusChip'
 
 /** Tono del avatar y del chip según el rol (mockup usuarios-cupos, pantalla 1). */
@@ -447,7 +447,7 @@ export function UsersPage() {
 
   return (
     <>
-      <h1 className="page-title">Equipo</h1>
+      <PageHead title="Equipo" action={{ label: 'Nuevo usuario', onClick: () => setCreating(true) }} />
 
       {access && <AccessCard access={access} onClose={() => setAccess(null)} />}
 
@@ -476,7 +476,6 @@ export function UsersPage() {
         })
       )}
 
-      <FAB onClick={() => setCreating(true)}>Nuevo usuario</FAB>
 
       {creating && (
         <NewUserSheet onClose={() => setCreating(false)} onCreated={(result) => setAccess(result)} />

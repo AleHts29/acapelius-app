@@ -2955,23 +2955,78 @@ div.alertcard {
   opacity: 0.5;
 }
 
+
+/* El ✕ del cajón sólo aparece en escritorio. */
+.sheet__x {
+  display: none;
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 1;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.sheet__x:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* --- C11 · Dirección: agrupadores que sólo existen en escritorio --------- */
+.attngrid,
+.dirrow2,
+.dirrow2__accs {
+  display: contents;
+}
+
+/* --- C11 · Ventas como tabla (columnas ocultas en celular) --------------- */
+.srow__col,
+.thead {
+  display: none;
+}
+
 /* ==========================================================================
-   Escritorio (>= 1024px)
+   C11 · Tablet y escritorio
 
    La app se diseñó para el celular y así se queda: una columna, barra abajo,
-   todo al alcance del pulgar. En una pantalla grande eso dejaba el 70% del
-   ancho vacío, y dirección trabaja rendiciones, panel y asistencia desde la
-   compu. Acá la barra de abajo se vuelve columna lateral y el contenido usa
-   el ancho que hay. Todo vive en media queries: el celular no cambia.
+   todo al alcance del pulgar. En pantalla grande eso dejaba el 70% del ancho
+   vacío. Acá la barra de abajo se vuelve columna lateral, el contenido usa el
+   ancho, las listas se vuelven tablas y el sheet se vuelve cajón lateral.
+   Referencia visual: design/acapelius-desktop.html.
 
-   Va al final del archivo a propósito: las reglas base de .tabbar y .app-main
-   están más arriba y, con la misma especificidad, gana la última.
+   Todo vive en media queries y va al final del archivo a propósito: las
+   reglas base están más arriba y, con la misma especificidad, gana la última.
    ========================================================================== */
 
 .sidenav {
   display: none; /* sólo escritorio; el CSS elige, no el JS */
 }
 
+.page-head__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* La acción primaria vive en el header sólo en escritorio; en celular es el
+   FAB, que es la misma acción declarada una vez (ver PageHead). */
+.page-head__cta {
+  display: none;
+}
+
+/* --- Tablet: el layout del celular, centrado ------------------------------ */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .app-main,
+  .app-main--wide {
+    max-width: 640px;
+  }
+}
+
+/* --- Escritorio ----------------------------------------------------------- */
 @media (min-width: 1024px) {
   .app-shell {
     flex-direction: row;
@@ -2986,9 +3041,9 @@ div.alertcard {
     top: 0;
     align-self: flex-start;
     height: 100vh;
-    width: 232px;
-    flex: 0 0 232px;
-    padding: 20px 14px 16px;
+    width: 216px;
+    flex: 0 0 216px;
+    padding: 18px 10px 12px;
     background: var(--surface);
     border-right: 1px solid var(--line);
   }
@@ -2996,19 +3051,19 @@ div.alertcard {
   .sidenav__brand {
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 0 8px 18px;
+    gap: 8px;
+    padding: 0 8px 14px;
     color: var(--ink);
     text-decoration: none;
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 14px;
-    letter-spacing: 0.16em;
+    font-size: 12.5px;
+    letter-spacing: 0.2em;
   }
 
   .sidenav__logo {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
   }
 
   .sidenav__items {
@@ -3021,9 +3076,9 @@ div.alertcard {
     display: flex;
     align-items: center;
     gap: 10px;
-    min-height: 42px;
-    padding: 0 10px;
-    border-radius: 11px;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: 10px;
     text-decoration: none;
     font-size: 13px;
     font-weight: 700;
@@ -3035,7 +3090,7 @@ div.alertcard {
     color: var(--ink);
   }
 
-  /* Activo: el mismo color de categoría que usa la barra del celular. */
+  /* Activo: fondo crema, el mismo color de categoría que la barra del celular. */
   .sidenav__item--on {
     background: var(--bg);
   }
@@ -3045,7 +3100,7 @@ div.alertcard {
     display: flex;
     align-items: center;
     gap: 9px;
-    padding: 10px 8px 0;
+    padding: 12px 6px 0;
     border-top: 1px solid var(--line);
   }
 
@@ -3058,6 +3113,7 @@ div.alertcard {
   }
 
   .sidenav__who b {
+    font-size: 12.5px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3083,54 +3139,332 @@ div.alertcard {
   }
 
   .avatar--sm {
-    width: 30px;
-    height: 30px;
-    font-size: 12px;
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
     flex-shrink: 0;
   }
 
   /* Con lateral, la marca de arriba y la barra de abajo sobran. */
   .app-header,
-  .tabbar {
+  .tabbar,
+  .fab {
     display: none;
   }
 
-  .app-main {
-    max-width: 760px;
-    padding: 28px 32px 48px;
-  }
-
+  .app-main,
   .app-main--wide {
-    max-width: 1120px;
+    max-width: 1200px;
+    padding: 22px 28px 40px;
   }
 
-  /* Las grillas de Dirección aprovechan el ancho en vez de estirar. */
-  .app-main--wide .kpis,
-  .app-main--wide .grid2 {
+  .page-title {
+    font-size: 22px;
+  }
+
+  .page-head__cta {
+    display: inline-flex;
+    width: auto;
+  }
+
+  /* --- El sheet se vuelve cajón lateral derecho -------------------------- */
+  .sheet {
+    top: 0;
+    bottom: 0;
+    left: auto;
+    right: 0;
+    width: 340px;
+    max-width: 92vw;
+    margin: 0;
+    max-height: none;
+    border-radius: 16px 0 0 16px;
+    padding: 18px 20px 24px;
+    overflow-y: auto;
+    animation: drawer-in 0.18s ease-out;
+  }
+
+  .sheet__grip {
+    display: none;
+  }
+
+  .sheet__x {
+    display: flex;
+  }
+
+  /* --- Grillas: llenar el ancho, no estirarlo --------------------------- */
+  .kpis,
+  .grid2 {
     grid-template-columns: repeat(4, 1fr);
   }
 
-  .app-main--wide .fngrid {
-    grid-template-columns: repeat(3, 1fr);
+  .fngrid {
+    grid-template-columns: repeat(4, 1fr);
   }
 
-  /* Listas de tarjetas: en el ancho de dirección entran dos por fila, en vez
-     de una tarjeta de mil pixeles con un botón del mismo largo. */
-  .app-main--wide .cardgrid {
+  .fngrid .fncard {
+    margin-bottom: 0;
+  }
+
+  .cardgrid {
     grid-template-columns: repeat(2, 1fr);
     /* Sólo horizontal: las tarjetas ya traen su margen inferior. */
     column-gap: 10px;
   }
 
-  .app-main--wide .fngrid .fncard {
-    margin-bottom: 0;
+
+
+  /* --- Dirección (frame 3) --------------------------------------------- */
+  /* 10 alertas ocupan 5 filas, no 10. */
+  .attngrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 10px;
   }
 
-  /* El modo puerta se queda como está: sin lateral y sin nada alrededor. En
-     una pantalla grande se centra en el ancho de una tablet, porque el diseño
-     es táctil y un visor de 1440px de ancho no lo mejora. */
-  .app-shell--puerta .app-main {
-    max-width: 560px;
+  .attngrid .alertcard {
+    min-width: 0;
+  }
+
+  /* El título de la alerta se corta con ellipsis y el completo va al tooltip. */
+  .attngrid .alertcard__mid b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* El chart gana ancho real; los accesos quedan en una card compacta. */
+  .dirrow2 {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 12px;
+    align-items: start;
+    margin-top: 12px;
+  }
+
+  .dirrow2__accs {
+    display: block;
+  }
+
+  .dirrow2__accs .ghead {
+    margin-top: 0;
+  }
+
+  /* Los accesos pasan a lista compacta de dos columnas dentro de una sola
+     card: al lado del chart, cinco cards grandes desbordan la fila. */
+  .dirrow2__accs .grid2 {
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: 8px 12px;
+  }
+
+  .dirrow2__accs .acc {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: none;
+    border: 0;
+    border-radius: 9px;
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .dirrow2__accs .acc:hover {
+    background: var(--bg);
+  }
+
+  .dirrow2__accs .acc__ic {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+
+  .dirrow2__accs .acc b {
+    margin-top: 0;
+    font-weight: 700;
+  }
+
+  /* El subtítulo no entra en una fila compacta; el nombre alcanza. */
+  .dirrow2__accs .acc span:not(.acc__ic) {
+    display: none;
+  }
+
+  /* --- Ventas: tabla densa (frame 2) ------------------------------------ */
+  .salesbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  /* La barra de búsqueda y filtros manda; el resumen se va a la derecha. */
+  .salesbar .sticky-bar {
+    position: static;
+    flex: 1;
+    min-width: 0;
     padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .salesbar .sticky-bar > div {
+    margin-top: 0;
+  }
+
+  .salesbar .searchbar {
+    max-width: 340px;
+  }
+
+  .salesbar .fchip {
+    margin-top: 0 !important;
+  }
+
+  .salesbar .sumstrip {
+    order: 2;
+    background: none;
+    border: 0;
+    padding: 0;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+
+  /* Ocho columnas, no siete: el avatar es su propia celda. Con siete, la
+     última celda de cada fila caía a una fila implícita y aparecían ⋮ sueltos
+     debajo de cada renglón. */
+  .thead,
+  .srow {
+    display: grid;
+    grid-template-columns: 28px 1.8fr 1.2fr 1.1fr 0.5fr 0.9fr 1.1fr 30px;
+    gap: 8px;
+    align-items: center;
+    padding: 0 16px;
+  }
+
+  .thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: 38px;
+    background: #fdfaf5;
+    border: 1px solid var(--line);
+    border-bottom: 0;
+    border-radius: 14px 14px 0 0;
+    font-family: var(--font-display);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Las filas viven adentro de una sola tarjeta, no una por fila. */
+  .stable {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-top: 0;
+    border-radius: 0 0 14px 14px;
+    overflow: hidden;
+  }
+
+  .srow {
+    height: 46px;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    margin: 0;
+    padding: 0 16px;
+    font-size: 12.5px;
+  }
+
+  .srow:hover {
+    background: #fdfaf5;
+  }
+
+  .srow--sel {
+    background: var(--blue-soft, #e8edf8);
+  }
+
+  .srow .ini {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 11px;
+  }
+
+  /* El avatar y el nombre son una sola celda. */
+  .srow .mrow__mid {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .srow__sub {
+    display: none;
+  }
+
+  .srow__col {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .srow__fn,
+  .srow__seller {
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+
+  .srow__total {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .srow .mrow__dots {
+    text-align: center;
+  }
+
+  /* Banda de grupo por función, adentro de la tabla. */
+  .stable .ghead {
+    margin: 0;
+    padding: 7px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* --- Formularios de página: centrados, no estirados -------------------- */
+  .form-page {
+    max-width: 560px;
+  }
+
+  /* El modo puerta se queda sin lateral y en el ancho de una tablet. */
+  .app-shell--puerta .app-main {
+    max-width: none;
+    padding: 22px 28px 28px;
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
   }
 }

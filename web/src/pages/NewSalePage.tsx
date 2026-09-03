@@ -122,7 +122,7 @@ export function NewSalePage() {
 
   if (created) {
     return (
-      <>
+      <div className="form-page">
         <h1 className="page-title">Venta registrada ✓</h1>
 
         <div className="panel panel--success">
@@ -168,12 +168,12 @@ export function NewSalePage() {
             Ir a mis ventas
           </Link>
         </div>
-      </>
+      </div>
     )
   }
 
   return (
-    <>
+    <div className="form-page">
       <h1 className="page-title">{isComp ? 'Nueva cortesía' : 'Nueva venta'}</h1>
 
       <form className="panel" style={{ borderRadius: 18 }} onSubmit={handleSubmit}>
@@ -288,6 +288,6 @@ export function NewSalePage() {
           </button>
         )}
       </form>
-    </>
+    </div>
   )
 }

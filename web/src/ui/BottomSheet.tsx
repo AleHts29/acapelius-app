@@ -1,11 +1,15 @@
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { X } from 'lucide-react'
 
 /**
- * BottomSheet (C10): dim + panel inferior con grip. Cierra con tap afuera,
- * Escape o el gesto de arrastrar el grip hacia abajo. Bloquea el scroll del
- * fondo mientras esta abierto.
+ * El panel de acciones de la app (C10 + C11). Es UNA sola pieza con dos
+ * presentaciones que elige el CSS por breakpoint: en celular entra desde abajo
+ * con su grip y se arrastra para cerrar; de 1024px para arriba es un cajón
+ * lateral derecho con su ✕. Se mantiene el nombre BottomSheet porque lo usan
+ * cinco pantallas y el comportamiento —abrir, cerrar con Escape o tocando
+ * afuera, bloquear el scroll del fondo— es el mismo en las dos.
  */
 export function BottomSheet({
   open,
@@ -55,6 +59,10 @@ export function BottomSheet({
         }}
       >
         <div className="sheet__grip" aria-hidden />
+        {/* Sólo visible en escritorio: en el cajón lateral el grip no aplica. */}
+        <button className="sheet__x" type="button" onClick={onClose} aria-label="Cerrar">
+          <X size={16} aria-hidden />
+        </button>
         {children}
       </div>
     </div>,
