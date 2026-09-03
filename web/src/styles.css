@@ -2732,6 +2732,22 @@ div.alertcard {
 }
 
 /* Mini-card de funcion: barra de venta y cifras al pie. */
+/* Lista de tarjetas que en escritorio se reparte en columnas. En celular es
+ * una columna y se comporta igual que antes. */
+.cardgrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+/* Contenedor de las mini-cards de función: una columna en celular, varias en
+ * escritorio (ver el bloque de escritorio al final del archivo). */
+.fngrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
 .fncard {
   display: block;
   background: var(--surface);
@@ -2937,4 +2953,184 @@ div.alertcard {
 
 .pay-hist__del:disabled {
   opacity: 0.5;
+}
+
+/* ==========================================================================
+   Escritorio (>= 1024px)
+
+   La app se diseñó para el celular y así se queda: una columna, barra abajo,
+   todo al alcance del pulgar. En una pantalla grande eso dejaba el 70% del
+   ancho vacío, y dirección trabaja rendiciones, panel y asistencia desde la
+   compu. Acá la barra de abajo se vuelve columna lateral y el contenido usa
+   el ancho que hay. Todo vive en media queries: el celular no cambia.
+
+   Va al final del archivo a propósito: las reglas base de .tabbar y .app-main
+   están más arriba y, con la misma especificidad, gana la última.
+   ========================================================================== */
+
+.sidenav {
+  display: none; /* sólo escritorio; el CSS elige, no el JS */
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  /* Fija: la navegación no se va con el scroll de una lista de 200 ventas. */
+  .sidenav {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    width: 232px;
+    flex: 0 0 232px;
+    padding: 20px 14px 16px;
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+  }
+
+  .sidenav__brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 8px 18px;
+    color: var(--ink);
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.16em;
+  }
+
+  .sidenav__logo {
+    width: 28px;
+    height: 28px;
+  }
+
+  .sidenav__items {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sidenav__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 0 10px;
+    border-radius: 11px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .sidenav__item:hover {
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  /* Activo: el mismo color de categoría que usa la barra del celular. */
+  .sidenav__item--on {
+    background: var(--bg);
+  }
+
+  .sidenav__account {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 8px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .sidenav__who {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .sidenav__who b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidenav__who .muted {
+    font-size: 10.5px;
+  }
+
+  .sidenav__out {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 9px;
+  }
+
+  .sidenav__out:hover {
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  .avatar--sm {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  /* Con lateral, la marca de arriba y la barra de abajo sobran. */
+  .app-header,
+  .tabbar {
+    display: none;
+  }
+
+  .app-main {
+    max-width: 760px;
+    padding: 28px 32px 48px;
+  }
+
+  .app-main--wide {
+    max-width: 1120px;
+  }
+
+  /* Las grillas de Dirección aprovechan el ancho en vez de estirar. */
+  .app-main--wide .kpis,
+  .app-main--wide .grid2 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .app-main--wide .fngrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Listas de tarjetas: en el ancho de dirección entran dos por fila, en vez
+     de una tarjeta de mil pixeles con un botón del mismo largo. */
+  .app-main--wide .cardgrid {
+    grid-template-columns: repeat(2, 1fr);
+    /* Sólo horizontal: las tarjetas ya traen su margen inferior. */
+    column-gap: 10px;
+  }
+
+  .app-main--wide .fngrid .fncard {
+    margin-bottom: 0;
+  }
+
+  /* El modo puerta se queda como está: sin lateral y sin nada alrededor. En
+     una pantalla grande se centra en el ancho de una tablet, porque el diseño
+     es táctil y un visor de 1440px de ancho no lo mejora. */
+  .app-shell--puerta .app-main {
+    max-width: 560px;
+    padding: 0;
+  }
 }

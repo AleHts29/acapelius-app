@@ -8,23 +8,6 @@ el paquete de cambios v2 (C1–C10), en [docs/CAMBIOS_V2.md](docs/CAMBIOS_V2.md)
 
 ---
 
-## P1 · Versión de escritorio
-
-**Qué pasa.** En una pantalla grande la app se ve igual que en el celular: una
-columna angosta al medio, la barra de pestañas abajo, y el resto de la pantalla
-vacío. Eli trabaja Rendiciones, Panel de ventas y Asistencia desde la compu, y
-ahí sobra ancho que hoy no se usa.
-
-**Dónde.** `web/src/components/Layout.tsx` y `TabBar.tsx`, más los anchos
-máximos de `web/src/styles.css`.
-
-**Terminado cuando.** En ≥1024px hay navegación lateral en vez de barra inferior,
-el contenido usa el ancho disponible (listas y tablas de dirección en varias
-columnas donde tenga sentido) y ninguna pantalla queda peor que hoy en el
-celular. El modo puerta sigue siendo pantalla completa y táctil: no se toca.
-
----
-
 ## P2 · Dirección no muestra los ingresos el día de la función
 
 **Qué pasa.** La mini-card de función muestra "N ingresaron" sólo si la función

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 
 import { useSession } from '../auth/session'
+import { SideNav } from './SideNav'
 import { TabBar } from './TabBar'
 
 export function Layout() {
@@ -11,11 +12,16 @@ export function Layout() {
   if (!user) return null
 
   const initial = user.name.trim().charAt(0).toUpperCase() || 'A'
-  // Direccion puede expandirse a 2 columnas en desktop (design system §5).
+  // Las pantallas de dirección son listas largas y tablas: en escritorio se les
+  // da más ancho que a las de venta, que son de una columna.
   const wide = location.pathname.startsWith('/direccion') || location.pathname.startsWith('/panel')
+  // El modo puerta es pantalla completa y táctil, se use donde se use: nada de
+  // navegación alrededor comiéndole lugar al visor.
+  const puerta = /^\/puerta\/\d/.test(location.pathname)
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${puerta ? ' app-shell--puerta' : ''}`}>
+      {!puerta && <SideNav user={user} onLogout={() => void logout()} />}
       <header className="app-header">
         <Link className="app-header__brand" to="/" aria-label="Inicio">
           <img className="app-header__logo" src="/logo-mark-blue.png" alt="" />

@@ -299,9 +299,11 @@ export function DireccionPage() {
           <div className="ghead">
             <b>La temporada, función por función</b>
           </div>
-          {fns.map((fn) => (
-            <FunctionCard key={fn.id} fn={fn} seasonId={season.id} />
-          ))}
+          <div className="fngrid">
+            {fns.map((fn) => (
+              <FunctionCard key={fn.id} fn={fn} seasonId={season.id} />
+            ))}
+          </div>
           <SalesRhythm seasonId={season.id} />
         </>
       )}

@@ -164,3 +164,21 @@ No se aceptan cobros por encima del saldo: eso es una vuelta, no un cobro de
 esa venta. Los dos botones de siempre ("Marcar pagó — efectivo/transferencia")
 ahora registran un cobro por lo que falte, y "Volver a pendiente" borra los
 cobros de la venta: no hay un camino paralelo que pudiera desincronizar.
+
+## Escritorio: media queries, no una app aparte
+
+En una pantalla grande la app se veía igual que en el celular: una columna de
+480px al medio de 1440 y la barra de pestañas abajo. Se eligió resolverlo con
+una media query en 1024px —la barra de abajo se convierte en columna lateral y
+el contenido usa el ancho— en vez de una segunda interfaz para escritorio: el
+celular es donde se vende y se entra a la puerta, y mantener dos capas de
+pantallas en sincronía cuesta el doble por cada cambio.
+
+La navegación vive una sola vez en `components/nav.ts`; `TabBar` (celular) y
+`SideNav` (escritorio) la consumen. Las dos se renderizan siempre y el CSS
+elige cuál se ve: ningún componente necesita saber el tamaño de la ventana, así
+que no hay parpadeo al cargar ni estado duplicado.
+
+El modo puerta no participa: es táctil y a pantalla completa se use donde se
+use, así que no lleva navegación alrededor y en escritorio se centra en el
+ancho de una tablet.

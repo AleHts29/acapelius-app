@@ -250,6 +250,7 @@ export function SettlementsPage() {
           {debtors.length > 0 && (
             <>
               <div className="ghead"><b>Deben rendir · {debtors.length}</b></div>
+              <div className="cardgrid">
               {debtors.map((row) => (
                 <div key={row.seller_id} className="debt-card">
                   <button
@@ -271,6 +272,7 @@ export function SettlementsPage() {
                   </button>
                 </div>
               ))}
+              </div>
             </>
           )}
 
@@ -285,6 +287,7 @@ export function SettlementsPage() {
           {upToDate.length > 0 && (
             <>
               <div className="ghead"><b>Al día · {upToDate.length}</b></div>
+              <div className="cardgrid">
               {upToDate.map((row) => (
                 <button
                   key={row.seller_id}
@@ -306,6 +309,7 @@ export function SettlementsPage() {
                   </span>
                 </button>
               ))}
+              </div>
             </>
           )}
 
