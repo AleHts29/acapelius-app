@@ -39,8 +39,21 @@ SELECT quantity FROM allocations
 WHERE user_id = sqlc.arg(user_id)::bigint AND function_id = sqlc.arg(function_id)::bigint;
 
 -- name: SumAllocations :one
-SELECT COALESCE(SUM(quantity), 0)::bigint FROM allocations
-WHERE function_id = sqlc.arg(function_id)::bigint;
+-- Cuenta lo mismo que muestra el tablero: solo cupos de coristas activas. Si
+-- a alguien le cambian el rol o la desactivan, su fila queda invisible en
+-- pantalla; contarla aca hacia que el total validado no coincidiera con el
+-- total en pantalla y que asignar el ultimo cupo fallara con numeros que no
+-- estaban en ningun lado.
+SELECT COALESCE(SUM(a.quantity), 0)::bigint
+FROM allocations a
+JOIN users u ON u.id = a.user_id
+WHERE a.function_id = sqlc.arg(function_id)::bigint
+  AND u.role = 'seller' AND u.is_active;
+
+-- name: DeleteAllocationsForUser :exec
+-- Al salir del rol de corista (o al desactivarse) se le sueltan los cupos:
+-- si no, quedan reservando lugares que nadie puede vender ni ver.
+DELETE FROM allocations WHERE user_id = sqlc.arg(user_id)::bigint;
 
 -- name: MyAllocations :many
 -- Cupo y avance de la corista logueada, por funcion (C8: /api/me/allocations).

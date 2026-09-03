@@ -159,6 +159,16 @@ func (s *Service) UpdateUser(ctx context.Context, actorID, userID int64, name, e
 		}
 		return nil, fmt.Errorf("actualizar usuario: %w", err)
 	}
+	// Si deja de ser corista activa se le sueltan los cupos: si no, quedan
+	// reservando lugares que ya no aparecen en el tablero de asignaciones y
+	// que nadie puede vender. Un fallo aca no invalida el cambio de rol —que
+	// ya esta hecho— pero tiene que quedar registrado.
+	if role != domain.RoleSeller || !isActive {
+		if err := s.queries.DeleteAllocationsForUser(ctx, userID); err != nil {
+			slog.Error("no se pudieron soltar los cupos del usuario", "user_id", userID, "error", err)
+		}
+	}
+
 	user := toDomainUser(row)
 	return &user, nil
 }

@@ -100,3 +100,24 @@ La migración 00008 normaliza lo que ya esté cargado dejando activa la más
 nueva. No se agregó un índice único parcial porque el UPDATE que activa una y
 apaga el resto lo violaría fila por fila (los índices únicos no se difieren);
 la garantía queda en la transacción del handler.
+
+## Los cupos se sueltan al salir del rol de corista
+
+El tablero de asignaciones lista coristas activas (`role='seller' AND
+is_active`), pero `SumAllocations` sumaba todas las filas. Cambiarle el rol a
+una corista, o desactivarla, dejaba su cupo en la base: invisible en pantalla
+y contando en la validación. El tablero decía "quedan 36 sin asignar", se
+asignaban 36 y saltaba "las asignaciones suman 81 y el cupo es 80" — dos
+números que no aparecían en ninguna pantalla.
+
+Se eligió soltar los cupos al salir del rol (`DeleteAllocationsForUser` desde
+`UpdateUser`) en vez de mostrar las filas fantasma en el tablero: un cupo de
+alguien que ya no vende no es información, es un lugar bloqueado. Volver al
+rol de corista no devuelve el cupo viejo; hay que reasignarlo, que es lo que
+dirección haría igual.
+
+Además, todo lo que suma cupos cuenta lo mismo que muestra el tablero
+(`SumAllocations`, `FunctionsSummary.assigned` y la alerta de entradas sin
+repartir filtran por corista activa), y `PUT /allocations` rechaza con 409 un
+cupo para alguien que no es corista activa: por API se le podía asignar cupo a
+la puerta o a dirección.

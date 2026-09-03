@@ -149,3 +149,56 @@ func TestCapacityNoBajaDeAsignado(t *testing.T) {
 	assertStatus(t, admin.do(http.MethodPatch, fmt.Sprintf("/api/functions/%.0f", fnID),
 		map[string]any{"capacity": 60}), http.StatusOK)
 }
+
+// TestCuposDeQuienYaNoEsCorista: los cupos no pueden quedar reservados por
+// alguien que salio del rol. Antes, cambiarle el rol a una corista dejaba su
+// fila en la base: el tablero mostraba un total y la validacion contaba otro,
+// asi que asignar el ultimo cupo fallaba con numeros que no estaban en
+// ninguna pantalla.
+func TestCuposDeQuienYaNoEsCorista(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	fnID := setupCatalog(t, admin, 10)
+	createSellerClient(t, env, admin, "Corista Uno", "corista.uno@acapelius.test") // user 2
+	createSellerClient(t, env, admin, "Corista Dos", "corista.dos@acapelius.test") // user 3
+
+	path := fmt.Sprintf("/api/functions/%.0f/allocations", fnID)
+	assertStatus(t, admin.do(http.MethodPut, path, map[string]any{
+		"allocations": []map[string]any{{"user_id": 2, "quantity": 4}},
+	}), http.StatusOK)
+
+	board := func() (total float64, filas int) {
+		t.Helper()
+		resp := admin.get(path)
+		assertStatus(t, resp, http.StatusOK)
+		return resp.Body["total_assigned"].(float64), len(resp.Body["allocations"].([]any))
+	}
+
+	if total, _ := board(); total != 4 {
+		t.Fatalf("el tablero tendria que mostrar 4 asignadas, mostro %v", total)
+	}
+
+	// Pasa a puerta: sus cupos se sueltan.
+	assertStatus(t, admin.do(http.MethodPatch, "/api/users/2", map[string]any{
+		"name": "Corista Uno", "email": "corista.uno@acapelius.test",
+		"role": "door", "is_active": true,
+	}), http.StatusOK)
+
+	total, filas := board()
+	if total != 4-4 {
+		t.Fatalf("al salir del rol los cupos tendrian que soltarse; el tablero muestra %v", total)
+	}
+	if filas != 1 {
+		t.Fatalf("tendria que quedar solo la otra corista en el tablero, quedaron %d", filas)
+	}
+
+	// Y el cupo completo vuelve a estar disponible: 10 de 10 para la que queda.
+	assertStatus(t, admin.do(http.MethodPut, path, map[string]any{
+		"allocations": []map[string]any{{"user_id": 3, "quantity": 10}},
+	}), http.StatusOK)
+
+	// A alguien que no es corista activa no se le asigna cupo.
+	assertStatus(t, admin.do(http.MethodPut, path, map[string]any{
+		"allocations": []map[string]any{{"user_id": 2, "quantity": 1}},
+	}), http.StatusConflict)
+}

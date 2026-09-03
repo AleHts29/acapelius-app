@@ -161,6 +161,13 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 			httpx.Internal(w, r, err)
 			return
 		}
+		// Solo coristas activas: el tablero muestra esas y solo esas se cuentan
+		// al validar. Un cupo para otra persona quedaria invisible en pantalla.
+		if seller.Role != string(domain.RoleSeller) || !seller.IsActive {
+			httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+				fmt.Sprintf("%s no es una corista activa: no se le puede asignar cupo.", seller.Name))
+			return
+		}
 		sold, err := q.SoldBySellerInFunction(ctx, sqlcgen.SoldBySellerInFunctionParams{
 			SellerID:   entry.UserID,
 			FunctionID: functionID,

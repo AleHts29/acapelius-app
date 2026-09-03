@@ -25,6 +25,17 @@ func (q *Queries) DeleteAllocation(ctx context.Context, arg DeleteAllocationPara
 	return err
 }
 
+const deleteAllocationsForUser = `-- name: DeleteAllocationsForUser :exec
+DELETE FROM allocations WHERE user_id = $1::bigint
+`
+
+// Al salir del rol de corista (o al desactivarse) se le sueltan los cupos:
+// si no, quedan reservando lugares que nadie puede vender ni ver.
+func (q *Queries) DeleteAllocationsForUser(ctx context.Context, userID int64) error {
+	_, err := q.db.Exec(ctx, deleteAllocationsForUser, userID)
+	return err
+}
+
 const functionAllocationBoard = `-- name: FunctionAllocationBoard :many
 SELECT
   u.id AS user_id,
@@ -221,10 +232,18 @@ func (q *Queries) SoldBySellerInFunction(ctx context.Context, arg SoldBySellerIn
 }
 
 const sumAllocations = `-- name: SumAllocations :one
-SELECT COALESCE(SUM(quantity), 0)::bigint FROM allocations
-WHERE function_id = $1::bigint
+SELECT COALESCE(SUM(a.quantity), 0)::bigint
+FROM allocations a
+JOIN users u ON u.id = a.user_id
+WHERE a.function_id = $1::bigint
+  AND u.role = 'seller' AND u.is_active
 `
 
+// Cuenta lo mismo que muestra el tablero: solo cupos de coristas activas. Si
+// a alguien le cambian el rol o la desactivan, su fila queda invisible en
+// pantalla; contarla aca hacia que el total validado no coincidiera con el
+// total en pantalla y que asignar el ultimo cupo fallara con numeros que no
+// estaban en ningun lado.
 func (q *Queries) SumAllocations(ctx context.Context, functionID int64) (int64, error) {
 	row := q.db.QueryRow(ctx, sumAllocations, functionID)
 	var column_1 int64

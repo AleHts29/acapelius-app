@@ -112,7 +112,8 @@ SELECT
    WHERE s.function_id = f.id AND s.payment_status = 'paid'
      AND NOT s.is_comp AND s.voided_at IS NULL)::bigint AS collected_cents,
   (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
-   WHERE a.function_id = f.id)::bigint AS assigned,
+   JOIN users au ON au.id = a.user_id
+   WHERE a.function_id = f.id AND au.role = 'seller' AND au.is_active)::bigint AS assigned,
   (SELECT count(*) FROM checkins c
    JOIN tickets t ON c.ticket_id = t.id
    JOIN sales s ON t.sale_id = s.id
@@ -177,13 +178,14 @@ SELECT
   f.venue,
   f.starts_at,
   f.capacity,
-  COALESCE(SUM(a.quantity), 0)::bigint AS assigned
+  COALESCE(SUM(a.quantity) FILTER (WHERE au.id IS NOT NULL), 0)::bigint AS assigned
 FROM functions f
 LEFT JOIN allocations a ON a.function_id = f.id
+LEFT JOIN users au ON au.id = a.user_id AND au.role = 'seller' AND au.is_active
 WHERE f.season_id = sqlc.arg(season_id)::bigint
   AND f.starts_at > now()
 GROUP BY f.id
-HAVING f.capacity > COALESCE(SUM(a.quantity), 0)
+HAVING f.capacity > COALESCE(SUM(a.quantity) FILTER (WHERE au.id IS NOT NULL), 0)
 ORDER BY f.starts_at;
 
 -- name: AttentionPendingInvites :many
