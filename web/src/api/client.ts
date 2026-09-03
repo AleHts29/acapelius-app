@@ -117,6 +117,8 @@ export interface ShowFunction {
   created_at: string
   /** Entradas vivas emitidas (para barras de progreso). */
   sold: number
+  /** Ingresos ya registrados. Con al menos uno, la función queda congelada. */
+  entered: number
 }
 
 export interface FunctionInput {

@@ -85,7 +85,10 @@ function FunctionCard({ fn, seasonId }: { fn: FunctionSummary; seasonId: number 
             {fn.sold}/{fn.capacity}
           </b>{' '}
           vendidas
-          {done ? (
+          {/* El día de la función el dato que importa es la puerta, y antes no
+              se mostraba ninguno de los dos: "ingresaron" era sólo para las
+              hechas y "sin asignar" sólo para las futuras. */}
+          {done || isToday ? (
             <>
               {' '}
               · <b className="g">{fn.entered}</b> ingresaron

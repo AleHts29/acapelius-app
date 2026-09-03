@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Mail } from 'lucide-react'
 
 import { ApiError, api, publicSaleURL, shareOrCopy } from '../api/client'
 import type { EmailStatus, Sale } from '../api/client'
@@ -128,8 +129,9 @@ export function NewSalePage() {
           <p className="panel__label">Entradas de {created.sale.buyer_name}</p>
           <div className="success-actions">
             {created.emailStatus === 'sent' && (
-              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-                📧 El email con los QR ya salió para {created.sale.buyer_email}.
+              <p className="muted" style={{ margin: 0, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Mail size={14} aria-hidden style={{ flexShrink: 0 }} />
+                El email con los QR ya salió para {created.sale.buyer_email}.
               </p>
             )}
             {created.emailStatus === 'failed' && (

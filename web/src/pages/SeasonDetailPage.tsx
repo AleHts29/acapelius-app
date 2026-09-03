@@ -215,16 +215,26 @@ function FunctionCard({
           <h3 style={{ fontSize: 16 }}>{fn.name ?? fn.venue}</h3>
           {fn.name && <p className="lrow__sub" style={{ margin: 0 }}>{fn.venue}</p>}
         </div>
-        <button
-          className="button button--ghost"
-          type="button"
-          onClick={() => {
-            setValues(formFromFunction(fn))
-            setEditing(true)
-          }}
-        >
-          Editar
-        </button>
+        {/* Con ingresos registrados la función queda congelada (spec §5.1):
+            cambiar fecha, lugar o cupo a esa altura sólo genera lío en la
+            puerta. Antes el botón estaba igual y el 409 aparecía recién al
+            guardar, con el formulario ya completo. */}
+        {fn.entered > 0 ? (
+          <span className="muted" style={{ fontSize: 10.5, textAlign: 'right', maxWidth: 130 }}>
+            Ya tiene ingresos: no se edita
+          </span>
+        ) : (
+          <button
+            className="button button--ghost"
+            type="button"
+            onClick={() => {
+              setValues(formFromFunction(fn))
+              setEditing(true)
+            }}
+          >
+            Editar
+          </button>
+        )}
       </div>
       <p style={{ margin: '6px 0 0', fontSize: 13 }}>{formatDateTime(fn.starts_at)}</p>
       <p className="lrow__sub" style={{ margin: '1px 0 0' }}>

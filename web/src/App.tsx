@@ -6,7 +6,6 @@ import { useSession } from './auth/session'
 import { Layout } from './components/Layout'
 import { AttendancePage } from './pages/AttendancePage'
 import { ChangePasswordPage } from './pages/ChangePasswordPage'
-import { DevUIPage } from './pages/DevUIPage'
 import { DireccionPage } from './pages/DireccionPage'
 import { DoorPage } from './pages/DoorPage'
 import { HomePage } from './pages/HomePage'
@@ -25,6 +24,14 @@ import { UsersPage } from './pages/UsersPage'
 const DoorModePage = lazy(() =>
   import('./pages/DoorModePage').then((m) => ({ default: m.DoorModePage })),
 )
+
+// La galería de componentes (C10) es una herramienta de desarrollo. El import
+// tiene que quedar DENTRO de la rama, no sólo su uso: si el lazy() se evalúa
+// siempre, el bundler igual emite el chunk. Con la condición como constante,
+// en producción la rama se colapsa y el archivo no entra al build.
+const DevUIPage = import.meta.env.DEV
+  ? lazy(() => import('./pages/DevUIPage').then((m) => ({ default: m.DevUIPage })))
+  : null
 
 /** Solo deja pasar al admin; el resto vuelve al inicio. */
 function RequireAdmin({ children }: { children: ReactNode }) {
@@ -62,14 +69,18 @@ function AuthenticatedApp() {
           index
           element={user.role === 'door' ? <Navigate to="/puerta" replace /> : <HomePage />}
         />
-        <Route
-          path="/dev/ui"
-          element={
-            <RequireAdmin>
-              <DevUIPage />
-            </RequireAdmin>
-          }
-        />
+        {DevUIPage && (
+          <Route
+            path="/dev/ui"
+            element={
+              <RequireAdmin>
+                <Suspense fallback={<p className="muted">Cargando…</p>}>
+                  <DevUIPage />
+                </Suspense>
+              </RequireAdmin>
+            }
+          />
+        )}
         <Route
           path="/direccion"
           element={

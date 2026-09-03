@@ -12,11 +12,17 @@ RETURNING *;
 
 -- name: ListFunctions :many
 -- Incluye cuantas entradas vivas tiene cada funcion (para barras de progreso
--- de venta). Solo cuenta, no expone plata.
+-- de venta) y cuantos ingresos ya se registraron: con ingresos, la funcion
+-- queda congelada (no se edita, spec §5.1) y la pantalla tiene que saberlo
+-- antes de ofrecer el formulario. Solo cuenta, no expone plata.
 SELECT
   f.*,
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
-   WHERE s.function_id = f.id AND t.status <> 'void')::bigint AS sold
+   WHERE s.function_id = f.id AND t.status <> 'void')::bigint AS sold,
+  (SELECT count(*) FROM checkins c
+   JOIN tickets t ON c.ticket_id = t.id
+   JOIN sales s ON t.sale_id = s.id
+   WHERE s.function_id = f.id)::bigint AS entered
 FROM functions f
 WHERE sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint
 ORDER BY f.starts_at;

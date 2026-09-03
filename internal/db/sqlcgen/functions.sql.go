@@ -79,7 +79,11 @@ const listFunctions = `-- name: ListFunctions :many
 SELECT
   f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at,
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
-   WHERE s.function_id = f.id AND t.status <> 'void')::bigint AS sold
+   WHERE s.function_id = f.id AND t.status <> 'void')::bigint AS sold,
+  (SELECT count(*) FROM checkins c
+   JOIN tickets t ON c.ticket_id = t.id
+   JOIN sales s ON t.sale_id = s.id
+   WHERE s.function_id = f.id)::bigint AS entered
 FROM functions f
 WHERE $1::bigint IS NULL OR f.season_id = $1::bigint
 ORDER BY f.starts_at
@@ -95,10 +99,13 @@ type ListFunctionsRow struct {
 	PriceCents int64     `json:"price_cents"`
 	CreatedAt  time.Time `json:"created_at"`
 	Sold       int64     `json:"sold"`
+	Entered    int64     `json:"entered"`
 }
 
 // Incluye cuantas entradas vivas tiene cada funcion (para barras de progreso
-// de venta). Solo cuenta, no expone plata.
+// de venta) y cuantos ingresos ya se registraron: con ingresos, la funcion
+// queda congelada (no se edita, spec §5.1) y la pantalla tiene que saberlo
+// antes de ofrecer el formulario. Solo cuenta, no expone plata.
 func (q *Queries) ListFunctions(ctx context.Context, seasonID *int64) ([]ListFunctionsRow, error) {
 	rows, err := q.db.Query(ctx, listFunctions, seasonID)
 	if err != nil {
@@ -118,6 +125,7 @@ func (q *Queries) ListFunctions(ctx context.Context, seasonID *int64) ([]ListFun
 			&i.PriceCents,
 			&i.CreatedAt,
 			&i.Sold,
+			&i.Entered,
 		); err != nil {
 			return nil, err
 		}

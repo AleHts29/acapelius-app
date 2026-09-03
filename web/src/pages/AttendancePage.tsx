@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Check, ChevronDown, Hand, Minus, ScanLine } from 'lucide-react'
+import { Check, ChevronDown, Hand, Minus, PartyPopper, ScanLine, Search, Theater } from 'lucide-react'
 
 import { api } from '../api/client'
 import type { AttendanceSale } from '../api/client'
@@ -240,15 +240,15 @@ export function AttendancePage() {
 
           {rows.length === 0 ? (
             q !== '' ? (
-              <EmptyState icon="🔍" title="Sin resultados">
+              <EmptyState icon={<Search size={18} />} title="Sin resultados">
                 Nadie coincide con «{q}» en esta pestaña.
               </EmptyState>
             ) : tab === 'ingresaron' ? (
-              <EmptyState icon="🎭" title="Todavía no entró nadie">
+              <EmptyState icon={<Theater size={18} />} title="Todavía no entró nadie">
                 Apenas se escanee la primera entrada la vas a ver acá.
               </EmptyState>
             ) : (
-              <EmptyState icon="🎉" title="Están todos adentro">
+              <EmptyState icon={<PartyPopper size={18} />} title="Están todos adentro">
                 No queda ninguna entrada sin usar.
               </EmptyState>
             )

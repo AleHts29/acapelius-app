@@ -19,8 +19,20 @@ const SessionContext = createContext<Session | null>(null)
 
 const meQueryKey = ['me'] as const
 
+/**
+ * Las páginas de entrada son públicas: alguien abre el link que le llegó por
+ * email y no tiene ni tiene por qué tener sesión. Preguntar quién es ahí sólo
+ * suma una request que termina en 401. Se mira `location` directo y no el
+ * router porque el provider está por encima de él; y una entrada pública se
+ * abre siempre como carga nueva, nunca navegando dentro de la app.
+ */
+function enPaginaPublica(): boolean {
+  return /^\/(e|t)\//.test(window.location.pathname)
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
+  const publica = enPaginaPublica()
 
   const { data, isPending } = useQuery({
     queryKey: meQueryKey,
@@ -36,6 +48,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // La sesion vive en una cookie; no tiene sentido reintentar un 401.
     retry: false,
     staleTime: 60_000,
+    enabled: !publica,
   })
 
   const setUser = useCallback(
@@ -67,7 +80,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Session>(
     () => ({
       user: data ?? null,
-      loading: isPending,
+      // Sin consulta no hay carga: en una página pública la sesión ya está
+      // resuelta (no hay), y dejar `loading` en true colgaría a quien la lea.
+      loading: publica ? false : isPending,
       mustChangePassword: data?.must_change_password ?? false,
       login: async (email, password) => {
         await loginMutation.mutateAsync({ email, password })
@@ -79,7 +94,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         await changePasswordMutation.mutateAsync({ current, next })
       },
     }),
-    [data, isPending, loginMutation, logoutMutation, changePasswordMutation],
+    [data, isPending, publica, loginMutation, logoutMutation, changePasswordMutation],
   )
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
