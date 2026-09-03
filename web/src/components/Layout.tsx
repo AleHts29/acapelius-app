@@ -15,13 +15,14 @@ export function Layout() {
   // Las pantallas de dirección son listas largas y tablas: en escritorio se les
   // da más ancho que a las de venta, que son de una columna.
   const wide = location.pathname.startsWith('/direccion') || location.pathname.startsWith('/panel')
-  // El modo puerta es pantalla completa y táctil, se use donde se use: nada de
-  // navegación alrededor comiéndole lugar al visor.
+  // En el celular el modo puerta es pantalla completa: es táctil y el visor
+  // necesita todo el alto. En escritorio es una mesa de entrada más, con su
+  // navegación al lado; sin ella la columna quedaba flotando en el medio.
   const puerta = /^\/puerta\/\d/.test(location.pathname)
 
   return (
     <div className={`app-shell${puerta ? ' app-shell--puerta' : ''}`}>
-      {!puerta && <SideNav user={user} onLogout={() => void logout()} />}
+      <SideNav user={user} onLogout={() => void logout()} />
       <header className="app-header">
         <Link className="app-header__brand" to="/" aria-label="Inicio">
           <img className="app-header__logo" src="/logo-mark-blue.png" alt="" />

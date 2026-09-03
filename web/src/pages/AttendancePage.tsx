@@ -226,7 +226,8 @@ export function AttendancePage() {
             <ProgressBar value={data.entered} max={data.issued} tone="ok" />
             <div className="att-live__leg">
               <span>
-                <b>{data.buyers_complete}</b> de {data.buyers_total} compradores completos
+                <b>{data.buyers_complete}</b> de {data.buyers_total} compradores entraron con
+                todas sus entradas
               </span>
               <span>{occupancy}%</span>
             </div>

@@ -340,6 +340,12 @@ export function DireccionPage() {
           subtitle="Quién debe y quién rindió"
         />
         <AccessCard
+          to={`/temporadas/${season.id}`}
+          icon={<Ticket size={16} />}
+          title="Asignar entradas"
+          subtitle="Repartir el cupo entre coristas"
+        />
+        <AccessCard
           to="/temporadas"
           icon={<CalendarDays size={16} />}
           title="Temporadas"

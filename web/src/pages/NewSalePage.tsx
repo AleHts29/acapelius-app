@@ -36,7 +36,7 @@ function ShareLinkButton({ url, buyerName }: { url: string; buyerName: string })
   )
 }
 
-export function NewSalePage() {
+export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
   const { user } = useSession()
   const isAdmin = user?.role === 'admin'
   const queryClient = useQueryClient()
@@ -164,9 +164,16 @@ export function NewSalePage() {
           >
             Registrar otra venta
           </button>
-          <Link className="button button--ghost" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', width: '100%' }} to="/ventas">
-            Ir a mis ventas
-          </Link>
+          {/* Dentro del modal ya estamos en la lista: cerrar alcanza. */}
+          {onDone ? (
+            <button className="button button--ghost" style={{ width: '100%' }} type="button" onClick={onDone}>
+              Volver a la lista
+            </button>
+          ) : (
+            <Link className="button button--ghost" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', width: '100%' }} to="/ventas">
+              Ir a mis ventas
+            </Link>
+          )}
         </div>
       </div>
     )

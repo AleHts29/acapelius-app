@@ -2985,6 +2985,72 @@ div.alertcard {
   display: contents;
 }
 
+/* --- C11 · Modal centrado (sólo escritorio; ver ui/Modal.tsx) ----------- */
+.modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--bg);
+  border-radius: 18px;
+  padding: 22px 24px 26px;
+  box-shadow: 0 24px 60px rgba(29, 29, 27, 0.22);
+}
+
+/* Adentro del modal el título de la página ya es el del diálogo. */
+.modal .page-title {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.modal .form-page {
+  max-width: none;
+}
+
+.modal__x {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 1;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.modal__x:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* Acción secundaria en texto: existe, pero no compite con el contenido. */
+.linkbtn {
+  background: none;
+  border: none;
+  padding: 8px 0;
+  min-height: 44px;
+  color: var(--brand-blue);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* --- C11 · Ventas como tabla (columnas ocultas en celular) --------------- */
 .srow__col,
 .thead {
@@ -3432,6 +3498,12 @@ div.alertcard {
     font-variant-numeric: tabular-nums;
   }
 
+  /* El chip abraza su texto: como celda de grilla se estiraba a lo ancho de
+     la columna y parecía una barra de color. */
+  .srow .chip {
+    justify-self: start;
+  }
+
   .srow .mrow__dots {
     text-align: center;
   }
@@ -3505,9 +3577,15 @@ div.alertcard {
     padding-bottom: 10px;
   }
 
+  /* Pegado arriba: eligiendo a alguien del final de la lista, el detalle
+     quedaba fuera de pantalla y había que subir a buscarlo. */
   .md__detail {
     flex: 1;
     min-width: 0;
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 14px;
@@ -3539,7 +3617,7 @@ div.alertcard {
 
   /* --- Modo puerta en escritorio: la mesa de entrada (frame 5) ---------- */
   .app-shell--puerta .app-main {
-    max-width: none;
+    max-width: 1200px;
     padding: 22px 28px 28px;
   }
 
@@ -3617,6 +3695,24 @@ div.alertcard {
     font-weight: 800;
     font-size: 12px;
     cursor: pointer;
+  }
+
+  .desk__acts {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .desk__row .mark-btn--one {
+    background: none;
+    color: var(--ink);
+    border: 1.5px solid var(--line);
+  }
+
+  .desk__row .mark-btn--one:hover {
+    border-color: var(--brand-blue);
+    color: var(--brand-blue);
   }
 
   .desk__row .mark-btn:disabled {

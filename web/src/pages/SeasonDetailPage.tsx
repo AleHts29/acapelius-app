@@ -148,6 +148,7 @@ function FunctionCard({
   }, [focused])
   const [values, setValues] = useState<FunctionFormValues>(emptyForm)
   const [error, setError] = useState<string | null>(null)
+  const sinAsignar = Math.max(fn.capacity - fn.assigned, 0)
 
   const update = useMutation({
     mutationFn: (input: Parameters<typeof api.updateFunction>[1]) => api.updateFunction(fn.id, input),
@@ -241,13 +242,20 @@ function FunctionCard({
         Cupo {fn.capacity} · {formatMoney(fn.price_cents)} por entrada · {fn.sold} vendidas
       </p>
 
+      {/* Repartir el cupo es la tarea de dirección que menos se encuentra: el
+          botón dice cuánto falta y pesa como acción principal cuando queda
+          algo sin repartir. */}
       <button
-        className="button button--ghost"
+        className={`button${sinAsignar > 0 && !showAllocations ? '' : ' button--ghost'}`}
         style={{ marginTop: 10 }}
         type="button"
         onClick={() => setShowAllocations(!showAllocations)}
       >
-        {showAllocations ? 'Cerrar asignaciones' : 'Asignar entradas a coristas'}
+        {showAllocations
+          ? 'Cerrar asignaciones'
+          : sinAsignar > 0
+            ? `Asignar entradas a coristas · faltan ${sinAsignar}`
+            : 'Asignar entradas a coristas'}
       </button>
       {showAllocations && <AllocationsEditor fn={fn} />}
     </div>

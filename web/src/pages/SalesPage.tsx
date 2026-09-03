@@ -9,6 +9,9 @@ import type { PaymentMethod, SaleListItem, SalePayments, SaleStatusFilter } from
 import { useSession } from '../auth/session'
 import { dayLabel, daysAgo, formatDateTime, formatMoney, pesosToCents } from '../lib/format'
 import { initials, normalizeText } from '../lib/search'
+import { useIsDesktop } from '../lib/viewport'
+import { Modal } from '../ui/Modal'
+import { NewSalePage } from './NewSalePage'
 import { BottomSheet, SheetAction } from '../ui/BottomSheet'
 import { EmptyState, FilterChips, Hl, PageHead, SearchBar, SegmentedToggle } from '../ui/controls'
 import { SaleChip } from '../ui/StatusChip'
@@ -344,6 +347,8 @@ function SaleSheet({
 
 export function SalesPage() {
   const { user } = useSession()
+  const escritorio = useIsDesktop()
+  const [nuevaVenta, setNuevaVenta] = useState(false)
   const isAdmin = user?.role === 'admin'
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -404,8 +409,20 @@ export function SalesPage() {
     <>
       <PageHead
         title={isAdmin ? 'Ventas' : 'Mis ventas'}
-        action={{ label: 'Nueva venta', onClick: () => navigate('/ventas/nueva') }}
+        /* En escritorio la venta se resuelve encima de la lista y al cerrar
+           seguís donde estabas; en celular es su propia pantalla, que ahí es
+           lo cómodo. */
+        action={{
+          label: 'Nueva venta',
+          onClick: () => (escritorio ? setNuevaVenta(true) : navigate('/ventas/nueva')),
+        }}
       />
+
+      {nuevaVenta && (
+        <Modal label="Nueva venta" onClose={() => setNuevaVenta(false)}>
+          <NewSalePage onDone={() => setNuevaVenta(false)} />
+        </Modal>
+      )}
 
       <div className="salesbar">
       {summary && (

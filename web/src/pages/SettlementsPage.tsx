@@ -403,10 +403,18 @@ export function SettlementDetailPage({
           <div className="k"><b className="g">{formatMoney(row.settled_cents)}</b><span>Rindió</span></div>
           <div className="k"><b className="y">{formatMoney(Math.max(row.balance_cents, 0))}</b><span>Debe</span></div>
         </div>
-        {/* CTA siempre disponible: cubre correcciones aunque este al dia. */}
-        <button className="button" type="button" onClick={() => setSheetOpen(true)}>
-          Registrar rendición
-        </button>
+        {/* Quien está al día no necesita que la pantalla le pida una rendición;
+            la acción sigue disponible en voz baja, para corregir un monto mal
+            cargado o registrar una entrega adelantada. */}
+        {row.balance_cents > 0 ? (
+          <button className="button" type="button" onClick={() => setSheetOpen(true)}>
+            Registrar rendición
+          </button>
+        ) : (
+          <button className="linkbtn" type="button" onClick={() => setSheetOpen(true)}>
+            Registrar una rendición igual
+          </button>
+        )}
         {row.pending_cents > 0 && (
           <p className="profile__note">
             Aparte, compradores le deben {formatMoney(row.pending_cents)} (no exigible aún)

@@ -83,7 +83,11 @@ SELECT
   (SELECT count(*) FROM checkins c
    JOIN tickets t ON c.ticket_id = t.id
    JOIN sales s ON t.sale_id = s.id
-   WHERE s.function_id = f.id)::bigint AS entered
+   WHERE s.function_id = f.id)::bigint AS entered,
+  -- Cupo repartido entre coristas activas: lo mismo que cuenta el tablero.
+  (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
+   JOIN users au ON au.id = a.user_id
+   WHERE a.function_id = f.id AND au.role = 'seller' AND au.is_active)::bigint AS assigned
 FROM functions f
 WHERE $1::bigint IS NULL OR f.season_id = $1::bigint
 ORDER BY f.starts_at
@@ -100,6 +104,7 @@ type ListFunctionsRow struct {
 	CreatedAt  time.Time `json:"created_at"`
 	Sold       int64     `json:"sold"`
 	Entered    int64     `json:"entered"`
+	Assigned   int64     `json:"assigned"`
 }
 
 // Incluye cuantas entradas vivas tiene cada funcion (para barras de progreso
@@ -126,6 +131,7 @@ func (q *Queries) ListFunctions(ctx context.Context, seasonID *int64) ([]ListFun
 			&i.CreatedAt,
 			&i.Sold,
 			&i.Entered,
+			&i.Assigned,
 		); err != nil {
 			return nil, err
 		}

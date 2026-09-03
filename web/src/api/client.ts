@@ -119,6 +119,8 @@ export interface ShowFunction {
   sold: number
   /** Ingresos ya registrados. Con al menos uno, la función queda congelada. */
   entered: number
+  /** Cupo ya repartido entre coristas. La diferencia con capacity es lo que falta. */
+  assigned: number
 }
 
 export interface FunctionInput {

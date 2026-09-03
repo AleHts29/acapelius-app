@@ -370,6 +370,13 @@ function EntryDesk({
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .slice(0, 6)
 
+  function marcar(codes: string[]) {
+    onCheckin(codes)
+    setQuery('')
+    setCursor(0)
+    inputRef.current?.focus()
+  }
+
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (grupos.length === 0) return
     if (e.key === 'ArrowDown') {
@@ -382,9 +389,8 @@ function EntryDesk({
       e.preventDefault()
       const grupo = grupos[activo]
       if (grupo && grupo.pending.length > 0) {
-        onCheckin(grupo.pending.map((t) => t.code))
-        setQuery('')
-        setCursor(0)
+        // Enter marca la compra entera; para uno solo está el botón "Solo 1".
+        marcar(grupo.pending.map((t) => t.code))
       }
     }
   }
@@ -433,22 +439,31 @@ function EntryDesk({
               </span>
             </span>
             <CounterChip count={grupo.entered} total={grupo.total} />
-            <button
-              className="mark-btn"
-              type="button"
-              disabled={faltan === 0}
-              onClick={() => {
-                onCheckin(grupo.pending.map((t) => t.code))
-                setQuery('')
-                setCursor(0)
-              }}
-            >
-              {faltan === 0
-                ? 'Ya ingresó'
-                : faltan === 1
-                  ? 'Marcar ingreso'
-                  : `Marcar ${faltan === grupo.total ? 'las' : 'las otras'} ${faltan}`}
-            </button>
+            <span className="desk__acts">
+              <button
+                className="mark-btn"
+                type="button"
+                disabled={faltan === 0}
+                onClick={() => marcar(grupo.pending.map((t) => t.code))}
+              >
+                {faltan === 0
+                  ? 'Ya ingresó'
+                  : faltan === 1
+                    ? 'Marcar ingreso'
+                    : `Marcar ${faltan === grupo.total ? 'las' : 'las otras'} ${faltan}`}
+              </button>
+              {/* Llega uno solo y los demás vienen después: no hay que
+                  marcarlos a todos de prepo. */}
+              {faltan > 1 && (
+                <button
+                  className="mark-btn mark-btn--one"
+                  type="button"
+                  onClick={() => marcar([grupo.pending[0].code])}
+                >
+                  Solo 1
+                </button>
+              )}
+            </span>
           </div>
         )
       })}
