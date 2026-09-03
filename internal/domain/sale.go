@@ -102,3 +102,32 @@ func ValidatePaymentChange(isComp bool, status PaymentStatus, method PaymentMeth
 		return nil, ErrPaymentStatusInvalid
 	}
 }
+
+// Errores propios de los cobros parciales.
+var (
+	ErrPaymentAmountInvalid = errors.New("el monto del cobro tiene que ser mayor a cero")
+	ErrPaymentOverBalance   = errors.New("el cobro es mayor a lo que falta pagar")
+	ErrPaymentNotFound      = errors.New("ese cobro no existe")
+)
+
+// ValidateSalePayment valida un cobro contra lo que la venta todavia debe.
+// `balance` es amount_cents - paid_cents. No se aceptan cobros de mas: si el
+// comprador pago de mas, eso es una vuelta, no un cobro de esta venta.
+func ValidateSalePayment(isComp bool, amountCents, balance int64, method PaymentMethod) error {
+	if isComp {
+		return ErrCompHasNoPayment
+	}
+	if amountCents <= 0 {
+		return ErrPaymentAmountInvalid
+	}
+	if method != MethodCash && method != MethodTransfer {
+		if method == "" {
+			return ErrPaymentMethodMissing
+		}
+		return ErrPaymentMethodInvalid
+	}
+	if amountCents > balance {
+		return ErrPaymentOverBalance
+	}
+	return nil
+}

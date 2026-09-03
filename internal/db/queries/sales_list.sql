@@ -10,7 +10,7 @@
 -- name: ListSalesPage :many
 SELECT
   s.id, s.code, s.buyer_name, s.buyer_email, s.quantity, s.amount_cents,
-  s.payment_status, s.payment_method, s.is_comp, s.voided_at, s.created_at,
+  s.payment_status, s.payment_method, s.paid_cents, s.is_comp, s.voided_at, s.created_at,
   s.function_id,
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
@@ -49,8 +49,10 @@ LIMIT sqlc.arg(page_size)::integer;
 -- estado ni el cursor: alimenta la tira de arriba y los contadores de chips.
 SELECT
   COALESCE(SUM(s.quantity) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS tickets_sold,
-  COALESCE(SUM(s.amount_cents) FILTER (WHERE s.payment_status = 'paid' AND NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS paid_cents,
-  COALESCE(SUM(s.amount_cents) FILTER (WHERE s.payment_status = 'pending' AND NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS pending_cents,
+  -- Cobrado y por cobrar salen de lo efectivamente cobrado: una venta con un
+  -- cobro parcial suma su parte de cada lado, no todo de uno.
+  COALESCE(SUM(s.paid_cents) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS paid_cents,
+  COALESCE(SUM(s.amount_cents - s.paid_cents) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS pending_cents,
   COUNT(*)::bigint AS total_count,
   COUNT(*) FILTER (WHERE s.payment_status = 'pending' AND NOT s.is_comp AND s.voided_at IS NULL)::bigint AS pending_count
 FROM sales s

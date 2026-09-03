@@ -11,7 +11,7 @@ SELECT
   u.name AS seller_name,
   COALESCE(SUM(s.quantity) FILTER (WHERE NOT s.is_comp), 0)::bigint AS tickets_sold,
   COALESCE(SUM(s.quantity) FILTER (WHERE s.is_comp), 0)::bigint AS comp_tickets,
-  COALESCE(SUM(s.amount_cents) FILTER (WHERE s.payment_status = 'paid' AND NOT s.is_comp), 0)::bigint AS paid_cents,
+  COALESCE(SUM(s.paid_cents) FILTER (WHERE NOT s.is_comp), 0)::bigint AS paid_cents,
   COALESCE(SUM(s.amount_cents) FILTER (WHERE s.payment_status = 'pending' AND NOT s.is_comp), 0)::bigint AS pending_cents
 FROM sales s
 JOIN functions f ON s.function_id = f.id
@@ -23,14 +23,15 @@ GROUP BY s.function_id, f.id, s.seller_id, u.id
 ORDER BY f.starts_at, u.name;
 
 -- name: SettlementsReport :many
--- Por vendedora de una temporada: cobrado (ventas pagas, sin cortesias ni
--- anuladas), pendiente de cobro, y rendido. El saldo a rendir es
--- collected - settled (spec §4). Lista a toda vendedora, mas cualquier otro
--- usuario con movimientos (p. ej. el admin si vendio).
+-- Por vendedora de una temporada: cobrado (plata que la corista tiene en la
+-- mano, cobros parciales incluidos; sin cortesias ni anuladas), pendiente de
+-- cobro, y rendido. El saldo a rendir es collected - settled (spec §4). Lista
+-- a toda vendedora, mas cualquier otro usuario con movimientos (p. ej. el
+-- admin si vendio).
 WITH collected AS (
   SELECT s.seller_id,
-         COALESCE(SUM(s.amount_cents) FILTER (WHERE s.payment_status = 'paid'), 0)::bigint AS paid_cents,
-         COALESCE(SUM(s.amount_cents) FILTER (WHERE s.payment_status = 'pending'), 0)::bigint AS pending_cents
+         COALESCE(SUM(s.paid_cents), 0)::bigint AS paid_cents,
+         COALESCE(SUM(s.amount_cents - s.paid_cents), 0)::bigint AS pending_cents
   FROM sales s
   JOIN functions f ON s.function_id = f.id
   WHERE f.season_id = sqlc.arg(season_id)::bigint
@@ -108,9 +109,8 @@ SELECT
   f.price_cents,
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
    WHERE s.function_id = f.id AND t.status <> 'void')::bigint AS sold,
-  (SELECT COALESCE(SUM(s.amount_cents), 0) FROM sales s
-   WHERE s.function_id = f.id AND s.payment_status = 'paid'
-     AND NOT s.is_comp AND s.voided_at IS NULL)::bigint AS collected_cents,
+  (SELECT COALESCE(SUM(s.paid_cents), 0) FROM sales s
+   WHERE s.function_id = f.id AND NOT s.is_comp AND s.voided_at IS NULL)::bigint AS collected_cents,
   (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
    JOIN users au ON au.id = a.user_id
    WHERE a.function_id = f.id AND au.role = 'seller' AND au.is_active)::bigint AS assigned,
@@ -140,13 +140,15 @@ GROUP BY 1
 ORDER BY 1;
 
 -- name: AttentionSettlements :many
--- Coristas con saldo a rendir (C9). `last_paid_at` es la venta paga mas
--- reciente: no guardamos fecha de cobro, asi que es la mejor referencia
--- temporal disponible. Centinela año 1 = todavia no cobro nada.
+-- Coristas con saldo a rendir (C9). `last_paid_at` es la fecha del cobro mas
+-- reciente, que desde que existen los cobros parciales se guarda de verdad.
+-- Centinela año 1 = todavia no cobro nada.
 WITH collected AS (
   SELECT s.seller_id,
-         COALESCE(SUM(s.amount_cents) FILTER (WHERE s.payment_status = 'paid'), 0)::bigint AS paid_cents,
-         COALESCE(MAX(s.created_at) FILTER (WHERE s.payment_status = 'paid'), '0001-01-01'::timestamptz) AS last_paid_at
+         COALESCE(SUM(s.paid_cents), 0)::bigint AS paid_cents,
+         COALESCE(
+           MAX((SELECT MAX(p.created_at) FROM sale_payments p WHERE p.sale_id = s.id)),
+           '0001-01-01'::timestamptz) AS last_paid_at
   FROM sales s
   JOIN functions f ON s.function_id = f.id
   WHERE f.season_id = sqlc.arg(season_id)::bigint

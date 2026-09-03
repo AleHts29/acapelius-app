@@ -95,3 +95,48 @@ RETURNING *;
 
 -- name: ListEmailSendsBySale :many
 SELECT * FROM email_sends WHERE sale_id = $1 ORDER BY created_at DESC;
+
+-- ============================================================================
+-- Cobros de una venta (parciales o totales)
+-- ============================================================================
+
+-- name: CreateSalePayment :one
+INSERT INTO sale_payments (sale_id, amount_cents, method, user_id)
+VALUES (sqlc.arg(sale_id)::bigint, sqlc.arg(amount_cents)::bigint,
+        sqlc.arg(method)::text, sqlc.arg(user_id)::bigint)
+RETURNING *;
+
+-- name: ListSalePayments :many
+SELECT p.*, u.name AS by_name
+FROM sale_payments p
+JOIN users u ON u.id = p.user_id
+WHERE p.sale_id = sqlc.arg(sale_id)::bigint
+ORDER BY p.created_at, p.id;
+
+-- name: DeleteSalePayment :one
+DELETE FROM sale_payments
+WHERE id = sqlc.arg(id)::bigint AND sale_id = sqlc.arg(sale_id)::bigint
+RETURNING *;
+
+-- name: DeleteSalePayments :exec
+DELETE FROM sale_payments WHERE sale_id = sqlc.arg(sale_id)::bigint;
+
+-- name: RecalcSalePayment :one
+-- Recalcula el cache de la venta desde sus cobros: cuanto lleva cobrado, si
+-- termino de pagar, y con que metodo fue el ultimo cobro (lo que muestra el
+-- chip). Se llama siempre entera, nunca sumando de a poco, para que el cache
+-- no pueda separarse del historial.
+UPDATE sales s
+SET paid_cents = c.total,
+    payment_status = CASE WHEN c.total >= s.amount_cents AND c.total > 0 THEN 'paid' ELSE 'pending' END,
+    payment_method = c.last_method
+FROM (
+  SELECT
+    COALESCE(SUM(p.amount_cents), 0)::bigint AS total,
+    (SELECT p2.method FROM sale_payments p2
+     WHERE p2.sale_id = sqlc.arg(sale_id)::bigint
+     ORDER BY p2.created_at DESC, p2.id DESC LIMIT 1) AS last_method
+  FROM sale_payments p WHERE p.sale_id = sqlc.arg(sale_id)::bigint
+) c
+WHERE s.id = sqlc.arg(sale_id)::bigint
+RETURNING s.*;

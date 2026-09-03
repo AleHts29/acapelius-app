@@ -11,14 +11,23 @@ export function Chip({ tone, children }: { tone: ChipTone; children: React.React
   return <span className={`chip chip--${tone}`}>{children}</span>
 }
 
-/** Chip de estado de una venta, derivado siempre con la misma regla. */
-export function SaleChip({ sale }: { sale: Pick<Sale, 'voided_at' | 'is_comp' | 'payment_status' | 'payment_method' | 'amount_cents'> }) {
+/**
+ * Chip de estado de una venta, derivado siempre con la misma regla. Lo que
+ * muestra cuando falta plata es el SALDO, no el total: con cobros parciales
+ * una venta de $24.000 con $16.000 cobrados debe $8.000.
+ */
+export function SaleChip({
+  sale,
+}: {
+  sale: Pick<Sale, 'voided_at' | 'is_comp' | 'payment_status' | 'payment_method' | 'amount_cents' | 'paid_cents'>
+}) {
   if (sale.voided_at !== null) return <Chip tone="danger">Anulada</Chip>
   if (sale.is_comp) return <Chip tone="blue">Cortesía</Chip>
-  if (sale.payment_status === 'paid') {
+  const falta = sale.amount_cents - sale.paid_cents
+  if (falta <= 0) {
     return <Chip tone="ok">{sale.payment_method === 'transfer' ? 'Pagó (transf.)' : 'Pagó'}</Chip>
   }
-  return <Chip tone="warn">Debe {formatMoney(sale.amount_cents)}</Chip>
+  return <Chip tone="warn">Debe {formatMoney(falta)}</Chip>
 }
 
 /** Chip de saldo a rendir de una corista. */

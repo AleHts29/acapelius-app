@@ -395,3 +395,117 @@ func TestCupoDeFuncionNoBajaDeLoVendido(t *testing.T) {
 	assertStatus(t, admin.do(http.MethodPatch, fmt.Sprintf("/api/functions/%.0f", fnID),
 		map[string]any{"capacity": 4}), http.StatusOK)
 }
+
+// TestCobrosParciales: una venta se puede cobrar en varias veces. El saldo, el
+// estado y lo que ven los reportes salen siempre del historial de cobros.
+func TestCobrosParciales(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	fnID := setupCatalog(t, admin, 80)
+	corista := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test") // user 2
+	assertStatus(t, admin.do(http.MethodPut, fmt.Sprintf("/api/functions/%.0f/allocations", fnID),
+		map[string]any{"allocations": []map[string]any{{"user_id": 2, "quantity": 10}}}), http.StatusOK)
+
+	venta := corista.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Fran Sponton", "quantity": 3,
+	})
+	assertStatus(t, venta, http.StatusCreated)
+	saleID := venta.Body["sale"].(map[string]any)["id"].(float64)
+	total := venta.Body["sale"].(map[string]any)["amount_cents"].(float64)
+	pagos := fmt.Sprintf("/api/sales/%.0f/payments", saleID)
+
+	estado := func() (paid float64, status string) {
+		t.Helper()
+		resp := corista.get(pagos)
+		assertStatus(t, resp, http.StatusOK)
+		s := resp.Body["sale"].(map[string]any)
+		return s["paid_cents"].(float64), s["payment_status"].(string)
+	}
+
+	// Una seña: la venta sigue pendiente pero ya tiene plata cobrada.
+	assertStatus(t, corista.post(pagos, map[string]any{
+		"amount_cents": total / 3, "method": "cash",
+	}), http.StatusOK)
+	paid, status := estado()
+	if paid != total/3 || status != "pending" {
+		t.Fatalf("tras la seña: cobrado %v estado %q (esperaba %v / pending)", paid, status, total/3)
+	}
+
+	// Cobrar de mas no se acepta: eso es una vuelta, no un cobro de la venta.
+	assertStatus(t, corista.post(pagos, map[string]any{
+		"amount_cents": total, "method": "cash",
+	}), http.StatusBadRequest)
+
+	// El resto por transferencia: queda paga, y el metodo es el del ultimo cobro.
+	assertStatus(t, corista.post(pagos, map[string]any{
+		"amount_cents": total - total/3, "method": "transfer",
+	}), http.StatusOK)
+	paid, status = estado()
+	if paid != total || status != "paid" {
+		t.Fatalf("tras cobrar todo: cobrado %v estado %q", paid, status)
+	}
+
+	// El resumen de ventas cuenta lo cobrado de verdad, no el total de la venta.
+	resumen := corista.get("/api/sales").Body["summary"].(map[string]any)
+	if resumen["paid_cents"].(float64) != total || resumen["pending_cents"].(float64) != 0 {
+		t.Fatalf("resumen: cobrado %v, por cobrar %v", resumen["paid_cents"], resumen["pending_cents"])
+	}
+
+	// Rendiciones ve la misma plata: lo que la corista tiene en la mano.
+	rend := admin.get("/api/reports/settlements?season_id=1")
+	assertStatus(t, rend, http.StatusOK)
+	for _, raw := range rend.Body["rows"].([]any) {
+		row := raw.(map[string]any)
+		if row["seller_name"] != "Carolina" {
+			continue
+		}
+		if row["collected_cents"].(float64) != total || row["pending_cents"].(float64) != 0 {
+			t.Fatalf("rendiciones: cobrado %v, por cobrar %v (esperaba %v / 0)",
+				row["collected_cents"], row["pending_cents"], total)
+		}
+	}
+
+	// Quitar un cobro mal cargado devuelve la venta a pendiente por esa parte.
+	historial := corista.get(pagos).Body["payments"].([]any)
+	if len(historial) != 2 {
+		t.Fatalf("tendria que haber 2 cobros, hay %d", len(historial))
+	}
+	primero := historial[0].(map[string]any)["id"].(float64)
+	assertStatus(t, corista.do(http.MethodDelete,
+		fmt.Sprintf("%s/%.0f", pagos, primero), nil), http.StatusOK)
+	paid, status = estado()
+	if paid != total-total/3 || status != "pending" {
+		t.Fatalf("tras quitar un cobro: cobrado %v estado %q", paid, status)
+	}
+
+	// "Marcar pagó" cobra lo que falta y queda anotado en el historial.
+	assertStatus(t, corista.do(http.MethodPatch, fmt.Sprintf("/api/sales/%.0f", saleID),
+		map[string]any{"payment_status": "paid", "payment_method": "cash"}), http.StatusOK)
+	paid, status = estado()
+	if paid != total || status != "paid" {
+		t.Fatalf("tras marcar pago: cobrado %v estado %q", paid, status)
+	}
+	if n := len(corista.get(pagos).Body["payments"].([]any)); n != 2 {
+		t.Fatalf("el atajo tendria que dejar rastro: hay %d cobros", n)
+	}
+
+	// "Volver a pendiente" borra los cobros de esa venta.
+	assertStatus(t, corista.do(http.MethodPatch, fmt.Sprintf("/api/sales/%.0f", saleID),
+		map[string]any{"payment_status": "pending"}), http.StatusOK)
+	paid, status = estado()
+	if paid != 0 || status != "pending" {
+		t.Fatalf("tras volver a pendiente: cobrado %v estado %q", paid, status)
+	}
+	if n := len(corista.get(pagos).Body["payments"].([]any)); n != 0 {
+		t.Fatalf("no tendria que quedar ningun cobro, quedan %d", n)
+	}
+
+	// Una cortesia no admite cobros.
+	comp := admin.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Padre Benítez", "quantity": 1, "is_comp": true,
+	})
+	assertStatus(t, comp, http.StatusCreated)
+	compID := comp.Body["sale"].(map[string]any)["id"].(float64)
+	assertStatus(t, admin.post(fmt.Sprintf("/api/sales/%.0f/payments", compID),
+		map[string]any{"amount_cents": 100, "method": "cash"}), http.StatusBadRequest)
+}

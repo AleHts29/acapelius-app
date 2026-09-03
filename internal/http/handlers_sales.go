@@ -443,16 +443,181 @@ func (s *Server) handleUpdateSalePayment(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updated, err := s.queries.UpdateSalePayment(r.Context(), sqlcgen.UpdateSalePaymentParams{
-		PaymentStatus: req.PaymentStatus,
-		PaymentMethod: method,
-		ID:            sale.ID,
-	})
+	// El atajo de siempre, ahora escrito en el historial: "marcar pagó" es un
+	// cobro por lo que falte, y "volver a pendiente" borra los cobros de esa
+	// venta. Asi los dos botones de la hoja siguen andando igual y dejan
+	// rastro, sin un camino paralelo que pudiera desincronizar el cache.
+	ctx := r.Context()
+	user := auth.MustUserFrom(ctx)
+
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	q := s.queries.WithTx(tx)
+
+	if domain.PaymentStatus(req.PaymentStatus) == domain.PaymentPaid {
+		falta := sale.AmountCents - sale.PaidCents
+		if falta <= 0 {
+			httpx.Error(w, http.StatusConflict, httpx.CodeConflict, "Esa venta ya está cobrada entera.")
+			return
+		}
+		if _, err := q.CreateSalePayment(ctx, sqlcgen.CreateSalePaymentParams{
+			SaleID: sale.ID, AmountCents: falta, Method: *method, UserID: user.ID,
+		}); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+	} else {
+		if err := q.DeleteSalePayments(ctx, sale.ID); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+	}
+
+	updated, err := q.RecalcSalePayment(ctx, sale.ID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, map[string]sqlcgen.Sale{"sale": updated})
+}
+
+// ============================================================================
+// Cobros parciales
+// ============================================================================
+
+type createPaymentRequest struct {
+	AmountCents int64  `json:"amount_cents"`
+	Method      string `json:"method"`
+}
+
+type paymentsResponse struct {
+	Sale     sqlcgen.Sale                  `json:"sale"`
+	Payments []sqlcgen.ListSalePaymentsRow `json:"payments"`
+}
+
+// salePaymentsResponse arma la respuesta comun a alta y baja de cobros: la
+// venta ya recalculada y su historial.
+func (s *Server) salePaymentsResponse(w http.ResponseWriter, r *http.Request, sale sqlcgen.Sale) {
+	payments, err := s.queries.ListSalePayments(r.Context(), sale.ID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, paymentsResponse{Sale: sale, Payments: payments})
+}
+
+// handleListSalePayments: GET /api/sales/{id}/payments — el historial de
+// cobros de una venta. Lo ve la corista de esa venta y dirección.
+func (s *Server) handleListSalePayments(w http.ResponseWriter, r *http.Request) {
+	sale, ok := s.loadOwnedSale(w, r)
+	if !ok {
+		return
+	}
+	s.salePaymentsResponse(w, r, sale)
+}
+
+// handleCreateSalePayment: POST /api/sales/{id}/payments — registra un cobro,
+// total o parcial. El cache de la venta (paid_cents, payment_status y el
+// metodo del ultimo cobro) se recalcula entero en la misma transaccion.
+func (s *Server) handleCreateSalePayment(w http.ResponseWriter, r *http.Request) {
+	var req createPaymentRequest
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	sale, ok := s.loadOwnedSale(w, r)
+	if !ok {
+		return
+	}
+	if sale.VoidedAt != nil {
+		mapDomainError(w, domain.ErrSaleVoided)
+		return
+	}
+	if err := domain.ValidateSalePayment(sale.IsComp, req.AmountCents,
+		sale.AmountCents-sale.PaidCents, domain.PaymentMethod(req.Method)); err != nil {
+		mapDomainError(w, err)
+		return
+	}
+
+	ctx := r.Context()
+	user := auth.MustUserFrom(ctx)
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	q := s.queries.WithTx(tx)
+
+	if _, err := q.CreateSalePayment(ctx, sqlcgen.CreateSalePaymentParams{
+		SaleID: sale.ID, AmountCents: req.AmountCents, Method: req.Method, UserID: user.ID,
+	}); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	updated, err := q.RecalcSalePayment(ctx, sale.ID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	s.salePaymentsResponse(w, r, updated)
+}
+
+// handleDeleteSalePayment: DELETE /api/sales/{id}/payments/{paymentID} — para
+// corregir un cobro mal cargado. Borra ese cobro y recalcula la venta.
+func (s *Server) handleDeleteSalePayment(w http.ResponseWriter, r *http.Request) {
+	sale, ok := s.loadOwnedSale(w, r)
+	if !ok {
+		return
+	}
+	paymentID, err := strconv.ParseInt(chi.URLParam(r, "paymentID"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrPaymentNotFound)
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	q := s.queries.WithTx(tx)
+
+	if _, err := q.DeleteSalePayment(ctx, sqlcgen.DeleteSalePaymentParams{
+		ID: paymentID, SaleID: sale.ID,
+	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrPaymentNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+	updated, err := q.RecalcSalePayment(ctx, sale.ID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	s.salePaymentsResponse(w, r, updated)
 }
 
 func (s *Server) handleResendEmail(w http.ResponseWriter, r *http.Request) {

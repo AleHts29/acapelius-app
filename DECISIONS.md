@@ -138,3 +138,29 @@ falla, se muestra esa y no el verde.
 El agrupado usa `sale_id`, que se agregó al snapshot de la puerta. Un
 dispositivo que quedó offline con un snapshot viejo no lo trae: ahí se cae a
 comprador+vendedora, que en la puerta alcanza.
+
+## Cobros parciales: un historial, no un saldo
+
+Una venta estaba paga o no. Si el comprador dejaba una seña, la corista no
+tenía dónde anotarla y la venta figuraba debiendo todo. Se eligió modelar cada
+cobro como un registro (`sale_payments`: monto, método, quién y cuándo) en vez
+de un solo número `paid_cents` en la venta, por tres razones: una venta se
+puede cobrar mitad en efectivo y mitad por transferencia y un campo único no
+lo representa; se puede quitar un cobro mal cargado sin recalcular a mano; y
+es el mismo modelo que ya tienen las rendiciones, así que la app no aprende
+dos formas distintas de anotar plata.
+
+`sales.paid_cents` queda igual, como caché de `SUM(sale_payments)`, junto a
+`payment_status` que ya era caché de lo mismo. Se recalcula **entero** —nunca
+sumando de a poco— dentro de la transacción del cobro, así el caché no puede
+separarse del historial. Tenerlo en la fila deja todos los reportes de plata
+en una suma simple, sin un join extra en cada consulta.
+
+`payment_status` sigue siendo `pending`/`paid`, sin un tercer valor
+`partial`: significa "¿terminó de pagar?", que es exactamente lo que necesitan
+el filtro "Deben" y los chips. Lo parcial se lee del saldo.
+
+No se aceptan cobros por encima del saldo: eso es una vuelta, no un cobro de
+esa venta. Los dos botones de siempre ("Marcar pagó — efectivo/transferencia")
+ahora registran un cobro por lo que falte, y "Volver a pendiente" borra los
+cobros de la venta: no hay un camino paralelo que pudiera desincronizar.

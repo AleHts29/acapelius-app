@@ -54,7 +54,7 @@ VALUES (
   $9::boolean,
   $10
 )
-RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at
+RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents
 `
 
 type CreateSaleParams struct {
@@ -100,6 +100,44 @@ func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (Sale, e
 		&i.Notes,
 		&i.VoidedAt,
 		&i.CreatedAt,
+		&i.PaidCents,
+	)
+	return i, err
+}
+
+const createSalePayment = `-- name: CreateSalePayment :one
+
+INSERT INTO sale_payments (sale_id, amount_cents, method, user_id)
+VALUES ($1::bigint, $2::bigint,
+        $3::text, $4::bigint)
+RETURNING id, sale_id, amount_cents, method, user_id, created_at
+`
+
+type CreateSalePaymentParams struct {
+	SaleID      int64  `json:"sale_id"`
+	AmountCents int64  `json:"amount_cents"`
+	Method      string `json:"method"`
+	UserID      int64  `json:"user_id"`
+}
+
+// ============================================================================
+// Cobros de una venta (parciales o totales)
+// ============================================================================
+func (q *Queries) CreateSalePayment(ctx context.Context, arg CreateSalePaymentParams) (SalePayment, error) {
+	row := q.db.QueryRow(ctx, createSalePayment,
+		arg.SaleID,
+		arg.AmountCents,
+		arg.Method,
+		arg.UserID,
+	)
+	var i SalePayment
+	err := row.Scan(
+		&i.ID,
+		&i.SaleID,
+		&i.AmountCents,
+		&i.Method,
+		&i.UserID,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -128,6 +166,40 @@ func (q *Queries) CreateTicket(ctx context.Context, arg CreateTicketParams) (Tic
 	return i, err
 }
 
+const deleteSalePayment = `-- name: DeleteSalePayment :one
+DELETE FROM sale_payments
+WHERE id = $1::bigint AND sale_id = $2::bigint
+RETURNING id, sale_id, amount_cents, method, user_id, created_at
+`
+
+type DeleteSalePaymentParams struct {
+	ID     int64 `json:"id"`
+	SaleID int64 `json:"sale_id"`
+}
+
+func (q *Queries) DeleteSalePayment(ctx context.Context, arg DeleteSalePaymentParams) (SalePayment, error) {
+	row := q.db.QueryRow(ctx, deleteSalePayment, arg.ID, arg.SaleID)
+	var i SalePayment
+	err := row.Scan(
+		&i.ID,
+		&i.SaleID,
+		&i.AmountCents,
+		&i.Method,
+		&i.UserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const deleteSalePayments = `-- name: DeleteSalePayments :exec
+DELETE FROM sale_payments WHERE sale_id = $1::bigint
+`
+
+func (q *Queries) DeleteSalePayments(ctx context.Context, saleID int64) error {
+	_, err := q.db.Exec(ctx, deleteSalePayments, saleID)
+	return err
+}
+
 const getFunctionForUpdate = `-- name: GetFunctionForUpdate :one
 SELECT id, season_id, name, venue, starts_at, capacity, price_cents, created_at FROM functions WHERE id = $1 FOR UPDATE
 `
@@ -151,7 +223,7 @@ func (q *Queries) GetFunctionForUpdate(ctx context.Context, id int64) (Function,
 }
 
 const getSale = `-- name: GetSale :one
-SELECT id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at FROM sales WHERE id = $1
+SELECT id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents FROM sales WHERE id = $1
 `
 
 func (q *Queries) GetSale(ctx context.Context, id int64) (Sale, error) {
@@ -173,12 +245,13 @@ func (q *Queries) GetSale(ctx context.Context, id int64) (Sale, error) {
 		&i.Notes,
 		&i.VoidedAt,
 		&i.CreatedAt,
+		&i.PaidCents,
 	)
 	return i, err
 }
 
 const getSaleByCode = `-- name: GetSaleByCode :one
-SELECT id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at FROM sales WHERE code = $1::text
+SELECT id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents FROM sales WHERE code = $1::text
 `
 
 func (q *Queries) GetSaleByCode(ctx context.Context, code string) (Sale, error) {
@@ -200,6 +273,7 @@ func (q *Queries) GetSaleByCode(ctx context.Context, code string) (Sale, error) 
 		&i.Notes,
 		&i.VoidedAt,
 		&i.CreatedAt,
+		&i.PaidCents,
 	)
 	return i, err
 }
@@ -269,9 +343,55 @@ func (q *Queries) ListEmailSendsBySale(ctx context.Context, saleID int64) ([]Ema
 	return items, nil
 }
 
+const listSalePayments = `-- name: ListSalePayments :many
+SELECT p.id, p.sale_id, p.amount_cents, p.method, p.user_id, p.created_at, u.name AS by_name
+FROM sale_payments p
+JOIN users u ON u.id = p.user_id
+WHERE p.sale_id = $1::bigint
+ORDER BY p.created_at, p.id
+`
+
+type ListSalePaymentsRow struct {
+	ID          int64     `json:"id"`
+	SaleID      int64     `json:"sale_id"`
+	AmountCents int64     `json:"amount_cents"`
+	Method      string    `json:"method"`
+	UserID      int64     `json:"user_id"`
+	CreatedAt   time.Time `json:"created_at"`
+	ByName      string    `json:"by_name"`
+}
+
+func (q *Queries) ListSalePayments(ctx context.Context, saleID int64) ([]ListSalePaymentsRow, error) {
+	rows, err := q.db.Query(ctx, listSalePayments, saleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSalePaymentsRow{}
+	for rows.Next() {
+		var i ListSalePaymentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SaleID,
+			&i.AmountCents,
+			&i.Method,
+			&i.UserID,
+			&i.CreatedAt,
+			&i.ByName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSalesDetailed = `-- name: ListSalesDetailed :many
 SELECT
-  s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at,
+  s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents,
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
   f.name AS function_name,
@@ -308,6 +428,7 @@ type ListSalesDetailedRow struct {
 	Notes            *string    `json:"notes"`
 	VoidedAt         *time.Time `json:"voided_at"`
 	CreatedAt        time.Time  `json:"created_at"`
+	PaidCents        int64      `json:"paid_cents"`
 	FunctionVenue    string     `json:"function_venue"`
 	FunctionStartsAt time.Time  `json:"function_starts_at"`
 	FunctionName     *string    `json:"function_name"`
@@ -342,6 +463,7 @@ func (q *Queries) ListSalesDetailed(ctx context.Context, arg ListSalesDetailedPa
 			&i.Notes,
 			&i.VoidedAt,
 			&i.CreatedAt,
+			&i.PaidCents,
 			&i.FunctionVenue,
 			&i.FunctionStartsAt,
 			&i.FunctionName,
@@ -388,6 +510,51 @@ func (q *Queries) ListTicketsBySale(ctx context.Context, saleID int64) ([]Ticket
 	return items, nil
 }
 
+const recalcSalePayment = `-- name: RecalcSalePayment :one
+UPDATE sales s
+SET paid_cents = c.total,
+    payment_status = CASE WHEN c.total >= s.amount_cents AND c.total > 0 THEN 'paid' ELSE 'pending' END,
+    payment_method = c.last_method
+FROM (
+  SELECT
+    COALESCE(SUM(p.amount_cents), 0)::bigint AS total,
+    (SELECT p2.method FROM sale_payments p2
+     WHERE p2.sale_id = $1::bigint
+     ORDER BY p2.created_at DESC, p2.id DESC LIMIT 1) AS last_method
+  FROM sale_payments p WHERE p.sale_id = $1::bigint
+) c
+WHERE s.id = $1::bigint
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents
+`
+
+// Recalcula el cache de la venta desde sus cobros: cuanto lleva cobrado, si
+// termino de pagar, y con que metodo fue el ultimo cobro (lo que muestra el
+// chip). Se llama siempre entera, nunca sumando de a poco, para que el cache
+// no pueda separarse del historial.
+func (q *Queries) RecalcSalePayment(ctx context.Context, saleID int64) (Sale, error) {
+	row := q.db.QueryRow(ctx, recalcSalePayment, saleID)
+	var i Sale
+	err := row.Scan(
+		&i.ID,
+		&i.FunctionID,
+		&i.SellerID,
+		&i.Code,
+		&i.BuyerName,
+		&i.BuyerEmail,
+		&i.BuyerPhone,
+		&i.Quantity,
+		&i.AmountCents,
+		&i.PaymentStatus,
+		&i.PaymentMethod,
+		&i.IsComp,
+		&i.Notes,
+		&i.VoidedAt,
+		&i.CreatedAt,
+		&i.PaidCents,
+	)
+	return i, err
+}
+
 const recordEmailSend = `-- name: RecordEmailSend :one
 INSERT INTO email_sends (sale_id, recipient, status, error)
 VALUES (
@@ -430,7 +597,7 @@ UPDATE sales
 SET payment_status = $1::text,
     payment_method = $2
 WHERE id = $3::bigint
-RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at
+RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents
 `
 
 type UpdateSalePaymentParams struct {
@@ -458,12 +625,13 @@ func (q *Queries) UpdateSalePayment(ctx context.Context, arg UpdateSalePaymentPa
 		&i.Notes,
 		&i.VoidedAt,
 		&i.CreatedAt,
+		&i.PaidCents,
 	)
 	return i, err
 }
 
 const voidSale = `-- name: VoidSale :one
-UPDATE sales SET voided_at = now() WHERE id = $1::bigint RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at
+UPDATE sales SET voided_at = now() WHERE id = $1::bigint RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents
 `
 
 func (q *Queries) VoidSale(ctx context.Context, id int64) (Sale, error) {
@@ -485,6 +653,7 @@ func (q *Queries) VoidSale(ctx context.Context, id int64) (Sale, error) {
 		&i.Notes,
 		&i.VoidedAt,
 		&i.CreatedAt,
+		&i.PaidCents,
 	)
 	return i, err
 }

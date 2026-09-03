@@ -116,6 +116,7 @@ func mapDomainError(w http.ResponseWriter, err error) bool {
 		errors.Is(err, domain.ErrFunctionNotFound),
 		errors.Is(err, domain.ErrSaleNotFound),
 		errors.Is(err, domain.ErrTicketNotFound),
+		errors.Is(err, domain.ErrPaymentNotFound),
 		errors.Is(err, domain.ErrUserNotFound):
 		status, code = http.StatusNotFound, httpx.CodeNotFound
 	case errors.Is(err, domain.ErrCapacityExceeded),
@@ -139,6 +140,8 @@ func mapDomainError(w http.ResponseWriter, err error) bool {
 		errors.Is(err, domain.ErrCompHasNoPayment),
 		errors.Is(err, domain.ErrBuyerEmailMissing),
 		errors.Is(err, domain.ErrSettlementAmountInvalid),
+		errors.Is(err, domain.ErrPaymentAmountInvalid),
+		errors.Is(err, domain.ErrPaymentOverBalance),
 		errors.Is(err, domain.ErrSettlementMethodInvalid):
 		status, code = http.StatusBadRequest, httpx.CodeValidation
 	default:

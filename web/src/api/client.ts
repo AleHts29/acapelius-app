@@ -143,6 +143,8 @@ export interface Sale {
   buyer_phone: string | null
   quantity: number
   amount_cents: number
+  /** Lo ya cobrado. La diferencia con amount_cents es lo que se debe. */
+  paid_cents: number
   payment_status: PaymentStatus
   payment_method: PaymentMethod | null
   is_comp: boolean
@@ -167,6 +169,8 @@ export interface SaleListItem {
   buyer_email: string | null
   quantity: number
   amount_cents: number
+  /** Lo ya cobrado. La diferencia con amount_cents es lo que se debe. */
+  paid_cents: number
   payment_status: PaymentStatus
   payment_method: PaymentMethod | null
   is_comp: boolean
@@ -244,6 +248,22 @@ export interface DoorSnapshot {
   }
   tickets: DoorTicket[]
   checkins: DoorCheckin[]
+}
+
+/** Un cobro de una venta: total o parcial. */
+export interface SalePayment {
+  id: number
+  sale_id: number
+  amount_cents: number
+  method: PaymentMethod
+  created_at: string
+  /** Quién lo registró. */
+  by_name: string
+}
+
+export interface SalePayments {
+  sale: Sale
+  payments: SalePayment[]
 }
 
 export type CheckinResult = 'ok' | 'already_checked_in' | 'invalid' | 'void' | 'wrong_function'
@@ -473,6 +493,14 @@ export const api = {
       payment_status: status,
       payment_method: method ?? '',
     }),
+  salePayments: (id: number) => request<SalePayments>('GET', `/sales/${id}/payments`),
+  addSalePayment: (id: number, amountCents: number, method: PaymentMethod) =>
+    request<SalePayments>('POST', `/sales/${id}/payments`, {
+      amount_cents: amountCents,
+      method,
+    }),
+  deleteSalePayment: (id: number, paymentId: number) =>
+    request<SalePayments>('DELETE', `/sales/${id}/payments/${paymentId}`),
   resendSaleEmail: (id: number) =>
     request<{ email_status: EmailStatus }>('POST', `/sales/${id}/resend-email`),
   voidSale: (id: number) => request<{ sale: Sale }>('POST', `/sales/${id}/void`),

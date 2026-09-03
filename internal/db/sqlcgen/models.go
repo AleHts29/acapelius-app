@@ -61,6 +61,16 @@ type Sale struct {
 	Notes         *string    `json:"notes"`
 	VoidedAt      *time.Time `json:"voided_at"`
 	CreatedAt     time.Time  `json:"created_at"`
+	PaidCents     int64      `json:"paid_cents"`
+}
+
+type SalePayment struct {
+	ID          int64     `json:"id"`
+	SaleID      int64     `json:"sale_id"`
+	AmountCents int64     `json:"amount_cents"`
+	Method      string    `json:"method"`
+	UserID      int64     `json:"user_id"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Season struct {

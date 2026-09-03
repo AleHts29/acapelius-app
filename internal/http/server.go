@@ -124,6 +124,9 @@ func (s *Server) Handler() http.Handler {
 					seller.Get("/sales", s.handleListSales)
 					seller.Patch("/sales/{id}", s.handleUpdateSalePayment)
 					seller.Post("/sales/{id}/resend-email", s.handleResendEmail)
+					seller.Get("/sales/{id}/payments", s.handleListSalePayments)
+					seller.Post("/sales/{id}/payments", s.handleCreateSalePayment)
+					seller.Delete("/sales/{id}/payments/{paymentID}", s.handleDeleteSalePayment)
 					seller.Get("/me/allocations", s.handleMyAllocations)
 				})
 
