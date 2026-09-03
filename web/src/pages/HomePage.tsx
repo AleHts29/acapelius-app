@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
-import { api } from '../api/client'
+import { activeSeason, api } from '../api/client'
 import type { ShowFunction } from '../api/client'
 import { useSession } from '../auth/session'
 import { formatDateTime, formatMoney } from '../lib/format'
@@ -66,7 +66,7 @@ function CatItem({ to, title, subtitle }: { to: string; title: string; subtitle:
 function SellerSeasonCard() {
   const allocations = useQuery({ queryKey: ['my-allocations'], queryFn: () => api.myAllocations() })
   const seasons = useQuery({ queryKey: ['seasons'], queryFn: () => api.listSeasons() })
-  const seasonId = seasons.data?.seasons[0]?.id
+  const seasonId = activeSeason(seasons.data?.seasons)?.id
   const balance = useQuery({
     queryKey: ['settlements-report', seasonId],
     queryFn: () => api.settlementsReport(seasonId!),
@@ -122,7 +122,7 @@ export function HomePage() {
     queryFn: () => api.listSeasons(),
     enabled: user?.role === 'admin',
   })
-  const seasonId = seasons.data?.seasons[0]?.id
+  const seasonId = activeSeason(seasons.data?.seasons)?.id
   const settlements = useQuery({
     queryKey: ['settlements-report', seasonId],
     queryFn: () => api.settlementsReport(seasonId!),

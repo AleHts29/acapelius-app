@@ -203,3 +203,58 @@ func TestCatalogoLecturaParaTodosEscrituraSoloAdmin(t *testing.T) {
 	assertErrorCode(t, seller.do(http.MethodPatch, "/api/functions/1",
 		map[string]any{"capacity": 5}), http.StatusForbidden, "forbidden")
 }
+
+// TestUnaSolaTemporadaEnCurso: crear una temporada apaga la anterior, y
+// "Usar esta temporada" la vuelve a prender. Antes quedaban las dos activas y
+// Inicio y Rendiciones —que toman la temporada en curso sin preguntar— se
+// iban a la vacia, mostrando $0 con plata sin rendir en la base.
+func TestUnaSolaTemporadaEnCurso(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+
+	primera := admin.post("/api/seasons", map[string]string{"name": "Temporada 2026"})
+	assertStatus(t, primera, http.StatusCreated)
+	idPrimera := primera.Body["season"].(map[string]any)["id"].(float64)
+
+	segunda := admin.post("/api/seasons", map[string]string{"name": "Temporada 2027"})
+	assertStatus(t, segunda, http.StatusCreated)
+	idSegunda := segunda.Body["season"].(map[string]any)["id"].(float64)
+
+	activas := func() []float64 {
+		t.Helper()
+		resp := admin.get("/api/seasons")
+		assertStatus(t, resp, http.StatusOK)
+		var ids []float64
+		for _, raw := range resp.Body["seasons"].([]any) {
+			s := raw.(map[string]any)
+			if s["is_active"] == true {
+				ids = append(ids, s["id"].(float64))
+			}
+		}
+		return ids
+	}
+
+	if got := activas(); len(got) != 1 || got[0] != idSegunda {
+		t.Fatalf("tendria que quedar activa solo la nueva (%v); activas: %v", idSegunda, got)
+	}
+
+	// La activa va primera en la lista: de ahi la saca el frontend.
+	lista := admin.get("/api/seasons")
+	primeraDeLaLista := lista.Body["seasons"].([]any)[0].(map[string]any)
+	if primeraDeLaLista["id"].(float64) != idSegunda {
+		t.Fatalf("la activa tendria que venir primera; vino %v", primeraDeLaLista["id"])
+	}
+
+	// Volver a la anterior.
+	assertStatus(t, admin.post(fmt.Sprintf("/api/seasons/%d/activate", int(idPrimera)), nil), http.StatusOK)
+	if got := activas(); len(got) != 1 || got[0] != idPrimera {
+		t.Fatalf("tendria que quedar activa solo la primera (%v); activas: %v", idPrimera, got)
+	}
+
+	// Una temporada que no existe: 404, no 500.
+	assertStatus(t, admin.post("/api/seasons/99999/activate", nil), http.StatusNotFound)
+
+	// Solo dirección puede cambiarla.
+	corista := createSellerClient(t, env, admin, "Corista", "corista@acapelius.test")
+	assertStatus(t, corista.post(fmt.Sprintf("/api/seasons/%d/activate", int(idSegunda)), nil), http.StatusForbidden)
+}

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, History } from 'lucide-react'
 
-import { ApiError, api } from '../api/client'
+import { ApiError, activeSeason, api } from '../api/client'
 import type { PaymentMethod, Settlement, SettlementReportRow } from '../api/client'
 import { dayLabel, formatMoney, pesosToCents, timeShort } from '../lib/format'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -15,10 +15,10 @@ function initials(name: string): string {
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?'
 }
 
-/** Temporada activa (la mas nueva). */
+/** La temporada en curso, la que dirección marcó activa. */
 function useSeason() {
   const seasons = useQuery({ queryKey: ['seasons'], queryFn: () => api.listSeasons() })
-  return seasons.data?.seasons[0]
+  return activeSeason(seasons.data?.seasons)
 }
 
 function useReport(seasonId: number | undefined) {

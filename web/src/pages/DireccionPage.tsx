@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { api } from '../api/client'
+import { activeSeason, api } from '../api/client'
 import type { Alert, FunctionSummary } from '../api/client'
 import { dayLabel, daysAgo, formatMoney } from '../lib/format'
 import { AlertCard, ProgressBar } from '../ui/controls'
@@ -163,7 +163,7 @@ export function DireccionPage() {
   const navigate = useNavigate()
   const seasons = useQuery({ queryKey: ['seasons'], queryFn: () => api.listSeasons() })
   const all = seasons.data?.seasons ?? []
-  const season = all[0]
+  const season = activeSeason(all)
   const seasonId = season?.id
 
   const attention = useQuery({

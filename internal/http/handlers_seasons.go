@@ -3,7 +3,11 @@ package httpapi
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/ale-hts/acapelius/internal/db/sqlcgen"
 	"github.com/ale-hts/acapelius/internal/domain"
@@ -34,12 +38,63 @@ func (s *Server) handleCreateSeason(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	season, err := s.queries.CreateSeason(r.Context(), req.Name)
+	// Hay una sola temporada en curso: la nueva entra activa y apaga a la
+	// anterior en la misma transaccion. Con dos activas, Inicio y Rendiciones
+	// —que toman "la temporada" sin preguntar— mostraban la vacia.
+	ctx := r.Context()
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	q := s.queries.WithTx(tx)
+	if err := q.DeactivateAllSeasons(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	season, err := q.CreateSeason(ctx, req.Name)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
 	httpx.JSON(w, http.StatusCreated, seasonResponse{Season: season})
+}
+
+// handleActivateSeason: POST /api/seasons/{id}/activate — elige cual es la
+// temporada en curso. Es la que miran Inicio, Rendiciones y Direccion.
+func (s *Server) handleActivateSeason(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrSeasonNotFound)
+		return
+	}
+
+	ctx := r.Context()
+	if _, err := s.queries.GetSeason(ctx, id); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrSeasonNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	if err := s.queries.SetActiveSeason(ctx, id); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	season, err := s.queries.GetSeason(ctx, id)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, seasonResponse{Season: season})
 }
 
 func (s *Server) handleListSeasons(w http.ResponseWriter, r *http.Request) {

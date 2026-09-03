@@ -76,3 +76,27 @@ cubrian el caso o entraban en tension con el codigo ya existente.
   ventana): en UTC las ventas de la noche caerian en el dia siguiente y el
   grafico mostraria un ritmo que nadie vivio. El handler completa los dias
   sin ventas en cero para que las barras no mientan sobre el ritmo.
+
+## Una sola temporada en curso
+
+`seasons.is_active` existía en el esquema desde el día uno pero no lo leía ni
+lo escribía nadie: "la temporada" era, en los hechos, la última creada
+(`ORDER BY created_at DESC` y `seasons[0]` en el frontend). Crear una temporada
+nueva dejaba dos activas y mandaba Inicio, Rendiciones y Dirección a la vacía:
+Rendiciones decía "Nadie debe rendir" con $458.000 sin rendir en la base.
+
+Se eligió hacer real el campo en vez de agregar un selector de temporada en
+cada pantalla. El coro trabaja una temporada por vez; un selector obliga a
+elegir en cada visita y deja la puerta abierta a mirar la temporada equivocada
+sin darse cuenta. Ahora:
+
+- crear una temporada la deja en curso y apaga la anterior, en una transacción;
+- `POST /seasons/{id}/activate` vuelve a cualquier temporada guardada;
+- `ListSeasons` devuelve la activa primera, y `activeSeason()` en el frontend
+  es el único lugar que decide cuál es;
+- el formulario de alta avisa que la nueva pasa a ser la que se ve.
+
+La migración 00008 normaliza lo que ya esté cargado dejando activa la más
+nueva. No se agregó un índice único parcial porque el UPDATE que activa una y
+apaga el resto lo violaría fila por fila (los índices únicos no se difieren);
+la garantía queda en la transacción del handler.

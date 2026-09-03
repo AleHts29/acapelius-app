@@ -3,7 +3,8 @@ import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, api } from '../api/client'
+import { ApiError, activeSeason, api } from '../api/client'
+import { Chip } from '../ui/StatusChip'
 
 export function SeasonsPage() {
   const queryClient = useQueryClient()
@@ -14,16 +15,33 @@ export function SeasonsPage() {
     queryKey: ['seasons'],
     queryFn: () => api.listSeasons(),
   })
+  const enCurso = activeSeason(data?.seasons)
+
+  // Cambiar de temporada en curso mueve TODO lo que se calcula por temporada:
+  // Inicio, Rendiciones y Dirección. Por eso se invalida cada una.
+  function refrescarTemporada() {
+    setName('')
+    setError(null)
+    void queryClient.invalidateQueries({ queryKey: ['seasons'] })
+    void queryClient.invalidateQueries({ queryKey: ['settlements-report'] })
+    void queryClient.invalidateQueries({ queryKey: ['settlements-history'] })
+    void queryClient.invalidateQueries({ queryKey: ['attention'] })
+    void queryClient.invalidateQueries({ queryKey: ['functions-summary'] })
+    void queryClient.invalidateQueries({ queryKey: ['sales-timeline'] })
+  }
 
   const createSeason = useMutation({
     mutationFn: (seasonName: string) => api.createSeason(seasonName),
-    onSuccess: () => {
-      setName('')
-      setError(null)
-      void queryClient.invalidateQueries({ queryKey: ['seasons'] })
-    },
+    onSuccess: refrescarTemporada,
     onError: (err) =>
       setError(err instanceof ApiError ? err.message : 'No se pudo crear la temporada.'),
+  })
+
+  const activar = useMutation({
+    mutationFn: (id: number) => api.activateSeason(id),
+    onSuccess: refrescarTemporada,
+    onError: (err) =>
+      setError(err instanceof ApiError ? err.message : 'No se pudo cambiar la temporada en curso.'),
   })
 
   function handleSubmit(event: FormEvent) {
@@ -59,6 +77,10 @@ export function SeasonsPage() {
             Crear
           </button>
         </div>
+        <p className="muted" style={{ fontSize: 10.5, margin: '8px 0 0' }}>
+          La temporada nueva pasa a ser la que ves en Inicio, Rendiciones y Dirección. La anterior
+          queda guardada y volvés cuando quieras.
+        </p>
       </form>
 
       <div className="panel">
@@ -70,9 +92,28 @@ export function SeasonsPage() {
             {data.seasons.map((season) => (
               <li key={season.id}>
                 <Link className="list__item" to={`/temporadas/${season.id}`}>
-                  <span style={{ fontWeight: 700 }}>{season.name}</span>
+                  <span style={{ fontWeight: 700 }}>
+                    {season.name}
+                    {season.id === enCurso?.id && (
+                      <>
+                        {' '}
+                        <Chip tone="ok">En curso</Chip>
+                      </>
+                    )}
+                  </span>
                   <span className="muted" aria-hidden>›</span>
                 </Link>
+                {season.id !== enCurso?.id && (
+                  <button
+                    className="button button--ghost"
+                    style={{ margin: '2px 0 8px' }}
+                    type="button"
+                    disabled={activar.isPending}
+                    onClick={() => activar.mutate(season.id)}
+                  >
+                    Usar esta temporada
+                  </button>
+                )}
               </li>
             ))}
           </ul>

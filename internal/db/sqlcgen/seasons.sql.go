@@ -27,6 +27,15 @@ func (q *Queries) CreateSeason(ctx context.Context, name string) (Season, error)
 	return i, err
 }
 
+const deactivateAllSeasons = `-- name: DeactivateAllSeasons :exec
+UPDATE seasons SET is_active = FALSE WHERE is_active
+`
+
+func (q *Queries) DeactivateAllSeasons(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deactivateAllSeasons)
+	return err
+}
+
 const getSeason = `-- name: GetSeason :one
 SELECT id, name, is_active, created_at FROM seasons WHERE id = $1
 `
@@ -44,9 +53,11 @@ func (q *Queries) GetSeason(ctx context.Context, id int64) (Season, error) {
 }
 
 const listSeasons = `-- name: ListSeasons :many
-SELECT id, name, is_active, created_at FROM seasons ORDER BY created_at DESC
+SELECT id, name, is_active, created_at FROM seasons ORDER BY is_active DESC, created_at DESC
 `
 
+// La activa primero: el frontend la toma de aca cuando una pantalla necesita
+// "la temporada en curso" sin preguntar.
 func (q *Queries) ListSeasons(ctx context.Context) ([]Season, error) {
 	rows, err := q.db.Query(ctx, listSeasons)
 	if err != nil {
@@ -70,4 +81,14 @@ func (q *Queries) ListSeasons(ctx context.Context) ([]Season, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const setActiveSeason = `-- name: SetActiveSeason :exec
+UPDATE seasons SET is_active = (id = $1::bigint)
+`
+
+// Una sola temporada en curso: activa la elegida y apaga el resto de una.
+func (q *Queries) SetActiveSeason(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, setActiveSeason, id)
+	return err
 }

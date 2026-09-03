@@ -428,6 +428,7 @@ export const api = {
 
   listSeasons: () => request<{ seasons: Season[] }>('GET', '/seasons'),
   createSeason: (name: string) => request<{ season: Season }>('POST', '/seasons', { name }),
+  activateSeason: (id: number) => request<{ season: Season }>('POST', `/seasons/${id}/activate`),
 
   listFunctions: (seasonId?: number) =>
     request<{ functions: ShowFunction[] }>(
@@ -533,6 +534,18 @@ export const api = {
   }) => request<{ settlement: Settlement }>('POST', '/settlements', input),
   attendanceReport: (functionId: number) =>
     request<AttendanceReport>('GET', `/reports/attendance?function_id=${functionId}`),
+}
+
+/**
+ * La temporada en curso. Hay una sola marcada activa (el backend lo garantiza
+ * al crear y al activar); el fallback a la primera es por si alguna base vieja
+ * quedo sin ninguna. Toda pantalla que necesite "la temporada" sale de aca:
+ * antes tomaban `seasons[0]` — la mas nueva — y crear una temporada nueva
+ * dejaba Rendiciones en cero con plata sin rendir.
+ */
+export function activeSeason(seasons: Season[] | undefined): Season | undefined {
+  if (!seasons || seasons.length === 0) return undefined
+  return seasons.find((s) => s.is_active) ?? seasons[0]
 }
 
 /** Link publico de una venta, para compartir por WhatsApp. */
