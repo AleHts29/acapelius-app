@@ -5,6 +5,8 @@ check-in en la puerta escaneando (con busqueda manual como respaldo) y panel de
 ventas, rendiciones y asistencia.
 
 La especificacion funcional completa esta en [`docs/spec.md`](docs/spec.md).
+Lo que falta hacer esta en [`PENDIENTES.md`](PENDIENTES.md), y por que cada
+cosa es como es, en [`DECISIONS.md`](DECISIONS.md).
 
 **Estado: MVP completo (fases 0 a 6).** Ciclo entero funcionando: catalogo,
 ventas con QR firmado y email, pagina publica, modo puerta offline-first,
