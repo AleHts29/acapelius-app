@@ -75,6 +75,9 @@ const doorSnapshotTickets = `-- name: DoorSnapshotTickets :many
 SELECT
   t.code,
   t.status,
+  -- sale_id agrupa las entradas de una misma compra: la busqueda por nombre
+  -- muestra una fila por comprador, no tres renglones identicos.
+  s.id AS sale_id,
   s.buyer_name,
   u.name AS seller_name,
   s.is_comp
@@ -88,6 +91,7 @@ ORDER BY s.buyer_name, t.id
 type DoorSnapshotTicketsRow struct {
 	Code       string `json:"code"`
 	Status     string `json:"status"`
+	SaleID     int64  `json:"sale_id"`
 	BuyerName  string `json:"buyer_name"`
 	SellerName string `json:"seller_name"`
 	IsComp     bool   `json:"is_comp"`
@@ -107,6 +111,7 @@ func (q *Queries) DoorSnapshotTickets(ctx context.Context, functionID int64) ([]
 		if err := rows.Scan(
 			&i.Code,
 			&i.Status,
+			&i.SaleID,
 			&i.BuyerName,
 			&i.SellerName,
 			&i.IsComp,

@@ -34,6 +34,9 @@ WHERE s.function_id = $1;
 SELECT
   t.code,
   t.status,
+  -- sale_id agrupa las entradas de una misma compra: la busqueda por nombre
+  -- muestra una fila por comprador, no tres renglones identicos.
+  s.id AS sale_id,
   s.buyer_name,
   u.name AS seller_name,
   s.is_comp

@@ -219,6 +219,9 @@ export interface PublicSale {
 export interface DoorTicket {
   code: string
   status: TicketStatus
+  /** Agrupa las entradas de una misma compra. Puede faltar en un snapshot
+   * guardado por una versión anterior de la app: ahí se agrupa por nombre. */
+  sale_id?: number
   buyer_name: string
   seller_name: string
   is_comp: boolean

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { DoorTicket } from '../api/client'
-import { filterTickets, normalizeText } from './search'
+import { filterTickets, groupByBuyer, normalizeText } from './search'
 
 const tickets: DoorTicket[] = [
   { code: 'T1', status: 'issued', buyer_name: 'María Dutra', seller_name: 'Carolina', is_comp: false },
@@ -39,5 +39,45 @@ describe('filterTickets', () => {
 
   it('busca por partes del nombre', () => {
     expect(filterTickets(tickets, 'gom').map((t) => t.code)).toEqual(['T3'])
+  })
+})
+
+describe('groupByBuyer (búsqueda de la puerta)', () => {
+  const compra = (n: number, estado: DoorTicket['status'], saleId = 10): DoorTicket => ({
+    code: `C${n}`,
+    status: estado,
+    sale_id: saleId,
+    buyer_name: 'Fran Sponton',
+    seller_name: 'Alejandro',
+    is_comp: false,
+  })
+
+  it('una compra de tres es una sola fila con su contador', () => {
+    const grupos = groupByBuyer([compra(1, 'checked_in'), compra(2, 'issued'), compra(3, 'issued')])
+    expect(grupos).toHaveLength(1)
+    expect(grupos[0].total).toBe(3)
+    expect(grupos[0].entered).toBe(1)
+    expect(grupos[0].pending.map((t) => t.code)).toEqual(['C2', 'C3'])
+  })
+
+  it('dos compras del mismo comprador no se mezclan', () => {
+    const grupos = groupByBuyer([compra(1, 'issued', 10), compra(2, 'issued', 11)])
+    expect(grupos).toHaveLength(2)
+  })
+
+  it('una entrada anulada no cuenta como emitida ni como ingreso', () => {
+    const grupos = groupByBuyer([compra(1, 'void'), compra(2, 'issued')])
+    expect(grupos[0].total).toBe(1)
+    expect(grupos[0].hasVoid).toBe(true)
+    expect(grupos[0].pending.map((t) => t.code)).toEqual(['C2'])
+  })
+
+  it('sin sale_id (snapshot viejo guardado offline) agrupa por comprador y vendedora', () => {
+    const viejo = tickets.map(({ code, status, buyer_name, seller_name, is_comp }) => ({
+      code, status, buyer_name, seller_name, is_comp,
+    }))
+    const grupos = groupByBuyer(viejo)
+    expect(grupos.map((g) => g.buyerName)).toEqual(['María Dutra', 'Pedro Gómez', 'Invitado de Eli'])
+    expect(grupos[0].total).toBe(2)
   })
 })

@@ -7,7 +7,7 @@ import type { CheckinResponse, DoorTicket } from '../api/client'
 import type { CheckinAttempt } from '../door/useDoorStore'
 import { useDoorStore } from '../door/useDoorStore'
 import { doorCounter, effectiveTickets } from '../door/logic'
-import { filterTickets } from '../lib/search'
+import { filterTickets, groupByBuyer } from '../lib/search'
 
 // Preferencia por dispositivo del modo nocturno (design system §3.7).
 const NIGHT_KEY = 'acapelius-door-night'
@@ -239,10 +239,11 @@ function SearchSheet({
   onCheckin,
 }: {
   tickets: DoorTicket[]
-  onCheckin: (code: string) => void
+  /** Marca de una las entradas que se le pasen (una compra entera, o una sola). */
+  onCheckin: (codes: string[]) => void
 }) {
   const [query, setQuery] = useState('')
-  const found = filterTickets(tickets, query)
+  const grupos = groupByBuyer(filterTickets(tickets, query))
 
   return (
     <div className="door__sheet">
@@ -257,30 +258,52 @@ function SearchSheet({
         autoFocus
       />
       <div className="door__results">
-        {query.trim() !== '' && found.length === 0 && (
+        {query.trim() !== '' && grupos.length === 0 && (
           <p className="muted" style={{ padding: '10px 2px' }}>
             No aparece. Probá con menos letras, o solo el apellido.
           </p>
         )}
-        {found.slice(0, 20).map((ticket) => (
-          <div key={ticket.code} className="door-ticket">
-            <span>
-              <strong>{ticket.buyer_name}</strong>
-              {ticket.is_comp && ' · cortesía'}
-              <br />
-              <span className="muted" style={{ fontSize: 11.5 }}>le vendió {ticket.seller_name}</span>
-            </span>
-            {ticket.status === 'issued' ? (
-              <button className="mark-btn" type="button" onClick={() => onCheckin(ticket.code)}>
-                Marcar ingreso
-              </button>
-            ) : (
-              <span className="muted" style={{ fontSize: 11.5, flexShrink: 0 }}>
-                {ticket.status === 'checked_in' ? 'Ya entró' : 'Anulada'}
+        {grupos.slice(0, 20).map((grupo) => {
+          const faltan = grupo.pending.length
+          return (
+            <div key={grupo.key} className="door-ticket">
+              <span>
+                <strong>{grupo.buyerName}</strong>
+                {grupo.isComp && ' · cortesía'}
+                <br />
+                <span className="muted" style={{ fontSize: 11.5 }}>
+                  {grupo.total === 1 ? '1 entrada' : `${grupo.entered} de ${grupo.total} entraron`}
+                  {' · le vendió '}
+                  {grupo.sellerName}
+                </span>
               </span>
-            )}
-          </div>
-        ))}
+              {faltan === 0 ? (
+                <span className="muted" style={{ fontSize: 11.5, flexShrink: 0 }}>
+                  Ya entró
+                </span>
+              ) : (
+                <span className="door-ticket__acts">
+                  <button
+                    className="mark-btn"
+                    type="button"
+                    onClick={() => onCheckin(grupo.pending.map((t) => t.code))}
+                  >
+                    {faltan === 1 ? 'Marcar ingreso' : `Marcar ${faltan === grupo.total ? 'las' : 'las otras'} ${faltan}`}
+                  </button>
+                  {faltan > 1 && (
+                    <button
+                      className="mark-btn mark-btn--one"
+                      type="button"
+                      onClick={() => onCheckin([grupo.pending[0].code])}
+                    >
+                      Solo 1
+                    </button>
+                  )}
+                </span>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -349,6 +372,36 @@ export function DoorModePage() {
     const verdict = await store.checkin(input)
     setSheetOpen(false)
     showResult(toDisplay(verdict))
+  }
+
+  /**
+   * Marca varias entradas de una misma compra (la familia que llega junta).
+   * Se muestra un solo cartel: repetir el verde tres veces no le sirve a nadie
+   * en la puerta. Si alguna sale mal, manda esa.
+   */
+  async function attemptGroup(codes: string[]) {
+    if (codes.length === 1) {
+      await attempt({ method: 'manual', code: codes[0] })
+      return
+    }
+    const verdicts: CheckinResponse[] = []
+    for (const code of codes) {
+      verdicts.push(await store.checkin({ method: 'manual', code }))
+    }
+    setSheetOpen(false)
+    const problema = verdicts.find((v) => v.result !== 'ok')
+    if (problema) {
+      showResult(toDisplay(problema))
+      return
+    }
+    const primero = verdicts[0]
+    showResult({
+      ok: true,
+      title: primero.buyer_name ?? 'Adelante',
+      detail: `${verdicts.length} entradas · le vendió ${primero.seller_name}`,
+      seal: `Sello Acapelius · ${primero.checked_in_at ? timeOf(primero.checked_in_at) : ''}`,
+      autoCloseMs: 2500,
+    })
   }
 
   useEffect(() => () => {
@@ -421,7 +474,7 @@ export function DoorModePage() {
           </button>
         )}
         {sheetOpen && !result && (
-          <SearchSheet tickets={tickets} onCheckin={(code) => void attempt({ method: 'manual', code })} />
+          <SearchSheet tickets={tickets} onCheckin={(codes) => void attemptGroup(codes)} />
         )}
       </div>
 

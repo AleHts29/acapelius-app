@@ -1407,6 +1407,26 @@ input[type='datetime-local'].field__input {
   flex-shrink: 0;
 }
 
+/* "Marcar las 3" y "Solo 1": la familia entera o la persona que llegó sola. */
+.door-ticket__acts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.door-ticket .mark-btn--one {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  padding: 0 10px;
+}
+
+.door.night .door-ticket .mark-btn--one {
+  color: var(--night-text);
+  border-color: var(--night-line);
+}
+
 /* ==========================================================================
    Entrada publica (/e y /t)
    ========================================================================== */

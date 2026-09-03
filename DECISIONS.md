@@ -121,3 +121,20 @@ Además, todo lo que suma cupos cuenta lo mismo que muestra el tablero
 repartir filtran por corista activa), y `PUT /allocations` rechaza con 409 un
 cupo para alguien que no es corista activa: por API se le podía asignar cupo a
 la puerta o a dirección.
+
+## La puerta busca por comprador, no por entrada
+
+La búsqueda por nombre listaba una fila por entrada: una compra de tres daba
+tres renglones idénticos, sin forma de distinguirlos. Marcabas uno, la hoja se
+cerraba, y al volver encontrabas dos filas iguales otra vez. Asistencia ya se
+había resuelto por comprador (C6); la puerta seguía por entrada.
+
+Ahora es una fila por compra, con "1 de 3 entraron" y dos acciones: la familia
+entera ("Marcar las 3") o la persona que llegó sola ("Solo 1"). Marcar el
+grupo muestra un solo cartel verde con la cantidad: repetir el verde tres
+veces no le sirve a nadie con gente esperando. Si alguna entrada del grupo
+falla, se muestra esa y no el verde.
+
+El agrupado usa `sale_id`, que se agregó al snapshot de la puerta. Un
+dispositivo que quedó offline con un snapshot viejo no lo trae: ahí se cae a
+comprador+vendedora, que en la puerta alcanza.
