@@ -1154,31 +1154,19 @@ input[type='datetime-local'].field__input {
   display: block;
 }
 
+/* El !important no es decorativo: al arrancar, html5-qrcode le escribe
+ * `position: relative` EN LINEA a este contenedor (html5-qrcode.ts:405) y el
+ * estilo en linea le gana a la hoja. Sin absolute, el contenedor vuelve a ser
+ * un item flex de .door__scan cuyo unico hijo (el video) esta fuera de flujo:
+ * colapsa a 0x0 y el video, dimensionado al 100% de ese cero, queda invisible
+ * aunque la camara este andando. */
 #door-scanner {
-  position: absolute;
+  position: absolute !important;
   inset: 0;
 }
 
-/* html5-qrcode envuelve el video en divs con alto calculado en linea. Si midio
- * mal el contenedor, ese alto queda en cero y recorta el video: el recuadro se
- * ve vacio aunque la camara este andando. Aca se anula ese calculo — el tamaño
- * lo manda el contenedor, no la libreria. */
-#door-scanner > div,
-#door-scanner__scan_region {
-  position: absolute !important;
-  inset: 0 !important;
-  width: auto !important;
-  height: auto !important;
-  min-height: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  overflow: visible !important;
-}
-
-/* La imagen de "camara apagada" y el panel de controles de la libreria: la
- * pantalla ya tiene sus propios estados (C4). */
-#door-scanner img,
-#door-scanner__dashboard {
+/* El canvas de decodificacion no se muestra. */
+#door-scanner canvas {
   display: none !important;
 }
 
