@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Propuesta de UI para desktop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:#E7DECE; color:#1D1D1B; -webkit-font-smoothing:antialiased; }
+  .page { max-width:1240px; margin:0 auto; padding:44px 20px 90px; }
+  .page > h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(26px,4vw,38px); }
+  .page > h1 span { color:#415DA7; }
+  .page > p.lead { margin-top:10px; max-width:860px; font-size:14.5px; line-height:1.65; color:#4C4A44; }
+  .fr { margin-top:34px; }
+  .fr > .cap { font-size:13px; font-weight:700; color:#55524A; margin-bottom:10px; }
+  .fr > .cap b { color:#1D1D1B; }
+
+  :root { --azul:#415DA7; --crema:#F8ECDE; --tinta:#1D1D1B; --mut:#8B8578; --line:#EADFCB;
+          --ok:#2F7D5B; --ok-s:#E4F0EA; --warn:#B7791F; --warn-s:#F7ECD7; --blue-s:#E8EDF8; --bad:#C24A4A; --bad-s:#F7E3E3; }
+
+  /* browser frame */
+  .browser { border:1px solid #C9BFA9; border-radius:14px; overflow:hidden; box-shadow:0 16px 36px rgba(29,29,27,.14); background:var(--crema); }
+  .chrome { background:#1D1D1B; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome .dots i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:420px; background:#2E2D28; color:#B9B2A2; border-radius:7px; padding:5px 12px; font-size:11px; }
+
+  .app { display:flex; min-height:520px; }
+  /* sidebar */
+  .side { width:216px; background:#fff; border-right:1px solid var(--line); display:flex; flex-direction:column; flex-shrink:0; }
+  .side .logo { padding:18px 18px 14px; font-family:'Archivo',sans-serif; font-weight:800; letter-spacing:0.2em; font-size:12.5px; display:flex; align-items:center; gap:8px; }
+  .side .logo .mk { width:22px; height:22px; border-radius:50%; border:1.6px solid var(--azul); color:var(--azul); font-size:11px; display:flex; align-items:center; justify-content:center; font-style:italic; font-family:'Archivo'; }
+  .nav { padding:6px 10px; }
+  .nav a { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; font-size:13px; font-weight:700; color:#55524A; margin-bottom:2px; }
+  .nav a.on { background:var(--crema); color:var(--tinta); }
+  .nav a .i { width:16px; text-align:center; }
+  .side .grow { flex:1; }
+  .side .me { border-top:1px solid var(--line); padding:12px 14px; display:flex; align-items:center; gap:9px; font-size:12px; }
+  .side .me .av { width:28px; height:28px; border-radius:50%; background:var(--azul); color:var(--crema); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px; }
+  .side .me b { display:block; font-size:12.5px; }
+  .side .me span { color:var(--mut); font-size:10.5px; }
+
+  .main { flex:1; padding:22px 28px 28px; min-width:0; }
+  .phead { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:16px; }
+  .phead h2 { font-family:'Archivo',sans-serif; font-size:22px; font-weight:800; }
+  .phead .right { display:flex; align-items:center; gap:10px; }
+  .btn { border-radius:11px; padding:10px 16px; font-size:13px; font-weight:800; }
+  .btn.pri { background:var(--azul); color:var(--crema); }
+  .btn.ghost { background:#fff; border:1.5px solid var(--line); color:var(--tinta); }
+  .pillbtn { display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:800; border:1.5px solid var(--line); background:#fff; border-radius:99px; padding:7px 12px; }
+  .pillbtn span { color:var(--mut); }
+
+  .pill { font-size:10.5px; font-weight:800; padding:4px 9px; border-radius:99px; white-space:nowrap; }
+  .pill.ok { background:var(--ok-s); color:var(--ok); }
+  .pill.debt { background:var(--warn-s); color:var(--warn); }
+  .pill.comp { background:var(--blue-s); color:var(--azul); }
+  .eyebrow { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.13em; text-transform:uppercase; color:var(--mut); }
+
+  /* ===== FRAME 1: INICIO ===== */
+  .hero { background:var(--azul); color:var(--crema); border-radius:16px; padding:18px 22px; display:flex; align-items:center; gap:26px; position:relative; overflow:hidden; }
+  .hero .wm { position:absolute; right:-24px; bottom:-38px; width:130px; height:130px; border:2px solid rgba(248,236,222,.14); border-radius:50%; }
+  .hero .l { flex:1; min-width:0; }
+  .hero .fn { margin-top:5px; font-family:'Archivo',sans-serif; font-size:20px; font-weight:800; }
+  .hero .meta { margin-top:2px; font-size:12.5px; color:rgba(248,236,222,.8); }
+  .hero .bar { margin-top:11px; height:6px; border-radius:99px; background:rgba(248,236,222,.25); overflow:hidden; max-width:420px; }
+  .hero .bar i { display:block; height:100%; width:18%; background:#F8ECDE; }
+  .hero .barlbl { margin-top:6px; font-size:11px; color:rgba(248,236,222,.85); font-weight:600; }
+  .hero .stats { display:flex; gap:26px; }
+  .hero .st b { font-family:'Archivo',sans-serif; font-size:19px; display:block; }
+  .hero .st span { font-size:10px; opacity:.75; font-weight:700; letter-spacing:0.06em; }
+
+  .cats { margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+  .cat { background:#fff; border:1px solid var(--line); border-radius:15px; overflow:hidden; display:flex; }
+  .cat .edge { width:5px; }
+  .cat.sales .edge { background:var(--azul); } .cat.door .edge { background:var(--ok); } .cat.admin .edge { background:var(--tinta); }
+  .cat .inner { flex:1; padding:13px 15px; }
+  .cat .h { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .cat .h b { font-family:'Archivo',sans-serif; font-size:11px; font-weight:800; letter-spacing:0.13em; text-transform:uppercase; }
+  .cat.sales .h b { color:var(--azul); } .cat.door .h b { color:var(--ok); } .cat.admin .h b { color:var(--tinta); }
+  .cat .item { padding:8px 0; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--line); }
+  .cat .item:first-of-type { border-top:0; }
+  .cat .item b { font-size:13px; font-weight:700; display:block; }
+  .cat .item span { font-size:10.5px; color:var(--mut); }
+  .cat .chev { color:var(--mut); }
+
+  /* ===== FRAME 2: VENTAS TABLA + DRAWER ===== */
+  .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .search { flex:1; min-width:220px; max-width:380px; display:flex; align-items:center; gap:8px; background:#fff; border:1.5px solid var(--line); border-radius:11px; padding:9px 12px; font-size:12.5px; color:var(--mut); }
+  .f { font-size:11px; font-weight:800; padding:7px 12px; border-radius:99px; border:1.5px solid var(--line); background:#fff; color:#55524A; }
+  .f.on { background:var(--tinta); border-color:var(--tinta); color:var(--crema); }
+  .sumline { display:flex; gap:18px; font-size:12px; color:var(--mut); font-weight:600; margin-left:auto; }
+  .sumline b { color:var(--tinta); font-family:'Archivo',sans-serif; }
+  .sumline b.g { color:var(--ok); } .sumline b.y { color:var(--warn); }
+
+  .split { display:flex; gap:16px; align-items:flex-start; }
+  .table { flex:1; background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; min-width:0; }
+  .thead, .trow { display:grid; grid-template-columns:2fr 1.4fr 1.3fr 0.7fr 0.9fr 1fr 34px; gap:8px; align-items:center; padding:0 16px; }
+  .thead { background:#FDFAF5; border-bottom:1px solid var(--line); height:38px; font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--mut); }
+  .trow { height:46px; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .trow:last-child { border-bottom:0; }
+  .trow.sel { background:var(--blue-s); }
+  .trow .who { display:flex; align-items:center; gap:9px; min-width:0; }
+  .trow .ini { width:28px; height:28px; border-radius:8px; background:var(--blue-s); color:var(--azul); font-family:'Archivo',sans-serif; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .trow .who b { font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .trow .dim2 { color:var(--mut); font-size:11.5px; }
+  .trow .kebab { color:var(--mut); font-weight:800; text-align:center; }
+  .gband { padding:7px 16px; background:var(--crema); border-bottom:1px solid var(--line); font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.11em; text-transform:uppercase; color:var(--mut); display:flex; justify-content:space-between; }
+
+  .drawer { width:300px; flex-shrink:0; background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .drawer .who { display:flex; align-items:center; gap:10px; padding-bottom:12px; border-bottom:1px solid var(--line); }
+  .drawer .ini { width:38px; height:38px; border-radius:11px; background:var(--blue-s); color:var(--azul); font-family:'Archivo',sans-serif; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .drawer .who b { font-size:14.5px; font-weight:800; display:block; }
+  .drawer .who span { font-size:11px; color:var(--mut); }
+  .drawer .act { display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); font-size:13px; font-weight:700; }
+  .drawer .act:last-child { border-bottom:0; }
+  .drawer .act .ic { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; background:var(--crema); }
+  .drawer .act.pri .ic { background:var(--ok-s); }
+  .drawer .act.danger { color:var(--bad); }
+  .drawer .act.danger .ic { background:var(--bad-s); }
+  .drawer .act small { margin-left:auto; font-size:10px; color:var(--mut); font-weight:600; }
+  .drawer .x { float:right; color:var(--mut); font-weight:800; }
+
+  /* ===== FRAME 3: DIRECCIÓN GRID ===== */
+  .kpis4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .kpi { background:#fff; border:1px solid var(--line); border-radius:13px; padding:13px 15px; }
+  .kpi b { font-family:'Archivo',sans-serif; font-size:19px; font-weight:800; display:block; }
+  .kpi span { font-size:9.5px; color:var(--mut); font-weight:700; letter-spacing:0.05em; }
+  .kpi .sub { font-size:9.5px; color:var(--mut); margin-top:2px; }
+  .kpi b.g { color:var(--ok); } .kpi b.y { color:var(--warn); } .kpi b.b { color:var(--azul); }
+  .sect { display:flex; align-items:center; gap:8px; margin:18px 0 9px; }
+  .sect b { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .sect::after { content:""; flex:1; height:1px; background:var(--line); }
+  .attn { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .alert { background:#fff; border:1px solid var(--line); border-left:4px solid var(--warn); border-radius:12px; padding:10px 13px; display:flex; align-items:center; gap:10px; }
+  .alert.blue { border-left-color:var(--azul); }
+  .alert .ic { width:30px; height:30px; border-radius:9px; background:var(--warn-s); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .alert.blue .ic { background:var(--blue-s); }
+  .alert .mid { flex:1; min-width:0; }
+  .alert .mid b { font-size:12px; font-weight:700; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .alert .mid span { font-size:10px; color:var(--mut); }
+  .alert .go { font-size:11px; font-weight:800; color:var(--azul); white-space:nowrap; }
+  .fns { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .fn { background:#fff; border:1px solid var(--line); border-radius:13px; padding:11px 13px; }
+  .fn .h { display:flex; justify-content:space-between; align-items:center; }
+  .fn .h b { font-size:12.5px; font-weight:800; }
+  .fn .tag { font-size:9px; font-weight:800; padding:3px 7px; border-radius:99px; background:var(--line); color:var(--mut); }
+  .fn .tag.hoy { background:var(--ok); color:#fff; }
+  .fn .bar { margin-top:8px; height:5px; border-radius:99px; background:var(--line); overflow:hidden; }
+  .fn .bar i { display:block; height:100%; background:var(--azul); }
+  .fn .leg { margin-top:6px; font-size:10px; color:var(--mut); font-weight:600; display:flex; justify-content:space-between; }
+  .fn .leg b { color:var(--tinta); }
+  .row2 { display:grid; grid-template-columns:1.6fr 1fr; gap:12px; margin-top:12px; }
+  .chart { background:#fff; border:1px solid var(--line); border-radius:13px; padding:13px 15px; }
+  .chart .h { display:flex; justify-content:space-between; font-size:11.5px; font-weight:800; }
+  .chart .h span { color:var(--warn); }
+  .bars { margin-top:10px; display:flex; align-items:flex-end; gap:5px; height:58px; }
+  .bars i { flex:1; background:var(--blue-s); border-radius:3px 3px 0 0; }
+  .bars i.hot { background:var(--azul); }
+  .accs { background:#fff; border:1px solid var(--line); border-radius:13px; padding:13px 15px; display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; align-content:start; }
+  .acc { display:flex; align-items:center; gap:9px; font-size:12px; font-weight:700; padding:7px 0; }
+  .acc .i { width:28px; height:28px; border-radius:8px; background:var(--crema); display:flex; align-items:center; justify-content:center; font-size:13px; }
+
+  /* ===== FRAME 4: RENDICIONES MASTER-DETAIL ===== */
+  .md { display:flex; gap:16px; align-items:flex-start; }
+  .mlist { width:330px; flex-shrink:0; }
+  .sum { background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:12px; }
+  .sum .big { display:flex; justify-content:space-between; align-items:baseline; }
+  .sum .big b { font-family:'Archivo',sans-serif; font-size:19px; font-weight:800; color:var(--warn); }
+  .sum .big span { font-size:9.5px; font-weight:800; color:var(--mut); letter-spacing:0.08em; }
+  .sum .bar { margin-top:8px; height:6px; border-radius:99px; background:var(--warn-s); overflow:hidden; }
+  .sum .bar i { display:block; height:100%; background:var(--ok); width:60%; }
+  .mrow { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 13px; margin-bottom:7px; display:flex; align-items:center; justify-content:space-between; }
+  .mrow.sel { border-color:var(--azul); box-shadow:0 0 0 3px rgba(65,93,167,.1); }
+  .mrow .l b { font-size:13px; font-weight:700; display:block; }
+  .mrow .l span { font-size:10.5px; color:var(--mut); }
+  .detail { flex:1; background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 20px; min-width:0; }
+  .detail .h { display:flex; align-items:center; gap:12px; }
+  .detail .ini { width:44px; height:44px; border-radius:12px; background:var(--warn-s); color:var(--warn); font-family:'Archivo',sans-serif; font-weight:800; font-size:16px; display:flex; align-items:center; justify-content:center; }
+  .detail .h b.nm { font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; display:block; }
+  .detail .h span.role { font-size:11px; color:var(--mut); }
+  .detail .h .btn { margin-left:auto; }
+  .k3 { margin-top:14px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; max-width:440px; }
+  .k { background:#FDFAF5; border:1px solid var(--line); border-radius:11px; padding:9px 11px; }
+  .k b { font-family:'Archivo',sans-serif; font-size:14px; font-weight:800; display:block; }
+  .k span { font-size:8.5px; color:var(--mut); font-weight:800; letter-spacing:0.06em; }
+  .k b.g { color:var(--ok); } .k b.y { color:var(--warn); }
+  .hrow { border-bottom:1px solid var(--line); padding:10px 2px; display:flex; gap:10px; align-items:flex-start; font-size:12.5px; }
+  .hrow:last-child { border-bottom:0; }
+  .hrow .ic { width:26px; height:26px; border-radius:8px; background:var(--ok-s); color:var(--ok); display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
+  .hrow .mid { flex:1; }
+  .hrow .amt { font-family:'Archivo',sans-serif; font-weight:800; }
+  .hrow .note { font-size:10.5px; color:var(--mut); font-style:italic; }
+  .hrow .when { font-size:10px; color:var(--mut); font-weight:700; text-align:right; line-height:1.4; }
+
+  /* ===== FRAME 5: PUERTA ===== */
+  .doorwrap { max-width:640px; margin:0 auto; }
+  .doorhead { display:flex; align-items:center; justify-content:space-between; }
+  .doorhead .fn { font-family:'Archivo',sans-serif; font-size:19px; font-weight:800; }
+  .net { font-size:11px; font-weight:800; color:var(--ok); }
+  .counter { margin-top:12px; background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 18px; display:flex; align-items:baseline; justify-content:space-between; }
+  .counter .n { font-family:'Archivo',sans-serif; font-size:30px; font-weight:800; color:var(--ok); }
+  .counter .n span { font-size:15px; color:var(--mut); font-weight:600; }
+  .counter .st { font-family:'Archivo',sans-serif; font-size:10px; color:var(--mut); font-weight:800; letter-spacing:0.12em; }
+  .scan { margin-top:12px; aspect-ratio:4/3; border-radius:16px; background:#141311; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .scan .frame { width:180px; height:180px; border-radius:16px; border:2.5px solid var(--crema); position:relative; }
+  .scan .frame::after { content:""; position:absolute; left:10px; right:10px; top:50%; height:2px; background:linear-gradient(90deg,transparent,#F8ECDE,transparent); }
+  .scan .hint { position:absolute; bottom:12px; left:0; right:0; text-align:center; color:rgba(248,236,222,.7); font-size:11px; font-weight:600; }
+  .doorbtns { margin-top:12px; display:grid; grid-template-columns:1fr 1.4fr; gap:10px; }
+  .dbtn { border-radius:12px; padding:14px; text-align:center; font-size:13.5px; font-weight:800; }
+  .dbtn.p { background:var(--tinta); color:var(--crema); }
+  .dbtn.s { background:#fff; border:1.5px solid var(--line); }
+  .tip { margin-top:10px; text-align:center; font-size:11px; color:var(--mut); }
+
+  /* puerta desktop: búsqueda protagonista */
+  .dsearch { margin-top:14px; display:flex; align-items:center; gap:10px; background:#fff; border:2px solid var(--azul); box-shadow:0 0 0 4px rgba(65,93,167,.12); border-radius:14px; padding:14px 16px; font-size:16px; }
+  .dsearch b { font-weight:600; }
+  .dsearch .cursor { display:inline-block; width:2px; height:19px; background:var(--azul); }
+  .rrow { margin-top:9px; background:#fff; border:1px solid var(--line); border-radius:13px; padding:11px 14px; display:flex; align-items:center; gap:11px; }
+  .rrow.sel { border-color:var(--azul); box-shadow:0 0 0 3px rgba(65,93,167,.1); }
+  .rrow .ini { width:34px; height:34px; border-radius:10px; background:var(--blue-s); color:var(--azul); font-family:'Archivo',sans-serif; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .rrow .mid { flex:1; min-width:0; }
+  .rrow .mid b { font-size:14px; font-weight:700; display:block; }
+  .rrow .mid b mark { background:#F3E3C3; border-radius:3px; padding:0 1px; }
+  .rrow .mid span { font-size:11px; color:var(--mut); }
+  .cnt { font-family:'Archivo',sans-serif; font-size:11px; font-weight:800; padding:4px 9px; border-radius:99px; flex-shrink:0; }
+  .cnt.part { background:var(--warn-s); color:var(--warn); }
+  .cnt.full { background:var(--ok-s); color:var(--ok); }
+  .markbtn { background:var(--azul); color:var(--crema); border-radius:10px; padding:9px 14px; font-size:12px; font-weight:800; flex-shrink:0; }
+  .markbtn.off { background:var(--line); color:var(--mut); }
+  .kbdhint { margin-top:8px; text-align:center; font-size:10.5px; color:var(--mut); }
+  .kbdhint kbd { background:#fff; border:1px solid var(--line); border-radius:5px; padding:1px 5px; font-family:'Inter'; font-size:10px; font-weight:700; }
+  .sect2 { display:flex; align-items:center; gap:8px; margin:16px 0 7px; }
+  .sect2 b { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .sect2::after { content:""; flex:1; height:1px; background:var(--line); }
+  .lrow { display:flex; align-items:center; justify-content:space-between; padding:7px 4px; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .lrow:last-of-type { border-bottom:0; }
+  .lrow .l { display:flex; align-items:center; gap:8px; }
+  .lrow .l b { font-weight:700; }
+  .lrow .l span { color:var(--mut); font-size:11px; }
+  .lrow .t { color:var(--mut); font-size:11px; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Acapelius en desktop: <span>usar el ancho, no estirarlo</span></h1>
+  <p class="lead">El problema actual: la app es el layout de celular flotando en un mar de crema — columna angosta centrada, FAB en una esquina de monitor, listas de una columna con aire infinito. La propuesta define un <b>shell de escritorio</b> (breakpoint ≥1024px) con cinco reglas: contenido a ancho completo con grillas de 2–4 columnas; <b>tablas densas con encabezado</b> en vez de cards apiladas; <b>drawer lateral</b> en lugar de bottom sheet; <b>master-detail</b> (lista + detalle lado a lado) para Rendiciones y Asistencia; y las acciones primarias en el <b>header de página</b>, no en un FAB. Todo con los mismos tokens — en mobile no cambia nada.</p>
+
+  <!-- FRAME 1 -->
+  <div class="fr">
+    <div class="cap"><b>1 · Inicio</b> — hero con stats integradas + las tres categorías lado a lado (hoy: apiladas en columna angosta)</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a class="on"><span class="i">♪</span>Inicio</a>
+            <a><span class="i">🎟</span>Vender</a>
+            <a><span class="i">⛶</span>Puerta</a>
+            <a><span class="i">📊</span>Dirección</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead"><h2>Hola, Eli</h2><div class="right"><div class="btn pri">＋ Nueva venta</div></div></div>
+          <div class="hero">
+            <div class="wm"></div>
+            <div class="l">
+              <div class="eyebrow" style="color:rgba(248,236,222,.75);">Próxima función · en 10 días</div>
+              <div class="fn">Cierre de temporada</div>
+              <div class="meta">Dom 13 sept, 21:00 · Teatro Municipal</div>
+              <div class="bar"><i></i></div>
+              <div class="barlbl">14 de 80 vendidas · 18%</div>
+            </div>
+            <div class="stats">
+              <div class="st"><b>14/80</b><span>VENDIDAS</span></div>
+              <div class="st"><b>$36.000</b><span>RECAUDÓ</span></div>
+              <div class="st"><b>31</b><span>SIN ASIGNAR</span></div>
+            </div>
+          </div>
+          <div class="cats">
+            <div class="cat sales"><div class="edge"></div><div class="inner">
+              <div class="h"><b>Ventas</b><span class="pill debt">10 pendientes</span></div>
+              <div class="item"><div><b>Pagos pendientes</b><span>Cobrar lo que todavía deben</span></div><span class="chev">›</span></div>
+              <div class="item"><div><b>Links y reenvíos</b><span>Compartir y reenviar</span></div><span class="chev">›</span></div>
+              <div class="item"><div><b>Todas las ventas</b><span>El listado completo</span></div><span class="chev">›</span></div>
+            </div></div>
+            <div class="cat door"><div class="edge"></div><div class="inner">
+              <div class="h"><b>Operación</b></div>
+              <div class="item"><div><b>Modo puerta</b><span>Escanear QR y marcar ingresos</span></div><span class="chev">›</span></div>
+            </div></div>
+            <div class="cat admin"><div class="edge"></div><div class="inner">
+              <div class="h"><b>Administración</b><span class="pill debt">Debe $451.000</span></div>
+              <div class="item"><div><b>Rendiciones</b><span>Quién debe cuánto</span></div><span class="chev">›</span></div>
+              <div class="item"><div><b>Asistencia</b><span>Quién entró</span></div><span class="chev">›</span></div>
+              <div class="item"><div><b>Temporadas y equipo</b><span>Funciones, cupos, roles</span></div><span class="chev">›</span></div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRAME 2 -->
+  <div class="fr">
+    <div class="cap"><b>2 · Ventas</b> — tabla densa con columnas y hover + drawer lateral de acciones (reemplaza al bottom sheet); "Nueva venta" en el header, no FAB</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/ventas</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span class="i">♪</span>Inicio</a>
+            <a class="on"><span class="i">🎟</span>Vender</a>
+            <a><span class="i">⛶</span>Puerta</a>
+            <a><span class="i">📊</span>Dirección</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead"><h2>Ventas</h2><div class="right"><div class="btn pri">＋ Nueva venta</div></div></div>
+          <div class="toolbar">
+            <div class="search">🔍 Buscar comprador o vendedora…</div>
+            <div class="f on">Todas · 50</div><div class="f">Deben · 10</div><div class="f">Pagas</div><div class="f">Cortesías</div><div class="f">Todas las funciones ▾</div>
+            <div class="sumline"><span><b>138</b> entradas</span><span><b class="g">$1.016.000</b> cobrado</span><span><b class="y">$218.000</b> por cobrar</span></div>
+          </div>
+          <div class="split">
+            <div class="table">
+              <div class="thead"><span>Comprador</span><span>Función</span><span>Vendedora</span><span>Entr.</span><span>Total</span><span>Estado</span><span></span></div>
+              <div class="gband"><span>Función de apertura · vie 14 ago</span><span>15 ventas</span></div>
+              <div class="trow sel"><div class="who"><div class="ini">MD</div><b>María Dutra</b></div><span class="dim2">Apertura</span><span class="dim2">Carolina Vega</span><span>3</span><span>$72.000</span><span><span class="pill ok">Pagó</span></span><span class="kebab">⋮</span></div>
+              <div class="trow"><div class="who"><div class="ini">PG</div><b>Pedro Gómez</b></div><span class="dim2">Apertura</span><span class="dim2">Carolina Vega</span><span>2</span><span>$48.000</span><span><span class="pill ok">Pagó (transf.)</span></span><span class="kebab">⋮</span></div>
+              <div class="trow"><div class="who"><div class="ini">LF</div><b>Lucía Fernández</b></div><span class="dim2">Apertura</span><span class="dim2">Virginia Sosa</span><span>4</span><span>$96.000</span><span><span class="pill debt">Debe</span></span><span class="kebab">⋮</span></div>
+              <div class="trow"><div class="who"><div class="ini">JA</div><b>Jorge Álvarez</b></div><span class="dim2">Apertura</span><span class="dim2">Virginia Sosa</span><span>2</span><span>$48.000</span><span><span class="pill ok">Pagó (transf.)</span></span><span class="kebab">⋮</span></div>
+              <div class="trow"><div class="who"><div class="ini">PB</div><b>Padre Benítez</b></div><span class="dim2">Apertura</span><span class="dim2">emitió Eli</span><span>2</span><span>—</span><span><span class="pill comp">Cortesía</span></span><span class="kebab">⋮</span></div>
+              <div class="trow"><div class="who"><div class="ini">AP</div><b>Ana Pereira</b></div><span class="dim2">Apertura</span><span class="dim2">Silvia Rey</span><span>2</span><span>$48.000</span><span><span class="pill ok">Pagó</span></span><span class="kebab">⋮</span></div>
+            </div>
+            <div class="drawer">
+              <span class="x">✕</span>
+              <div class="who"><div class="ini">MD</div><div><b>María Dutra</b><span>3 entradas · Apertura · vendió Carolina Vega · $72.000</span></div></div>
+              <div class="act pri"><div class="ic">💵</div> Volver a pendiente</div>
+              <div class="act"><div class="ic">🔗</div> Copiar link de la entrada</div>
+              <div class="act"><div class="ic">✉️</div> Reenviar email <small>hace 3 días</small></div>
+              <div class="act"><div class="ic">👥</div> Ver ingresos <small>2/3 entraron</small></div>
+              <div class="act danger"><div class="ic">✕</div> Anular venta</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRAME 3 -->
+  <div class="fr">
+    <div class="cap"><b>3 · Dirección</b> — atención en 2 columnas (10 alertas = 5 filas, no 10), funciones 4 por fila, ritmo + accesos lado a lado</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/direccion</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span class="i">♪</span>Inicio</a>
+            <a><span class="i">🎟</span>Vender</a>
+            <a><span class="i">⛶</span>Puerta</a>
+            <a class="on"><span class="i">📊</span>Dirección</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead"><h2>Dirección</h2><div class="right"><div class="pillbtn">Temporada 2026 <span>▾</span></div></div></div>
+          <div class="kpis4">
+            <div class="kpi"><b class="g">$1.016.000</b><span>RECAUDADO</span></div>
+            <div class="kpi"><b class="y">$451.000</b><span>POR RENDIR</span><div class="sub">en manos de 7 coristas</div></div>
+            <div class="kpi"><b class="b">145 <span style="font-size:12px; color:var(--mut);">/255</span></b><span>VENDIDAS</span></div>
+            <div class="kpi"><b>3/4</b><span>FUNCIONES HECHAS</span></div>
+          </div>
+          <div class="sect"><b>Necesita tu atención · 10</b></div>
+          <div class="attn">
+            <div class="alert"><div class="ic">💰</div><div class="mid"><b>Beatriz Coria debe rendir $112.000</b><span>Cobró hace 8 días</span></div><span class="go">Registrar ›</span></div>
+            <div class="alert"><div class="ic">💰</div><div class="mid"><b>Marta Ledesma debe rendir $106.000</b><span>Cobró hace 12 días</span></div><span class="go">Registrar ›</span></div>
+            <div class="alert"><div class="ic">💰</div><div class="mid"><b>Adriana Bustos debe rendir $73.000</b><span>Cobró hace 9 días</span></div><span class="go">Registrar ›</span></div>
+            <div class="alert"><div class="ic">💰</div><div class="mid"><b>Silvia Rey debe rendir $62.000</b><span>Cobró hace 10 días</span></div><span class="go">Registrar ›</span></div>
+            <div class="alert"><div class="ic">🎟</div><div class="mid"><b>Cierre: 31 entradas sin asignar</b><span>Dom 13 sept · cupo 80</span></div><span class="go">Asignar ›</span></div>
+            <div class="alert blue"><div class="ic">✉️</div><div class="mid"><b>Josefina Paz nunca entró a la app</b><span>Invitada hace 28 días</span></div><span class="go">Reenviar ›</span></div>
+          </div>
+          <div class="sect"><b>La temporada, función por función</b></div>
+          <div class="fns">
+            <div class="fn"><div class="h"><b>Apertura</b><span class="tag">HECHA</span></div><div class="bar"><i style="width:84%; background:var(--ok);"></i></div><div class="leg"><span><b>38/45</b> · 29 ingresaron</span><span><b>$256.000</b></span></div></div>
+            <div class="fn"><div class="h"><b>Invierno</b><span class="tag">HECHA</span></div><div class="bar"><i style="width:64%; background:var(--ok);"></i></div><div class="leg"><span><b>32/50</b> · 28 ingresaron</span><span><b>$224.000</b></span></div></div>
+            <div class="fn"><div class="h"><b>Gala</b><span class="tag">HECHA</span></div><div class="bar"><i style="width:76%; background:var(--ok);"></i></div><div class="leg"><span><b>61/80</b> · 29 ingresaron</span><span><b>$500.000</b></span></div></div>
+            <div class="fn"><div class="h"><b>Cierre</b><span class="tag hoy" style="background:var(--azul);">DOM 13</span></div><div class="bar"><i style="width:18%;"></i></div><div class="leg"><span><b>14/80</b> · 31 sin asignar</span><span><b>$36.000</b></span></div></div>
+          </div>
+          <div class="row2">
+            <div class="chart">
+              <div class="h"><span>Ritmo de ventas · últimas 2 semanas</span><span>↓ 65</span></div>
+              <div class="bars"><i style="height:52%"></i><i style="height:30%"></i><i style="height:44%"></i><i style="height:58%"></i><i style="height:78%"></i><i style="height:60%"></i><i style="height:8%"></i><i style="height:5%"></i><i style="height:10%"></i><i style="height:6%"></i><i style="height:8%"></i><i style="height:5%"></i><i style="height:4%"></i><i class="hot" style="height:34%"></i></div>
+            </div>
+            <div class="accs">
+              <div class="acc"><div class="i">📈</div>Panel de ventas</div>
+              <div class="acc"><div class="i">👥</div>Asistencia</div>
+              <div class="acc"><div class="i">💰</div>Rendiciones</div>
+              <div class="acc"><div class="i">📅</div>Temporadas</div>
+              <div class="acc"><div class="i">🎤</div>Equipo</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRAME 4 -->
+  <div class="fr">
+    <div class="cap"><b>4 · Rendiciones</b> — master-detail: lista a la izquierda, detalle de la corista seleccionada a la derecha (mismo patrón para Asistencia). En mobile siguen siendo dos vistas navegadas.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/direccion/rendiciones</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span class="i">♪</span>Inicio</a>
+            <a><span class="i">🎟</span>Vender</a>
+            <a><span class="i">⛶</span>Puerta</a>
+            <a class="on"><span class="i">📊</span>Dirección</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead"><h2>Rendiciones</h2><div class="right"><div class="pillbtn">🕐 Historial general</div></div></div>
+          <div class="md">
+            <div class="mlist">
+              <div class="sum"><div class="big"><b>$451.000</b><span>POR RENDIR</span></div><div class="bar"><i></i></div></div>
+              <div class="eyebrow" style="margin:4px 0 7px;">Deben rendir · 7</div>
+              <div class="mrow sel"><div class="l"><b>Beatriz Coria</b><span>Cobró $112.000 · rindió $0</span></div><span class="pill debt">$112.000</span></div>
+              <div class="mrow"><div class="l"><b>Marta Ledesma</b><span>Cobró $146.000 · rindió $40.000</span></div><span class="pill debt">$106.000</span></div>
+              <div class="mrow"><div class="l"><b>Adriana Bustos</b><span>Cobró $73.000 · rindió $0</span></div><span class="pill debt">$73.000</span></div>
+              <div class="eyebrow" style="margin:10px 0 7px;">Al día · 2</div>
+              <div class="mrow"><div class="l"><b>Carolina Vega</b><span>Cobró $190.000 · rindió $190.000</span></div><span class="pill ok">Al día</span></div>
+            </div>
+            <div class="detail">
+              <div class="h">
+                <div class="ini">BC</div>
+                <div><b class="nm">Beatriz Coria</b><span class="role">Corista · 11 ventas esta temporada</span></div>
+                <div class="btn pri">Registrar rendición</div>
+              </div>
+              <div class="k3">
+                <div class="k"><b>$112.000</b><span>COBRÓ</span></div>
+                <div class="k"><b class="g">$0</b><span>RINDIÓ</span></div>
+                <div class="k"><b class="y">$112.000</b><span>DEBE</span></div>
+              </div>
+              <div class="sect" style="margin-top:16px;"><b>Su historial</b></div>
+              <div class="hrow"><div class="ic">✓</div><div class="mid"><b>Rindió <span class="amt">$60.000</span> · efectivo</b><div class="note">"Ensayo del jueves" · Temporada 2025</div></div><div class="when">12 DIC 25</div></div>
+              <div class="hrow"><div class="ic">✓</div><div class="mid"><b>Rindió <span class="amt">$85.000</span> · transferencia</b><div class="note">Temporada 2025</div></div><div class="when">02 DIC 25</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRAME 5 -->
+  <div class="fr">
+    <div class="cap"><b>5 · Modo puerta</b> — sin scanner en desktop: la mesa de entrada gira alrededor de la búsqueda manual, optimizada para teclado, con los últimos ingresos en vivo</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/puerta/1</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span class="i">♪</span>Inicio</a>
+            <a><span class="i">🎟</span>Vender</a>
+            <a class="on"><span class="i">⛶</span>Puerta</a>
+            <a><span class="i">📊</span>Dirección</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="doorwrap">
+            <div class="doorhead"><div class="fn">Función de apertura</div><div class="net">● En línea</div></div>
+            <div class="counter"><div class="n">29<span> / 38</span></div><div class="st">INGRESARON</div></div>
+
+            <div class="dsearch">🔍 <b>dut</b><span class="cursor"></span></div>
+
+            <div class="rrow sel">
+              <div class="ini">MD</div>
+              <div class="mid"><b>María <mark>Dut</mark>ra</b><span>vendió Carolina Vega · 3 entradas · falta 1</span></div>
+              <span class="cnt part">2/3</span>
+              <div class="markbtn">Marcar ingreso</div>
+            </div>
+            <div class="rrow">
+              <div class="ini" style="background:var(--ok-s); color:var(--ok);">RD</div>
+              <div class="mid"><b>Ramón <mark>Dut</mark>ari</b><span>vendió Silvia Rey · 2 entradas</span></div>
+              <span class="cnt full">2/2</span>
+              <div class="markbtn off">Ya ingresó</div>
+            </div>
+            <div class="kbdhint"><kbd>↑</kbd><kbd>↓</kbd> para moverte · <kbd>Enter</kbd> marca el ingreso</div>
+
+            <div class="sect2"><b>Últimos ingresos</b></div>
+            <div class="lrow"><div class="l"><b>Ana Pereira</b><span>✋ manual · Eli</span></div><span class="t">21:38</span></div>
+            <div class="lrow"><div class="l"><b>Hugo Díaz</b><span>📷 celular · Marta</span></div><span class="t">21:36</span></div>
+            <div class="lrow"><div class="l"><b>Clara Suárez</b><span>📷 celular · Marta</span></div><span class="t">21:34</span></div>
+
+            <div class="tip">📱 Para escanear QRs usá el celular — esta mesa resuelve búsquedas e ingresos manuales.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -8,6 +8,28 @@ el paquete de cambios v2 (C1–C10), en [docs/CAMBIOS_V2.md](docs/CAMBIOS_V2.md)
 
 ---
 
+## P0 · C11 · UI de escritorio
+
+**Qué pasa.** La spec está en [`docs/DESKTOP_UI.md`](docs/DESKTOP_UI.md) y la
+referencia visual en [`design/acapelius-desktop.html`](design/acapelius-desktop.html)
+(5 frames). El shell de escritorio ya está (barra lateral, anchos, grillas de
+Dirección); falta el resto.
+
+| | Estado |
+|---|---|
+| Shell: sidebar, breakpoints, header de página, sin FAB | pendiente de ajuste |
+| BottomSheet → drawer lateral en escritorio | pendiente |
+| Ventas como tabla densa con toolbar | pendiente |
+| Dirección: atención en 2 columnas, ritmo + accesos lado a lado | pendiente |
+| Rendiciones master-detail | pendiente |
+| Asistencia master-detail | pendiente |
+| Modo puerta sin cámara, búsqueda con teclado | pendiente |
+| Formularios centrados a 560px | pendiente |
+
+**Terminado cuando.** Se cumplen los seis criterios de aceptación de la spec.
+
+---
+
 ## P1 · Config as Code de Railway, deprecado
 
 **Qué pasa.** Cada deploy avisa que `railway.json` deja de funcionar el
