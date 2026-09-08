@@ -103,7 +103,11 @@ function SaleSheet({
   const [notice, setNotice] = useState<string | null>(null)
   const [confirmVoid, setConfirmVoid] = useState(false)
 
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: salesQueryKey })
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: salesQueryKey })
+    // "Te falta cobrar", "últimas ventas" y los badges salen de la home.
+    void queryClient.invalidateQueries({ queryKey: ['home'] })
+  }
   const fail = (err: unknown, fallback: string) =>
     setError(err instanceof ApiError ? err.message : fallback)
 

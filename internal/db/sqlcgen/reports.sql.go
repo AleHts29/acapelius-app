@@ -136,6 +136,10 @@ SELECT
   u.id AS seller_id,
   u.name AS seller_name,
   (c.paid_cents - COALESCE(st.cents, 0))::bigint AS balance_cents,
+  -- Cobrado y rendido viajan con la alerta para que el pop-up de la home
+  -- pueda armar su encabezado sin pedir el reporte entero (C14).
+  c.paid_cents::bigint AS collected_cents,
+  COALESCE(st.cents, 0)::bigint AS settled_cents,
   c.last_paid_at::timestamptz AS last_paid_at
 FROM collected c
 JOIN users u ON u.id = c.seller_id
@@ -145,10 +149,12 @@ ORDER BY (c.paid_cents - COALESCE(st.cents, 0)) DESC
 `
 
 type AttentionSettlementsRow struct {
-	SellerID     int64     `json:"seller_id"`
-	SellerName   string    `json:"seller_name"`
-	BalanceCents int64     `json:"balance_cents"`
-	LastPaidAt   time.Time `json:"last_paid_at"`
+	SellerID       int64     `json:"seller_id"`
+	SellerName     string    `json:"seller_name"`
+	BalanceCents   int64     `json:"balance_cents"`
+	CollectedCents int64     `json:"collected_cents"`
+	SettledCents   int64     `json:"settled_cents"`
+	LastPaidAt     time.Time `json:"last_paid_at"`
 }
 
 // Coristas con saldo a rendir (C9). `last_paid_at` es la fecha del cobro mas
@@ -167,6 +173,8 @@ func (q *Queries) AttentionSettlements(ctx context.Context, seasonID int64) ([]A
 			&i.SellerID,
 			&i.SellerName,
 			&i.BalanceCents,
+			&i.CollectedCents,
+			&i.SettledCents,
 			&i.LastPaidAt,
 		); err != nil {
 			return nil, err
@@ -232,6 +240,23 @@ func (q *Queries) AttentionUnassigned(ctx context.Context, seasonID int64) ([]At
 		return nil, err
 	}
 	return items, nil
+}
+
+const countPendingSales = `-- name: CountPendingSales :one
+SELECT count(*) FROM sales s
+WHERE s.voided_at IS NULL
+  AND NOT s.is_comp
+  AND s.amount_cents > s.paid_cents
+  AND ($1::bigint IS NULL OR s.seller_id = $1::bigint)
+`
+
+// Badge de "Vender": ventas con saldo. Global para direccion, propias para la
+// corista.
+func (q *Queries) CountPendingSales(ctx context.Context, sellerID *int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countPendingSales, sellerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const createSettlement = `-- name: CreateSettlement :one
@@ -387,6 +412,168 @@ func (q *Queries) ListSettlements(ctx context.Context, arg ListSettlementsParams
 			&i.Method,
 			&i.Notes,
 			&i.CreatedAt,
+			&i.SellerName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const myCollectedInFunction = `-- name: MyCollectedInFunction :one
+SELECT COALESCE(SUM(s.paid_cents), 0)::bigint
+FROM sales s
+WHERE s.seller_id = $1::bigint
+  AND s.function_id = $2::bigint
+  AND NOT s.is_comp
+  AND s.voided_at IS NULL
+`
+
+type MyCollectedInFunctionParams struct {
+	SellerID   int64 `json:"seller_id"`
+	FunctionID int64 `json:"function_id"`
+}
+
+// Lo que la corista ya tiene cobrado de esa funcion.
+func (q *Queries) MyCollectedInFunction(ctx context.Context, arg MyCollectedInFunctionParams) (int64, error) {
+	row := q.db.QueryRow(ctx, myCollectedInFunction, arg.SellerID, arg.FunctionID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const myPendingSales = `-- name: MyPendingSales :many
+SELECT
+  s.id, s.code, s.buyer_name, s.quantity, s.created_at,
+  (s.amount_cents - s.paid_cents)::bigint AS balance_cents,
+  (s.buyer_email IS NOT NULL)::boolean AS has_email
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+WHERE s.seller_id = $1::bigint
+  AND s.voided_at IS NULL
+  AND NOT s.is_comp
+  AND (
+    s.amount_cents > s.paid_cents
+    OR (s.buyer_email IS NULL AND f.starts_at > now())
+  )
+ORDER BY (s.amount_cents > s.paid_cents) DESC, s.created_at
+LIMIT $2::integer
+`
+
+type MyPendingSalesParams struct {
+	SellerID int64 `json:"seller_id"`
+	Max      int32 `json:"max"`
+}
+
+type MyPendingSalesRow struct {
+	ID           int64     `json:"id"`
+	Code         string    `json:"code"`
+	BuyerName    string    `json:"buyer_name"`
+	Quantity     int32     `json:"quantity"`
+	CreatedAt    time.Time `json:"created_at"`
+	BalanceCents int64     `json:"balance_cents"`
+	HasEmail     bool      `json:"has_email"`
+}
+
+// Lo que a la corista le falta resolver: cobrar lo que le deben, y compartir
+// el link de las ventas sin email. Lo segundo solo si la funcion todavia no
+// paso: una entrada de una funcion que ya fue no hay que compartirla. Primero
+// lo que tiene plata de por medio, y dentro de cada grupo lo mas viejo.
+func (q *Queries) MyPendingSales(ctx context.Context, arg MyPendingSalesParams) ([]MyPendingSalesRow, error) {
+	rows, err := q.db.Query(ctx, myPendingSales, arg.SellerID, arg.Max)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []MyPendingSalesRow{}
+	for rows.Next() {
+		var i MyPendingSalesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.BuyerName,
+			&i.Quantity,
+			&i.CreatedAt,
+			&i.BalanceCents,
+			&i.HasEmail,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const recentSales = `-- name: RecentSales :many
+
+SELECT
+  s.id, s.buyer_name, s.quantity, s.amount_cents, s.paid_cents,
+  s.payment_status, s.payment_method, s.is_comp, s.voided_at, s.created_at,
+  f.name AS function_name, f.venue AS function_venue,
+  u.name AS seller_name
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+JOIN users u ON s.seller_id = u.id
+WHERE s.voided_at IS NULL
+  AND ($1::bigint IS NULL OR s.seller_id = $1::bigint)
+ORDER BY s.created_at DESC
+LIMIT $2::integer
+`
+
+type RecentSalesParams struct {
+	SellerID *int64 `json:"seller_id"`
+	Max      int32  `json:"max"`
+}
+
+type RecentSalesRow struct {
+	ID            int64      `json:"id"`
+	BuyerName     string     `json:"buyer_name"`
+	Quantity      int32      `json:"quantity"`
+	AmountCents   int64      `json:"amount_cents"`
+	PaidCents     int64      `json:"paid_cents"`
+	PaymentStatus string     `json:"payment_status"`
+	PaymentMethod *string    `json:"payment_method"`
+	IsComp        bool       `json:"is_comp"`
+	VoidedAt      *time.Time `json:"voided_at"`
+	CreatedAt     time.Time  `json:"created_at"`
+	FunctionName  *string    `json:"function_name"`
+	FunctionVenue string     `json:"function_venue"`
+	SellerName    string     `json:"seller_name"`
+}
+
+// ============================================================================
+// Home por rol (C12)
+// ============================================================================
+// Las ultimas ventas para la home. Sin cursor ni filtros: son tres filas.
+func (q *Queries) RecentSales(ctx context.Context, arg RecentSalesParams) ([]RecentSalesRow, error) {
+	rows, err := q.db.Query(ctx, recentSales, arg.SellerID, arg.Max)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []RecentSalesRow{}
+	for rows.Next() {
+		var i RecentSalesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BuyerName,
+			&i.Quantity,
+			&i.AmountCents,
+			&i.PaidCents,
+			&i.PaymentStatus,
+			&i.PaymentMethod,
+			&i.IsComp,
+			&i.VoidedAt,
+			&i.CreatedAt,
+			&i.FunctionName,
+			&i.FunctionVenue,
 			&i.SellerName,
 		); err != nil {
 			return nil, err

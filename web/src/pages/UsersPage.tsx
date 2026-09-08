@@ -118,6 +118,7 @@ function NewUserSheet({
     onSuccess: (access) => {
       void queryClient.invalidateQueries({ queryKey: ['users'] })
       void queryClient.invalidateQueries({ queryKey: ['attention'] })
+    void queryClient.invalidateQueries({ queryKey: ['home'] })
       onCreated(access)
       onClose()
     },
@@ -248,6 +249,7 @@ function UserSheet({
     void queryClient.invalidateQueries({ queryKey: ['users'] })
     // Las invitaciones pendientes son una alerta del panel (C9).
     void queryClient.invalidateQueries({ queryKey: ['attention'] })
+    void queryClient.invalidateQueries({ queryKey: ['home'] })
   }
   const fail = (err: unknown, fallback: string) =>
     setError(err instanceof ApiError ? err.message : fallback)

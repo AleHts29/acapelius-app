@@ -71,6 +71,7 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
       void queryClient.invalidateQueries({ queryKey: ['my-allocations'] })
       void queryClient.invalidateQueries({ queryKey: ['functions'] })
       void queryClient.invalidateQueries({ queryKey: ['sales'] })
+      void queryClient.invalidateQueries({ queryKey: ['home'] })
     },
     onError: (err) =>
       setError(err instanceof ApiError ? err.message : 'No se pudo registrar la venta.'),

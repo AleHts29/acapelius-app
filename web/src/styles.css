@@ -3074,6 +3074,314 @@ div.alertcard {
   cursor: pointer;
 }
 
+/* ==========================================================================
+   C12 · Home por rol
+
+   La misma estructura para los dos roles —hero → lo accionable → contenido
+   propio → accesos—; cambian los datos, no el layout. En celular se apila en
+   ese orden; en escritorio el bloque accionable y la columna de contexto van
+   lado a lado.
+   ========================================================================== */
+
+.page-head__sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Las acciones primarias: en celular abajo del hero, en escritorio en el
+   header. Se declaran en los dos lados y el CSS muestra las que van. */
+.home-actions {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.home-cta {
+  display: none;
+}
+
+.home-cols {
+  display: block;
+}
+
+.ghead__lnk {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--indigo);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Card de la home. No reusa `.card`, que es la tarjeta angosta del login y
+ * trae un max-width de 400px. */
+.hcard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.hcard--p0 {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Fila accionable: alerta de dirección o pendiente de cobro de la corista. */
+.alertrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  text-align: left;
+  text-decoration: none;
+  color: var(--ink);
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.alertrow:last-child {
+  border-bottom: 0;
+}
+
+.alertrow:hover {
+  background: var(--surface-alt);
+}
+
+.alertrow__ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  flex-shrink: 0;
+}
+
+.alertrow--ind .alertrow__ic {
+  background: var(--indigo-soft);
+  color: var(--indigo);
+}
+
+.alertrow__mid {
+  flex: 1;
+  min-width: 0;
+}
+
+.alertrow__mid b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alertrow__mid span {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.alertrow__go {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--indigo);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Tabla corta de últimas ventas. */
+.thead2,
+.trow2 {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 0.5fr 0.9fr;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 14px;
+}
+
+.thead2 {
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.trow2 {
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.trow2:last-child {
+  border-bottom: 0;
+}
+
+.trow2__who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.trow2__who b {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trow2 .ini {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 9.5px;
+  flex-shrink: 0;
+}
+
+.trow2__dim {
+  color: var(--text-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trow2 .chip {
+  justify-self: start;
+}
+
+/* Fila de función: nombre, barra y su N/M. */
+.fnrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.fnrow:last-child {
+  border-bottom: 0;
+}
+
+.fnrow__mid {
+  flex: 1;
+  min-width: 0;
+}
+
+.fnrow__mid b {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.fnrow__r {
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.fnrow__r > span {
+  display: block;
+}
+
+.tag {
+  display: inline-block;
+  margin-bottom: 3px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--text-muted);
+  font-size: 8.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tag--next {
+  background: var(--indigo);
+  color: var(--brand-white);
+}
+
+/* Accesos rápidos: dos por fila. */
+.qa {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.qa--solo {
+  grid-template-columns: 1fr;
+  margin-top: 9px;
+}
+
+.q {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 12px;
+  text-decoration: none;
+  color: var(--ink);
+  display: block;
+}
+
+.q:hover {
+  border-color: var(--indigo);
+}
+
+.q__i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--indigo);
+}
+
+.q b {
+  display: block;
+  margin-top: 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.q span {
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+
+/* Hero: el bloque de stats y el CTA sólo entran al lado en escritorio. */
+.hero__eyebrow {
+  color: var(--indigo-light);
+}
+
+.hero__stats,
+.hero__cta {
+  display: none;
+}
+
 /* --- C11 · Ventas como tabla (columnas ocultas en celular) --------------- */
 .srow__col,
 .thead {
@@ -3161,6 +3469,28 @@ div.alertcard {
     display: flex;
     flex-direction: column;
     gap: 2px;
+  }
+
+  /* Título del segundo nivel (C12). */
+  .sidenav__sect {
+    margin: 13px 0 4px;
+    padding: 0 12px;
+    font-family: var(--font-display);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .sidenav__badge {
+    margin-left: auto;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: var(--warn-soft);
+    color: var(--warn);
+    font-size: 9px;
+    font-weight: 800;
   }
 
   .sidenav__item {
@@ -3395,6 +3725,101 @@ div.alertcard {
   /* El subtítulo no entra en una fila compacta; el nombre alcanza. */
   .dirrow2__accs .acc span:not(.acc__ic) {
     display: none;
+  }
+
+  /* --- C12 · Home en escritorio ---------------------------------------- */
+
+  /* En el header ya están las acciones: el bloque de abajo del hero sobra. */
+  .home-actions {
+    display: none;
+  }
+
+  .home-cta {
+    display: inline-flex;
+    width: auto;
+  }
+
+  /* El hero se vuelve horizontal: dato, stats y la acción de la función. */
+  .hero {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 16px 20px;
+  }
+
+  .hero__l {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .hero__bar {
+    max-width: 360px;
+  }
+
+  .hero__barlbl {
+    max-width: 360px;
+  }
+
+  .hero__stats {
+    display: flex;
+    gap: 22px;
+    padding-left: 22px;
+    border-left: 1px solid rgba(242, 243, 245, 0.16);
+    flex-shrink: 0;
+  }
+
+  .hero__st b {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  .hero__st span {
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    opacity: 0.68;
+  }
+
+  .hero__cta {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    background: var(--indigo);
+    color: var(--brand-white);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .hero__cta:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  /* Lo accionable a la izquierda, el contexto a la derecha. */
+  .home-cols {
+    display: grid;
+    grid-template-columns: 1.45fr 1fr;
+    gap: 14px;
+    align-items: start;
+    margin-top: 14px;
+  }
+
+  .home-cols__main,
+  .home-cols__side {
+    min-width: 0;
+  }
+
+  .home-cols .ghead:first-child {
+    margin-top: 0;
   }
 
   /* --- Ventas: tabla densa (frame 2) ------------------------------------ */

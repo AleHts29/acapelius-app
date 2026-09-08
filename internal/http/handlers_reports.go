@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -467,13 +468,17 @@ type attentionAlert struct {
 	// settlement
 	SellerID    int64 `json:"seller_id,omitempty"`
 	AmountCents int64 `json:"amount_cents,omitempty"`
+	// Lo que el pop-up de rendicion necesita para su encabezado, sin tener que
+	// pedir el reporte entero desde la home (C14).
+	CollectedCents int64 `json:"collected_cents,omitempty"`
+	SettledCents   int64 `json:"settled_cents,omitempty"`
 	// allocation
 	FunctionID int64      `json:"function_id,omitempty"`
 	Missing    int64      `json:"missing,omitempty"`
 	Capacity   int32      `json:"capacity,omitempty"`
 	StartsAt   *time.Time `json:"starts_at,omitempty"`
 	// invite
-	UserID int64 `json:"user_id,omitempty"`
+	UserID int64  `json:"user_id,omitempty"`
 	Role   string `json:"role,omitempty"`
 	// Since: referencia temporal del pendiente (ultimo cobro / alta).
 	Since *time.Time `json:"since,omitempty"`
@@ -491,32 +496,42 @@ func (s *Server) handleAttention(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	ctx := r.Context()
-
-	debts, err := s.queries.AttentionSettlements(ctx, seasonID)
+	alerts, err := s.attentionAlerts(r.Context(), seasonID)
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
+	}
+	httpx.JSON(w, http.StatusOK, attentionResponse{Alerts: alerts})
+}
+
+// attentionAlerts arma la lista de cosas que necesitan a la direccion. Vive
+// aparte del handler porque la home (C12) muestra las mismas alertas y tienen
+// que ser exactamente las mismas: dos armados distintos es la forma segura de
+// que la home y Direccion terminen contando cosas diferentes.
+func (s *Server) attentionAlerts(ctx context.Context, seasonID int64) ([]attentionAlert, error) {
+	debts, err := s.queries.AttentionSettlements(ctx, seasonID)
+	if err != nil {
+		return nil, err
 	}
 	unassigned, err := s.queries.AttentionUnassigned(ctx, seasonID)
 	if err != nil {
-		httpx.Internal(w, r, err)
-		return
+		return nil, err
 	}
 	invites, err := s.queries.AttentionPendingInvites(ctx)
 	if err != nil {
-		httpx.Internal(w, r, err)
-		return
+		return nil, err
 	}
 
 	alerts := make([]attentionAlert, 0, len(debts)+len(unassigned)+len(invites))
 	for _, row := range debts {
 		alerts = append(alerts, attentionAlert{
-			Kind:        alertSettlement,
-			Name:        row.SellerName,
-			SellerID:    row.SellerID,
-			AmountCents: row.BalanceCents,
-			Since:       sentinelTime(row.LastPaidAt),
+			Kind:           alertSettlement,
+			Name:           row.SellerName,
+			SellerID:       row.SellerID,
+			AmountCents:    row.BalanceCents,
+			CollectedCents: row.CollectedCents,
+			SettledCents:   row.SettledCents,
+			Since:          sentinelTime(row.LastPaidAt),
 		})
 	}
 	for _, row := range unassigned {
@@ -545,7 +560,7 @@ func (s *Server) handleAttention(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	httpx.JSON(w, http.StatusOK, attentionResponse{Alerts: alerts})
+	return alerts, nil
 }
 
 // sentinelTime convierte el centinela año 1 de SQL en null (mismo criterio

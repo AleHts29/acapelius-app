@@ -274,3 +274,36 @@ prop y no siempre existe como nodo con id. El nombre accesible es el mismo.
 completa no va en pop-up, pero es lo que pediste explícitamente en la iteración
 anterior y quedó andando. Se mantuvo el modal de 560px; si preferís la regla de
 la spec, es sacar tres líneas de SalesPage.
+
+## La home la arma el server, no el frontend
+
+C12 pedía una home por rol. Se resolvió con un `GET /api/home` que devuelve la
+carga ya recortada según quién pregunta, en vez de que el frontend pida cinco
+endpoints y esconda lo que no corresponde.
+
+La razón no es la cantidad de requests: es que **la corista no recibe ni un
+dato global**. Lo recaudado de la función, las ventas de las demás y las
+alertas de dirección no viajan y después se ocultan — no se arman. Un bug de
+render no puede filtrar lo que nunca estuvo en la respuesta.
+
+La estructura de la pantalla es la misma para los dos roles (hero → lo
+accionable → contenido propio → accesos): cambian los datos, no el layout. Los
+campos del rol que no corresponde vienen en cero.
+
+**Las alertas se arman una sola vez.** `attentionAlerts` salió del handler de
+Dirección para que la home use exactamente la misma lista: dos armados
+distintos era la forma segura de que las dos pantallas terminaran contando
+cosas diferentes.
+
+La alerta de rendición trae `collected_cents` y `settled_cents` para que el
+pop-up de la home pueda mostrar su encabezado sin pedir el reporte entero.
+Resolver ahí adentro invalida `['home']` y la alerta desaparece sola.
+
+La lateral tiene dos niveles para dirección; la barra del celular sólo muestra
+el primero y se reparte en tantas columnas como pestañas tenga el rol. Cuando
+dos ítems coinciden con la ruta gana el más específico: parado en
+`/panel/rendiciones` se prende Rendiciones, no Dirección.
+
+`.card` ya existía como la tarjeta angosta del login, con un `max-width` de
+400px. La de la home se llama `.hcard`: el choque de nombres del que avisaba
+C14 pasó igual, y se resolvió con un nombre propio en vez de tocar el login.

@@ -35,6 +35,7 @@ export function AllocationsEditor({ fn }: { fn: ShowFunction }) {
       // Repartir el cupo puede cerrar la alerta de Dirección (C9).
       void queryClient.invalidateQueries({ queryKey: ['attention'] })
       void queryClient.invalidateQueries({ queryKey: ['functions-summary'] })
+      void queryClient.invalidateQueries({ queryKey: ['home'] })
     },
     onError: (err) =>
       setError(err instanceof ApiError ? err.message : 'No se pudieron guardar las asignaciones.'),

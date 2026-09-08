@@ -35,7 +35,7 @@ function useReport(seasonId: number | undefined) {
  * preview "queda al dia" cuando salda.
  * ========================================================================== */
 
-function RegisterSheet({
+export function RegisterSheet({
   row,
   seasonId,
   onClose,
@@ -73,6 +73,8 @@ function RegisterSheet({
       // La alerta "debe rendir" del panel de Dirección (C9) sale de la misma
       // plata: si no se invalida, queda mostrando una deuda ya saldada.
       void queryClient.invalidateQueries({ queryKey: ['attention'] })
+      // La home muestra la misma alerta y el mismo badge (C12).
+      void queryClient.invalidateQueries({ queryKey: ['home'] })
       onClose()
     },
     onError: (err) =>

@@ -115,6 +115,9 @@ func (s *Server) Handler() http.Handler {
 
 				// Lecturas del catalogo, para cualquier rol: la vendedora
 				// elige funcion al vender y la puerta al abrir su modo.
+				// La home la arma el server segun el rol (C12): una sola
+				// llamada, y la corista no recibe ni un dato global.
+				ready.Get("/home", s.handleHome)
 				ready.Get("/seasons", s.handleListSeasons)
 				ready.Get("/functions", s.handleListFunctions)
 

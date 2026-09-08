@@ -361,6 +361,8 @@ export interface Alert {
   /** settlement */
   seller_id?: number
   amount_cents?: number
+  collected_cents?: number
+  settled_cents?: number
   /** allocation */
   function_id?: number
   missing?: number
@@ -435,6 +437,7 @@ export interface AttendanceReport {
 
 export const api = {
   me: () => request<{ user: User }>('GET', '/me'),
+  home: () => request<Home>('GET', '/home'),
   login: (email: string, password: string) =>
     request<{ user: User }>('POST', '/auth/login', { email, password }),
   logout: () => request<void>('POST', '/auth/logout'),
@@ -569,6 +572,62 @@ export const api = {
   }) => request<{ settlement: Settlement }>('POST', '/settlements', input),
   attendanceReport: (functionId: number) =>
     request<AttendanceReport>('GET', `/reports/attendance?function_id=${functionId}`),
+}
+
+/* ===== Home por rol (C12) ================================================ */
+
+export interface HomeFunction {
+  id: number
+  name: string | null
+  venue: string
+  starts_at: string
+  capacity: number
+  sold: number
+  entered: number
+  collected_cents: number
+  assigned: number
+  /** Sólo con rol corista. */
+  my_assigned: number
+  my_sold: number
+  my_collected_cents: number
+  no_allocation: boolean
+}
+
+export interface HomeSale {
+  id: number
+  buyer_name: string
+  seller_name: string
+  function_name: string
+  quantity: number
+  amount_cents: number
+  paid_cents: number
+  is_comp: boolean
+  created_at: string
+}
+
+/** Una fila de "te falta cobrar" (corista). */
+export interface HomeToDo {
+  sale_id: number
+  code: string
+  buyer_name: string
+  quantity: number
+  balance_cents: number
+  has_email: boolean
+  created_at: string
+}
+
+export interface Home {
+  role: Role
+  name: string
+  season: Season | null
+  next_function: HomeFunction | null
+  functions: HomeFunction[]
+  alerts: Alert[]
+  alert_total: number
+  todo: HomeToDo[]
+  todo_total: number
+  last_sales: HomeSale[]
+  badges: { sales_pending: number; settlements_pending: number }
 }
 
 /**

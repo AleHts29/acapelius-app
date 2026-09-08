@@ -165,6 +165,10 @@ SELECT
   u.id AS seller_id,
   u.name AS seller_name,
   (c.paid_cents - COALESCE(st.cents, 0))::bigint AS balance_cents,
+  -- Cobrado y rendido viajan con la alerta para que el pop-up de la home
+  -- pueda armar su encabezado sin pedir el reporte entero (C14).
+  c.paid_cents::bigint AS collected_cents,
+  COALESCE(st.cents, 0)::bigint AS settled_cents,
   c.last_paid_at::timestamptz AS last_paid_at
 FROM collected c
 JOIN users u ON u.id = c.seller_id
@@ -196,3 +200,61 @@ SELECT id AS user_id, name, role, created_at
 FROM users
 WHERE is_active AND last_login_at IS NULL
 ORDER BY created_at;
+
+-- ============================================================================
+-- Home por rol (C12)
+-- ============================================================================
+
+-- name: RecentSales :many
+-- Las ultimas ventas para la home. Sin cursor ni filtros: son tres filas.
+SELECT
+  s.id, s.buyer_name, s.quantity, s.amount_cents, s.paid_cents,
+  s.payment_status, s.payment_method, s.is_comp, s.voided_at, s.created_at,
+  f.name AS function_name, f.venue AS function_venue,
+  u.name AS seller_name
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+JOIN users u ON s.seller_id = u.id
+WHERE s.voided_at IS NULL
+  AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
+ORDER BY s.created_at DESC
+LIMIT sqlc.arg(max)::integer;
+
+-- name: MyPendingSales :many
+-- Lo que a la corista le falta resolver: cobrar lo que le deben, y compartir
+-- el link de las ventas sin email. Lo segundo solo si la funcion todavia no
+-- paso: una entrada de una funcion que ya fue no hay que compartirla. Primero
+-- lo que tiene plata de por medio, y dentro de cada grupo lo mas viejo.
+SELECT
+  s.id, s.code, s.buyer_name, s.quantity, s.created_at,
+  (s.amount_cents - s.paid_cents)::bigint AS balance_cents,
+  (s.buyer_email IS NOT NULL)::boolean AS has_email
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+WHERE s.seller_id = sqlc.arg(seller_id)::bigint
+  AND s.voided_at IS NULL
+  AND NOT s.is_comp
+  AND (
+    s.amount_cents > s.paid_cents
+    OR (s.buyer_email IS NULL AND f.starts_at > now())
+  )
+ORDER BY (s.amount_cents > s.paid_cents) DESC, s.created_at
+LIMIT sqlc.arg(max)::integer;
+
+-- name: MyCollectedInFunction :one
+-- Lo que la corista ya tiene cobrado de esa funcion.
+SELECT COALESCE(SUM(s.paid_cents), 0)::bigint
+FROM sales s
+WHERE s.seller_id = sqlc.arg(seller_id)::bigint
+  AND s.function_id = sqlc.arg(function_id)::bigint
+  AND NOT s.is_comp
+  AND s.voided_at IS NULL;
+
+-- name: CountPendingSales :one
+-- Badge de "Vender": ventas con saldo. Global para direccion, propias para la
+-- corista.
+SELECT count(*) FROM sales s
+WHERE s.voided_at IS NULL
+  AND NOT s.is_comp
+  AND s.amount_cents > s.paid_cents
+  AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint);
