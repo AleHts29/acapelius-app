@@ -7,7 +7,7 @@ import { ApiError, activeSeason, api } from '../api/client'
 import { useIsDesktop } from '../lib/viewport'
 import type { PaymentMethod, Settlement, SettlementReportRow } from '../api/client'
 import { dayLabel, formatMoney, pesosToCents, timeShort } from '../lib/format'
-import { BottomSheet } from '../ui/BottomSheet'
+import { ActionPanel } from '../ui/ActionPanel'
 import { EmptyState, FilterChips, ProgressBar, SegmentedToggle } from '../ui/controls'
 import { BalanceChip } from '../ui/StatusChip'
 
@@ -46,14 +46,17 @@ function RegisterSheet({
 }) {
   const queryClient = useQueryClient()
   const debt = Math.max(row.balance_cents, 0)
-  const [mode, setMode] = useState<'todo' | 'otra'>(debt > 0 ? 'todo' : 'otra')
-  const [amount, setAmount] = useState('')
+  // El monto arranca cargado con la deuda: el caso normal es que rinda todo, y
+  // así el paso más frecuente es un solo clic en Confirmar (C14).
+  const [amount, setAmount] = useState(debt > 0 ? String(debt / 100) : '')
   const [method, setMethod] = useState<PaymentMethod>('transfer')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const cents = mode === 'todo' ? debt : (pesosToCents(amount) ?? 0)
+  const cents = pesosToCents(amount) ?? 0
+  const todo = debt > 0 && cents === debt
   const settlesAll = debt > 0 && cents >= debt
+  const restante = debt - cents
 
   const create = useMutation({
     mutationFn: () =>
@@ -77,7 +80,7 @@ function RegisterSheet({
   })
 
   return (
-    <BottomSheet open onClose={onClose} label={`Registrar rendición de ${row.seller_name}`}>
+    <ActionPanel open onClose={onClose} label={`Registrar rendición de ${row.seller_name}`}>
       <div className="sheet-head">
         <span className="ini">{initials(row.seller_name)}</span>
         <span>
@@ -95,32 +98,36 @@ function RegisterSheet({
         </p>
       )}
 
-      {debt > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <FilterChips<'todo' | 'otra'>
-            value={mode}
-            onChange={setMode}
-            options={[
-              { value: 'todo', label: `Todo (${formatMoney(debt)})` },
-              { value: 'otra', label: 'Otra cifra' },
-            ]}
-          />
-        </div>
-      )}
+      <label className="field">
+        <span className="field__label">Cuánto rinde</span>
+        <input
+          className="field__input field__input--amount"
+          type="text"
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="30000"
+          autoFocus
+        />
+      </label>
 
-      {(mode === 'otra' || debt === 0) && (
-        <label className="field">
-          <span className="field__label">Monto ($)</span>
-          <input
-            className="field__input"
-            type="text"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder={debt > 0 ? String(debt / 100) : '30000'}
-            autoFocus
-          />
-        </label>
+      {debt > 0 && (
+        <div className="quickamt">
+          <button
+            className={`fchip${todo ? ' fchip--on fchip--ink' : ''}`}
+            type="button"
+            onClick={() => setAmount(String(debt / 100))}
+          >
+            Todo ({formatMoney(debt)})
+          </button>
+          <button
+            className={`fchip${todo ? '' : ' fchip--on fchip--ink'}`}
+            type="button"
+            onClick={() => setAmount('')}
+          >
+            Otra cifra
+          </button>
+        </div>
       )}
 
       <div className="field">
@@ -146,20 +153,34 @@ function RegisterSheet({
         />
       </label>
 
-      {settlesAll && (
-        <p className="settle-preview">✓ Después de esto {row.seller_name} queda al día.</p>
-      )}
+      <div className="panel-foot">
+        <span className="panel-foot__note">
+          {cents <= 0 ? (
+            'Poné cuánto rinde para confirmar.'
+          ) : settlesAll ? (
+            <>
+              Después de esto <b className="stat-ok">queda al día</b>.
+            </>
+          ) : (
+            <>
+              Le van a quedar <b>{formatMoney(restante)}</b> por rendir.
+            </>
+          )}
+        </span>
+        <button className="button button--ghost panel-foot__btn" type="button" onClick={onClose}>
+          Cancelar
+        </button>
+        <button
+          className="button panel-foot__btn"
+          type="button"
+          disabled={cents <= 0 || create.isPending}
+          onClick={() => create.mutate()}
+        >
+          {create.isPending ? 'Registrando…' : 'Confirmar'}
+        </button>
+      </div>
 
-      <button
-        className="button"
-        style={{ marginTop: 12 }}
-        type="button"
-        disabled={cents <= 0 || create.isPending}
-        onClick={() => create.mutate()}
-      >
-        {create.isPending ? 'Registrando…' : `Registrar ${cents > 0 ? formatMoney(cents) : 'rendición'}`}
-      </button>
-    </BottomSheet>
+    </ActionPanel>
   )
 }
 

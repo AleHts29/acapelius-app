@@ -247,3 +247,30 @@ Los PNG del isologo se recolorearon proyectando cada pixel sobre la recta entre
 los dos colores de origen y reconstruyéndolo sobre la nueva: así el
 antialiasing se mantiene en vez de aparecer un borde duro. El logo azul original
 se conserva porque lo sigue usando la entrada pública.
+
+## Un solo panel de acciones, dos presentaciones
+
+C14 pedía un componente con modal en escritorio y sheet en celular. Había dos:
+`BottomSheet` (que en escritorio era un cajón lateral) y `Modal` (centrado, para
+la venta nueva). Quedó uno solo, `ActionPanel`, con un `size`: `panel` (420px,
+acciones cortas) y `form` (560px, un formulario completo). El cajón lateral se
+fue: la spec pide centrado y no vale la pena sostener tres presentaciones.
+
+**El foco se anota en el render, no en un efecto.** Un campo con `autoFocus`
+adentro del panel se lleva el foco durante el commit, antes de que corra
+cualquier efecto: si el opener se capturara ahí, se guardaría ese campo en vez
+del botón de afuera, y al cerrar el foco se iría al body. Leer
+`document.activeElement` durante el render es de las pocas veces que mirar el
+DOM ahí está justificado, porque es el único momento en que la respuesta
+todavía es la correcta.
+
+El scrim se llama `scrim` y no `dim`: en el mockup ese nombre chocaba con el
+gris de texto.
+
+Se usa `aria-label` en vez de `aria-labelledby`: el título del panel llega como
+prop y no siempre existe como nodo con id. El nombre accesible es el mismo.
+
+**Queda un conflicto declarado con la spec.** C14 dice que la venta nueva
+completa no va en pop-up, pero es lo que pediste explícitamente en la iteración
+anterior y quedó andando. Se mantuvo el modal de 560px; si preferís la regla de
+la spec, es sacar tres líneas de SalesPage.

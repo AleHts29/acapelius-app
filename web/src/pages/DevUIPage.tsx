@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Banknote, CheckCircle2, Landmark, Link2, Mail, PartyPopper, Ticket, Wallet, X } from 'lucide-react'
 
-import { BottomSheet, SheetAction } from '../ui/BottomSheet'
+import { ActionPanel, SheetAction } from '../ui/ActionPanel'
 import {
   AlertCard,
   EmptyState,
@@ -131,7 +131,7 @@ export function DevUIPage() {
         </button>
       </div>
 
-      <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} label="Acciones de la venta">
+      <ActionPanel open={sheetOpen} onClose={() => setSheetOpen(false)} label="Acciones de la venta">
         <div className="sheet-head">
           <span className="ini">MD</span>
           <span>
@@ -154,7 +154,7 @@ export function DevUIPage() {
         <SheetAction icon={<X size={15} />} tone="danger" onClick={() => setSheetOpen(false)}>
           Anular venta
         </SheetAction>
-      </BottomSheet>
+      </ActionPanel>
 
       <FAB onClick={() => setSheetOpen(true)}>Nueva venta</FAB>
     </div>

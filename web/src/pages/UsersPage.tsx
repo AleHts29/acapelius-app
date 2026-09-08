@@ -8,7 +8,7 @@ import type { Role, User, UserAccessResponse } from '../api/client'
 import { useSession } from '../auth/session'
 import { daysAgo } from '../lib/format'
 import { initials } from '../lib/search'
-import { BottomSheet, SheetAction } from '../ui/BottomSheet'
+import { ActionPanel, SheetAction } from '../ui/ActionPanel'
 import { EmptyState, PageHead } from '../ui/controls'
 import { Chip, PendingInviteChip } from '../ui/StatusChip'
 
@@ -128,7 +128,7 @@ function NewUserSheet({
   const ready = name.trim() !== '' && email.trim() !== ''
 
   return (
-    <BottomSheet open onClose={onClose} label="Nuevo usuario">
+    <ActionPanel open onClose={onClose} label="Nuevo usuario">
       <div className="sheet-head">
         <span className="ini" aria-hidden>
           <UserPlus size={16} />
@@ -188,7 +188,7 @@ function NewUserSheet({
       <p className="muted" style={{ textAlign: 'center', fontSize: 10.5, margin: '8px 0 0' }}>
         Le llega un email con acceso y contraseña temporal.
       </p>
-    </BottomSheet>
+    </ActionPanel>
   )
 }
 
@@ -297,7 +297,7 @@ function UserSheet({
   }
 
   return (
-    <BottomSheet open onClose={onClose} label={`Editar a ${user.name}`}>
+    <ActionPanel open onClose={onClose} label={`Editar a ${user.name}`}>
       <div className="sheet-head">
         <span className={`ini ini--${ROLE_TONE[user.role]}`} aria-hidden>
           {initials(user.name)}
@@ -420,7 +420,7 @@ function UserSheet({
           cupo.
         </p>
       )}
-    </BottomSheet>
+    </ActionPanel>
   )
 }
 

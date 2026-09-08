@@ -10,9 +10,8 @@ import { useSession } from '../auth/session'
 import { dayLabel, daysAgo, formatDateTime, formatMoney, pesosToCents } from '../lib/format'
 import { initials, normalizeText } from '../lib/search'
 import { useIsDesktop } from '../lib/viewport'
-import { Modal } from '../ui/Modal'
 import { NewSalePage } from './NewSalePage'
-import { BottomSheet, SheetAction } from '../ui/BottomSheet'
+import { ActionPanel, SheetAction } from '../ui/ActionPanel'
 import { EmptyState, FilterChips, Hl, PageHead, SearchBar, SegmentedToggle } from '../ui/controls'
 import { SaleChip } from '../ui/StatusChip'
 
@@ -205,7 +204,7 @@ function SaleSheet({
   const paid = cobrable && falta <= 0
 
   return (
-    <BottomSheet open onClose={onClose} label={`Acciones de la venta de ${sale.buyer_name}`}>
+    <ActionPanel open onClose={onClose} label={`Acciones de la venta de ${sale.buyer_name}`}>
       <div className="sheet-head">
         <span className="ini">{initials(sale.buyer_name)}</span>
         <span>
@@ -341,7 +340,7 @@ function SaleSheet({
           {confirmVoid ? '¿Seguro? Anular definitivamente (libera el cupo)' : 'Anular venta'}
         </SheetAction>
       )}
-    </BottomSheet>
+    </ActionPanel>
   )
 }
 
@@ -419,9 +418,9 @@ export function SalesPage() {
       />
 
       {nuevaVenta && (
-        <Modal label="Nueva venta" onClose={() => setNuevaVenta(false)}>
+        <ActionPanel label="Nueva venta" size="form" onClose={() => setNuevaVenta(false)}>
           <NewSalePage onDone={() => setNuevaVenta(false)} />
-        </Modal>
+        </ActionPanel>
       )}
 
       <div className="salesbar">
