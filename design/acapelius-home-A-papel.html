@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Home A · Papel pautado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#F2F3F5; --sur:#FFFFFF; --ink:#1A1C22; --mut:#7C818C; --line:#E3E5E9;
+          --indigo:#3A3FC4; --indigo-s:#E8E8FA; --indigo-l:#8A8DEA; --carbon:#1A1C22;
+          --ok:#0E7A55; --ok-s:#E2F2EB; --warn:#9C6A0C; --warn-s:#F6EEDC; --bad:#B3403F; --bad-s:#F7E6E5; }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .page { max-width:1300px; margin:0 auto; padding:44px 20px 90px; }
+  .page > h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(25px,4vw,34px); }
+  .page > h1 span { color:var(--indigo); }
+  .page > p.lead { margin-top:10px; max-width:880px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .page > p.lead b { color:var(--ink); }
+  .pal { margin-top:16px; display:flex; flex-wrap:wrap; gap:8px; }
+  .sw { display:flex; align-items:center; gap:7px; background:#fff; border:1px solid #D5D8DD; border-radius:99px; padding:5px 12px 5px 6px; font-size:11px; font-weight:700; color:#55575E; }
+  .sw i { width:19px; height:19px; border-radius:50%; display:block; border:1px solid rgba(0,0,0,.12); }
+  .fr { margin-top:36px; overflow-x:auto; padding-bottom:8px; -webkit-overflow-scrolling:touch; }
+  .fr > .cap { font-size:13.5px; font-weight:700; color:#55575E; margin-bottom:10px; }
+  .fr > .cap b { color:var(--ink); }
+  .hintbar { margin-top:14px; background:#fff; border:1px solid #D5D8DD; border-left:4px solid var(--indigo); border-radius:12px; padding:12px 15px; font-size:12.5px; line-height:1.55; color:#4A4C55; }
+  .hintbar b { color:var(--ink); }
+
+  .browser { border:1px solid #C3C7CE; border-radius:14px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); background:var(--bg); min-width:1060px; }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome .dots i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:380px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; }
+  .app { display:flex; min-height:560px; position:relative; }
+
+  /* sidebar */
+  .side { width:212px; background:var(--sur); border-right:1px solid var(--line); display:flex; flex-direction:column; flex-shrink:0; }
+  .side .logo { padding:17px 16px 13px; font-family:'Archivo',sans-serif; font-weight:800; letter-spacing:0.2em; font-size:12px; display:flex; align-items:center; gap:8px; }
+  .side .logo .mk { width:21px; height:21px; border-radius:50%; border:1.6px solid var(--indigo); color:var(--indigo); font-size:10px; display:flex; align-items:center; justify-content:center; font-style:italic; }
+  .nav { padding:5px 9px; }
+  .nav a { display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:9px; font-size:12.5px; font-weight:700; color:#5A5D66; margin-bottom:2px; }
+  .nav a.on { background:var(--indigo-s); color:var(--indigo); }
+  .nav .sec { padding:13px 11px 5px; font-family:'Archivo',sans-serif; font-size:8.5px; font-weight:800; letter-spacing:0.14em; color:var(--mut); }
+  .nav a .b { margin-left:auto; font-size:9px; font-weight:800; padding:2px 6px; border-radius:99px; background:var(--warn-s); color:var(--warn); }
+  .side .grow { flex:1; }
+  .side .me { border-top:1px solid var(--line); padding:11px 13px; display:flex; align-items:center; gap:9px; }
+  .side .me .av { width:26px; height:26px; border-radius:50%; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:10px; }
+  .side .me b { display:block; font-size:12px; } .side .me span { color:var(--mut); font-size:10px; }
+  .side .me .out { margin-left:auto; color:var(--mut); font-size:13px; }
+
+  .main { flex:1; padding:20px 26px 26px; min-width:0; }
+  .phead { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
+  .phead h2 { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .phead .sub { font-size:12px; color:var(--mut); margin-top:2px; }
+  .btn { border-radius:10px; padding:9px 15px; font-size:12.5px; font-weight:800; }
+  .btn.pri { background:var(--indigo); color:#fff; }
+  .btn.ghost { background:var(--sur); border:1.5px solid var(--line); color:var(--ink); }
+  .eyebrow { font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.13em; text-transform:uppercase; color:var(--mut); }
+  .pill { font-size:10px; font-weight:800; padding:3px 8px; border-radius:99px; }
+  .pill.ok { background:var(--ok-s); color:var(--ok); }
+  .pill.debt { background:var(--warn-s); color:var(--warn); }
+  .pill.comp { background:var(--indigo-s); color:var(--indigo); }
+
+  /* hero */
+  .hero { background:var(--carbon); color:#F2F3F5; border-radius:15px; padding:16px 20px; display:flex; align-items:center; gap:24px; position:relative; overflow:hidden; }
+  .hero .wm { position:absolute; right:-20px; bottom:-34px; width:118px; height:118px; border:2px solid rgba(242,243,245,.12); border-radius:50%; }
+  .hero .l { flex:1; min-width:0; }
+  .hero .e { font-family:'Archivo',sans-serif; font-size:9px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--indigo-l); }
+  .hero .fn { margin-top:4px; font-family:'Archivo',sans-serif; font-size:19px; font-weight:800; }
+  .hero .m { font-size:12px; opacity:.72; margin-top:1px; }
+  .hero .bar { margin-top:10px; height:5px; border-radius:99px; background:rgba(242,243,245,.18); overflow:hidden; max-width:360px; }
+  .hero .bar i { display:block; height:100%; background:var(--indigo-l); }
+  .hero .bl { margin-top:5px; font-size:10.5px; opacity:.78; font-weight:600; }
+  .hero .stats { display:flex; gap:22px; padding-left:22px; border-left:1px solid rgba(242,243,245,.16); }
+  .hero .st b { font-family:'Archivo',sans-serif; font-size:18px; display:block; }
+  .hero .st span { font-size:8.5px; opacity:.68; font-weight:800; letter-spacing:0.07em; }
+  .hero .cta { background:var(--indigo); color:#fff; border-radius:10px; padding:9px 14px; font-size:12px; font-weight:800; white-space:nowrap; }
+
+  .sect { display:flex; align-items:center; gap:8px; margin:16px 0 8px; }
+  .sect b { font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .sect::after { content:""; flex:1; height:1px; background:var(--line); }
+  .sect .lnk { font-size:11px; font-weight:800; color:var(--indigo); }
+
+  .cols { display:grid; grid-template-columns:1.45fr 1fr; gap:14px; }
+  .card { background:var(--sur); border:1px solid var(--line); border-radius:14px; padding:14px 16px; }
+  .card.p0 { padding:0; overflow:hidden; }
+
+  .alert { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line); }
+  .alert:last-child { border-bottom:0; }
+  .alert .ic { width:28px; height:28px; border-radius:8px; background:var(--warn-s); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+  .alert.ind .ic { background:var(--indigo-s); }
+  .alert .mid { flex:1; min-width:0; }
+  .alert .mid b { font-size:12.5px; font-weight:700; display:block; }
+  .alert .mid span { font-size:10px; color:var(--mut); }
+  .alert .go { font-size:11px; font-weight:800; color:var(--indigo); }
+
+  .thead2 { display:grid; grid-template-columns:1.6fr 1fr 0.5fr 0.8fr; gap:8px; padding:8px 14px; background:#FAFBFC; border-bottom:1px solid var(--line); font-family:'Archivo',sans-serif; font-size:8.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--mut); }
+  .trow { display:grid; grid-template-columns:1.6fr 1fr 0.5fr 0.8fr; gap:8px; align-items:center; padding:9px 14px; border-bottom:1px solid var(--line); font-size:12px; }
+  .trow:last-child { border-bottom:0; }
+  .trow .who { display:flex; align-items:center; gap:8px; min-width:0; }
+  .trow .ini { width:24px; height:24px; border-radius:7px; background:var(--indigo-s); color:var(--indigo); font-family:'Archivo',sans-serif; font-weight:800; font-size:9.5px; display:flex; align-items:center; justify-content:center; }
+  .trow .who b { font-weight:700; }
+  .trow .dim { color:var(--mut); font-size:11px; }
+
+  .fnrow { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
+  .fnrow:last-child { border-bottom:0; }
+  .fnrow .mid { flex:1; min-width:0; }
+  .fnrow .mid b { font-size:12px; font-weight:700; display:block; }
+  .fnrow .bar { margin-top:5px; height:4px; border-radius:99px; background:var(--line); overflow:hidden; }
+  .fnrow .bar i { display:block; height:100%; background:var(--indigo); }
+  .fnrow .r { font-size:10.5px; color:var(--mut); font-weight:700; text-align:right; white-space:nowrap; }
+  .tag { font-size:8.5px; font-weight:800; padding:2px 7px; border-radius:99px; background:var(--line); color:var(--mut); }
+  .tag.next { background:var(--indigo); color:#fff; }
+
+  .qa { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .q { background:var(--sur); border:1px solid var(--line); border-radius:12px; padding:11px 12px; }
+  .q .i { width:28px; height:28px; border-radius:9px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .q b { display:block; margin-top:7px; font-size:12px; font-weight:800; }
+  .q span { font-size:9.5px; color:var(--mut); }
+
+  /* cupo corista */
+  .quota { background:var(--indigo-s); border:1px solid #CFD0F5; border-radius:12px; padding:11px 14px; display:flex; align-items:center; justify-content:space-between; }
+  .quota b { font-family:'Archivo',sans-serif; font-size:14px; font-weight:800; color:var(--indigo); }
+  .quota span { font-size:10.5px; color:var(--indigo); font-weight:700; opacity:.8; }
+  .quota .bar { margin-top:6px; height:5px; border-radius:99px; background:#D3D4F7; overflow:hidden; width:200px; }
+  .quota .bar i { display:block; height:100%; background:var(--indigo); width:85%; }
+
+  /* ===== MOBILE ===== */
+  .phones { display:flex; gap:24px; flex-wrap:wrap; }
+  .mini { width:300px; height:630px; border-radius:32px; overflow:hidden; border:6px solid #15161A; box-shadow:0 16px 34px rgba(26,28,34,.2); display:flex; flex-direction:column; background:var(--bg); position:relative; }
+  .m-top { padding:14px 16px 8px; display:flex; align-items:center; justify-content:space-between; }
+  .m-brand { font-family:'Archivo',sans-serif; font-weight:800; font-size:11.5px; letter-spacing:0.2em; }
+  .m-av { width:26px; height:26px; border-radius:50%; background:var(--indigo); color:#fff; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .m-body { flex:1; padding:2px 16px 0; overflow:hidden; }
+  .m-h1 { font-family:'Archivo',sans-serif; font-size:19px; font-weight:800; }
+  .m-sub { font-size:11px; color:var(--mut); margin-top:1px; margin-bottom:10px; }
+  .m-hero { background:var(--carbon); color:#F2F3F5; border-radius:14px; padding:13px 14px; position:relative; overflow:hidden; }
+  .m-hero .wm { position:absolute; right:-16px; bottom:-26px; width:92px; height:92px; border:2px solid rgba(242,243,245,.12); border-radius:50%; }
+  .m-hero .e { font-family:'Archivo',sans-serif; font-size:8px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--indigo-l); }
+  .m-hero .fn { margin-top:3px; font-family:'Archivo',sans-serif; font-size:16px; font-weight:800; }
+  .m-hero .m { font-size:10.5px; opacity:.72; margin-top:1px; }
+  .m-hero .bar { margin-top:9px; height:5px; border-radius:99px; background:rgba(242,243,245,.18); overflow:hidden; }
+  .m-hero .bar i { display:block; height:100%; background:var(--indigo-l); }
+  .m-hero .bl { margin-top:5px; font-size:10px; opacity:.78; font-weight:600; display:flex; justify-content:space-between; }
+  .m-sect { display:flex; align-items:center; gap:8px; margin:14px 0 7px; }
+  .m-sect b { font-family:'Archivo',sans-serif; font-size:9px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .m-sect::after { content:""; flex:1; height:1px; background:var(--line); }
+  .m-sect .lnk { font-size:10px; font-weight:800; color:var(--indigo); }
+  .m-card { background:var(--sur); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
+  .m-alert { display:flex; align-items:center; gap:9px; padding:10px 12px; border-bottom:1px solid var(--line); }
+  .m-alert:last-child { border-bottom:0; }
+  .m-alert .ic { width:26px; height:26px; border-radius:8px; background:var(--warn-s); display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
+  .m-alert.ind .ic { background:var(--indigo-s); }
+  .m-alert .mid { flex:1; min-width:0; }
+  .m-alert .mid b { font-size:11.5px; font-weight:700; display:block; }
+  .m-alert .mid span { font-size:9.5px; color:var(--mut); }
+  .m-alert .go { font-size:10px; font-weight:800; color:var(--indigo); }
+  .m-srow { display:flex; align-items:center; gap:9px; padding:9px 12px; border-bottom:1px solid var(--line); }
+  .m-srow:last-child { border-bottom:0; }
+  .m-srow .ini { width:26px; height:26px; border-radius:8px; background:var(--indigo-s); color:var(--indigo); font-family:'Archivo',sans-serif; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; }
+  .m-srow .mid { flex:1; min-width:0; }
+  .m-srow .mid b { font-size:12px; font-weight:700; display:block; }
+  .m-srow .mid span { font-size:9.5px; color:var(--mut); }
+  .m-quota { background:var(--indigo-s); border:1px solid #CFD0F5; border-radius:13px; padding:11px 13px; }
+  .m-quota b { font-family:'Archivo',sans-serif; font-size:13px; font-weight:800; color:var(--indigo); display:block; }
+  .m-quota span { font-size:10px; color:var(--indigo); font-weight:700; opacity:.8; }
+  .m-quota .bar { margin-top:7px; height:5px; border-radius:99px; background:#D3D4F7; overflow:hidden; }
+  .m-quota .bar i { display:block; height:100%; background:var(--indigo); width:85%; }
+  .m-cta { margin-top:10px; background:var(--indigo); color:#fff; border-radius:11px; padding:12px; text-align:center; font-size:13px; font-weight:800; }
+  .m-actions { margin-top:10px; display:grid; grid-template-columns:1.35fr 1fr; gap:8px; }
+  .m-cta2 { border-radius:11px; padding:11px; text-align:center; font-size:12.5px; font-weight:800; }
+  .m-cta2.pri { background:var(--indigo); color:#fff; }
+  .m-cta2.ghost { background:var(--sur); border:1.5px solid var(--line); color:var(--ink); }
+  .m-tabs { border-top:1px solid var(--line); background:var(--sur); display:grid; grid-template-columns:repeat(4,1fr); padding:8px 6px 13px; }
+  .m-tabs.three { grid-template-columns:repeat(3,1fr); }
+  .m-tab { text-align:center; font-size:9px; font-weight:700; color:var(--mut); }
+  .m-tab .i { font-size:15px; display:block; margin-bottom:2px; }
+  .m-tab.on { color:var(--indigo); }
+  .mcap { margin-top:10px; text-align:center; font-size:12.5px; font-weight:600; color:#5A5D66; }
+
+  /* ===== POP-UPS ===== */
+  .scrim { position:absolute; inset:0; background:rgba(26,28,34,.5); }
+  .modal { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:420px; background:var(--sur); border-radius:16px; box-shadow:0 24px 60px rgba(26,28,34,.35); padding:20px 22px; }
+  .modal .mh { display:flex; align-items:flex-start; justify-content:space-between; }
+  .modal h3 { font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; }
+  .modal .msub { font-size:11.5px; color:var(--mut); margin-top:2px; }
+  .modal .x { color:var(--mut); font-size:15px; font-weight:800; }
+  .modal label { display:block; margin-top:14px; font-family:'Archivo',sans-serif; font-size:9px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .modal .amount { margin-top:6px; border:1.5px solid var(--indigo); box-shadow:0 0 0 3px rgba(58,63,196,.12); border-radius:11px; padding:11px 13px; font-family:'Archivo',sans-serif; font-size:20px; font-weight:800; }
+  .modal .quick { display:flex; gap:6px; margin-top:7px; }
+  .modal .q2 { font-size:11px; font-weight:800; padding:6px 11px; border-radius:99px; border:1.5px solid var(--line); background:#FAFBFC; }
+  .modal .q2.on { background:var(--carbon); color:#fff; border-color:var(--carbon); }
+  .modal .seg { margin-top:6px; display:grid; grid-template-columns:1fr 1fr; border:1.5px solid var(--line); border-radius:11px; overflow:hidden; }
+  .modal .seg div { padding:10px; text-align:center; font-size:12px; font-weight:800; background:#FAFBFC; color:var(--mut); }
+  .modal .seg div.on { background:var(--indigo); color:#fff; }
+  .modal .inp { margin-top:6px; border:1.5px solid var(--line); border-radius:11px; padding:10px 12px; font-size:12.5px; color:var(--mut); background:#FAFBFC; }
+  .modal .foot { margin-top:18px; display:flex; gap:9px; justify-content:flex-end; align-items:center; }
+  .modal .note { margin-right:auto; font-size:10.5px; color:var(--mut); }
+  .modal .note b { color:var(--ok); }
+
+  .msheet { position:absolute; left:0; right:0; bottom:0; background:var(--sur); border-radius:20px 20px 0 0; padding:10px 16px 18px; }
+  .msheet .grip { width:34px; height:4px; border-radius:99px; background:var(--line); margin:0 auto 12px; }
+  .msheet .who { display:flex; align-items:center; gap:10px; padding-bottom:11px; border-bottom:1px solid var(--line); }
+  .msheet .who .ini { width:36px; height:36px; border-radius:10px; background:var(--indigo-s); color:var(--indigo); font-family:'Archivo',sans-serif; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .msheet .who b { font-size:14px; font-weight:800; display:block; }
+  .msheet .who span { font-size:10.5px; color:var(--mut); }
+  .msheet .act { display:flex; align-items:center; gap:10px; padding:12px 2px; border-bottom:1px solid var(--line); font-size:13.5px; font-weight:700; }
+  .msheet .act:last-child { border-bottom:0; }
+  .msheet .act .ic { width:28px; height:28px; border-radius:8px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .msheet .act.pri .ic { background:var(--ok-s); }
+  .msheet .act.danger { color:var(--bad); } .msheet .act.danger .ic { background:var(--bad-s); }
+  .msheet .act small { margin-left:auto; font-size:10px; color:var(--mut); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Home opción A <span>en Papel pautado</span></h1>
+  <p class="lead">La misma arquitectura para los dos roles: <b>hero de la próxima función → lo que necesita acción → contenido propio → accesos</b>. Cambian los datos, no la estructura, así se mantiene una sola home. La paleta gris frío + índigo hace que las cards blancas floten de verdad y que el índigo solo aparezca donde hay una acción o un estado activo.</p>
+  <div class="pal">
+    <span class="sw"><i style="background:#F2F3F5"></i>Gris papel #F2F3F5</span>
+    <span class="sw"><i style="background:#FFFFFF"></i>Card #FFFFFF</span>
+    <span class="sw"><i style="background:#3A3FC4"></i>Índigo #3A3FC4</span>
+    <span class="sw"><i style="background:#1A1C22"></i>Carbón #1A1C22</span>
+    <span class="sw"><i style="background:#0E7A55"></i>OK #0E7A55</span>
+    <span class="sw"><i style="background:#9C6A0C"></i>Deuda #9C6A0C</span>
+  </div>
+
+  <div class="hintbar"><b>Cómo verlo:</b> este documento maqueta pantallas de escritorio, así que necesita ancho. Abrilo en el navegador a pantalla completa, o expandí la vista previa con el ícono de expandir (↗) arriba a la derecha. Si la pantalla es angosta, cada maqueta se scrollea horizontalmente en vez de romperse.</div>
+
+  <!-- DESKTOP ELI -->
+  <div class="fr">
+    <div class="cap"><b>1 · Desktop — Eli (dirección)</b>: atención, últimas ventas, temporada y accesos. Sidebar de dos niveles con badges.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a class="on"><span>♪</span>Inicio</a>
+            <a><span>🎟</span>Vender <span class="b">10</span></a>
+            <a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>💰</span>Rendiciones <span class="b">7</span></a>
+            <a><span>👥</span>Asistencia</a>
+            <a><span>📅</span>Temporadas</a>
+            <a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div><span class="out">⇥</span></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Hola, Eli</h2><div class="sub">Lunes 8 de septiembre · Temporada 2026</div></div>
+            <div style="display:flex; gap:9px;"><div class="btn ghost">Modo puerta</div><div class="btn pri">＋ Nueva venta</div></div>
+          </div>
+          <div class="hero">
+            <div class="wm"></div>
+            <div class="l">
+              <div class="e">Próxima función · en 5 días</div>
+              <div class="fn">Cierre de temporada</div>
+              <div class="m">Dom 13 sept, 21:00 · Teatro Municipal</div>
+              <div class="bar"><i style="width:18%"></i></div>
+              <div class="bl">14 de 80 vendidas · 18%</div>
+            </div>
+            <div class="stats">
+              <div class="st"><b>$36.000</b><span>RECAUDÓ</span></div>
+              <div class="st"><b>31</b><span>SIN ASIGNAR</span></div>
+            </div>
+            <div class="cta">Ver función →</div>
+          </div>
+          <div class="cols" style="margin-top:14px;">
+            <div>
+              <div class="sect"><b>Necesita tu atención · 10</b><span class="lnk">Ver todo</span></div>
+              <div class="card p0">
+                <div class="alert"><div class="ic">💰</div><div class="mid"><b>Beatriz Coria debe rendir $112.000</b><span>Cobró hace 8 días</span></div><span class="go">Registrar ›</span></div>
+                <div class="alert"><div class="ic">💰</div><div class="mid"><b>Marta Ledesma debe rendir $106.000</b><span>Cobró hace 12 días</span></div><span class="go">Registrar ›</span></div>
+                <div class="alert"><div class="ic">🎟</div><div class="mid"><b>Cierre: 31 entradas sin asignar</b><span>Dom 13 sept · cupo 80</span></div><span class="go">Asignar ›</span></div>
+                <div class="alert ind"><div class="ic">✉️</div><div class="mid"><b>Josefina Paz nunca entró a la app</b><span>Invitada hace 28 días</span></div><span class="go">Reenviar ›</span></div>
+              </div>
+              <div class="sect"><b>Últimas ventas</b><span class="lnk">Ver todas</span></div>
+              <div class="card p0">
+                <div class="thead2"><span>Comprador</span><span>Vendedora</span><span>Entr.</span><span>Estado</span></div>
+                <div class="trow"><div class="who"><div class="ini">MD</div><b>María Dutra</b></div><span class="dim">Carolina Vega</span><span>3</span><span><span class="pill ok">Pagó</span></span></div>
+                <div class="trow"><div class="who"><div class="ini">LF</div><b>Lucía Fernández</b></div><span class="dim">Virginia Sosa</span><span>4</span><span><span class="pill debt">Debe</span></span></div>
+                <div class="trow"><div class="who"><div class="ini">PB</div><b>Padre Benítez</b></div><span class="dim">emitió Eli</span><span>2</span><span><span class="pill comp">Cortesía</span></span></div>
+              </div>
+            </div>
+            <div>
+              <div class="sect"><b>La temporada</b></div>
+              <div class="card">
+                <div class="fnrow"><div class="mid"><b>Apertura</b><div class="bar"><i style="width:84%; background:var(--ok);"></i></div></div><div class="r"><span class="tag">HECHA</span><div style="margin-top:4px;">38/45</div></div></div>
+                <div class="fnrow"><div class="mid"><b>Invierno</b><div class="bar"><i style="width:64%; background:var(--ok);"></i></div></div><div class="r"><span class="tag">HECHA</span><div style="margin-top:4px;">32/50</div></div></div>
+                <div class="fnrow"><div class="mid"><b>Gala</b><div class="bar"><i style="width:76%; background:var(--ok);"></i></div></div><div class="r"><span class="tag">HECHA</span><div style="margin-top:4px;">61/80</div></div></div>
+                <div class="fnrow"><div class="mid"><b>Cierre de temporada</b><div class="bar"><i style="width:18%"></i></div></div><div class="r"><span class="tag next">DOM 13</span><div style="margin-top:4px;">14/80</div></div></div>
+              </div>
+              <div class="sect"><b>Accesos rápidos</b></div>
+              <div class="qa">
+                <div class="q"><div class="i">💰</div><b>Rendiciones</b><span>7 pendientes</span></div>
+                <div class="q"><div class="i">📈</div><b>Panel de ventas</b><span>Por corista</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DESKTOP CORISTA -->
+  <div class="fr">
+    <div class="cap"><b>2 · Desktop — Carolina (corista)</b>: misma estructura, datos propios. Su cupo, sus compradores que deben, sus ventas. Sidebar corta, sin sección Dirección.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a class="on"><span>♪</span>Inicio</a>
+            <a><span>🎟</span>Mis ventas <span class="b">3</span></a>
+            <a><span>⛶</span>Puerta</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">C</div><div><b>Carolina</b><span>Corista</span></div><span class="out">⇥</span></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Hola, Carolina</h2><div class="sub">Lunes 8 de septiembre · Temporada 2026</div></div>
+            <div class="btn pri">＋ Nueva venta</div>
+          </div>
+          <div class="hero">
+            <div class="wm"></div>
+            <div class="l">
+              <div class="e">Próxima función · en 5 días</div>
+              <div class="fn">Cierre de temporada</div>
+              <div class="m">Dom 13 sept, 21:00 · Teatro Municipal</div>
+              <div class="bar"><i style="width:85%"></i></div>
+              <div class="bl">Vendiste 17 de tus 20 entradas</div>
+            </div>
+            <div class="stats">
+              <div class="st"><b>3</b><span>TE QUEDAN</span></div>
+              <div class="st"><b>$56.000</b><span>COBRASTE</span></div>
+            </div>
+            <div class="cta">＋ Vender</div>
+          </div>
+          <div class="cols" style="margin-top:14px;">
+            <div>
+              <div class="sect"><b>Te falta cobrar · 3</b><span class="lnk">Ver todo</span></div>
+              <div class="card p0">
+                <div class="alert"><div class="ic">💵</div><div class="mid"><b>Rosa Suárez debe $96.000</b><span>4 entradas · vendida hace 6 días</span></div><span class="go">Marcar pago ›</span></div>
+                <div class="alert"><div class="ic">💵</div><div class="mid"><b>Lucía Molina debe $48.000</b><span>2 entradas · vendida hace 3 días</span></div><span class="go">Marcar pago ›</span></div>
+                <div class="alert ind"><div class="ic">✉️</div><div class="mid"><b>Graciela Torres no tiene email cargado</b><span>1 entrada · compartile el link</span></div><span class="go">Copiar link ›</span></div>
+              </div>
+              <div class="sect"><b>Mis últimas ventas</b><span class="lnk">Ver todas</span></div>
+              <div class="card p0">
+                <div class="thead2"><span>Comprador</span><span>Función</span><span>Entr.</span><span>Estado</span></div>
+                <div class="trow"><div class="who"><div class="ini">RS</div><b>Rosa Suárez</b></div><span class="dim">Cierre</span><span>4</span><span><span class="pill debt">Debe</span></span></div>
+                <div class="trow"><div class="who"><div class="ini">MD</div><b>María Dutra</b></div><span class="dim">Cierre</span><span>3</span><span><span class="pill ok">Pagó</span></span></div>
+                <div class="trow"><div class="who"><div class="ini">LM</div><b>Lucía Molina</b></div><span class="dim">Cierre</span><span>2</span><span><span class="pill debt">Debe</span></span></div>
+              </div>
+            </div>
+            <div>
+              <div class="sect"><b>Tu cupo por función</b></div>
+              <div class="card">
+                <div class="fnrow"><div class="mid"><b>Cierre de temporada</b><div class="bar"><i style="width:85%"></i></div></div><div class="r"><span class="tag next">DOM 13</span><div style="margin-top:4px;">17/20</div></div></div>
+                <div class="fnrow"><div class="mid"><b>Gala</b><div class="bar"><i style="width:100%; background:var(--ok);"></i></div></div><div class="r"><span class="tag">HECHA</span><div style="margin-top:4px;">15/15</div></div></div>
+                <div class="fnrow"><div class="mid"><b>Invierno</b><div class="bar"><i style="width:80%; background:var(--ok);"></i></div></div><div class="r"><span class="tag">HECHA</span><div style="margin-top:4px;">8/10</div></div></div>
+              </div>
+              <div class="sect"><b>Accesos rápidos</b></div>
+              <div class="qa">
+                <div class="q"><div class="i">🔗</div><b>Links</b><span>Compartir entradas</span></div>
+                <div class="q"><div class="i">💰</div><b>Mi rendición</b><span>Al día</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE -->
+  <div class="fr">
+    <div class="cap"><b>3 · App (mobile)</b>: misma jerarquía en vertical. Acá la home sí conserva navegación (no hay sidebar), pero ahora arranca por lo accionable en vez de por un índice.</div>
+    <div class="phones">
+
+      <div>
+        <div class="mini">
+          <div class="m-top"><div class="m-brand">ACAPELIUS</div><div class="m-av">E</div></div>
+          <div class="m-body">
+            <div class="m-h1">Hola, Eli</div>
+            <div class="m-sub">Lunes 8 de septiembre</div>
+            <div class="m-hero">
+              <div class="wm"></div>
+              <div class="e">Próxima función · en 5 días</div>
+              <div class="fn">Cierre de temporada</div>
+              <div class="m">Dom 13 sept, 21:00 · Teatro Municipal</div>
+              <div class="bar"><i style="width:18%"></i></div>
+              <div class="bl"><span>14 de 80 vendidas</span><span>18%</span></div>
+            </div>
+            <div class="m-actions">
+              <div class="m-cta2 pri">＋ Nueva venta</div>
+              <div class="m-cta2 ghost">Modo puerta</div>
+            </div>
+            <div class="m-sect"><b>Necesita tu atención · 10</b><span class="lnk">Ver todo</span></div>
+            <div class="m-card">
+              <div class="m-alert"><div class="ic">💰</div><div class="mid"><b>Beatriz debe rendir $112.000</b><span>Cobró hace 8 días</span></div><span class="go">›</span></div>
+              <div class="m-alert"><div class="ic">🎟</div><div class="mid"><b>Cierre: 31 sin asignar</b><span>Dom 13 sept · cupo 80</span></div><span class="go">›</span></div>
+              <div class="m-alert ind"><div class="ic">✉️</div><div class="mid"><b>Josefina nunca entró</b><span>Invitada hace 28 días</span></div><span class="go">›</span></div>
+            </div>
+            <div class="m-sect"><b>La temporada</b></div>
+            <div class="m-card" style="padding:4px 12px;">
+              <div class="fnrow"><div class="mid"><b>Cierre de temporada</b><div class="bar"><i style="width:18%"></i></div></div><div class="r"><span class="tag next">DOM 13</span></div></div>
+              <div class="fnrow"><div class="mid"><b>Gala</b><div class="bar"><i style="width:76%; background:var(--ok);"></i></div></div><div class="r"><span class="tag">HECHA</span></div></div>
+            </div>
+          </div>
+          <div class="m-tabs">
+            <div class="m-tab on"><span class="i">♪</span>Inicio</div>
+            <div class="m-tab"><span class="i">🎟</span>Vender</div>
+            <div class="m-tab"><span class="i">⛶</span>Puerta</div>
+            <div class="m-tab"><span class="i">📊</span>Dirección</div>
+          </div>
+        </div>
+        <div class="mcap">Mobile · Eli</div>
+      </div>
+
+      <div>
+        <div class="mini">
+          <div class="m-top"><div class="m-brand">ACAPELIUS</div><div class="m-av">C</div></div>
+          <div class="m-body">
+            <div class="m-h1">Hola, Carolina</div>
+            <div class="m-sub">Lunes 8 de septiembre</div>
+            <div class="m-hero">
+              <div class="wm"></div>
+              <div class="e">Próxima función · en 5 días</div>
+              <div class="fn">Cierre de temporada</div>
+              <div class="m">Dom 13 sept, 21:00 · Teatro Municipal</div>
+              <div class="bar"><i style="width:85%"></i></div>
+              <div class="bl"><span>Vendiste 17 de 20</span><span>te quedan 3</span></div>
+            </div>
+            <div class="m-cta">＋ Nueva venta</div>
+            <div class="m-sect"><b>Te falta cobrar · 3</b><span class="lnk">Ver todo</span></div>
+            <div class="m-card">
+              <div class="m-alert"><div class="ic">💵</div><div class="mid"><b>Rosa Suárez debe $96.000</b><span>4 entradas · hace 6 días</span></div><span class="go">›</span></div>
+              <div class="m-alert"><div class="ic">💵</div><div class="mid"><b>Lucía Molina debe $48.000</b><span>2 entradas · hace 3 días</span></div><span class="go">›</span></div>
+              <div class="m-alert ind"><div class="ic">✉️</div><div class="mid"><b>Graciela sin email</b><span>Compartile el link</span></div><span class="go">›</span></div>
+            </div>
+            <div class="m-sect"><b>Mis últimas ventas</b><span class="lnk">Ver todas</span></div>
+            <div class="m-card">
+              <div class="m-srow"><div class="ini">MD</div><div class="mid"><b>María Dutra</b><span>3 entradas · Cierre</span></div><span class="pill ok">Pagó</span></div>
+              <div class="m-srow"><div class="ini">LM</div><div class="mid"><b>Lucía Molina</b><span>2 entradas · Cierre</span></div><span class="pill debt">Debe</span></div>
+            </div>
+          </div>
+          <div class="m-tabs three">
+            <div class="m-tab on"><span class="i">♪</span>Inicio</div>
+            <div class="m-tab"><span class="i">🎟</span>Vender</div>
+            <div class="m-tab"><span class="i">⛶</span>Puerta</div>
+          </div>
+        </div>
+        <div class="mcap">Mobile · Carolina (corista)</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- POPUPS -->
+  <div class="fr">
+    <div class="cap"><b>4 · Pop-ups</b>: las acciones cortas no navegan a otra pantalla — se resuelven encima del contexto. <b>Modal centrado en desktop, bottom sheet en mobile</b>: mismo componente, distinta presentación por breakpoint.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app · registrar rendición</div></div>
+      <div class="app" style="position:relative;">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a class="on"><span>♪</span>Inicio</a>
+            <a><span>🎟</span>Vender <span class="b">10</span></a>
+            <a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>💰</span>Rendiciones <span class="b">7</span></a>
+            <a><span>👥</span>Asistencia</a>
+            <a><span>📅</span>Temporadas</a>
+            <a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div><span class="out">⇥</span></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Hola, Eli</h2><div class="sub">Lunes 8 de septiembre · Temporada 2026</div></div>
+            <div style="display:flex; gap:9px;"><div class="btn ghost">Modo puerta</div><div class="btn pri">＋ Nueva venta</div></div>
+          </div>
+          <div class="hero">
+            <div class="wm"></div>
+            <div class="l">
+              <div class="e">Próxima función · en 5 días</div>
+              <div class="fn">Cierre de temporada</div>
+              <div class="m">Dom 13 sept, 21:00 · Teatro Municipal</div>
+              <div class="bar"><i style="width:18%"></i></div>
+              <div class="bl">14 de 80 vendidas · 18%</div>
+            </div>
+            <div class="stats"><div class="st"><b>$36.000</b><span>RECAUDÓ</span></div><div class="st"><b>31</b><span>SIN ASIGNAR</span></div></div>
+            <div class="cta">Ver función →</div>
+          </div>
+          <div class="sect"><b>Necesita tu atención · 10</b><span class="lnk">Ver todo</span></div>
+          <div class="card p0">
+            <div class="alert"><div class="ic">💰</div><div class="mid"><b>Beatriz Coria debe rendir $112.000</b><span>Cobró hace 8 días</span></div><span class="go">Registrar ›</span></div>
+            <div class="alert"><div class="ic">💰</div><div class="mid"><b>Marta Ledesma debe rendir $106.000</b><span>Cobró hace 12 días</span></div><span class="go">Registrar ›</span></div>
+          </div>
+        </div>
+        <div class="scrim"></div>
+        <div class="modal">
+          <div class="mh">
+            <div><h3>Rendición de Beatriz Coria</h3><div class="msub">Debe $112.000 · cobró $112.000 · rindió $0</div></div>
+            <span class="x">✕</span>
+          </div>
+          <label>Monto</label>
+          <div class="amount">$ 112.000</div>
+          <div class="quick"><div class="q2 on">Todo ($112.000)</div><div class="q2">Otra cifra</div></div>
+          <label>Método</label>
+          <div class="seg"><div class="on">Transferencia</div><div>Efectivo</div></div>
+          <label>Nota (opcional)</label>
+          <div class="inp">Me lo mandó por MercadoPago</div>
+          <div class="foot">
+            <span class="note">Después de esto queda <b>al día</b></span>
+            <div class="btn ghost">Cancelar</div>
+            <div class="btn pri">Confirmar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px; display:flex; gap:24px; flex-wrap:wrap;">
+      <div>
+        <div class="mini" style="position:relative;">
+          <div class="m-top"><div class="m-brand">ACAPELIUS</div><div class="m-av">C</div></div>
+          <div class="m-body">
+            <div class="m-h1">Hola, Carolina</div>
+            <div class="m-sub">Lunes 8 de septiembre</div>
+            <div class="m-hero">
+              <div class="wm"></div>
+              <div class="e">Próxima función · en 5 días</div>
+              <div class="fn">Cierre de temporada</div>
+              <div class="m">Dom 13 sept, 21:00 · Teatro Municipal</div>
+              <div class="bar"><i style="width:85%"></i></div>
+              <div class="bl"><span>Vendiste 17 de 20</span><span>te quedan 3</span></div>
+            </div>
+            <div class="m-cta">＋ Nueva venta</div>
+            <div class="m-sect"><b>Te falta cobrar · 3</b><span class="lnk">Ver todo</span></div>
+            <div class="m-card">
+              <div class="m-alert"><div class="ic">💵</div><div class="mid"><b>Rosa Suárez debe $96.000</b><span>4 entradas · hace 6 días</span></div><span class="go">›</span></div>
+            </div>
+          </div>
+          <div class="m-tabs three">
+            <div class="m-tab on"><span class="i">♪</span>Inicio</div>
+            <div class="m-tab"><span class="i">🎟</span>Vender</div>
+            <div class="m-tab"><span class="i">⛶</span>Puerta</div>
+          </div>
+          <div class="scrim"></div>
+          <div class="msheet">
+            <div class="grip"></div>
+            <div class="who"><div class="ini">RS</div><div><b>Rosa Suárez</b><span>4 entradas · Cierre · $96.000</span></div></div>
+            <div class="act pri"><div class="ic">💵</div> Marcar pagó — efectivo</div>
+            <div class="act pri"><div class="ic">🏦</div> Marcar pagó — transferencia</div>
+            <div class="act"><div class="ic">🔗</div> Copiar link</div>
+            <div class="act"><div class="ic">✉️</div> Reenviar email <small>hace 6 días</small></div>
+            <div class="act danger"><div class="ic">✕</div> Anular venta</div>
+          </div>
+        </div>
+        <div class="mcap">Mobile · bottom sheet (mismo componente)</div>
+      </div>
+
+      <div style="flex:1; min-width:280px; max-width:420px;">
+        <div class="card" style="padding:16px 18px;">
+          <div class="eyebrow">Qué va en pop-up y qué no</div>
+          <div style="margin-top:10px; font-size:13px; line-height:1.6; color:#4A4C55;">
+            <p style="margin-bottom:9px;"><b style="color:var(--ink);">Sí, en pop-up</b> — acciones cortas que no merecen perder el contexto: registrar rendición, acciones de una venta (pagos, link, reenvío, anular), nuevo usuario, asignar cupo a una corista, editar función, confirmar anulación, marcar ingreso manual desde la búsqueda.</p>
+            <p style="margin-bottom:9px;"><b style="color:var(--ink);">No, pantalla propia</b> — flujos con varios pasos o mucho contenido: nueva venta completa, modo puerta, listados, detalle de corista con historial, panel de ventas.</p>
+            <p><b style="color:var(--ink);">Reglas:</b> un solo pop-up a la vez (nunca uno sobre otro); cierre por ✕, Escape y click afuera; foco atrapado adentro y devuelto al elemento que lo abrió; el pop-up no cambia la URL salvo que sea deep-linkeable; en mobile el sheet se cierra deslizando hacia abajo.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

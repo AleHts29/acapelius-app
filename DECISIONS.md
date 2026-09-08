@@ -214,3 +214,36 @@ Decisiones puntuales:
 - **La puerta en escritorio no tiene cámara.** Nadie escanea un QR con la webcam
   de una notebook; la mesa de entrada resuelve búsquedas con el teclado y lo
   dice al pie. De paso, una superficie menos que probar contra webcams raras.
+
+## La paleta vive sólo en los tokens
+
+C11 cambió la paleta sin tocar lógica: todo salió del bloque `:root`. Los pocos
+hexas sueltos que había —el ámbar del "sin conexión" nocturno, el fondo del
+visor de la puerta, el resalte de búsqueda, el gris de los chips— eran deuda de
+iteraciones anteriores y se convirtieron en tokens (`--night-warn`,
+`--surface-alt`, `--mark`, `--ink-soft`). Hoy no queda un solo color fuera del
+bloque de tokens en `styles.css`, ni ninguno en los componentes.
+
+Se renombraron los tokens para que un color tenga un nombre: `--brand-blue` →
+`--indigo`, `--blue-soft` → `--indigo-soft`, `--muted` → `--text-muted`. Dejar
+"blue" apuntando a un índigo era garantía de confusión en la próxima lectura.
+
+**Dos tokens de la spec no llegaban a AA** y se corrigieron:
+
+- `--text-muted` #7C818C da 3.91 sobre blanco y 3.52 sobre el fondo. Es el
+  color del texto de 11–12px de toda la app, así que necesita 4.5, no 3.0.
+  Quedó en **#6B6F78** (5.04 y 4.54): el mínimo que pasa en los dos fondos.
+- `--warn` #9C6A0C sobre `--warn-soft` da 4.06, y el chip es de 10px. Quedó en
+  **#90620B** (4.62).
+
+El resto de los pares se verificó por cálculo, incluido el modo nocturno de la
+puerta sobre carbón: ninguno baja de 4.5 salvo los que son decorativos.
+
+El crema queda reservado para lo que sale del producto. La entrada pública lo
+pinta con `body:has(.ticket-page)`, así la página no necesita tocar el DOM ni
+hay una clase que alguien pueda olvidarse de sacar. El email no se tocó.
+
+Los PNG del isologo se recolorearon proyectando cada pixel sobre la recta entre
+los dos colores de origen y reconstruyéndolo sobre la nueva: así el
+antialiasing se mantiene en vez de aparecer un borde duro. El logo azul original
+se conserva porque lo sigue usando la entrada pública.

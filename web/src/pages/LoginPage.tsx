@@ -28,7 +28,7 @@ export function LoginPage() {
   return (
     <div className="centered-screen">
       <form className="card" onSubmit={handleSubmit} noValidate>
-        <img className="login-logo" src="/logo-full-blue.png" alt="Acapelius" />
+        <img className="login-logo" src="/logo-full-indigo.png" alt="Acapelius" />
         <p className="card__subtitle" style={{ textAlign: 'center' }}>
           Entradas del coro
         </p>

@@ -25,7 +25,7 @@ export function Layout() {
       <SideNav user={user} onLogout={() => void logout()} />
       <header className="app-header">
         <Link className="app-header__brand" to="/" aria-label="Inicio">
-          <img className="app-header__logo" src="/logo-mark-blue.png" alt="" />
+          <img className="app-header__logo" src="/logo-mark-indigo.png" alt="" />
           <span className="app-header__word">ACAPELIUS</span>
         </Link>
         <div style={{ position: 'relative' }}>
