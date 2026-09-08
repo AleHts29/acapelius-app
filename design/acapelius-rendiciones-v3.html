@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Rendiciones completas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#F2F3F5; --sur:#FFFFFF; --alt:#FAFBFC; --ink:#1A1C22; --mut:#7C818C; --line:#E3E5E9;
+          --indigo:#3A3FC4; --indigo-s:#E8E8FA; --carbon:#1A1C22;
+          --ok:#0E7A55; --ok-s:#E2F2EB; --warn:#9C6A0C; --warn-s:#F6EEDC; --bad:#B3403F; --bad-s:#F7E6E5; }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .page { max-width:1340px; margin:0 auto; padding:44px 20px 90px; }
+  .page > h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(25px,4vw,34px); }
+  .page > h1 span { color:var(--indigo); }
+  .page > p.lead { margin-top:10px; max-width:920px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .page > p.lead b { color:var(--ink); }
+  .diag { margin-top:16px; display:grid; gap:9px; }
+  @media(min-width:860px){ .diag { grid-template-columns:1fr 1fr; gap:9px 22px; } }
+  .di { background:#fff; border:1px solid #D5D8DD; border-radius:12px; padding:11px 14px; font-size:12.5px; line-height:1.55; color:#4A4C55; }
+  .di b { color:var(--ink); }
+  .di .k { display:inline-block; font-family:'Archivo',sans-serif; font-size:8.5px; font-weight:800; letter-spacing:0.1em; padding:2px 7px; border-radius:99px; background:var(--indigo-s); color:var(--indigo); margin-right:7px; vertical-align:1px; }
+
+  .fr { margin-top:30px; overflow-x:auto; padding-bottom:8px; }
+  .fr > .cap { font-size:13.5px; font-weight:700; color:#55575E; margin-bottom:10px; }
+  .fr > .cap b { color:var(--ink); }
+  .browser { border:1px solid #C3C7CE; border-radius:14px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); background:var(--bg); min-width:1160px; }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome .dots i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:380px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; }
+  .app { display:flex; min-height:680px; position:relative; }
+
+  .side { width:200px; background:var(--sur); border-right:1px solid var(--line); display:flex; flex-direction:column; flex-shrink:0; }
+  .side .logo { padding:15px 14px 11px; font-family:'Archivo',sans-serif; font-weight:800; letter-spacing:0.2em; font-size:11px; display:flex; align-items:center; gap:7px; }
+  .side .logo .mk { width:19px; height:19px; border-radius:50%; border:1.5px solid var(--indigo); color:var(--indigo); font-size:9px; display:flex; align-items:center; justify-content:center; font-style:italic; }
+  .nav { padding:4px 8px; }
+  .nav a { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:8px; font-size:11.5px; font-weight:700; color:#5A5D66; margin-bottom:2px; }
+  .nav a.on { background:var(--indigo-s); color:var(--indigo); }
+  .nav .sec { padding:11px 10px 4px; font-family:'Archivo',sans-serif; font-size:8px; font-weight:800; letter-spacing:0.14em; color:var(--mut); }
+  .nav a .b { margin-left:auto; font-size:8.5px; font-weight:800; padding:2px 6px; border-radius:99px; background:var(--warn-s); color:var(--warn); }
+  .side .grow { flex:1; }
+  .side .me { border-top:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:8px; }
+  .side .me .av { width:23px; height:23px; border-radius:50%; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:9px; }
+  .side .me b { display:block; font-size:11px; } .side .me span { color:var(--mut); font-size:9.5px; }
+
+  .main { flex:1; padding:20px 24px 24px; min-width:0; display:flex; flex-direction:column; }
+  .phead { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
+  .phead h2 { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .phead .sub { font-size:11.5px; color:var(--mut); margin-top:2px; }
+  .pillbtn { display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:800; border:1.5px solid var(--line); background:var(--sur); border-radius:99px; padding:8px 13px; }
+  .btn { border-radius:9px; padding:10px 15px; font-size:12.5px; font-weight:800; white-space:nowrap; }
+  .btn.pri { background:var(--indigo); color:#fff; }
+  .btn.gh { background:var(--sur); border:1.5px solid var(--line); color:var(--ink); }
+  .pill { font-size:10.5px; font-weight:800; padding:4px 9px; border-radius:99px; white-space:nowrap; }
+  .pill.debt { background:var(--warn-s); color:var(--warn); }
+  .pill.ok { background:var(--ok-s); color:var(--ok); }
+
+  .md { display:grid; grid-template-columns:320px 1fr; gap:16px; align-items:stretch; flex:1; min-height:0; }
+  .col { display:flex; flex-direction:column; gap:12px; min-height:0; }
+  .card { background:var(--sur); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
+
+  /* resumen */
+  .sum { padding:13px 15px; }
+  .sum .top { display:flex; align-items:baseline; justify-content:space-between; }
+  .sum .top b { font-family:'Archivo',sans-serif; font-size:22px; font-weight:800; color:var(--warn); }
+  .sum .top span { font-size:9.5px; font-weight:800; letter-spacing:0.08em; color:var(--mut); }
+  .sum .bar { margin-top:10px; height:7px; border-radius:99px; background:var(--warn-s); overflow:hidden; }
+  .sum .bar i { display:block; height:100%; background:var(--ok); }
+  .sum .leg { margin-top:7px; display:flex; justify-content:space-between; font-size:10.5px; color:var(--mut); font-weight:600; }
+  .sum .leg b { color:var(--ink); }
+
+  .grphd { display:flex; align-items:center; gap:8px; padding:2px 2px 0; }
+  .grphd b { font-family:'Archivo',sans-serif; font-size:9px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .grphd::after { content:""; flex:1; height:1px; background:var(--line); }
+  .listwrap { overflow:hidden; display:flex; flex-direction:column; gap:7px; }
+  .prow { background:var(--sur); border:1px solid var(--line); border-left:3px solid var(--warn); border-radius:11px; padding:10px 12px; }
+  .prow.sel { border-color:var(--indigo); border-left-color:var(--indigo); box-shadow:0 0 0 3px rgba(58,63,196,.1); }
+  .prow .t { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .prow .t b { font-size:12.5px; font-weight:700; }
+  .prow .s { margin-top:3px; font-size:10.5px; color:var(--mut); }
+  .prow .s b { color:var(--ink); font-weight:700; }
+  .prow.okr { border-left-color:var(--ok); }
+  .prow.okr .s { color:var(--mut); }
+
+  /* DETALLE */
+  .detail { background:var(--sur); border:1px solid var(--line); border-radius:13px; display:flex; flex-direction:column; overflow:hidden; }
+  .dh { padding:16px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:13px; }
+  .dh .ini { width:44px; height:44px; border-radius:12px; background:var(--warn-s); color:var(--warn); font-family:'Archivo',sans-serif; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; }
+  .dh .who b { font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; display:block; }
+  .dh .who span { font-size:11px; color:var(--mut); }
+  .dh .sp { flex:1; }
+  .dh .acts { display:flex; gap:8px; align-items:center; }
+  .kbar { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--line); }
+  .kbar .k { padding:13px 20px; border-left:1px solid var(--line); }
+  .kbar .k:first-child { border-left:0; }
+  .kbar .k b { font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; display:block; }
+  .kbar .k b.y { color:var(--warn); } .kbar .k b.g { color:var(--ok); }
+  .kbar .k span { font-size:9px; color:var(--mut); font-weight:800; letter-spacing:0.06em; text-transform:uppercase; margin-top:2px; display:block; }
+  .kbar .k .hint { font-size:10px; color:var(--mut); margin-top:4px; font-weight:500; text-transform:none; letter-spacing:0; }
+
+  .dbody { flex:1; overflow:hidden; display:grid; grid-template-columns:1.25fr 1fr; }
+  .dsect { border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+  .dsect:last-child { border-right:0; }
+  .dsh { padding:11px 18px; background:var(--alt); border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+  .dsh b { font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; }
+  .dsh span { font-size:10.5px; color:var(--mut); font-weight:700; }
+  .srow { display:flex; align-items:center; gap:11px; padding:10px 18px; border-bottom:1px solid var(--line); }
+  .srow:last-of-type { border-bottom:0; }
+  .srow .mid { flex:1; min-width:0; }
+  .srow .mid b { font-size:12.5px; font-weight:700; display:block; }
+  .srow .mid span { font-size:10.5px; color:var(--mut); }
+  .srow .amt { font-family:'Archivo',sans-serif; font-size:12.5px; font-weight:800; }
+  .srow .when { font-size:10px; color:var(--mut); font-weight:700; width:62px; text-align:right; }
+  .stot { padding:11px 18px; background:var(--warn-s); display:flex; align-items:center; justify-content:space-between; border-top:1px solid #EADFC4; }
+  .stot span { font-size:11px; font-weight:800; color:var(--warn); }
+  .stot b { font-family:'Archivo',sans-serif; font-size:14px; font-weight:800; color:var(--warn); }
+
+  .tl { padding:6px 18px 14px; }
+  .tlr { display:flex; gap:11px; padding:9px 0; }
+  .tlr .dot { width:9px; height:9px; border-radius:50%; margin-top:4px; flex-shrink:0; }
+  .tlr .dot.ok { background:var(--ok); } .tlr .dot.n { background:var(--indigo); } .tlr .dot.g { background:var(--line); }
+  .tlr .mid b { font-size:12px; font-weight:700; display:block; }
+  .tlr .mid span { font-size:10.5px; color:var(--mut); }
+  .tlr .mid .note { font-size:10.5px; color:var(--mut); font-style:italic; margin-top:2px; }
+  .empty-tl { padding:22px 18px; text-align:center; font-size:11.5px; color:var(--mut); }
+
+  /* EMPTY STATE útil */
+  .estate { flex:1; display:flex; flex-direction:column; }
+  .eh { padding:20px 22px 16px; border-bottom:1px solid var(--line); }
+  .eh .n { font-family:'Archivo',sans-serif; font-size:30px; font-weight:800; color:var(--warn); }
+  .eh .l { font-size:12px; color:var(--mut); font-weight:600; margin-top:3px; }
+  .eh .acts { margin-top:14px; display:flex; gap:9px; }
+  .erow { display:flex; align-items:center; gap:12px; padding:12px 22px; border-bottom:1px solid var(--line); }
+  .erow .rank { font-family:'Archivo',sans-serif; font-size:11px; font-weight:800; color:var(--mut); width:16px; }
+  .erow .mid { flex:1; }
+  .erow .mid b { font-size:12.5px; font-weight:700; display:block; }
+  .erow .mid span { font-size:10.5px; color:var(--mut); }
+  .erow .track { width:110px; height:6px; border-radius:99px; background:var(--line); overflow:hidden; }
+  .erow .track i { display:block; height:100%; background:var(--warn); }
+  .erow .amt { font-family:'Archivo',sans-serif; font-size:13px; font-weight:800; color:var(--warn); width:78px; text-align:right; }
+  .ehint { padding:14px 22px; font-size:11.5px; color:var(--mut); text-align:center; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Rendiciones: <span>que el detalle sirva para reclamar</span></h1>
+  <p class="lead">La vista actual responde <b>cuánto</b> debe cada corista, pero no <b>de dónde sale esa deuda</b> — que es justo lo que Eli necesita para hablar con ella. Además el panel derecho ocupa un tercio del alto y deja el resto vacío, mientras la lista izquierda scrollea. Cuatro agregados lo completan.</p>
+
+  <div class="diag">
+    <div class="di"><span class="k">1</span><b>De dónde sale la deuda:</b> la lista de ventas que ya cobró y no rindió, con comprador, función, monto y cuándo las cobró. Eso convierte un número abstracto en algo concreto para reclamar.</div>
+    <div class="di"><span class="k">2</span><b>Recordatorio:</b> botón "Recordar" que le manda el detalle por email, y el registro de cuándo se le recordó por última vez. Hoy no hay forma de reclamar desde la app.</div>
+    <div class="di"><span class="k">3</span><b>Timeline propia:</b> sus rendiciones y recordatorios en orden, con notas. Si nunca rindió, dice desde cuándo, no solo "todavía no rindió nada".</div>
+    <div class="di"><span class="k">4</span><b>Empty state útil:</b> sin selección, el panel muestra el ranking de deudas y la acción masiva "Recordar a las 6", en vez de una caja vacía con una frase.</div>
+  </div>
+
+  <div class="fr">
+    <div class="cap"><b>1 · Con una corista seleccionada</b> — el panel llena el alto: encabezado con acciones, cuatro cifras con contexto, origen de la deuda a la izquierda y su historial a la derecha.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/panel/rendiciones/beatriz-coria</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a><a><span>🎟</span>Vender <span class="b">10</span></a><a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>📊</span>Dirección</a><a class="on"><span>💰</span>Rendiciones <span class="b">6</span></a><a><span>👥</span>Asistencia</a><a><span>📅</span>Temporadas</a><a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+
+        <div class="main">
+          <div class="phead">
+            <div><h2>Rendiciones</h2><div class="sub">Temporada 2026 · 6 coristas deben rendir</div></div>
+            <div class="pillbtn">🕐 Historial general</div>
+          </div>
+
+          <div class="md">
+            <div class="col">
+              <div class="card sum">
+                <div class="top"><b>$378.000</b><span>POR RENDIR</span></div>
+                <div class="bar"><i style="width:63%"></i></div>
+                <div class="leg"><span>Rendido <b>$638.000</b></span><span>Cobrado <b>$1.016.000</b></span></div>
+              </div>
+              <div class="grphd"><b>Deben rendir · 6</b></div>
+              <div class="listwrap">
+                <div class="prow sel"><div class="t"><b>Beatriz Coria</b><span class="pill debt">$112.000</span></div><div class="s">Cobró <b>$112.000</b> · rindió <b>$0</b> · hace 13 días</div></div>
+                <div class="prow"><div class="t"><b>Marta Ledesma</b><span class="pill debt">$106.000</span></div><div class="s">Cobró <b>$106.000</b> · rindió <b>$0</b> · hace 16 días</div></div>
+                <div class="prow"><div class="t"><b>Silvia Rey</b><span class="pill debt">$62.000</span></div><div class="s">Cobró <b>$124.000</b> · rindió <b>$62.000</b></div></div>
+                <div class="prow"><div class="t"><b>Carolina Vega</b><span class="pill debt">$44.000</span></div><div class="s">Cobró <b>$124.000</b> · rindió <b>$80.000</b></div></div>
+                <div class="prow"><div class="t"><b>Mercedes Ibarra</b><span class="pill debt">$30.000</span></div><div class="s">Cobró <b>$86.000</b> · rindió <b>$56.000</b></div></div>
+                <div class="prow"><div class="t"><b>Eli</b><span class="pill debt">$24.000</span></div><div class="s">Cobró <b>$24.000</b> · rindió <b>$0</b></div></div>
+              </div>
+              <div class="grphd"><b>Al día · 6</b></div>
+              <div class="listwrap">
+                <div class="prow okr"><div class="t"><b>Adriana Bustos</b><span class="pill ok">Al día</span></div><div class="s">Rindió todo lo cobrado</div></div>
+                <div class="prow okr"><div class="t"><b>Alejandro</b><span class="pill ok">Al día</span></div><div class="s">Todavía no cobró ventas</div></div>
+              </div>
+            </div>
+
+            <div class="detail">
+              <div class="dh">
+                <div class="ini">BC</div>
+                <div class="who"><b>Beatriz Coria</b><span>Corista · 15 entradas vendidas esta temporada</span></div>
+                <div class="sp"></div>
+                <div class="acts">
+                  <div class="btn gh">✉ Recordar</div>
+                  <div class="btn pri">Registrar rendición</div>
+                </div>
+              </div>
+              <div class="kbar">
+                <div class="k"><b>$112.000</b><span>Cobró</span><div class="hint">7 ventas</div></div>
+                <div class="k"><b class="g">$0</b><span>Rindió</span><div class="hint">Nunca</div></div>
+                <div class="k"><b class="y">$112.000</b><span>Debe</span><div class="hint">Hace 13 días</div></div>
+                <div class="k"><b>$27.000</b><span>Sin cobrar</span><div class="hint">No exigible aún</div></div>
+              </div>
+              <div class="dbody">
+                <div class="dsect">
+                  <div class="dsh"><b>De dónde sale la deuda</b><span>7 ventas cobradas</span></div>
+                  <div class="srow"><div class="mid"><b>Rosa Suárez</b><span>4 entradas · Gala</span></div><span class="amt">$32.000</span><span class="when">26 ago</span></div>
+                  <div class="srow"><div class="mid"><b>Hugo Díaz</b><span>3 entradas · Gala</span></div><span class="amt">$24.000</span><span class="when">26 ago</span></div>
+                  <div class="srow"><div class="mid"><b>Lucía Molina</b><span>2 entradas · Invierno</span></div><span class="amt">$14.000</span><span class="when">22 ago</span></div>
+                  <div class="srow"><div class="mid"><b>Graciela Torres</b><span>2 entradas · Invierno</span></div><span class="amt">$14.000</span><span class="when">22 ago</span></div>
+                  <div class="srow"><div class="mid"><b>Ana Pereira</b><span>2 entradas · Apertura</span></div><span class="amt">$12.000</span><span class="when">14 ago</span></div>
+                  <div class="srow"><div class="mid"><b>Jorge Álvarez</b><span>2 entradas · Apertura</span></div><span class="amt">$12.000</span><span class="when">14 ago</span></div>
+                  <div class="srow"><div class="mid"><b>Clara Suárez</b><span>1 entrada · Apertura</span></div><span class="amt">$4.000</span><span class="when">14 ago</span></div>
+                  <div class="stot"><span>Total a rendir</span><b>$112.000</b></div>
+                </div>
+                <div class="dsect">
+                  <div class="dsh"><b>Su historial</b><span>Temporada 2026</span></div>
+                  <div class="tl">
+                    <div class="tlr"><div class="dot n"></div><div class="mid"><b>Recordatorio enviado</b><span>Hoy, 11:20 · por email</span></div></div>
+                    <div class="tlr"><div class="dot g"></div><div class="mid"><b>Última venta cobrada</b><span>26 ago · Rosa Suárez, $32.000</span></div></div>
+                    <div class="tlr"><div class="dot g"></div><div class="mid"><b>Primera venta cobrada</b><span>14 ago · Ana Pereira, $12.000</span></div></div>
+                  </div>
+                  <div class="empty-tl">Todavía no rindió nada en esta temporada.<br>En 2025 rindió $145.000 en 2 entregas.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fr">
+    <div class="cap"><b>2 · Sin selección</b> — el panel no queda vacío: ranking de deudas con barras comparables, total, y las acciones masivas que hoy no existen.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/panel/rendiciones</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a><a><span>🎟</span>Vender <span class="b">10</span></a><a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>📊</span>Dirección</a><a class="on"><span>💰</span>Rendiciones <span class="b">6</span></a><a><span>👥</span>Asistencia</a><a><span>📅</span>Temporadas</a><a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+
+        <div class="main">
+          <div class="phead">
+            <div><h2>Rendiciones</h2><div class="sub">Temporada 2026 · 6 coristas deben rendir</div></div>
+            <div class="pillbtn">🕐 Historial general</div>
+          </div>
+
+          <div class="md">
+            <div class="col">
+              <div class="card sum">
+                <div class="top"><b>$378.000</b><span>POR RENDIR</span></div>
+                <div class="bar"><i style="width:63%"></i></div>
+                <div class="leg"><span>Rendido <b>$638.000</b></span><span>Cobrado <b>$1.016.000</b></span></div>
+              </div>
+              <div class="grphd"><b>Deben rendir · 6</b></div>
+              <div class="listwrap">
+                <div class="prow"><div class="t"><b>Beatriz Coria</b><span class="pill debt">$112.000</span></div><div class="s">Cobró <b>$112.000</b> · rindió <b>$0</b> · hace 13 días</div></div>
+                <div class="prow"><div class="t"><b>Marta Ledesma</b><span class="pill debt">$106.000</span></div><div class="s">Cobró <b>$106.000</b> · rindió <b>$0</b> · hace 16 días</div></div>
+                <div class="prow"><div class="t"><b>Silvia Rey</b><span class="pill debt">$62.000</span></div><div class="s">Cobró <b>$124.000</b> · rindió <b>$62.000</b></div></div>
+                <div class="prow"><div class="t"><b>Carolina Vega</b><span class="pill debt">$44.000</span></div><div class="s">Cobró <b>$124.000</b> · rindió <b>$80.000</b></div></div>
+                <div class="prow"><div class="t"><b>Mercedes Ibarra</b><span class="pill debt">$30.000</span></div><div class="s">Cobró <b>$86.000</b> · rindió <b>$56.000</b></div></div>
+                <div class="prow"><div class="t"><b>Eli</b><span class="pill debt">$24.000</span></div><div class="s">Cobró <b>$24.000</b> · rindió <b>$0</b></div></div>
+              </div>
+            </div>
+
+            <div class="detail">
+              <div class="estate">
+                <div class="eh">
+                  <div class="n">$378.000</div>
+                  <div class="l">repartidos entre 6 coristas · el 37% de lo cobrado en la temporada</div>
+                  <div class="acts">
+                    <div class="btn pri">✉ Recordar a las 6</div>
+                    <div class="btn gh">Exportar detalle</div>
+                  </div>
+                </div>
+                <div class="erow"><span class="rank">1</span><div class="mid"><b>Beatriz Coria</b><span>Nunca rindió · hace 13 días</span></div><span class="track"><i style="width:100%"></i></span><span class="amt">$112.000</span></div>
+                <div class="erow"><span class="rank">2</span><div class="mid"><b>Marta Ledesma</b><span>Nunca rindió · hace 16 días</span></div><span class="track"><i style="width:95%"></i></span><span class="amt">$106.000</span></div>
+                <div class="erow"><span class="rank">3</span><div class="mid"><b>Silvia Rey</b><span>Rindió la mitad · hace 15 días</span></div><span class="track"><i style="width:55%"></i></span><span class="amt">$62.000</span></div>
+                <div class="erow"><span class="rank">4</span><div class="mid"><b>Carolina Vega</b><span>Rindió $80.000 · hace 19 días</span></div><span class="track"><i style="width:39%"></i></span><span class="amt">$44.000</span></div>
+                <div class="erow"><span class="rank">5</span><div class="mid"><b>Mercedes Ibarra</b><span>Rindió $56.000 · hace 10 días</span></div><span class="track"><i style="width:27%"></i></span><span class="amt">$30.000</span></div>
+                <div class="erow"><span class="rank">6</span><div class="mid"><b>Eli</b><span>Nunca rindió · hace 4 días</span></div><span class="track"><i style="width:21%"></i></span><span class="amt">$24.000</span></div>
+                <div class="ehint">Elegí una corista para ver de dónde sale su deuda y registrar una entrega.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

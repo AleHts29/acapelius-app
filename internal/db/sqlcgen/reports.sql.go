@@ -259,6 +259,42 @@ func (q *Queries) CountPendingSales(ctx context.Context, sellerID *int64) (int64
 	return count, err
 }
 
+const createReminder = `-- name: CreateReminder :one
+INSERT INTO settlement_reminders (seller_id, season_id, sent_by, amount_cents, status)
+VALUES ($1::bigint, $2::bigint,
+        $3::bigint, $4::bigint, $5::text)
+RETURNING id, seller_id, season_id, sent_by, amount_cents, status, created_at
+`
+
+type CreateReminderParams struct {
+	SellerID    int64  `json:"seller_id"`
+	SeasonID    int64  `json:"season_id"`
+	SentBy      int64  `json:"sent_by"`
+	AmountCents int64  `json:"amount_cents"`
+	Status      string `json:"status"`
+}
+
+func (q *Queries) CreateReminder(ctx context.Context, arg CreateReminderParams) (SettlementReminder, error) {
+	row := q.db.QueryRow(ctx, createReminder,
+		arg.SellerID,
+		arg.SeasonID,
+		arg.SentBy,
+		arg.AmountCents,
+		arg.Status,
+	)
+	var i SettlementReminder
+	err := row.Scan(
+		&i.ID,
+		&i.SellerID,
+		&i.SeasonID,
+		&i.SentBy,
+		&i.AmountCents,
+		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createSettlement = `-- name: CreateSettlement :one
 INSERT INTO settlements (seller_id, season_id, amount_cents, method, notes)
 VALUES (
@@ -364,6 +400,79 @@ func (q *Queries) FunctionsSummary(ctx context.Context, seasonID int64) ([]Funct
 			&i.Assigned,
 			&i.CompTickets,
 			&i.Entered,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lastReminders = `-- name: LastReminders :many
+SELECT DISTINCT ON (seller_id) seller_id, created_at, status
+FROM settlement_reminders
+WHERE season_id = $1::bigint
+ORDER BY seller_id, created_at DESC
+`
+
+type LastRemindersRow struct {
+	SellerID  int64     `json:"seller_id"`
+	CreatedAt time.Time `json:"created_at"`
+	Status    string    `json:"status"`
+}
+
+// El ultimo recordatorio de cada corista de la temporada, para el ranking.
+func (q *Queries) LastReminders(ctx context.Context, seasonID int64) ([]LastRemindersRow, error) {
+	rows, err := q.db.Query(ctx, lastReminders, seasonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LastRemindersRow{}
+	for rows.Next() {
+		var i LastRemindersRow
+		if err := rows.Scan(&i.SellerID, &i.CreatedAt, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReminders = `-- name: ListReminders :many
+SELECT id, seller_id, season_id, sent_by, amount_cents, status, created_at FROM settlement_reminders
+WHERE seller_id = $1::bigint AND season_id = $2::bigint
+ORDER BY created_at DESC
+`
+
+type ListRemindersParams struct {
+	SellerID int64 `json:"seller_id"`
+	SeasonID int64 `json:"season_id"`
+}
+
+func (q *Queries) ListReminders(ctx context.Context, arg ListRemindersParams) ([]SettlementReminder, error) {
+	rows, err := q.db.Query(ctx, listReminders, arg.SellerID, arg.SeasonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SettlementReminder{}
+	for rows.Next() {
+		var i SettlementReminder
+		if err := rows.Scan(
+			&i.ID,
+			&i.SellerID,
+			&i.SeasonID,
+			&i.SentBy,
+			&i.AmountCents,
+			&i.Status,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -764,6 +873,117 @@ func (q *Queries) SeasonSettled(ctx context.Context, seasonID int64) (int64, err
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const sellerDebtSources = `-- name: SellerDebtSources :many
+
+SELECT
+  s.id, s.buyer_name, s.quantity, s.paid_cents,
+  f.name AS function_name,
+  f.venue AS function_venue,
+  (SELECT MAX(p.created_at) FROM sale_payments p WHERE p.sale_id = s.id)::timestamptz AS paid_at
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+WHERE s.seller_id = $1::bigint
+  AND f.season_id = $2::bigint
+  AND s.voided_at IS NULL
+  AND NOT s.is_comp
+  AND s.paid_cents > 0
+ORDER BY paid_at DESC NULLS LAST, s.id DESC
+`
+
+type SellerDebtSourcesParams struct {
+	SellerID int64 `json:"seller_id"`
+	SeasonID int64 `json:"season_id"`
+}
+
+type SellerDebtSourcesRow struct {
+	ID            int64     `json:"id"`
+	BuyerName     string    `json:"buyer_name"`
+	Quantity      int32     `json:"quantity"`
+	PaidCents     int64     `json:"paid_cents"`
+	FunctionName  *string   `json:"function_name"`
+	FunctionVenue string    `json:"function_venue"`
+	PaidAt        time.Time `json:"paid_at"`
+}
+
+// ============================================================================
+// Detalle de rendicion de una corista
+// ============================================================================
+// De donde sale la deuda: las ventas que la corista ya cobro, con cuanto
+// cobro de cada una y cuando fue el ultimo cobro. Ordenadas por fecha de
+// cobro descendente: lo mas fresco arriba, que es de lo que se acuerda.
+func (q *Queries) SellerDebtSources(ctx context.Context, arg SellerDebtSourcesParams) ([]SellerDebtSourcesRow, error) {
+	rows, err := q.db.Query(ctx, sellerDebtSources, arg.SellerID, arg.SeasonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SellerDebtSourcesRow{}
+	for rows.Next() {
+		var i SellerDebtSourcesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BuyerName,
+			&i.Quantity,
+			&i.PaidCents,
+			&i.FunctionName,
+			&i.FunctionVenue,
+			&i.PaidAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const sellerSeasonStats = `-- name: SellerSeasonStats :one
+SELECT
+  COUNT(*) FILTER (WHERE s.paid_cents > 0)::bigint AS paid_sales,
+  COALESCE(SUM(s.quantity) FILTER (WHERE NOT s.is_comp), 0)::bigint AS tickets_sold,
+  COALESCE(SUM(s.amount_cents - s.paid_cents), 0)::bigint AS uncollected_cents,
+  COALESCE(MIN((SELECT MIN(p.created_at) FROM sale_payments p WHERE p.sale_id = s.id)),
+           '0001-01-01'::timestamptz)::timestamptz AS first_paid_at,
+  COALESCE(MAX((SELECT MAX(p.created_at) FROM sale_payments p WHERE p.sale_id = s.id)),
+           '0001-01-01'::timestamptz)::timestamptz AS last_paid_at
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+WHERE s.seller_id = $1::bigint
+  AND f.season_id = $2::bigint
+  AND s.voided_at IS NULL
+  AND NOT s.is_comp
+`
+
+type SellerSeasonStatsParams struct {
+	SellerID int64 `json:"seller_id"`
+	SeasonID int64 `json:"season_id"`
+}
+
+type SellerSeasonStatsRow struct {
+	PaidSales        int64     `json:"paid_sales"`
+	TicketsSold      int64     `json:"tickets_sold"`
+	UncollectedCents int64     `json:"uncollected_cents"`
+	FirstPaidAt      time.Time `json:"first_paid_at"`
+	LastPaidAt       time.Time `json:"last_paid_at"`
+}
+
+// Los numeros del encabezado: cuantas ventas cobro, desde cuando, y cuanto le
+// deben los compradores (que no es exigible todavia).
+func (q *Queries) SellerSeasonStats(ctx context.Context, arg SellerSeasonStatsParams) (SellerSeasonStatsRow, error) {
+	row := q.db.QueryRow(ctx, sellerSeasonStats, arg.SellerID, arg.SeasonID)
+	var i SellerSeasonStatsRow
+	err := row.Scan(
+		&i.PaidSales,
+		&i.TicketsSold,
+		&i.UncollectedCents,
+		&i.FirstPaidAt,
+		&i.LastPaidAt,
+	)
+	return i, err
 }
 
 const settlementsReport = `-- name: SettlementsReport :many

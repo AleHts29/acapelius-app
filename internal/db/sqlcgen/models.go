@@ -96,6 +96,16 @@ type Settlement struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type SettlementReminder struct {
+	ID          int64     `json:"id"`
+	SellerID    int64     `json:"seller_id"`
+	SeasonID    int64     `json:"season_id"`
+	SentBy      int64     `json:"sent_by"`
+	AmountCents int64     `json:"amount_cents"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type Ticket struct {
 	ID        int64     `json:"id"`
 	SaleID    int64     `json:"sale_id"`

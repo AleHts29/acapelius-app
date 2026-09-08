@@ -220,3 +220,84 @@ func TestDireccionMinimalista(t *testing.T) {
 		t.Fatalf("una funcion que no paso no tiene asistencia: %v", inSale["attendance_pct"])
 	}
 }
+
+// TestDetalleDeRendicion: el detalle tiene que servir para reclamar, no solo
+// para mirar. Se chequea que el origen de la deuda sume exactamente lo que se
+// debe, y que el recordatorio quede registrado con lo que decia en su momento.
+func TestDetalleDeRendicion(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	fnID := setupCatalog(t, admin, 30)
+	corista := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test") // user 2
+
+	assertStatus(t, admin.do(http.MethodPut, fmt.Sprintf("/api/functions/%.0f/allocations", fnID),
+		map[string]any{"allocations": []map[string]any{{"user_id": 2, "quantity": 10}}}), http.StatusOK)
+
+	var cobradas float64
+	for _, v := range []struct {
+		nombre string
+		qty    int
+		cobra  bool
+	}{{"Rosa Suárez", 4, true}, {"Hugo Díaz", 3, true}, {"Sin pagar", 2, false}} {
+		venta := corista.post("/api/sales", map[string]any{
+			"function_id": fnID, "buyer_name": v.nombre, "quantity": v.qty,
+		})
+		assertStatus(t, venta, http.StatusCreated)
+		if v.cobra {
+			sale := venta.Body["sale"].(map[string]any)
+			assertStatus(t, corista.do(http.MethodPatch, fmt.Sprintf("/api/sales/%.0f", sale["id"].(float64)),
+				map[string]any{"payment_status": "paid", "payment_method": "cash"}), http.StatusOK)
+			cobradas += sale["amount_cents"].(float64)
+		}
+	}
+
+	detalle := admin.get("/api/settlements/2/detail?season_id=1")
+	assertStatus(t, detalle, http.StatusOK)
+	if detalle.Body["balance_cents"].(float64) != cobradas {
+		t.Fatalf("debe %v y cobro %v", detalle.Body["balance_cents"], cobradas)
+	}
+
+	// De donde sale la deuda: solo las cobradas, y suman lo que debe.
+	fuentes := detalle.Body["debt_sources"].([]any)
+	if len(fuentes) != 2 {
+		t.Fatalf("tendrian que ser las 2 ventas cobradas, hay %d", len(fuentes))
+	}
+	var suma float64
+	for _, raw := range fuentes {
+		f := raw.(map[string]any)
+		suma += f["paid_cents"].(float64)
+		if f["buyer_name"] == "Sin pagar" {
+			t.Fatal("una venta sin cobrar no es parte de la deuda a rendir")
+		}
+		if f["paid_at"] == nil {
+			t.Fatalf("una venta cobrada tiene fecha de cobro: %v", f)
+		}
+	}
+	if suma != detalle.Body["balance_cents"].(float64) {
+		t.Fatalf("el origen suma %v y la deuda es %v: el detalle no cierra", suma, detalle.Body["balance_cents"])
+	}
+	if detalle.Body["last_reminder_at"] != nil {
+		t.Fatal("todavia no se le recordo nada")
+	}
+
+	// El recordatorio queda registrado con el monto de ese momento.
+	assertStatus(t, admin.post("/api/settlements/2/remind?season_id=1", nil), http.StatusOK)
+
+	despues := admin.get("/api/settlements/2/detail?season_id=1")
+	if despues.Body["last_reminder_at"] == nil {
+		t.Fatal("el recordatorio tendria que quedar registrado")
+	}
+	var vistos int
+	for _, raw := range despues.Body["timeline"].([]any) {
+		item := raw.(map[string]any)
+		if item["kind"] == "reminder" {
+			vistos++
+			if item["amount_cents"].(float64) != cobradas {
+				t.Fatalf("el recordatorio guarda cuanto debia: %v", item["amount_cents"])
+			}
+		}
+	}
+	if vistos != 1 {
+		t.Fatalf("un recordatorio en la linea de tiempo, hay %d", vistos)
+	}
+}

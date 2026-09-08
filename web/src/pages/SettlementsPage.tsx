@@ -1,12 +1,17 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, History } from 'lucide-react'
+import { Check, History, Mail } from 'lucide-react'
 
 import { ApiError, activeSeason, api } from '../api/client'
 import { useIsDesktop } from '../lib/viewport'
-import type { PaymentMethod, Settlement, SettlementReportRow } from '../api/client'
-import { dayLabel, formatMoney, pesosToCents, timeShort } from '../lib/format'
+import type {
+  PaymentMethod,
+  Settlement,
+  SettlementReportRow,
+  TimelineItem,
+} from '../api/client'
+import { dayLabel, daysAgo, formatMoney, pesosToCents, timeShort } from '../lib/format'
 import { ActionPanel } from '../ui/ActionPanel'
 import { EmptyState, FilterChips, ProgressBar, SegmentedToggle } from '../ui/controls'
 import { BalanceChip } from '../ui/StatusChip'
@@ -376,100 +381,215 @@ export function SettlementDetailPage({
   /** En el master-detail el "‹ Rendiciones" sobra: la lista está al lado. */
   embedded?: boolean
 } = {}) {
+  const queryClient = useQueryClient()
   const { sellerId: raw } = useParams()
   const sellerId = sellerIdProp ?? Number(raw)
   const season = useSeason()
-  const report = useReport(season?.id)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
 
-  const salesReport = useQuery({ queryKey: ['sales-report'], queryFn: () => api.salesReport() })
-  const history = useQuery({
-    queryKey: ['settlements-history', season?.id, sellerId],
-    queryFn: () => api.listSettlements(season!.id, sellerId),
+  const detail = useQuery({
+    queryKey: ['seller-detail', season?.id, sellerId],
+    queryFn: () => api.sellerDetail(sellerId, season!.id),
     enabled: season !== undefined && Number.isInteger(sellerId),
   })
 
-  const row = report.data?.rows.find((r) => r.seller_id === sellerId)
-  if (report.isPending) return <p className="muted">Cargando…</p>
-  if (!row) return <p className="alert">No encontramos a esa corista.</p>
+  const recordar = useMutation({
+    mutationFn: () => api.remindSeller(sellerId, season!.id),
+    onSuccess: ({ email_status }) => {
+      setAviso(
+        email_status === 'sent'
+          ? 'Recordatorio enviado con el detalle.'
+          : 'El recordatorio no salió. Probá de nuevo.',
+      )
+      void queryClient.invalidateQueries({ queryKey: ['seller-detail'] })
+    },
+    onError: () => setAviso('El recordatorio no salió. Probá de nuevo.'),
+  })
 
-  const salesCount = (salesReport.data?.rows ?? [])
-    .filter((r) => r.seller_id === sellerId)
-    .reduce((acc, r) => acc + r.tickets_sold, 0)
-  const settlements = history.data?.settlements ?? []
+  if (detail.isPending) return <p className="muted">Cargando…</p>
+  if (!detail.data) return <p className="alert">No encontramos a esa corista.</p>
+  const d = detail.data
+
+  // La fila que espera el pop-up de rendición.
+  const row: SettlementReportRow = {
+    seller_id: d.seller_id,
+    seller_name: d.seller_name,
+    collected_cents: d.collected_cents,
+    pending_cents: d.uncollected_cents,
+    settled_cents: d.settled_cents,
+    balance_cents: d.balance_cents,
+  }
 
   return (
-    <>
+    <div className="rd">
       {!embedded && (
         <p style={{ margin: '0 0 8px' }}>
-          <Link to="/panel/rendiciones" style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'none', fontSize: 13 }}>
+          <Link
+            to="/panel/rendiciones"
+            style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'none', fontSize: 13 }}
+          >
             ‹ Rendiciones
           </Link>
         </p>
       )}
 
-      <div className="profile">
-        <div className="profile__head">
-          <span className="ini">{initials(row.seller_name)}</span>
+      <div className="rd__h">
+        <span className={`ini ini--lg${d.balance_cents > 0 ? ' ini--warn' : ''}`}>
+          {initials(d.seller_name)}
+        </span>
+        <span className="rd__who">
+          <b>{d.seller_name}</b>
           <span>
-            <b>{row.seller_name}</b>
-            <span className="profile__role">
-              Corista · {salesCount} {salesCount === 1 ? 'entrada vendida' : 'entradas vendidas'} esta temporada
-            </span>
+            Corista · {d.tickets_sold}{' '}
+            {d.tickets_sold === 1 ? 'entrada vendida' : 'entradas vendidas'} esta temporada
           </span>
-          <span className="profile__chip">
-            <BalanceChip balanceCents={row.balance_cents} />
-          </span>
-        </div>
-        <div className="kpis3">
-          <div className="k"><b>{formatMoney(row.collected_cents)}</b><span>Cobró</span></div>
-          <div className="k"><b className="g">{formatMoney(row.settled_cents)}</b><span>Rindió</span></div>
-          <div className="k"><b className="y">{formatMoney(Math.max(row.balance_cents, 0))}</b><span>Debe</span></div>
-        </div>
-        {/* Quien está al día no necesita que la pantalla le pida una rendición;
-            la acción sigue disponible en voz baja, para corregir un monto mal
-            cargado o registrar una entrega adelantada. */}
-        {row.balance_cents > 0 ? (
-          <button className="button" type="button" onClick={() => setSheetOpen(true)}>
-            Registrar rendición
-          </button>
-        ) : (
-          <button className="linkbtn" type="button" onClick={() => setSheetOpen(true)}>
-            Registrar una rendición igual
-          </button>
-        )}
-        {row.pending_cents > 0 && (
-          <p className="profile__note">
-            Aparte, compradores le deben {formatMoney(row.pending_cents)} (no exigible aún)
-          </p>
-        )}
+        </span>
+        <span className="rd__acts">
+          {d.balance_cents > 0 && (
+            <button
+              className="button button--ghost"
+              type="button"
+              disabled={recordar.isPending}
+              onClick={() => recordar.mutate()}
+            >
+              <Mail size={14} aria-hidden /> {recordar.isPending ? 'Enviando…' : 'Recordar'}
+            </button>
+          )}
+          {/* Quien está al día no necesita que la pantalla le pida una
+              rendición; la acción sigue disponible en voz baja, para corregir
+              un monto mal cargado o registrar una entrega adelantada. */}
+          {d.balance_cents > 0 ? (
+            <button className="button" type="button" onClick={() => setSheetOpen(true)}>
+              Registrar rendición
+            </button>
+          ) : (
+            <button className="linkbtn" type="button" onClick={() => setSheetOpen(true)}>
+              Registrar una rendición igual
+            </button>
+          )}
+        </span>
       </div>
 
-      <div className="ghead"><b>Su historial</b></div>
-      {history.isPending ? (
-        <p className="muted">Cargando…</p>
-      ) : settlements.length === 0 ? (
-        <p className="muted" style={{ textAlign: 'center', fontSize: 11.5 }}>
-          Todavía no rindió nada.
+      {aviso && (
+        <p className="rd__aviso" role="status">
+          {aviso}
         </p>
-      ) : (
-        <>
-          {settlements.map((settlement) => (
-            <HistoryRow key={settlement.id} settlement={settlement} withName={false} />
-          ))}
-          {settlements.length === 1 && (
-            <p className="muted" style={{ textAlign: 'center', fontSize: 10.5 }}>
-              Una sola rendición hasta ahora
+      )}
+
+      <div className="kbar">
+        <div className="kbar__k">
+          <b>{formatMoney(d.collected_cents)}</b>
+          <span>Cobró</span>
+          <i>
+            {d.paid_sales} {d.paid_sales === 1 ? 'venta' : 'ventas'}
+          </i>
+        </div>
+        <div className="kbar__k">
+          <b className="stat-ok">{formatMoney(d.settled_cents)}</b>
+          <span>Rindió</span>
+          <i>{d.settled_cents === 0 ? 'Nunca' : 'En esta temporada'}</i>
+        </div>
+        <div className="kbar__k">
+          <b className="stat-warn">{formatMoney(Math.max(d.balance_cents, 0))}</b>
+          <span>Debe</span>
+          <i>{d.last_paid_at ? `Cobró ${daysAgo(d.last_paid_at)}` : 'Sin cobros'}</i>
+        </div>
+        <div className="kbar__k">
+          <b>{formatMoney(d.uncollected_cents)}</b>
+          <span>Sin cobrar</span>
+          <i>No exigible aún</i>
+        </div>
+      </div>
+
+      <div className="rd__body">
+        <div className="rd__sect">
+          <div className="rd__sh">
+            <b>De dónde sale la deuda</b>
+            <span>
+              {d.debt_sources.length}{' '}
+              {d.debt_sources.length === 1 ? 'venta cobrada' : 'ventas cobradas'}
+            </span>
+          </div>
+          {d.debt_sources.length === 0 ? (
+            <p className="rd__vacio">Todavía no cobró ninguna venta de esta temporada.</p>
+          ) : (
+            <>
+              {d.debt_sources.map((f) => (
+                <div key={f.sale_id} className="rd__row">
+                  <span className="rd__mid">
+                    <b>{f.buyer_name}</b>
+                    <span>
+                      {f.quantity} {f.quantity === 1 ? 'entrada' : 'entradas'} · {f.function_name}
+                    </span>
+                  </span>
+                  <span className="rd__amt">{formatMoney(f.paid_cents)}</span>
+                  <span className="rd__when">{f.paid_at ? dayLabel(f.paid_at) : '—'}</span>
+                </div>
+              ))}
+              <div className="rd__tot">
+                <span>Total a rendir</span>
+                <b>{formatMoney(Math.max(d.balance_cents, 0))}</b>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="rd__sect">
+          <div className="rd__sh">
+            <b>Su historial</b>
+            <span>{season?.name}</span>
+          </div>
+          {d.timeline.length === 0 ? (
+            <p className="rd__vacio">Todavía no hay movimientos en esta temporada.</p>
+          ) : (
+            <div className="tl">
+              {d.timeline.map((item, i) => (
+                <div key={`${item.kind}-${item.at}-${i}`} className="tl__r">
+                  <span className={`tl__dot tl__dot--${item.kind}`} aria-hidden />
+                  <span className="tl__mid">
+                    <b>{tituloTimeline(item)}</b>
+                    <span>
+                      {dayLabel(item.at)}, {timeShort(item.at)}
+                      {item.method && ` · ${item.method === 'transfer' ? 'transferencia' : 'efectivo'}`}
+                    </span>
+                    {item.notes && <span className="tl__note">“{item.notes}”</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {d.settled_cents === 0 && d.first_paid_at && (
+            <p className="rd__vacio">
+              Todavía no rindió nada. Tiene plata cobrada desde {daysAgo(d.first_paid_at)}.
             </p>
           )}
-        </>
-      )}
+        </div>
+      </div>
 
       {sheetOpen && season && (
         <RegisterSheet row={row} seasonId={season.id} onClose={() => setSheetOpen(false)} />
       )}
-    </>
+    </div>
   )
+}
+
+/** El título de cada movimiento de la línea de tiempo. */
+function tituloTimeline(item: TimelineItem): string {
+  switch (item.kind) {
+    default:
+      return 'Movimiento'
+    case 'settlement':
+      return `Rindió ${formatMoney(item.amount_cents ?? 0)}`
+    case 'reminder':
+      return item.detail === 'failed'
+        ? 'Recordatorio que no salió'
+        : `Recordatorio enviado por ${formatMoney(item.amount_cents ?? 0)}`
+    case 'last_paid':
+      return 'Última venta cobrada'
+    case 'first_paid':
+      return 'Primera venta cobrada'
+  }
 }
 
 /* ========================================================================== *
@@ -534,6 +654,146 @@ export function SettlementsHistoryPage() {
  * ========================================================================== */
 
 /**
+ * El panel cuando no hay nadie elegido. En vez de una caja vacía con una
+ * frase: el ranking de deudas con barras comparables —quién debe más se ve de
+ * un vistazo— y las dos acciones que aplican a todas.
+ */
+function SinSeleccion() {
+  const queryClient = useQueryClient()
+  const season = useSeason()
+  const report = useReport(season?.id)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const [confirmando, setConfirmando] = useState(false)
+
+  const rows = report.data?.rows ?? []
+  const deudoras = rows
+    .filter((r) => r.balance_cents > 0)
+    .sort((a, b) => b.balance_cents - a.balance_cents)
+  const total = deudoras.reduce((acc, r) => acc + r.balance_cents, 0)
+  const cobrado = rows.reduce((acc, r) => acc + r.collected_cents, 0)
+  const mayor = deudoras[0]?.balance_cents ?? 1
+  const porcentaje = cobrado > 0 ? Math.round((total / cobrado) * 100) : 0
+
+  const recordarTodas = useMutation({
+    mutationFn: () => api.remindAll(season!.id),
+    onSuccess: ({ sent, failed }) => {
+      setConfirmando(false)
+      setAviso(
+        failed === 0
+          ? `Recordatorio enviado a ${sent} ${sent === 1 ? 'corista' : 'coristas'}.`
+          : `Salieron ${sent} y fallaron ${failed}. Probá de nuevo con las que faltan.`,
+      )
+      void queryClient.invalidateQueries({ queryKey: ['seller-detail'] })
+    },
+    onError: () => {
+      setConfirmando(false)
+      setAviso('No se pudieron enviar los recordatorios.')
+    },
+  })
+
+  /** Exporta lo que se ve: quién, cuánto cobró, cuánto rindió y cuánto debe. */
+  function exportar() {
+    const filas = [
+      ['Corista', 'Cobró', 'Rindió', 'Debe'],
+      ...deudoras.map((r) => [
+        r.seller_name,
+        String(r.collected_cents / 100),
+        String(r.settled_cents / 100),
+        String(r.balance_cents / 100),
+      ]),
+    ]
+    const csv = filas.map((f) => f.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `rendiciones-${season?.name.replace(/\s+/g, '-').toLowerCase()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  if (deudoras.length === 0) {
+    return (
+      <EmptyState icon={<Check size={18} />} title="Nadie debe rendir">
+        Toda la plata cobrada ya está en manos de dirección.
+      </EmptyState>
+    )
+  }
+
+  return (
+    <div className="rank">
+      <div className="rank__h">
+        <p className="rank__n">{formatMoney(total)}</p>
+        <p className="rank__l">
+          repartidos entre {deudoras.length}{' '}
+          {deudoras.length === 1 ? 'corista' : 'coristas'} · el {porcentaje}% de lo cobrado en la
+          temporada
+        </p>
+        {aviso && (
+          <p className="rd__aviso" role="status">
+            {aviso}
+          </p>
+        )}
+        <div className="rank__acts">
+          {confirmando ? (
+            <>
+              <button
+                className="button"
+                type="button"
+                disabled={recordarTodas.isPending}
+                onClick={() => recordarTodas.mutate()}
+              >
+                {recordarTodas.isPending
+                  ? 'Enviando…'
+                  : `Sí, mandar ${deudoras.length} recordatorios`}
+              </button>
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => setConfirmando(false)}
+              >
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Manda emails de verdad a varias personas: se confirma antes. */}
+              <button className="button" type="button" onClick={() => setConfirmando(true)}>
+                <Mail size={14} aria-hidden /> Recordar a las {deudoras.length}
+              </button>
+              <button className="button button--ghost" type="button" onClick={exportar}>
+                Exportar detalle
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {deudoras.map((r, i) => (
+        <Link key={r.seller_id} className="rank__r" to={`/panel/rendiciones/${r.seller_id}`}>
+          <span className="rank__pos">{i + 1}</span>
+          <span className="rank__mid">
+            <b>{r.seller_name}</b>
+            <span>
+              {r.settled_cents === 0
+                ? 'Nunca rindió'
+                : `Rindió ${formatMoney(r.settled_cents)}`}{' '}
+              · cobró {formatMoney(r.collected_cents)}
+            </span>
+          </span>
+          <span className="rank__track">
+            <i style={{ width: `${(r.balance_cents / mayor) * 100}%` }} />
+          </span>
+          <span className="rank__amt">{formatMoney(r.balance_cents)}</span>
+        </Link>
+      ))}
+      <p className="rank__hint">
+        Elegí una corista para ver de dónde sale su deuda y registrar una entrega.
+      </p>
+    </div>
+  )
+}
+
+/**
  * Una sola URL para las dos formas. En escritorio `/panel/rendiciones/:id` es
  * lista + detalle lado a lado, y sin id la lista con una invitación a elegir;
  * en celular esa misma URL es la vista de detalle sola, como siempre. Un solo
@@ -561,13 +821,11 @@ export function SettlementsScreen() {
         <div className="md__list">
           <SettlementsPage embedded selectedId={sellerId} />
         </div>
-        <div className="md__detail">
+        <div className="md__detail md__detail--full">
           {sellerId !== undefined ? (
             <SettlementDetailPage sellerId={sellerId} embedded />
           ) : (
-            <p className="muted" style={{ margin: 0 }}>
-              Elegí una corista de la lista para ver su detalle y su historial.
-            </p>
+            <SinSeleccion />
           )}
         </div>
       </div>

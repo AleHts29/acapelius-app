@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import { Banknote, HandCoins, Landmark, Link2, Mail, PartyPopper, RotateCcw, X } from 'lucide-react'
@@ -9,9 +9,8 @@ import type { PaymentMethod, SaleListItem, SalePayments, SaleStatusFilter } from
 import { useSession } from '../auth/session'
 import { dayLabel, daysAgo, formatDateTime, formatMoney, pesosToCents } from '../lib/format'
 import { initials, normalizeText } from '../lib/search'
-import { useIsDesktop } from '../lib/viewport'
-import { NewSalePage } from './NewSalePage'
 import { ActionPanel, SheetAction } from '../ui/ActionPanel'
+import { useNuevaVenta } from '../ui/useNuevaVenta'
 import { EmptyState, FilterChips, Hl, PageHead, SearchBar, SegmentedToggle } from '../ui/controls'
 import { SaleChip } from '../ui/StatusChip'
 
@@ -350,10 +349,8 @@ function SaleSheet({
 
 export function SalesPage() {
   const { user } = useSession()
-  const escritorio = useIsDesktop()
-  const [nuevaVenta, setNuevaVenta] = useState(false)
+  const nuevaVenta = useNuevaVenta()
   const isAdmin = user?.role === 'admin'
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const filter = parseFilter(searchParams.get('filtro'))
@@ -415,17 +412,10 @@ export function SalesPage() {
         /* En escritorio la venta se resuelve encima de la lista y al cerrar
            seguís donde estabas; en celular es su propia pantalla, que ahí es
            lo cómodo. */
-        action={{
-          label: 'Nueva venta',
-          onClick: () => (escritorio ? setNuevaVenta(true) : navigate('/ventas/nueva')),
-        }}
+        action={{ label: 'Nueva venta', onClick: nuevaVenta.abrir }}
       />
 
-      {nuevaVenta && (
-        <ActionPanel label="Nueva venta" size="form" onClose={() => setNuevaVenta(false)}>
-          <NewSalePage onDone={() => setNuevaVenta(false)} />
-        </ActionPanel>
-      )}
+      {nuevaVenta.panel}
 
       <div className="salesbar">
       {summary && (

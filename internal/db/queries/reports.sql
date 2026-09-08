@@ -285,3 +285,61 @@ WHERE f.season_id = sqlc.arg(season_id)::bigint
 SELECT COALESCE(SUM(amount_cents), 0)::bigint
 FROM settlements
 WHERE season_id = sqlc.arg(season_id)::bigint;
+
+-- ============================================================================
+-- Detalle de rendicion de una corista
+-- ============================================================================
+
+-- name: SellerDebtSources :many
+-- De donde sale la deuda: las ventas que la corista ya cobro, con cuanto
+-- cobro de cada una y cuando fue el ultimo cobro. Ordenadas por fecha de
+-- cobro descendente: lo mas fresco arriba, que es de lo que se acuerda.
+SELECT
+  s.id, s.buyer_name, s.quantity, s.paid_cents,
+  f.name AS function_name,
+  f.venue AS function_venue,
+  (SELECT MAX(p.created_at) FROM sale_payments p WHERE p.sale_id = s.id)::timestamptz AS paid_at
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+WHERE s.seller_id = sqlc.arg(seller_id)::bigint
+  AND f.season_id = sqlc.arg(season_id)::bigint
+  AND s.voided_at IS NULL
+  AND NOT s.is_comp
+  AND s.paid_cents > 0
+ORDER BY paid_at DESC NULLS LAST, s.id DESC;
+
+-- name: SellerSeasonStats :one
+-- Los numeros del encabezado: cuantas ventas cobro, desde cuando, y cuanto le
+-- deben los compradores (que no es exigible todavia).
+SELECT
+  COUNT(*) FILTER (WHERE s.paid_cents > 0)::bigint AS paid_sales,
+  COALESCE(SUM(s.quantity) FILTER (WHERE NOT s.is_comp), 0)::bigint AS tickets_sold,
+  COALESCE(SUM(s.amount_cents - s.paid_cents), 0)::bigint AS uncollected_cents,
+  COALESCE(MIN((SELECT MIN(p.created_at) FROM sale_payments p WHERE p.sale_id = s.id)),
+           '0001-01-01'::timestamptz)::timestamptz AS first_paid_at,
+  COALESCE(MAX((SELECT MAX(p.created_at) FROM sale_payments p WHERE p.sale_id = s.id)),
+           '0001-01-01'::timestamptz)::timestamptz AS last_paid_at
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+WHERE s.seller_id = sqlc.arg(seller_id)::bigint
+  AND f.season_id = sqlc.arg(season_id)::bigint
+  AND s.voided_at IS NULL
+  AND NOT s.is_comp;
+
+-- name: CreateReminder :one
+INSERT INTO settlement_reminders (seller_id, season_id, sent_by, amount_cents, status)
+VALUES (sqlc.arg(seller_id)::bigint, sqlc.arg(season_id)::bigint,
+        sqlc.arg(sent_by)::bigint, sqlc.arg(amount_cents)::bigint, sqlc.arg(status)::text)
+RETURNING *;
+
+-- name: ListReminders :many
+SELECT * FROM settlement_reminders
+WHERE seller_id = sqlc.arg(seller_id)::bigint AND season_id = sqlc.arg(season_id)::bigint
+ORDER BY created_at DESC;
+
+-- name: LastReminders :many
+-- El ultimo recordatorio de cada corista de la temporada, para el ranking.
+SELECT DISTINCT ON (seller_id) seller_id, created_at, status
+FROM settlement_reminders
+WHERE season_id = sqlc.arg(season_id)::bigint
+ORDER BY seller_id, created_at DESC;

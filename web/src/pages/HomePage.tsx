@@ -12,6 +12,7 @@ import { useSession } from '../auth/session'
 import { calendarDaysUntil, dayLabel, daysAgo, formatDateTime, formatMoney } from '../lib/format'
 import { initials } from '../lib/search'
 import { ProgressBar } from '../ui/controls'
+import { useNuevaVenta } from '../ui/useNuevaVenta'
 import { SaleChip } from '../ui/StatusChip'
 
 /** "Próxima función · en 5 días" / "· hoy" / "Última función". */
@@ -37,7 +38,7 @@ function Stat({ value, label }: { value: string; label: string }) {
  * función; para la corista, su venta contra su cupo — el mismo bloque contando
  * la historia que le toca a cada una.
  */
-function Hero({ home, fn }: { home: Home; fn: HomeFunction }) {
+function Hero({ home, fn, onVender }: { home: Home; fn: HomeFunction; onVender: () => void }) {
   const navigate = useNavigate()
   const esCorista = home.role === 'seller'
   const sinCupo = esCorista && fn.no_allocation
@@ -90,7 +91,7 @@ function Hero({ home, fn }: { home: Home; fn: HomeFunction }) {
         type="button"
         disabled={sinCupo}
         onClick={() =>
-          navigate(esCorista ? '/ventas/nueva' : `/temporadas/${home.season?.id}?fn=${fn.id}`)
+          esCorista ? onVender() : navigate(`/temporadas/${home.season?.id}?fn=${fn.id}`)
         }
       >
         {esCorista ? '＋ Vender' : 'Ver función'}
@@ -227,6 +228,7 @@ export function HomePage() {
   const { user } = useSession()
   const navigate = useNavigate()
   const home = useQuery({ queryKey: ['home'], queryFn: () => api.home() })
+  const nuevaVenta = useNuevaVenta()
   // La rendición se resuelve acá mismo (C14): la alerta abre el pop-up y al
   // confirmar desaparece sola, porque la mutación invalida ['home'].
   const [rindiendo, setRindiendo] = useState<SettlementReportRow | null>(null)
@@ -271,14 +273,14 @@ export function HomePage() {
               Modo puerta
             </Link>
           )}
-          <Link className="button home-cta" to="/ventas/nueva">
+          <button className="button home-cta" type="button" onClick={nuevaVenta.abrir}>
             ＋ Nueva venta
-          </Link>
+          </button>
         </div>
       </div>
 
       {data.next_function ? (
-        <Hero home={data} fn={data.next_function} />
+        <Hero home={data} fn={data.next_function} onVender={nuevaVenta.abrir} />
       ) : (
         <p className="muted">
           Todavía no hay funciones cargadas.{' '}
@@ -289,9 +291,9 @@ export function HomePage() {
       {/* En celular las acciones van debajo del hero; en escritorio ya están
           arriba a la derecha y este bloque no se muestra. */}
       <div className="home-actions">
-        <Link className="button" to="/ventas/nueva">
+        <button className="button" type="button" onClick={nuevaVenta.abrir}>
           ＋ Nueva venta
-        </Link>
+        </button>
         {!esCorista && (
           <Link className="button button--ghost" to="/puerta">
             Modo puerta
@@ -473,6 +475,8 @@ export function HomePage() {
           )}
         </div>
       </div>
+
+      {nuevaVenta.panel}
 
       {rindiendo && data.season && (
         <RegisterSheet

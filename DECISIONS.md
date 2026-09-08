@@ -334,3 +334,29 @@ que es el que muestra esa pantalla.
 
 El promedio se redondea al peso. En un promedio los centavos son ruido:
 "$7.483,87" se lee peor que "$7.484" para la misma decisión.
+
+## El detalle de rendición sirve para reclamar
+
+La vista respondía "cuánto debe" pero no "de dónde sale esa deuda", que es lo
+que hace falta para hablar con la corista. Un "$112.000" a secas la obliga a
+reconstruir de memoria de dónde sale, y en esa reconstrucción aparecen las
+discusiones. Ahora el panel lista las ventas que ya cobró —comprador, función,
+monto y cuándo— y suma exactamente lo que debe, con test: si el origen no
+cierra con el total, el detalle no sirve para nada.
+
+**El recordatorio manda lo mismo que muestra la pantalla.** Por eso el armado
+del detalle vive en una función y no en el handler: si el mail y la pantalla se
+armaran por separado podrían discrepar, y esa discusión la pierde siempre
+dirección.
+
+Cada envío queda registrado con **cuánto debía en ese momento**. La deuda
+cambia; sin ese número el historial no se puede leer más tarde. También se
+registran los que fallan: un recordatorio que no salió es información.
+
+"Recordar a las N" manda emails de verdad a varias personas, así que pide
+confirmación antes. No es un pop-up: el botón se transforma en la pregunta, que
+para una sola decisión alcanza y no tapa el ranking que la justifica.
+
+El panel sin selección muestra el ranking con barras comparables en vez de una
+caja vacía. La barra es lo que hace comparable una deuda con la de al lado; los
+números solos obligan a hacer la cuenta de cabeza.

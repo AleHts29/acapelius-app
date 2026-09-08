@@ -3075,6 +3075,374 @@ div.alertcard {
 }
 
 /* ==========================================================================
+   Rendiciones · el detalle sirve para reclamar
+
+   La vista respondía "cuánto debe" pero no "de dónde sale esa deuda", que es
+   lo que hace falta para hablar con la corista. El panel muestra el origen
+   fila por fila, su historial, y las acciones para reclamar.
+   ========================================================================== */
+
+.rd__h {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.ini--lg {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.ini--warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.rd__who {
+  flex: 1;
+  min-width: 0;
+}
+
+.rd__who b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.rd__who > span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.rd__acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.rd__acts .button {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rd__aviso {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ok);
+}
+
+/* Las cuatro cifras, cada una con su contexto abajo: un número sin contexto
+   obliga a ir a buscarlo a otro lado. */
+.kbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--line);
+}
+
+.kbar__k {
+  padding: 13px 0;
+  border-left: 1px solid var(--line);
+  padding-left: 14px;
+}
+
+.kbar__k:nth-child(odd) {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.kbar__k b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.kbar__k span {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kbar__k i {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.rd__body {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.rd__sect {
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.rd__sect:last-child {
+  border-bottom: 0;
+}
+
+.rd__sh {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.rd__sh b {
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.rd__sh span {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.rd__row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.rd__mid {
+  flex: 1;
+  min-width: 0;
+}
+
+.rd__mid b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.rd__mid span {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.rd__amt {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.rd__when {
+  width: 82px;
+  text-align: right;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rd__tot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  margin: 0 -14px;
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.rd__tot span {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.rd__tot b {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.rd__vacio {
+  padding: 18px 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* Línea de tiempo de la corista. */
+.tl__r {
+  display: flex;
+  gap: 11px;
+  padding: 9px 0;
+}
+
+.tl__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+  background: var(--line);
+}
+
+.tl__dot--settlement {
+  background: var(--ok);
+}
+
+.tl__dot--reminder {
+  background: var(--indigo);
+}
+
+.tl__mid b {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tl__mid > span {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.tl__note {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* --- El panel sin selección: ranking de deudas --------------------------- */
+
+.rank__h {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rank__n {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--warn);
+}
+
+.rank__l {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.rank__acts {
+  margin-top: 14px;
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.rank__acts .button {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rank__r {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.rank__r:hover {
+  background: var(--surface-alt);
+}
+
+.rank__pos {
+  width: 16px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.rank__mid {
+  flex: 1;
+  min-width: 0;
+}
+
+.rank__mid b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.rank__mid span {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+/* La barra hace comparable una deuda con la de al lado: el número solo no. */
+.rank__track {
+  width: 90px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.rank__track i {
+  display: block;
+  height: 100%;
+  background: var(--warn);
+}
+
+.rank__amt {
+  width: 84px;
+  text-align: right;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--warn);
+  flex-shrink: 0;
+}
+
+.rank__hint {
+  padding: 14px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
    Dirección minimalista
 
    Tres bloques y mucho aire. La regla: si un dato necesita explicación,
@@ -4366,6 +4734,52 @@ div.alertcard {
     margin-top: 0;
   }
 
+  /* --- Rendiciones: el panel llena el alto ------------------------------ */
+  .kbar {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .kbar__k {
+    border-left: 1px solid var(--line);
+    padding-left: 16px;
+  }
+
+  .kbar__k:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .kbar__k:nth-child(odd) {
+    border-left: 1px solid var(--line);
+    padding-left: 16px;
+  }
+
+  .kbar__k:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .rd__body {
+    grid-template-columns: 1.25fr 1fr;
+    gap: 20px;
+  }
+
+  .rd__sect {
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+    padding-right: 20px;
+  }
+
+  .rd__sect:last-child {
+    border-right: 0;
+    padding-right: 0;
+  }
+
+  .rd__tot {
+    margin: 0 -20px 0 0;
+    padding-right: 20px;
+  }
+
   /* --- Dirección: tres hallazgos por fila y las dos columnas del pie ---- */
   .finds {
     grid-template-columns: repeat(3, 1fr);
@@ -4609,12 +5023,15 @@ div.alertcard {
   }
 
   /* Pegado arriba: eligiendo a alguien del final de la lista, el detalle
-     quedaba fuera de pantalla y había que subir a buscarlo. */
+     quedaba fuera de pantalla y había que subir a buscarlo. Y con alto
+     mínimo de pantalla: el panel llenando el alto mientras la lista scrollea
+     al lado es lo que hace que se pueda comparar sin perder el contexto. */
   .md__detail {
     flex: 1;
     min-width: 0;
     position: sticky;
     top: 16px;
+    min-height: calc(100vh - 190px);
     max-height: calc(100vh - 32px);
     overflow-y: auto;
     background: var(--surface);

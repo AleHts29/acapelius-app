@@ -3,6 +3,7 @@ package mail
 import (
 	"fmt"
 	"html"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -218,4 +219,109 @@ func ComposeInviteEmail(data InviteEmailData) Message {
 		HTML:    b.String(),
 		Text:    textB.String(),
 	}
+}
+
+// ReminderSale es una venta cobrada que la corista todavia no rindio.
+type ReminderSale struct {
+	BuyerName    string
+	FunctionName string
+	Quantity     int32
+	PaidCents    int64
+	PaidAt       time.Time
+}
+
+// ReminderEmailData es lo que necesita el recordatorio de rendicion.
+type ReminderEmailData struct {
+	Name       string
+	Email      string
+	SeasonName string
+	DebtCents  int64
+	Sales      []ReminderSale
+	BaseURL    string
+	SenderName string
+}
+
+/*
+ComposeReminderEmail arma el recordatorio de rendicion.
+
+El mail lleva el detalle completo —que venta, de quien, cuando la cobro— y no
+solo el total. Un "debes $112.000" a secas obliga a la corista a reconstruir de
+memoria de donde sale, y en esa reconstruccion aparecen las discusiones. Con el
+detalle enfrente, o esta de acuerdo o senala exactamente cual fila esta mal.
+*/
+func ComposeReminderEmail(data ReminderEmailData) Message {
+	esc := html.EscapeString
+
+	// --- Version texto plano -------------------------------------------------
+	var textB strings.Builder
+	fmt.Fprintf(&textB, "Hola %s:\n\n", data.Name)
+	fmt.Fprintf(&textB, "Segun Acapelius tenes %s cobrados de la %s que todavia no rendiste.\n\n",
+		Money(data.DebtCents), data.SeasonName)
+	if len(data.Sales) > 0 {
+		fmt.Fprintf(&textB, "De donde sale:\n")
+		for _, s := range data.Sales {
+			fmt.Fprintf(&textB, "  %-22s %-18s %s  (%s)\n",
+				s.BuyerName, s.FunctionName, Money(s.PaidCents), s.PaidAt.Format("02/01"))
+		}
+		fmt.Fprintf(&textB, "\n  Total: %s\n", Money(data.DebtCents))
+	}
+	fmt.Fprintf(&textB, "\nSi algo no coincide, avisale a %s.\n", data.SenderName)
+
+	// --- Version HTML --------------------------------------------------------
+	var b strings.Builder
+	fmt.Fprintf(&b, `<div style="margin:0;padding:24px 12px;background:%s;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">`, brandCream)
+	fmt.Fprintf(&b, `<div style="max-width:520px;margin:0 auto">`)
+	fmt.Fprintf(&b, `<div style="background:%s;border-radius:16px 16px 0 0;padding:22px 24px;text-align:center">`, brandBlue)
+	fmt.Fprintf(&b, `<img src="%s/email-logo.png" alt="Acapelius" width="200" style="max-width:60%%;height:auto">`, data.BaseURL)
+	fmt.Fprintf(&b, `</div>`)
+
+	fmt.Fprintf(&b, `<div style="background:#ffffff;border-radius:0 0 16px 16px;padding:28px 24px;color:%s">`, brandInk)
+	fmt.Fprintf(&b, `<h1 style="margin:0 0 14px;font-size:22px">Hola %s:</h1>`, esc(data.Name))
+	fmt.Fprintf(&b, `<p style="margin:0 0 18px">Tenes <strong>%s</strong> cobrados de la %s que todavia no rendiste.</p>`,
+		Money(data.DebtCents), esc(data.SeasonName))
+
+	if len(data.Sales) > 0 {
+		fmt.Fprintf(&b, `<table style="width:100%%;border-collapse:collapse;font-size:14px;margin:0 0 18px">`)
+		fmt.Fprintf(&b, `<tr><th align="left" style="padding:6px 0;border-bottom:2px solid %s;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#888">De quien</th>`, brandCream)
+		fmt.Fprintf(&b, `<th align="right" style="padding:6px 0;border-bottom:2px solid %s;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#888">Cobraste</th></tr>`, brandCream)
+		for _, s := range data.Sales {
+			fmt.Fprintf(&b, `<tr><td style="padding:8px 0;border-bottom:1px solid #eee"><strong>%s</strong><br><span style="color:#888;font-size:12px">%s · %s</span></td>`,
+				esc(s.BuyerName), esc(s.FunctionName), s.PaidAt.Format("02/01"))
+			fmt.Fprintf(&b, `<td align="right" style="padding:8px 0;border-bottom:1px solid #eee;white-space:nowrap"><strong>%s</strong></td></tr>`,
+				Money(s.PaidCents))
+		}
+		fmt.Fprintf(&b, `<tr><td style="padding:10px 0"><strong>Total a rendir</strong></td>`)
+		fmt.Fprintf(&b, `<td align="right" style="padding:10px 0"><strong style="font-size:17px">%s</strong></td></tr>`, Money(data.DebtCents))
+		fmt.Fprintf(&b, `</table>`)
+	}
+
+	fmt.Fprintf(&b, `<p style="margin:0;text-align:center;color:#888;font-size:12px">Si algo no coincide, avisale a %s.</p>`, esc(data.SenderName))
+	fmt.Fprintf(&b, `</div></div></div>`)
+
+	return Message{
+		To:      data.Email,
+		Subject: fmt.Sprintf("Rendicion pendiente: %s", Money(data.DebtCents)),
+		HTML:    b.String(),
+		Text:    textB.String(),
+	}
+}
+
+// Money formatea centavos como "$112.000". Vive aca porque el email no puede
+// pedirle el formato al frontend.
+func Money(cents int64) string {
+	pesos := cents / 100
+	signo := ""
+	if pesos < 0 {
+		signo = "-"
+		pesos = -pesos
+	}
+	s := strconv.FormatInt(pesos, 10)
+	var b strings.Builder
+	for i, r := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			b.WriteByte('.')
+		}
+		b.WriteRune(r)
+	}
+	return signo + "$" + b.String()
 }

@@ -565,6 +565,15 @@ export const api = {
       'GET',
       `/settlements?season_id=${seasonId}${sellerId !== undefined ? `&seller_id=${sellerId}` : ''}`,
     ),
+  sellerDetail: (sellerId: number, seasonId: number) =>
+    request<SellerDetail>('GET', `/settlements/${sellerId}/detail?season_id=${seasonId}`),
+  remindSeller: (sellerId: number, seasonId: number) =>
+    request<{ email_status: EmailStatus }>(
+      'POST',
+      `/settlements/${sellerId}/remind?season_id=${seasonId}`,
+    ),
+  remindAll: (seasonId: number) =>
+    request<{ sent: number; failed: number }>('POST', `/settlements/remind-all?season_id=${seasonId}`),
   createSettlement: (input: {
     seller_id: number
     season_id: number
@@ -574,6 +583,44 @@ export const api = {
   }) => request<{ settlement: Settlement }>('POST', '/settlements', input),
   attendanceReport: (functionId: number) =>
     request<AttendanceReport>('GET', `/reports/attendance?function_id=${functionId}`),
+}
+
+/* ===== Detalle de rendición de una corista ============================== */
+
+/** Una venta cobrada que todavía no se rindió: de ahí sale la deuda. */
+export interface DebtSource {
+  sale_id: number
+  buyer_name: string
+  function_name: string
+  quantity: number
+  paid_cents: number
+  paid_at: string | null
+}
+
+export interface TimelineItem {
+  kind: 'settlement' | 'reminder' | 'first_paid' | 'last_paid'
+  at: string
+  amount_cents?: number
+  method?: PaymentMethod
+  notes?: string
+  detail?: string
+}
+
+export interface SellerDetail {
+  seller_id: number
+  seller_name: string
+  email: string
+  collected_cents: number
+  settled_cents: number
+  balance_cents: number
+  uncollected_cents: number
+  tickets_sold: number
+  paid_sales: number
+  first_paid_at: string | null
+  last_paid_at: string | null
+  last_reminder_at: string | null
+  debt_sources: DebtSource[]
+  timeline: TimelineItem[]
 }
 
 /* ===== Dirección minimalista =========================================== */
