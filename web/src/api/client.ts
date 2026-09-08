@@ -549,6 +549,8 @@ export const api = {
       'GET',
       `/reports/settlements?season_id=${seasonId}`,
     ),
+  direccion: (seasonId: number) =>
+    request<Direccion>('GET', `/reports/direccion?season_id=${seasonId}`),
   attention: (seasonId: number) =>
     request<{ alerts: Alert[] }>('GET', `/reports/attention?season_id=${seasonId}`),
   functionsSummary: (seasonId: number) =>
@@ -572,6 +574,55 @@ export const api = {
   }) => request<{ settlement: Settlement }>('POST', '/settlements', input),
   attendanceReport: (functionId: number) =>
     request<AttendanceReport>('GET', `/reports/attendance?function_id=${functionId}`),
+}
+
+/* ===== Dirección minimalista =========================================== */
+
+export interface DireccionMoney {
+  sold_cents: number
+  in_hand_cents: number
+  unsettled_cents: number
+  uncollected_cents: number
+  sellers_owing: number
+  sales_uncollected: number
+}
+
+export interface DireccionFunction {
+  id: number
+  name: string | null
+  venue: string
+  starts_at: string
+  capacity: number
+  sold: number
+  entered: number
+  collected_cents: number
+  comp_tickets: number
+  assigned: number
+  price_cents: number
+  occupancy_pct: number
+  /** -1 = todavía no pasó: no hay asistencia que mostrar. */
+  attendance_pct: number
+  ticket_avg_cents: number
+  done: boolean
+}
+
+/** Una conclusión de "lo que hay que mirar". El texto lo arma el server. */
+export interface DireccionFinding {
+  kind: 'attendance' | 'unassigned' | 'comps'
+  value: string
+  suffix?: string
+  tone: 'danger' | 'warn' | 'indigo'
+  body: string
+  link_label: string
+  function_id?: number
+}
+
+export interface Direccion {
+  money: DireccionMoney
+  functions: DireccionFunction[]
+  totals: DireccionFunction
+  findings: DireccionFinding[]
+  in_sale: DireccionFunction | null
 }
 
 /* ===== Home por rol (C12) ================================================ */

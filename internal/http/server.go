@@ -168,6 +168,7 @@ func (s *Server) Handler() http.Handler {
 					admin.Get("/reports/sales", s.handleSalesReport)
 					admin.Get("/reports/attendance", s.handleAttendanceReport)
 					admin.Get("/reports/attention", s.handleAttention)
+					admin.Get("/reports/direccion", s.handleDireccion)
 					admin.Get("/reports/functions-summary", s.handleFunctionsSummary)
 					admin.Get("/reports/sales-timeline", s.handleSalesTimeline)
 					admin.Post("/settlements", s.handleCreateSettlement)

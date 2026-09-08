@@ -11,7 +11,7 @@ import { StackedBar, Stepper } from '../ui/controls'
  * asignadas / sin asignar, una fila por corista activa con stepper, y
  * guardado en batch. El "−" se frena en lo ya vendido.
  */
-export function AllocationsEditor({ fn }: { fn: ShowFunction }) {
+export function AllocationsEditor({ fn }: { fn: Pick<ShowFunction, 'id' | 'capacity'> }) {
   const queryClient = useQueryClient()
   const [drafts, setDrafts] = useState<Record<number, number>>({})
   const [error, setError] = useState<string | null>(null)
@@ -36,6 +36,7 @@ export function AllocationsEditor({ fn }: { fn: ShowFunction }) {
       void queryClient.invalidateQueries({ queryKey: ['attention'] })
       void queryClient.invalidateQueries({ queryKey: ['functions-summary'] })
       void queryClient.invalidateQueries({ queryKey: ['home'] })
+      void queryClient.invalidateQueries({ queryKey: ['direccion'] })
     },
     onError: (err) =>
       setError(err instanceof ApiError ? err.message : 'No se pudieron guardar las asignaciones.'),

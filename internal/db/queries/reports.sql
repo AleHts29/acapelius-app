@@ -114,6 +114,9 @@ SELECT
   (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
    JOIN users au ON au.id = a.user_id
    WHERE a.function_id = f.id AND au.role = 'seller' AND au.is_active)::bigint AS assigned,
+  -- Cortesias emitidas: no son plata, pero ocupan butaca.
+  (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
+   WHERE s.function_id = f.id AND s.is_comp AND t.status <> 'void')::bigint AS comp_tickets,
   (SELECT count(*) FROM checkins c
    JOIN tickets t ON c.ticket_id = t.id
    JOIN sales s ON t.sale_id = s.id
@@ -258,3 +261,27 @@ WHERE s.voided_at IS NULL
   AND NOT s.is_comp
   AND s.amount_cents > s.paid_cents
   AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint);
+
+-- ============================================================================
+-- Direccion minimalista: la plata de la temporada y la comparacion
+-- ============================================================================
+
+-- name: SeasonMoney :one
+-- Los tres pedazos en que se parte lo vendido: lo que la corista ya entrego,
+-- lo que tiene en la mano sin rendir, y lo que el comprador todavia no pago.
+-- Las cortesias no suman plata y las anuladas no existen.
+SELECT
+  COALESCE(SUM(s.amount_cents), 0)::bigint AS sold_cents,
+  COALESCE(SUM(s.paid_cents), 0)::bigint AS collected_cents,
+  COALESCE(SUM(s.amount_cents - s.paid_cents), 0)::bigint AS uncollected_cents,
+  COUNT(*) FILTER (WHERE s.amount_cents > s.paid_cents)::bigint AS sales_uncollected
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+WHERE f.season_id = sqlc.arg(season_id)::bigint
+  AND NOT s.is_comp
+  AND s.voided_at IS NULL;
+
+-- name: SeasonSettled :one
+SELECT COALESCE(SUM(amount_cents), 0)::bigint
+FROM settlements
+WHERE season_id = sqlc.arg(season_id)::bigint;

@@ -1,166 +1,303 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import {
-  CalendarDays,
-  CheckCircle2,
-  ChevronDown,
-  LineChart,
-  Mail,
-  Mic2,
-  Ticket,
-  Users,
-  Wallet,
-} from 'lucide-react'
-import type { ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
 
 import { activeSeason, api } from '../api/client'
-import type { Alert, FunctionSummary } from '../api/client'
-import { dayLabel, daysAgo, formatMoney } from '../lib/format'
-import { AlertCard, ProgressBar } from '../ui/controls'
+import type { Direccion, DireccionFinding, DireccionFunction } from '../api/client'
+import { AllocationsEditor } from '../components/AllocationsEditor'
+import { dayLabel, formatMoney } from '../lib/format'
+import { initials } from '../lib/search'
+import { ActionPanel } from '../ui/ActionPanel'
 
-/** Cada tipo de alerta define su ícono, su tono, su copy y a dónde lleva. */
-function alertProps(alert: Alert, seasonId: number): {
-  tone: 'warn' | 'blue'
-  icon: ReactNode
-  title: string
-  context: string
-  actionLabel: string
-  href: string
-} {
-  switch (alert.kind) {
-    case 'settlement':
-      return {
-        tone: 'warn',
-        icon: <Wallet size={15} />,
-        title: `${alert.name} debe rendir ${formatMoney(alert.amount_cents ?? 0)}`,
-        context: alert.since ? `Última venta cobrada ${daysAgo(alert.since)}` : 'Todavía sin rendir',
-        actionLabel: 'Registrar',
-        href: `/panel/rendiciones/${alert.seller_id}`,
-      }
-    case 'allocation':
-      return {
-        tone: 'warn',
-        icon: <Ticket size={15} />,
-        title: `${alert.name}: ${alert.missing} ${alert.missing === 1 ? 'entrada' : 'entradas'} sin asignar`,
-        context: `${alert.starts_at ? dayLabel(alert.starts_at) : ''} · cupo ${alert.capacity}`,
-        actionLabel: 'Asignar',
-        href: `/temporadas/${seasonId}?fn=${alert.function_id}`,
-      }
-    case 'invite':
-      return {
-        tone: 'blue',
-        icon: <Mail size={15} />,
-        title: `${alert.name} nunca entró a la app`,
-        context: alert.since ? `Invitada ${daysAgo(alert.since)}` : 'Invitación pendiente',
-        actionLabel: 'Reenviar',
-        href: `/usuarios?u=${alert.user_id}`,
-      }
-  }
+/** Nombre de la función, con el lugar como respaldo. */
+function nombre(fn: DireccionFunction): string {
+  return fn.name ?? fn.venue
 }
 
-/** Mini-card de función: barra de venta, vendidas sobre cupo y recaudado. */
-function FunctionCard({ fn, seasonId }: { fn: FunctionSummary; seasonId: number }) {
-  const start = new Date(fn.starts_at)
-  const now = Date.now()
-  const isToday = new Date().toDateString() === start.toDateString()
-  const done = start.getTime() < now && !isToday
-  const missing = fn.capacity - fn.assigned
-
+/**
+ * Bloque 1 · La plata. Un solo número grande —lo vendido en la temporada— y en
+ * qué tres estados está: entregado, cobrado sin rendir, y sin cobrar. Cada
+ * pedazo accionable es un link a la vista que se ocupa de eso.
+ */
+function Plata({ money }: { money: Direccion['money'] }) {
+  const total = Math.max(money.sold_cents, 1)
+  const parte = (n: number) => `${(n / total) * 100}%`
   return (
-    <Link className={`fncard ${done ? 'fncard--done' : ''}`} to={`/temporadas/${seasonId}?fn=${fn.id}`}>
-      <div className="fncard__h">
-        <b>{fn.name ?? fn.venue}</b>
-        {isToday ? (
-          <span className="fnpill fnpill--hoy">Hoy</span>
-        ) : done ? (
-          <span className="fnpill fnpill--hecha">Hecha</span>
-        ) : (
-          <span className="fncard__date">{dayLabel(fn.starts_at)}</span>
-        )}
+    <div className="money">
+      <p className="money__lbl">Vendido en la temporada</p>
+      <p className="money__big">{formatMoney(money.sold_cents)}</p>
+      <div className="money__stack" role="img" aria-label="Cómo se reparte lo vendido">
+        <i className="is-ok" style={{ width: parte(money.in_hand_cents) }} />
+        <i className="is-warn" style={{ width: parte(money.unsettled_cents) }} />
+        <i className="is-line" style={{ width: parte(money.uncollected_cents) }} />
       </div>
-      <ProgressBar value={fn.sold} max={fn.capacity} tone={done ? 'ok' : 'blue'} />
-      <div className="fncard__leg">
-        <span>
-          <b>
-            {fn.sold}/{fn.capacity}
-          </b>{' '}
-          vendidas
-          {/* El día de la función el dato que importa es la puerta, y antes no
-              se mostraba ninguno de los dos: "ingresaron" era sólo para las
-              hechas y "sin asignar" sólo para las futuras. */}
-          {done || isToday ? (
-            <>
-              {' '}
-              · <b className="g">{fn.entered}</b> ingresaron
-            </>
-          ) : missing > 0 ? (
-            <> · {missing} sin asignar</>
-          ) : null}
-        </span>
-        <span>
-          Recaudó <b className="g">{formatMoney(fn.collected_cents)}</b>
-        </span>
-      </div>
-    </Link>
-  )
-}
-
-/** Ritmo de ventas: barras por día, sin librería de charts. */
-function SalesRhythm({ seasonId }: { seasonId: number }) {
-  const timeline = useQuery({
-    queryKey: ['sales-timeline', seasonId],
-    queryFn: () => api.salesTimeline(seasonId, 14),
-  })
-
-  const data = timeline.data
-  if (!data || data.total === 0) return null
-
-  const peak = Math.max(...data.days.map((d) => d.tickets), 1)
-  // La última semana se pinta llena: es la que cuenta el delta.
-  const hotFrom = data.days.length - 7
-
-  return (
-    <div className="rhythm">
-      <div className="rhythm__h">
-        <b>Ritmo de ventas · últimas 2 semanas</b>
-        <span className={data.delta >= 0 ? 'g' : 'y'}>
-          {data.delta >= 0 ? '↑' : '↓'} {Math.abs(data.delta)}
-        </span>
-      </div>
-      <div
-        className="rhythm__bars"
-        role="img"
-        aria-label={`${data.total} entradas vendidas en 14 días`}
-      >
-        {data.days.map((day, i) => (
-          <i
-            key={day.day}
-            className={i >= hotFrom ? 'hot' : ''}
-            style={{ height: `${Math.max((day.tickets / peak) * 100, 3)}%` }}
-            title={`${day.day}: ${day.tickets}`}
-          />
-        ))}
+      <div className="money__legend">
+        <div className="money__lg">
+          <span className="money__d">
+            <i className="is-ok" />
+            En tu poder
+          </span>
+          <b>{formatMoney(money.in_hand_cents)}</b>
+        </div>
+        <div className="money__lg">
+          <span className="money__d">
+            <i className="is-warn" />
+            Sin rendir
+          </span>
+          <b>{formatMoney(money.unsettled_cents)}</b>
+          {money.sellers_owing > 0 && (
+            <Link to="/panel/rendiciones">
+              {money.sellers_owing} {money.sellers_owing === 1 ? 'corista' : 'coristas'} ›
+            </Link>
+          )}
+        </div>
+        <div className="money__lg">
+          <span className="money__d">
+            <i className="is-line" />
+            Sin cobrar
+          </span>
+          <b>{formatMoney(money.uncollected_cents)}</b>
+          {money.sales_uncollected > 0 && (
+            <Link to="/ventas?filtro=deben">
+              {money.sales_uncollected} {money.sales_uncollected === 1 ? 'venta' : 'ventas'} ›
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
-function AccessCard({ to, icon, title, subtitle }: { to: string; icon: ReactNode; title: string; subtitle: string }) {
+/** Bloque 2 · una conclusión con su cifra y su puerta. */
+function Hallazgo({ find, onAsignar }: { find: DireccionFinding; onAsignar: () => void }) {
+  const navigate = useNavigate()
+  const ir = () => {
+    if (find.kind === 'attendance') navigate('/panel/asistencia')
+    else if (find.kind === 'unassigned') onAsignar()
+    else navigate('/ventas?filtro=cortesias')
+  }
   return (
-    <Link className="acc" to={to}>
-      <span className="acc__ic" aria-hidden>
-        {icon}
-      </span>
-      <b>{title}</b>
-      <span>{subtitle}</span>
-    </Link>
+    <div className="find">
+      <p className={`find__n find__n--${find.tone}`}>
+        {find.value}
+        {find.suffix && <span>{find.suffix}</span>}
+      </p>
+      <p className="find__body">{find.body}</p>
+      <button className="find__go" type="button" onClick={ir}>
+        {find.link_label} ›
+      </button>
+    </div>
+  )
+}
+
+/** Bloque 3a · el cupo de la función en venta, y quién lo tiene. */
+function Asignaciones({ fn, onAbrir }: { fn: DireccionFunction; onAbrir: () => void }) {
+  const board = useQuery({
+    queryKey: ['function-allocations', fn.id],
+    queryFn: () => api.functionAllocations(fn.id),
+  })
+
+  const filas = board.data?.allocations ?? []
+  const conCupo = filas.filter((r) => r.assigned > 0 || r.sold > 0)
+  const sinAsignar = Math.max(fn.capacity - fn.assigned, 0)
+  const asignadasSinVender = Math.max(fn.assigned - fn.sold, 0)
+  const parte = (n: number) => `${(n / Math.max(fn.capacity, 1)) * 100}%`
+
+  return (
+    <div className="acard">
+      <div className="acard__h">
+        <b>{nombre(fn)}</b>
+        <span>
+          {dayLabel(fn.starts_at)} · cupo {fn.capacity}
+        </span>
+      </div>
+      <div className="acard__body">
+        <div className="acard__headline">
+          <p className="acard__n">
+            {sinAsignar}
+            <span> sin asignar</span>
+          </p>
+          <span className="acard__t">de {fn.capacity}</span>
+        </div>
+        <div className="money__stack acard__bar" role="img" aria-label="Reparto del cupo">
+          <i className="is-indigo" style={{ width: parte(fn.sold) }} />
+          <i className="is-indigo-soft" style={{ width: parte(asignadasSinVender) }} />
+          <i className="is-line" style={{ width: parte(sinAsignar) }} />
+        </div>
+        <div className="acard__leg">
+          <span className="acard__l">
+            <i className="is-indigo" />
+            Vendidas <b>{fn.sold}</b>
+          </span>
+          <span className="acard__l">
+            <i className="is-indigo-soft" />
+            Asignadas sin vender <b>{asignadasSinVender}</b>
+          </span>
+          <span className="acard__l">
+            <i className="is-line" />
+            Sin asignar <b>{sinAsignar}</b>
+          </span>
+        </div>
+
+        {conCupo.length > 0 && (
+          <div className="acard__who">
+            {conCupo.map((row) => (
+              <div key={row.user_id} className="wl">
+                <span className="ini">{initials(row.seller_name)}</span>
+                <span className="wl__nm">{row.seller_name}</span>
+                <span className="wl__track">
+                  <i
+                    className={row.sold >= row.assigned ? 'is-ok' : 'is-indigo'}
+                    style={{
+                      width: `${Math.min((row.sold / Math.max(row.assigned, 1)) * 100, 100)}%`,
+                    }}
+                  />
+                </span>
+                <span
+                  className={`wl__q${row.assigned > 0 && row.sold * 3 < row.assigned ? ' wl__q--low' : ''}`}
+                >
+                  {row.sold}/{row.assigned}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="acard__foot">
+        <button className="button" type="button" onClick={onAbrir}>
+          ＋ Asignar entradas
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Bloque 3b · las funciones en cuatro columnas, con la puerta al detalle. */
+function Funciones({
+  data,
+  seasonId,
+  onComparar,
+}: {
+  data: Direccion
+  seasonId: number
+  onComparar: () => void
+}) {
+  const navigate = useNavigate()
+  const ordenadas = [...data.functions].sort(
+    (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime(),
+  )
+  return (
+    <div className="mtbl">
+      <div className="mtbl__h" aria-hidden>
+        <span>Función</span>
+        <span>Ocupación</span>
+        <span>Asistencia</span>
+        <span />
+      </div>
+      {ordenadas.map((fn) => (
+        <button
+          key={fn.id}
+          className={`mtbl__r${fn.done ? '' : ' mtbl__r--live'}`}
+          type="button"
+          onClick={() => navigate(`/temporadas/${seasonId}?fn=${fn.id}`)}
+        >
+          <span className="mtbl__nm">
+            <b>{nombre(fn)}</b>
+            <span>
+              {dayLabel(fn.starts_at)} · {fn.done ? formatMoney(fn.collected_cents) : 'en venta'}
+            </span>
+          </span>
+          <span className={`mtbl__num${fn.done ? '' : ' is-i'}`}>{fn.occupancy_pct}%</span>
+          {fn.attendance_pct < 0 ? (
+            <span className="mtbl__none">—</span>
+          ) : (
+            <span className={`mtbl__num ${fn.attendance_pct < 60 ? 'is-b' : 'is-g'}`}>
+              {fn.attendance_pct}%
+            </span>
+          )}
+          <span className="mtbl__chev" aria-hidden>
+            ›
+          </span>
+        </button>
+      ))}
+      <button className="mtbl__foot" type="button" onClick={onComparar}>
+        Ver comparación completa ›
+      </button>
+    </div>
+  )
+}
+
+/** El pop-up del pie: todo lo que no entra en la tabla de la pantalla. */
+function Comparacion({ data, onClose }: { data: Direccion; onClose: () => void }) {
+  const t = data.totals
+  const peor = data.functions
+    .filter((fn) => fn.attendance_pct >= 0)
+    .sort((a, b) => a.attendance_pct - b.attendance_pct)[0]
+  const masRecaudo = [...data.functions].sort((a, b) => b.collected_cents - a.collected_cents)[0]
+
+  return (
+    <ActionPanel label="Comparación entre funciones" size="wide" onClose={onClose}>
+      <div className="cmp__h">
+        <b>Comparación entre funciones</b>
+        <span>Ordenado por fecha</span>
+      </div>
+      <div className="cmp">
+        <div className="cmp__hr" aria-hidden>
+          <span>Función</span>
+          <span>Ocup.</span>
+          <span>Recaudado</span>
+          <span>Ticket prom.</span>
+          <span>Cort.</span>
+          <span>Asist.</span>
+        </div>
+        {data.functions.map((fn) => (
+          <div key={fn.id} className="cmp__r">
+            <span className="cmp__nm">
+              <b>{nombre(fn)}</b>
+              <span>
+                {dayLabel(fn.starts_at)} · cupo {fn.capacity}
+              </span>
+            </span>
+            <span className="cmp__num">{fn.occupancy_pct}%</span>
+            <span className="cmp__num">{formatMoney(fn.collected_cents)}</span>
+            <span className="cmp__num">{formatMoney(fn.ticket_avg_cents)}</span>
+            <span className="cmp__num">{fn.comp_tickets}</span>
+            {fn.attendance_pct < 0 ? (
+              <span className="mtbl__none">—</span>
+            ) : (
+              <span className={`cmp__num ${fn.attendance_pct < 60 ? 'is-b' : 'is-g'}`}>
+                {fn.attendance_pct}%
+              </span>
+            )}
+          </div>
+        ))}
+        <div className="cmp__r cmp__r--tot">
+          <span className="cmp__nm">
+            <b>Total temporada</b>
+          </span>
+          <span className="cmp__num">{t.occupancy_pct}%</span>
+          <span className="cmp__num">{formatMoney(t.collected_cents)}</span>
+          <span className="cmp__num">{formatMoney(t.ticket_avg_cents)}</span>
+          <span className="cmp__num">{t.comp_tickets}</span>
+          <span className="cmp__num">{t.attendance_pct}%</span>
+        </div>
+      </div>
+      {peor && masRecaudo && peor.attendance_pct < 60 && (
+        <p className="cmp__foot">
+          {masRecaudo.id === peor.id
+            ? `${nombre(peor)} recaudó más que ninguna pero sólo entró el ${peor.attendance_pct}% de quienes compraron.`
+            : `${nombre(peor)} fue la de peor asistencia: entró el ${peor.attendance_pct}% de quienes compraron.`}
+        </p>
+      )}
+    </ActionPanel>
   )
 }
 
 /**
- * DireccionPage (C9): un asistente, no un tablero. Primero los KPIs con
- * contexto, después todo lo accionable en un solo lugar, después el pulso de
- * la temporada función por función, y al final los accesos.
+ * Dirección responde "¿cómo viene la temporada?". Tres bloques y nada más: la
+ * plata, lo que hay que mirar, y las funciones. Todo dato que necesite
+ * contexto para entenderse vive detrás de un click — acá van conclusiones.
  */
 export function DireccionPage() {
   const navigate = useNavigate()
@@ -169,37 +306,14 @@ export function DireccionPage() {
   const season = activeSeason(all)
   const seasonId = season?.id
 
-  const attention = useQuery({
-    queryKey: ['attention', seasonId],
-    queryFn: () => api.attention(seasonId!),
+  const [comparando, setComparando] = useState(false)
+  const [asignando, setAsignando] = useState(false)
+
+  const data = useQuery({
+    queryKey: ['direccion', seasonId],
+    queryFn: () => api.direccion(seasonId!),
     enabled: seasonId !== undefined,
   })
-  const summary = useQuery({
-    queryKey: ['functions-summary', seasonId],
-    queryFn: () => api.functionsSummary(seasonId!),
-    enabled: seasonId !== undefined,
-  })
-  const settlements = useQuery({
-    queryKey: ['settlements-report', seasonId],
-    queryFn: () => api.settlementsReport(seasonId!),
-    enabled: seasonId !== undefined,
-  })
-
-  const fns = summary.data?.functions ?? []
-  const totals = fns.reduce(
-    (acc, fn) => ({
-      sold: acc.sold + fn.sold,
-      capacity: acc.capacity + fn.capacity,
-      collected: acc.collected + fn.collected_cents,
-    }),
-    { sold: 0, capacity: 0, collected: 0 },
-  )
-  const done = fns.filter((fn) => new Date(fn.starts_at).getTime() < Date.now()).length
-
-  const debtors = (settlements.data?.rows ?? []).filter((row) => row.balance_cents > 0)
-  const toSettle = debtors.reduce((acc, row) => acc + row.balance_cents, 0)
-
-  const alerts = attention.data?.alerts ?? []
 
   if (!season) {
     return (
@@ -211,11 +325,23 @@ export function DireccionPage() {
       </>
     )
   }
+  if (data.isPending) return <p className="muted">Cargando…</p>
+  if (!data.data) return <p className="alert">No se pudo cargar la temporada.</p>
+
+  const d = data.data
+  const hechas = d.functions.filter((fn) => fn.done).length
+  const enVenta = d.functions.length - hechas
 
   return (
     <>
       <div className="page-head">
-        <h1 className="page-title">Dirección</h1>
+        <div>
+          <h1 className="page-title">Cómo viene la temporada</h1>
+          <p className="page-head__sub">
+            {season.name} · {hechas} {hechas === 1 ? 'función hecha' : 'funciones hechas'}
+            {enVenta > 0 && `, ${enVenta} en venta`}
+          </p>
+        </div>
         {all.length > 1 ? (
           <span className="att-fnsel">
             <select
@@ -238,128 +364,51 @@ export function DireccionPage() {
         )}
       </div>
 
-      <div className="kpis kpis--tight">
-        <div className="kpi">
-          <b className="g">{formatMoney(totals.collected)}</b>
-          <span>Recaudado</span>
-        </div>
-        <div className="kpi">
-          <b className={toSettle > 0 ? 'y' : 'g'}>{formatMoney(toSettle)}</b>
-          <span>Por rendir</span>
-          <div className="kpi__sub">
-            {toSettle > 0
-              ? `en manos de ${debtors.length} ${debtors.length === 1 ? 'corista' : 'coristas'}`
-              : 'todas al día'}
-          </div>
-        </div>
-        <div className="kpi">
-          <b className="b">
-            {totals.sold} <span className="kpi__of">/ {totals.capacity}</span>
-          </b>
-          <span>Vendidas</span>
-        </div>
-        <div className="kpi">
-          <b>
-            {done}/{fns.length}
-          </b>
-          <span>Funciones hechas</span>
-        </div>
-      </div>
+      <Plata money={d.money} />
 
-      <div className="ghead">
-        <b>Necesita tu atención</b>
-        {alerts.length > 0 && <span className="n-warn">{alerts.length}</span>}
-      </div>
-
-      {attention.isPending ? (
-        <p className="muted">Cargando…</p>
-      ) : alerts.length === 0 ? (
-        <AlertCard
-          tone="ok"
-          icon={<CheckCircle2 size={16} />}
-          title="Todo en orden"
-          context="Sin rendiciones pendientes ni tareas abiertas. ¡Gran temporada!"
-        />
-      ) : (
-        <div className="attngrid">
-          {alerts.map((alert, i) => {
-            const props = alertProps(alert, season.id)
-            return (
-              <AlertCard
-                key={`${alert.kind}-${alert.seller_id ?? alert.function_id ?? alert.user_id ?? i}`}
-                tone={props.tone}
-                icon={props.icon}
-                title={props.title}
-                context={props.context}
-                actionLabel={props.actionLabel}
-                onAction={() => navigate(props.href)}
-              />
-            )
-          })}
-        </div>
-      )}
-
-      {fns.length > 0 && (
+      {d.findings.length > 0 && (
         <>
-          <div className="ghead">
-            <b>La temporada, función por función</b>
-          </div>
-          <div className="fngrid">
-            {fns.map((fn) => (
-              <FunctionCard key={fn.id} fn={fn} seasonId={season.id} />
+          <hr className="divider" />
+          <p className="sect">Lo que hay que mirar</p>
+          <div className="finds">
+            {d.findings.map((find) => (
+              <Hallazgo key={find.kind} find={find} onAsignar={() => setAsignando(true)} />
             ))}
           </div>
         </>
       )}
 
-      {/* Ritmo y accesos lado a lado en escritorio; en celular `display:
-          contents` deja el orden y el flujo exactamente como estaban. */}
-      <div className="dirrow2">
-        {fns.length > 0 && <SalesRhythm seasonId={season.id} />}
-        <div className="dirrow2__accs">
-      <div className="ghead">
-        <b>Administración</b>
-      </div>
-      <div className="grid2">
-        <AccessCard
-          to="/panel/ventas"
-          icon={<LineChart size={16} />}
-          title="Panel de ventas"
-          subtitle="Por corista y función"
-        />
-        <AccessCard
-          to="/panel/asistencia"
-          icon={<Users size={16} />}
-          title="Asistencia"
-          subtitle="Quién entró"
-        />
-        <AccessCard
-          to="/panel/rendiciones"
-          icon={<Wallet size={16} />}
-          title="Rendiciones"
-          subtitle="Quién debe y quién rindió"
-        />
-        <AccessCard
-          to={`/temporadas/${season.id}`}
-          icon={<Ticket size={16} />}
-          title="Asignar entradas"
-          subtitle="Repartir el cupo entre coristas"
-        />
-        <AccessCard
-          to="/temporadas"
-          icon={<CalendarDays size={16} />}
-          title="Temporadas"
-          subtitle="Funciones y cupos"
-        />
-        <AccessCard
-          to="/usuarios"
-          icon={<Mic2 size={16} />}
-          title="Equipo"
-          subtitle="Coristas y roles"
-        />
-        </div>
+      <hr className="divider" />
+      <div className="cols2">
+        {d.in_sale && (
+          <div>
+            <p className="sect">Asignaciones</p>
+            <Asignaciones fn={d.in_sale} onAbrir={() => setAsignando(true)} />
+          </div>
+        )}
+        <div>
+          <p className="sect">Las funciones</p>
+          <Funciones data={d} seasonId={season.id} onComparar={() => setComparando(true)} />
         </div>
       </div>
+
+      {comparando && <Comparacion data={d} onClose={() => setComparando(false)} />}
+
+      {asignando && d.in_sale && (
+        <ActionPanel
+          label={`Asignar entradas de ${nombre(d.in_sale)}`}
+          size="form"
+          onClose={() => setAsignando(false)}
+        >
+          <div className="cmp__h">
+            <b>Asignar entradas</b>
+            <span>
+              {nombre(d.in_sale)} · {dayLabel(d.in_sale.starts_at)} · cupo {d.in_sale.capacity}
+            </span>
+          </div>
+          <AllocationsEditor fn={{ id: d.in_sale.id, capacity: d.in_sale.capacity }} />
+        </ActionPanel>
+      )}
     </>
   )
 }

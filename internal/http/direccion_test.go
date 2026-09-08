@@ -154,3 +154,69 @@ func TestPanelSinPendientes(t *testing.T) {
 		t.Fatalf("no tendria que haber nada pendiente: %v", attention.Body)
 	}
 }
+
+// TestDireccionMinimalista: la vista muestra conclusiones, no tablas. Lo que
+// se chequea acá es que las conclusiones sean ciertas: que la plata cierre en
+// tres pedazos y que un hallazgo aparezca sólo cuando hay algo que decir.
+func TestDireccionMinimalista(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	fnID := setupCatalog(t, admin, 20)
+	corista := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test") // user 2
+
+	path := fmt.Sprintf("/api/functions/%.0f/allocations", fnID)
+	assertStatus(t, admin.do(http.MethodPut, path, map[string]any{
+		"allocations": []map[string]any{{"user_id": 2, "quantity": 8}},
+	}), http.StatusOK)
+
+	// Dos ventas: una cobrada entera y otra sin cobrar.
+	cobrada := corista.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Pagó todo", "quantity": 2,
+	})
+	assertStatus(t, cobrada, http.StatusCreated)
+	saleID := cobrada.Body["sale"].(map[string]any)["id"].(float64)
+	assertStatus(t, corista.do(http.MethodPatch, fmt.Sprintf("/api/sales/%.0f", saleID),
+		map[string]any{"payment_status": "paid", "payment_method": "cash"}), http.StatusOK)
+	assertStatus(t, corista.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Debe", "quantity": 1,
+	}), http.StatusCreated)
+
+	resp := admin.get("/api/reports/direccion?season_id=1")
+	assertStatus(t, resp, http.StatusOK)
+	money := resp.Body["money"].(map[string]any)
+
+	// Lo vendido se parte en tres y no sobra ni falta un peso.
+	suma := money["in_hand_cents"].(float64) + money["unsettled_cents"].(float64) + money["uncollected_cents"].(float64)
+	if suma != money["sold_cents"].(float64) {
+		t.Fatalf("los tres pedazos suman %v y lo vendido es %v", suma, money["sold_cents"])
+	}
+	// Todavia no rindio nada: lo cobrado esta entero en manos de la corista.
+	if money["in_hand_cents"].(float64) != 0 {
+		t.Fatalf("nadie rindio todavia; en tu poder deberia ser 0, es %v", money["in_hand_cents"])
+	}
+	if money["sales_uncollected"].(float64) != 1 {
+		t.Fatalf("hay una sola venta sin cobrar, dice %v", money["sales_uncollected"])
+	}
+
+	// El cupo sin repartir es un hallazgo; la asistencia todavia no, porque
+	// ninguna funcion paso.
+	tipos := map[string]bool{}
+	for _, raw := range resp.Body["findings"].([]any) {
+		tipos[raw.(map[string]any)["kind"].(string)] = true
+	}
+	if !tipos["unassigned"] {
+		t.Fatalf("faltan 12 entradas por repartir y no aparece el hallazgo: %v", tipos)
+	}
+	if tipos["attendance"] {
+		t.Fatal("no paso ninguna funcion: no puede haber un hallazgo de asistencia")
+	}
+
+	// La funcion en venta es la que muestra la card de asignaciones.
+	inSale := resp.Body["in_sale"].(map[string]any)
+	if inSale["assigned"].(float64) != 8 || inSale["capacity"].(float64) != 20 {
+		t.Fatalf("en venta: asignadas %v de %v", inSale["assigned"], inSale["capacity"])
+	}
+	if inSale["attendance_pct"].(float64) != -1 {
+		t.Fatalf("una funcion que no paso no tiene asistencia: %v", inSale["attendance_pct"])
+	}
+}

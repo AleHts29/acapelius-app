@@ -3075,6 +3075,544 @@ div.alertcard {
 }
 
 /* ==========================================================================
+   Dirección minimalista
+
+   Tres bloques y mucho aire. La regla: si un dato necesita explicación,
+   contexto o comparación para entenderse, no va en la pantalla — va detrás de
+   un click. Acá van conclusiones; el detalle vive en Rendiciones, Asistencia
+   o en un pop-up.
+   ========================================================================== */
+
+.divider {
+  height: 1px;
+  border: 0;
+  background: var(--line);
+  margin: 26px 0;
+}
+
+.sect {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* --- 1 · La plata ------------------------------------------------------- */
+
+.money__lbl {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.money__big {
+  margin: 5px 0 0;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* Barra de tres pedazos: la misma pieza sirve para la plata y para el cupo. */
+.money__stack {
+  margin-top: 18px;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  gap: 3px;
+}
+
+.money__stack i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+
+.is-ok {
+  background: var(--ok);
+}
+.is-warn {
+  background: var(--warn);
+}
+.is-line {
+  background: var(--line);
+}
+.is-indigo {
+  background: var(--indigo);
+}
+.is-indigo-soft {
+  background: var(--indigo-soft);
+}
+
+.money__legend {
+  margin-top: 12px;
+  display: flex;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+
+.money__lg {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.money__d {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.money__d i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  display: block;
+}
+
+.money__lg b {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.money__lg a {
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--indigo);
+  text-decoration: none;
+}
+
+/* --- 2 · Lo que hay que mirar ------------------------------------------- */
+
+.finds {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.find {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 17px;
+}
+
+.find__n {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.find__n span {
+  font-size: 17px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.find__n--danger {
+  color: var(--danger);
+}
+.find__n--warn {
+  color: var(--warn);
+}
+.find__n--indigo {
+  color: var(--indigo);
+}
+
+.find__body {
+  margin: 7px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.find__go {
+  margin-top: 11px;
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--indigo);
+  cursor: pointer;
+}
+
+/* --- 3 · Asignaciones y funciones --------------------------------------- */
+
+.cols2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.acard,
+.mtbl {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.acard__h {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.acard__h b {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.acard__h span {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.acard__body {
+  padding: 16px 18px;
+}
+
+.acard__headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.acard__n {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--warn);
+}
+
+.acard__n span {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.acard__t {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.acard__bar {
+  margin-top: 13px;
+}
+
+.acard__leg {
+  margin-top: 10px;
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.acard__l {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.acard__l i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: block;
+}
+
+.acard__l b {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 11.5px;
+}
+
+.acard__who {
+  margin-top: 15px;
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+}
+
+.wl {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 0;
+}
+
+.wl .ini {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 9.5px;
+  flex-shrink: 0;
+}
+
+.wl__nm {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wl__track {
+  width: 88px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.wl__track i {
+  display: block;
+  height: 100%;
+}
+
+.wl__q {
+  width: 48px;
+  text-align: right;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* Tiene cupo y vendió menos de un tercio: el número lo dice sin una frase. */
+.wl__q--low {
+  color: var(--warn);
+}
+
+.acard__foot {
+  padding: 13px 18px;
+  border-top: 1px solid var(--line);
+}
+
+/* Tabla mínima de funciones. */
+.mtbl__h,
+.mtbl__r {
+  display: grid;
+  grid-template-columns: 1.6fr 0.9fr 0.9fr 20px;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+}
+
+.mtbl__h {
+  padding: 10px 18px;
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mtbl__r {
+  padding: 13px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.mtbl__r:hover {
+  background: var(--surface-alt);
+}
+
+.mtbl__r--live {
+  background: var(--indigo-soft);
+}
+
+.mtbl__r--live:hover {
+  background: var(--indigo-soft);
+}
+
+.mtbl__h span:not(:first-child),
+.mtbl__r > span:not(:first-child) {
+  text-align: right;
+}
+
+.mtbl__nm b {
+  font-weight: 700;
+  display: block;
+}
+
+.mtbl__nm span {
+  display: block;
+  margin-top: 1px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.mtbl__num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13.5px;
+}
+
+.mtbl__num.is-g {
+  color: var(--ok);
+}
+.mtbl__num.is-b {
+  color: var(--danger);
+}
+.mtbl__num.is-i {
+  color: var(--indigo);
+}
+
+.mtbl__none {
+  color: var(--text-muted);
+}
+
+.mtbl__chev {
+  color: var(--text-muted);
+}
+
+.mtbl__foot {
+  width: 100%;
+  padding: 11px 18px;
+  background: var(--surface-alt);
+  border: 0;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--indigo);
+  cursor: pointer;
+}
+
+/* --- El pop-up de comparación ------------------------------------------- */
+
+.cmp__h {
+  padding: 4px 0 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+
+.cmp__h b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.cmp__h span {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.cmp {
+  overflow-x: auto;
+}
+
+.cmp__hr,
+.cmp__r {
+  display: grid;
+  grid-template-columns: 1.5fr 0.7fr 1fr 1fr 0.6fr 0.8fr;
+  gap: 8px;
+  align-items: center;
+  min-width: 560px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+
+.cmp__hr {
+  padding: 9px 0;
+  font-family: var(--font-display);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.cmp__hr span:not(:first-child),
+.cmp__r > span:not(:first-child) {
+  text-align: right;
+}
+
+.cmp__nm b {
+  display: block;
+  font-weight: 700;
+}
+
+.cmp__nm span {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.cmp__num {
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+.cmp__num.is-g {
+  color: var(--ok);
+}
+.cmp__num.is-b {
+  color: var(--danger);
+}
+
+.cmp__r--tot {
+  background: var(--surface-alt);
+  border-bottom: 0;
+}
+
+.cmp__foot {
+  margin: 0;
+  padding: 12px 0 4px;
+  color: var(--warn);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* ==========================================================================
    C12 · Home por rol
 
    La misma estructura para los dos roles —hero → lo accionable → contenido
@@ -3609,9 +4147,15 @@ div.alertcard {
     animation: modal-in 0.16s ease-out;
   }
 
-  /* Un formulario completo necesita más aire que una lista de acciones. */
+  /* Un formulario completo necesita más aire que una lista de acciones, y una
+     tabla comparativa más todavía. */
   .sheet--form {
     width: 560px;
+  }
+
+  .sheet--wide {
+    width: 720px;
+    padding: 0 0 4px;
   }
 
   .sheet__grip {
@@ -3820,6 +4364,35 @@ div.alertcard {
 
   .home-cols .ghead:first-child {
     margin-top: 0;
+  }
+
+  /* --- Dirección: tres hallazgos por fila y las dos columnas del pie ---- */
+  .finds {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .cols2 {
+    grid-template-columns: 1.15fr 1fr;
+  }
+
+  .money__big {
+    font-size: 44px;
+  }
+
+  .money__legend {
+    gap: 34px;
+  }
+
+  .sheet--wide .cmp__hr,
+  .sheet--wide .cmp__r,
+  .sheet--wide .cmp__h,
+  .sheet--wide .cmp__foot {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .sheet--wide .cmp__h {
+    padding-top: 16px;
   }
 
   /* --- Ventas: tabla densa (frame 2) ------------------------------------ */

@@ -14,7 +14,8 @@ const FOCUSABLE =
  * centrado. Nunca hay dos abiertos a la vez porque cada pantalla abre uno.
  *
  * `size`: `panel` (420px) para acciones cortas; `form` (560px) para un
- * formulario completo, que necesita más aire.
+ * formulario completo; `wide` (720px) para una tabla que no se puede angostar
+ * sin que deje de leerse.
  *
  * El foco queda atrapado adentro mientras está abierto y vuelve al elemento
  * que lo abrió al cerrar: con Escape o con Tab no se puede salir del diálogo
@@ -30,7 +31,7 @@ export function ActionPanel({
   open?: boolean
   onClose: () => void
   label: string
-  size?: 'panel' | 'form'
+  size?: 'panel' | 'form' | 'wide'
   children: ReactNode
 }) {
   const startY = useRef<number | null>(null)

@@ -315,6 +315,9 @@ SELECT
   (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
    JOIN users au ON au.id = a.user_id
    WHERE a.function_id = f.id AND au.role = 'seller' AND au.is_active)::bigint AS assigned,
+  -- Cortesias emitidas: no son plata, pero ocupan butaca.
+  (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
+   WHERE s.function_id = f.id AND s.is_comp AND t.status <> 'void')::bigint AS comp_tickets,
   (SELECT count(*) FROM checkins c
    JOIN tickets t ON c.ticket_id = t.id
    JOIN sales s ON t.sale_id = s.id
@@ -334,6 +337,7 @@ type FunctionsSummaryRow struct {
 	Sold           int64     `json:"sold"`
 	CollectedCents int64     `json:"collected_cents"`
 	Assigned       int64     `json:"assigned"`
+	CompTickets    int64     `json:"comp_tickets"`
 	Entered        int64     `json:"entered"`
 }
 
@@ -358,6 +362,7 @@ func (q *Queries) FunctionsSummary(ctx context.Context, seasonID int64) ([]Funct
 			&i.Sold,
 			&i.CollectedCents,
 			&i.Assigned,
+			&i.CompTickets,
 			&i.Entered,
 		); err != nil {
 			return nil, err
@@ -707,6 +712,58 @@ func (q *Queries) SalesTimeline(ctx context.Context, arg SalesTimelineParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const seasonMoney = `-- name: SeasonMoney :one
+
+SELECT
+  COALESCE(SUM(s.amount_cents), 0)::bigint AS sold_cents,
+  COALESCE(SUM(s.paid_cents), 0)::bigint AS collected_cents,
+  COALESCE(SUM(s.amount_cents - s.paid_cents), 0)::bigint AS uncollected_cents,
+  COUNT(*) FILTER (WHERE s.amount_cents > s.paid_cents)::bigint AS sales_uncollected
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+WHERE f.season_id = $1::bigint
+  AND NOT s.is_comp
+  AND s.voided_at IS NULL
+`
+
+type SeasonMoneyRow struct {
+	SoldCents        int64 `json:"sold_cents"`
+	CollectedCents   int64 `json:"collected_cents"`
+	UncollectedCents int64 `json:"uncollected_cents"`
+	SalesUncollected int64 `json:"sales_uncollected"`
+}
+
+// ============================================================================
+// Direccion minimalista: la plata de la temporada y la comparacion
+// ============================================================================
+// Los tres pedazos en que se parte lo vendido: lo que la corista ya entrego,
+// lo que tiene en la mano sin rendir, y lo que el comprador todavia no pago.
+// Las cortesias no suman plata y las anuladas no existen.
+func (q *Queries) SeasonMoney(ctx context.Context, seasonID int64) (SeasonMoneyRow, error) {
+	row := q.db.QueryRow(ctx, seasonMoney, seasonID)
+	var i SeasonMoneyRow
+	err := row.Scan(
+		&i.SoldCents,
+		&i.CollectedCents,
+		&i.UncollectedCents,
+		&i.SalesUncollected,
+	)
+	return i, err
+}
+
+const seasonSettled = `-- name: SeasonSettled :one
+SELECT COALESCE(SUM(amount_cents), 0)::bigint
+FROM settlements
+WHERE season_id = $1::bigint
+`
+
+func (q *Queries) SeasonSettled(ctx context.Context, seasonID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, seasonSettled, seasonID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const settlementsReport = `-- name: SettlementsReport :many

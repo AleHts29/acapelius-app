@@ -307,3 +307,30 @@ dos ítems coinciden con la ruta gana el más específico: parado en
 `.card` ya existía como la tarjeta angosta del login, con un `max-width` de
 400px. La de la home se llama `.hcard`: el choque de nombres del que avisaba
 C14 pasó igual, y se resolvió con un nombre propio en vez de tocar el login.
+
+## Dirección muestra conclusiones, no tablas
+
+La versión anterior era un tablero: KPIs, alertas, funciones, chart y accesos.
+Mucho dato y ninguna respuesta. Ahora responde una sola pregunta —"¿cómo viene
+la temporada?"— con tres bloques, y la regla es explícita: **si un dato
+necesita explicación, contexto o comparación para entenderse, no va en la
+pantalla, va detrás de un click**.
+
+La plata es un solo número —lo vendido— partido en los tres estados en que
+puede estar: entregado a dirección, cobrado y sin rendir, y sin cobrar. Los
+tres suman exactamente lo vendido, y hay un test que lo verifica: es la clase
+de cuenta que se rompe callada.
+
+Los hallazgos los arma el server, no la pantalla, porque son comparaciones
+entre funciones y necesitan umbrales. Una asistencia baja se nombra sólo si
+además quedó lejos del resto: si todas rondaron el 55%, eso no es un problema
+de esa función, es cómo viene el coro, y decirlo de una sola sería mentir por
+recorte. Si no hay nada que decir, no se inventa una tarjeta.
+
+El detalle no desaparece: la comparación completa —ticket promedio, cortesías,
+totales— y el reparto de cupos viven en pop-ups. Eso contradice a C14, que
+ponía la asignación masiva fuera de los pop-ups; gana el documento más nuevo,
+que es el que muestra esa pantalla.
+
+El promedio se redondea al peso. En un promedio los centavos son ruido:
+"$7.483,87" se lee peor que "$7.484" para la misma decisión.
