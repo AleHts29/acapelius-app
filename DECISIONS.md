@@ -360,3 +360,55 @@ para una sola decisión alcanza y no tapa el ranking que la justifica.
 El panel sin selección muestra el ranking con barras comparables en vez de una
 caja vacía. La barra es lo que hace comparable una deuda con la de al lado; los
 números solos obligan a hacer la cuenta de cabeza.
+
+## Temporadas: una fila por función
+
+La vista anterior gastaba ~180 px de alto por función para mostrar cuatro
+datos, y ponía dos botones índigo a todo el ancho que pesaban más que los
+nombres de las funciones. Ahora cada función es una fila de ~70 px con la
+barra de ocupación, vendidas sobre cupo, asignadas y recaudado en columnas
+alineadas: la temporada entera entra sin scrollear. El índigo vuelve a ser
+sólo para acciones.
+
+**Temporadas ya no es una lista de temporadas.** `/temporadas` abre
+directamente la que está en curso, que es lo que dirección quiere ver casi
+siempre; el selector del header cambia de temporada y trae "＋ Crear
+temporada…" como última opción. Crear y activar dejaron de tener pantalla
+propia: eran dos acciones sueltas sosteniendo una vista entera.
+
+Cuando se mira una temporada que no es la que está en curso aparece una barra
+que lo dice y ofrece activarla. Sin ese aviso, ver números viejos y creer que
+son los de hoy es cuestión de tiempo.
+
+**Próximas y Ya pasaron, con la más cercana destacada.** Mezcladas no se podía
+distinguir dos funciones con el mismo nombre. El corte usa las mismas 3 horas
+de gracia que Inicio: a las 21:00, la función de las 20:00 todavía no "pasó".
+
+Las acciones son las mismas en todas las filas: Asignar (en ámbar cuando falta
+repartir, con cuánto falta), Editar y ⋮ para duplicar. En las que ya pasaron no
+se ofrece Asignar: repartir cupo de una función que ya fue no arregla nada. Por
+eso "Sin asignar" de la franja cuenta sólo las próximas — si contara las
+pasadas quedaría un número en ámbar que nunca se puede bajar.
+
+**Duplicar deja la fecha en blanco.** Es el único dato que seguro cambia, y
+prellenarlo con el de la función vieja es la forma segura de crear dos
+funciones el mismo día sin darse cuenta.
+
+**El precio arranca bloqueado si ya se vendió, pero se puede destrabar.** El
+motivo va adentro del pop-up de edición, no suelto en la lista, porque se lee
+justo cuando se intenta tocar el campo. La razón verdadera no es que se alteren
+las ventas hechas: `sales.amount_cents` guarda el importe de cada venta y no
+cambia nunca. Lo que pasa es que de ahí en adelante la misma función tiene dos
+precios y lo recaudado deja de coincidir con cupo × precio. El candado es guía,
+no regla: el server sigue aceptando el cambio. Un bloqueo duro dejaría sin
+salida a quien cargó mal el precio y ya vendió dos entradas, y para salir de
+ahí haría falta SQL.
+
+El chip de bloqueo cambia de texto según el caso: "Cerrada" en una función que
+ya pasó, "No se edita" en una que todavía se vende. "Cerrada" en una función
+futura no se entiende; el chip tiene que decir qué es lo que no se puede hacer.
+
+**"Cancelar función" no se implementó.** El mockup la lista en el ⋮, pero no
+existe en el modelo: una función no se puede dar de baja sin decidir antes qué
+pasa con las entradas vendidas, con lo que las coristas ya cobraron y con lo
+que tienen que rendir. Eso es una decisión de negocio, no un botón.

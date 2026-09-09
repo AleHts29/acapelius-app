@@ -45,17 +45,29 @@ export function FAB({ onClick, children }: { onClick: () => void; children: Reac
  */
 export function PageHead({
   title,
+  sub,
   action,
   children,
 }: {
   title: ReactNode
+  /** Renglón de contexto bajo el título. Va afuera del h1: es contexto, no
+   *  parte del nombre de la pantalla, y un lector de pantalla no debería
+   *  leerlo como si lo fuera. */
+  sub?: ReactNode
   action?: { label: string; onClick: () => void }
   children?: ReactNode
 }) {
   return (
     <>
       <div className="page-head">
-        <h1 className="page-title">{title}</h1>
+        {sub === undefined ? (
+          <h1 className="page-title">{title}</h1>
+        ) : (
+          <div>
+            <h1 className="page-title">{title}</h1>
+            <p className="page-head__sub">{sub}</p>
+          </div>
+        )}
         {(children || action) && (
           <div className="page-head__right">
             {children}

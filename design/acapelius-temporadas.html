@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Temporadas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#F2F3F5; --sur:#FFFFFF; --alt:#FAFBFC; --ink:#1A1C22; --mut:#7C818C; --line:#E3E5E9;
+          --indigo:#3A3FC4; --indigo-s:#E8E8FA; --carbon:#1A1C22;
+          --ok:#0E7A55; --ok-s:#E2F2EB; --warn:#9C6A0C; --warn-s:#F6EEDC; --warn-b:#E7D9B8; --bad:#B3403F; --bad-s:#F7E6E5; }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .page { max-width:1340px; margin:0 auto; padding:44px 20px 90px; }
+  .page > h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(25px,4vw,34px); }
+  .page > h1 span { color:var(--indigo); }
+  .page > p.lead { margin-top:10px; max-width:920px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .page > p.lead b { color:var(--ink); }
+  .diag { margin-top:16px; display:grid; gap:9px; }
+  @media(min-width:860px){ .diag { grid-template-columns:1fr 1fr; gap:9px 22px; } }
+  .di { background:#fff; border:1px solid #D5D8DD; border-radius:12px; padding:11px 14px; font-size:12.5px; line-height:1.55; color:#4A4C55; }
+  .di b { color:var(--ink); }
+  .di .x { color:var(--bad); font-weight:800; margin-right:7px; }
+  .di .y { color:var(--ok); font-weight:800; margin-right:7px; }
+
+  .fr { margin-top:30px; overflow-x:auto; padding-bottom:8px; }
+  .fr > .cap { font-size:13.5px; font-weight:700; color:#55575E; margin-bottom:10px; }
+  .fr > .cap b { color:var(--ink); }
+  .browser { border:1px solid #C3C7CE; border-radius:14px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); background:var(--bg); min-width:1160px; }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome .dots i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:400px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; }
+  .app { display:flex; min-height:660px; position:relative; }
+
+  .side { width:200px; background:var(--sur); border-right:1px solid var(--line); display:flex; flex-direction:column; flex-shrink:0; }
+  .side .logo { padding:15px 14px 11px; font-family:'Archivo',sans-serif; font-weight:800; letter-spacing:0.2em; font-size:11px; display:flex; align-items:center; gap:7px; }
+  .side .logo .mk { width:19px; height:19px; border-radius:50%; border:1.5px solid var(--indigo); color:var(--indigo); font-size:9px; display:flex; align-items:center; justify-content:center; font-style:italic; }
+  .nav { padding:4px 8px; }
+  .nav a { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:8px; font-size:11.5px; font-weight:700; color:var(--mut); margin-bottom:2px; }
+  .nav a.on { background:var(--indigo-s); color:var(--indigo); }
+  .nav .sec { padding:11px 10px 4px; font-family:'Archivo',sans-serif; font-size:8px; font-weight:800; letter-spacing:0.14em; color:var(--mut); }
+  .nav a .b { margin-left:auto; font-size:8.5px; font-weight:800; padding:2px 6px; border-radius:99px; background:var(--warn-s); color:var(--warn); }
+  .side .grow { flex:1; }
+  .side .me { border-top:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:8px; }
+  .side .me .av { width:23px; height:23px; border-radius:50%; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:9px; }
+  .side .me b { display:block; font-size:11px; } .side .me span { color:var(--mut); font-size:9.5px; }
+
+  .main { flex:1; padding:20px 26px 26px; min-width:0; }
+  .phead { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:16px; }
+  .phead h2 { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .phead .sub { font-size:11.5px; color:var(--mut); margin-top:3px; }
+  .phead .r { display:flex; gap:9px; align-items:center; }
+  .btn { border-radius:9px; padding:9px 14px; font-size:12.5px; font-weight:800; white-space:nowrap; }
+  .btn.pri { background:var(--indigo); color:#fff; }
+  .btn.gh { background:var(--sur); border:1.5px solid var(--line); color:var(--ink); }
+  .btn.sm { padding:7px 11px; font-size:11.5px; }
+  .btn.warn { background:var(--warn-s); border:1.5px solid var(--warn-b); color:var(--warn); }
+  .pillbtn { display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:800; border:1.5px solid var(--line); background:var(--sur); border-radius:99px; padding:8px 13px; }
+  .pillbtn span { color:var(--mut); }
+
+  /* franja resumen */
+  .strip { background:var(--sur); border:1px solid var(--line); border-radius:13px; display:grid; grid-template-columns:repeat(4,1fr); margin-bottom:18px; }
+  .strip .s { padding:12px 18px; border-left:1px solid var(--line); }
+  .strip .s:first-child { border-left:0; }
+  .strip .s b { font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; display:block; }
+  .strip .s b.g { color:var(--ok); } .strip .s b.y { color:var(--warn); }
+  .strip .s span { font-size:9.5px; color:var(--mut); font-weight:800; letter-spacing:0.06em; text-transform:uppercase; margin-top:3px; display:block; }
+
+  .sect { display:flex; align-items:center; gap:9px; margin:0 0 9px; }
+  .sect b { font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .sect::after { content:""; flex:1; height:1px; background:var(--line); }
+
+  /* fila de función */
+  .fnlist { background:var(--sur); border:1px solid var(--line); border-radius:13px; overflow:hidden; margin-bottom:20px; }
+  .fnrow { display:grid; grid-template-columns:1.6fr 1.15fr 1.35fr 0.85fr auto; gap:18px; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line); }
+  .fnrow:last-child { border-bottom:0; }
+  .fnrow.next { background:var(--indigo-s); }
+  .fnrow .nm { min-width:0; }
+  .fnrow .nm .t { display:flex; align-items:center; gap:8px; }
+  .fnrow .nm b { font-size:14px; font-weight:800; font-family:'Archivo',sans-serif; }
+  .fnrow .nm .v { font-size:10.5px; color:var(--mut); margin-top:2px; }
+  .fnrow .dt b { font-size:12.5px; font-weight:700; display:block; }
+  .fnrow .dt span { font-size:10.5px; color:var(--mut); }
+  .fnrow .prog .bar { height:6px; border-radius:99px; background:var(--line); overflow:hidden; }
+  .fnrow .prog .bar i { display:block; height:100%; background:var(--indigo); }
+  .fnrow .prog .lg { margin-top:6px; font-size:10.5px; color:var(--mut); font-weight:600; display:flex; justify-content:space-between; }
+  .fnrow .prog .lg b { color:var(--ink); }
+  .fnrow .money b { font-family:'Archivo',sans-serif; font-size:13.5px; font-weight:800; display:block; text-align:right; }
+  .fnrow .money span { font-size:9.5px; color:var(--mut); font-weight:700; display:block; text-align:right; margin-top:2px; }
+  .fnrow .acts { display:flex; align-items:center; gap:7px; }
+  .kebab { color:var(--mut); font-weight:800; padding:0 4px; }
+  .tag { font-size:8.5px; font-weight:800; padding:3px 8px; border-radius:99px; background:var(--line); color:var(--mut); white-space:nowrap; }
+  .tag.next { background:var(--indigo); color:#fff; }
+  .tag.lock { background:var(--alt); border:1px solid var(--line); color:var(--mut); display:inline-flex; align-items:center; gap:4px; }
+
+  .done .fnrow { opacity:.9; }
+  .done .fnrow .prog .bar i { background:var(--ok); }
+
+  /* pop-up */
+  .scrim { position:absolute; inset:0; background:rgba(26,28,34,.5); }
+  .modal { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:480px; background:var(--sur); border-radius:16px; box-shadow:0 24px 60px rgba(26,28,34,.35); overflow:hidden; }
+  .modal .mh { padding:16px 20px; border-bottom:1px solid var(--line); display:flex; align-items:flex-start; justify-content:space-between; }
+  .modal h3 { font-family:'Archivo',sans-serif; font-size:16px; font-weight:800; }
+  .modal .msub { font-size:11.5px; color:var(--mut); margin-top:2px; }
+  .modal .x { color:var(--mut); font-size:15px; font-weight:800; }
+  .mbody { padding:16px 20px; }
+  .fld { margin-top:13px; } .fld:first-child { margin-top:0; }
+  .fld label { display:block; font-family:'Archivo',sans-serif; font-size:9px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .inp { margin-top:6px; border:1.5px solid var(--line); border-radius:11px; padding:11px 13px; font-size:13px; background:var(--alt); }
+  .inp.f { border-color:var(--indigo); box-shadow:0 0 0 3px rgba(58,63,196,.12); background:var(--sur); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .lockmsg { margin-top:13px; background:var(--warn-s); border:1px solid var(--warn-b); border-radius:11px; padding:11px 13px; font-size:11.5px; color:var(--warn); font-weight:700; line-height:1.5; }
+  .mfoot { padding:13px 20px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:9px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Temporadas: <span>densidad y proporción</span></h1>
+  <p class="lead">La vista actual dedica ~180 px de alto por función para mostrar cuatro datos, y pone <b>tres botones índigo a todo el ancho</b> que pesan más que los nombres de las funciones. Con la regla que ya definimos —el índigo se reserva para acciones, nunca para bloques grandes— y una fila por función con la información que importa, la misma pantalla pasa a mostrar toda la temporada de un vistazo.</p>
+
+  <div class="diag">
+    <div class="di"><span class="x">✕</span><b>Botones gigantes:</b> "Agregar función" y "Asignar entradas" a 1.100 px de ancho, sólidos y apilados. <span class="y">→</span> Acción principal en el header; asignar como botón chico en su fila, en ámbar cuando falta algo.</div>
+    <div class="di"><span class="x">✕</span><b>"Ya tiene ingresos: no se edita"</b> en gris chiquito, partido en dos líneas y flotando arriba a la derecha. <span class="y">→</span> Un chip con candado, y la explicación completa dentro del pop-up de edición.</div>
+    <div class="di"><span class="x">✕</span><b>Sin orden:</b> funciones pasadas y futuras mezcladas, con dos "Concierto de invierno" indistinguibles. <span class="y">→</span> Agrupadas en "Próximas" y "Ya pasaron", ordenadas por fecha, la más cercana destacada.</div>
+    <div class="di"><span class="x">✕</span><b>Datos escondidos:</b> "38 vendidas" perdido en una línea gris, sin ocupación ni recaudación. <span class="y">→</span> Barra de ocupación, vendidas/cupo, asignadas y recaudado en columnas alineadas.</div>
+    <div class="di"><span class="x">✕</span><b>Botones inconsistentes:</b> una función tiene "Asignar" ghost chico, otra el gigante, otra solo "Editar". <span class="y">→</span> Mismo set en todas las filas: Asignar · Editar · ⋮ (duplicar, cancelar función).</div>
+    <div class="di"><span class="x">✕</span><b>Sin contexto de temporada:</b> el título es solo un rótulo. <span class="y">→</span> Selector de temporada + franja con funciones, entradas, recaudado y sin asignar.</div>
+  </div>
+
+  <div class="fr">
+    <div class="cap"><b>1 · La vista</b> — franja resumen, próximas destacadas, pasadas comprimidas. Seis funciones entran sin scrollear.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/temporadas/1</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a><a><span>🎟</span>Vender <span class="b">10</span></a><a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>📊</span>Dirección</a><a><span>💰</span>Rendiciones <span class="b">6</span></a><a><span>👥</span>Asistencia</a><a class="on"><span>📅</span>Temporadas</a><a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+
+        <div class="main">
+          <div class="phead">
+            <div><h2>Temporada 2026</h2><div class="sub">5 funciones · del 14 de agosto al 13 de septiembre</div></div>
+            <div class="r">
+              <div class="pillbtn">Temporada 2026 <span>▾</span></div>
+              <div class="btn pri">＋ Agregar función</div>
+            </div>
+          </div>
+
+          <div class="strip">
+            <div class="s"><b>5</b><span>Funciones</span></div>
+            <div class="s"><b>145 <span style="display:inline; font-size:12px; color:var(--mut); font-weight:600; text-transform:none; letter-spacing:0;">/ 315</span></b><span>Entradas vendidas</span></div>
+            <div class="s"><b class="g">$1.016.000</b><span>Recaudado</span></div>
+            <div class="s"><b class="y">76</b><span>Sin asignar</span></div>
+          </div>
+
+          <div class="sect"><b>Próximas · 2</b></div>
+          <div class="fnlist">
+            <div class="fnrow next">
+              <div class="nm">
+                <div class="t"><b>Cierre de temporada</b><span class="tag next">EN 4 DÍAS</span></div>
+                <div class="v">Teatro Municipal</div>
+              </div>
+              <div class="dt"><b>Dom 13 de septiembre</b><span>21:00 · cupo 80 · $10.000</span></div>
+              <div class="prog">
+                <div class="bar"><i style="width:18%"></i></div>
+                <div class="lg"><span><b>14</b>/80 vendidas</span><span>49 asignadas</span></div>
+              </div>
+              <div class="money"><b>$36.000</b><span>RECAUDADO</span></div>
+              <div class="acts">
+                <div class="btn warn sm">Asignar · faltan 31</div>
+                <div class="btn gh sm">Editar</div>
+                <span class="kebab">⋮</span>
+              </div>
+            </div>
+            <div class="fnrow">
+              <div class="nm">
+                <div class="t"><b>Concierto de invierno</b></div>
+                <div class="v">Teatro Municipal</div>
+              </div>
+              <div class="dt"><b>Sáb 12 de septiembre</b><span>20:00 · cupo 60 · $40.000</span></div>
+              <div class="prog">
+                <div class="bar"><i style="width:0%"></i></div>
+                <div class="lg"><span><b>0</b>/60 vendidas</span><span>0 asignadas</span></div>
+              </div>
+              <div class="money"><b>$0</b><span>RECAUDADO</span></div>
+              <div class="acts">
+                <div class="btn warn sm">Asignar · faltan 60</div>
+                <div class="btn gh sm">Editar</div>
+                <span class="kebab">⋮</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sect"><b>Ya pasaron · 3</b></div>
+          <div class="fnlist done">
+            <div class="fnrow">
+              <div class="nm">
+                <div class="t"><b>Función de gala</b><span class="tag">HECHA</span></div>
+                <div class="v">Teatro Municipal</div>
+              </div>
+              <div class="dt"><b>Mié 26 de agosto</b><span>21:00 · cupo 80 · $10.000</span></div>
+              <div class="prog">
+                <div class="bar"><i style="width:76%"></i></div>
+                <div class="lg"><span><b>61</b>/80 vendidas</span><span>29 entraron</span></div>
+              </div>
+              <div class="money"><b>$500.000</b><span>RECAUDADO</span></div>
+              <div class="acts">
+                <span class="tag lock">🔒 Cerrada</span>
+                <span class="kebab">⋮</span>
+              </div>
+            </div>
+            <div class="fnrow">
+              <div class="nm">
+                <div class="t"><b>Concierto de invierno</b><span class="tag">HECHA</span></div>
+                <div class="v">Teatro Municipal</div>
+              </div>
+              <div class="dt"><b>Sáb 22 de agosto</b><span>20:00 · cupo 50 · $8.000</span></div>
+              <div class="prog">
+                <div class="bar"><i style="width:64%"></i></div>
+                <div class="lg"><span><b>32</b>/50 vendidas</span><span>28 entraron</span></div>
+              </div>
+              <div class="money"><b>$224.000</b><span>RECAUDADO</span></div>
+              <div class="acts">
+                <span class="tag lock">🔒 Cerrada</span>
+                <span class="kebab">⋮</span>
+              </div>
+            </div>
+            <div class="fnrow">
+              <div class="nm">
+                <div class="t"><b>Función de apertura</b><span class="tag">HECHA</span></div>
+                <div class="v">Teatro Municipal</div>
+              </div>
+              <div class="dt"><b>Vie 14 de agosto</b><span>21:00 · cupo 45 · $8.000</span></div>
+              <div class="prog">
+                <div class="bar"><i style="width:84%"></i></div>
+                <div class="lg"><span><b>38</b>/45 vendidas</span><span>31 entraron</span></div>
+              </div>
+              <div class="money"><b>$256.000</b><span>RECAUDADO</span></div>
+              <div class="acts">
+                <span class="tag lock">🔒 Cerrada</span>
+                <span class="kebab">⋮</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fr">
+    <div class="cap"><b>2 · Editar función</b> — en pop-up, con la explicación del bloqueo dentro y no suelta en la lista. Los campos que ya no se pueden tocar quedan deshabilitados con su motivo.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/temporadas/1</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a><a><span>🎟</span>Vender <span class="b">10</span></a><a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>📊</span>Dirección</a><a><span>💰</span>Rendiciones <span class="b">6</span></a><a><span>👥</span>Asistencia</a><a class="on"><span>📅</span>Temporadas</a><a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Temporada 2026</h2><div class="sub">5 funciones · del 14 de agosto al 13 de septiembre</div></div>
+            <div class="r"><div class="pillbtn">Temporada 2026 <span>▾</span></div><div class="btn pri">＋ Agregar función</div></div>
+          </div>
+          <div class="strip">
+            <div class="s"><b>5</b><span>Funciones</span></div>
+            <div class="s"><b>145</b><span>Entradas vendidas</span></div>
+            <div class="s"><b class="g">$1.016.000</b><span>Recaudado</span></div>
+            <div class="s"><b class="y">76</b><span>Sin asignar</span></div>
+          </div>
+          <div class="sect"><b>Próximas · 2</b></div>
+          <div class="fnlist">
+            <div class="fnrow next">
+              <div class="nm"><div class="t"><b>Cierre de temporada</b><span class="tag next">EN 4 DÍAS</span></div><div class="v">Teatro Municipal</div></div>
+              <div class="dt"><b>Dom 13 de septiembre</b><span>21:00 · cupo 80 · $10.000</span></div>
+              <div class="prog"><div class="bar"><i style="width:18%"></i></div><div class="lg"><span><b>14</b>/80 vendidas</span><span>49 asignadas</span></div></div>
+              <div class="money"><b>$36.000</b><span>RECAUDADO</span></div>
+              <div class="acts"><div class="btn warn sm">Asignar · faltan 31</div><div class="btn gh sm">Editar</div><span class="kebab">⋮</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="scrim"></div>
+        <div class="modal">
+          <div class="mh">
+            <div><h3>Editar función</h3><div class="msub">Cierre de temporada · 14 entradas vendidas</div></div>
+            <span class="x">✕</span>
+          </div>
+          <div class="mbody">
+            <div class="fld"><label>Nombre</label><div class="inp f">Cierre de temporada</div></div>
+            <div class="fld"><label>Lugar</label><div class="inp">Teatro Municipal</div></div>
+            <div class="two" style="margin-top:13px;">
+              <div class="fld" style="margin-top:0;"><label>Fecha</label><div class="inp">13/09/2026</div></div>
+              <div class="fld" style="margin-top:0;"><label>Hora</label><div class="inp">21:00</div></div>
+            </div>
+            <div class="two" style="margin-top:13px;">
+              <div class="fld" style="margin-top:0;"><label>Cupo</label><div class="inp">80</div></div>
+              <div class="fld" style="margin-top:0;"><label>Precio</label><div class="inp" style="color:var(--mut);">$10.000 🔒</div></div>
+            </div>
+            <div class="lockmsg">🔒 El precio no se edita porque ya hay 14 entradas vendidas a $10.000. Cambiarlo alteraría lo que ya cobraron las coristas.</div>
+          </div>
+          <div class="mfoot">
+            <div class="btn gh">Cancelar</div>
+            <div class="btn pri">Guardar cambios</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

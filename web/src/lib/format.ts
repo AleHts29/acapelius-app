@@ -104,3 +104,41 @@ export function dayLabel(iso: string): string {
 export function timeShort(iso: string): string {
   return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 }
+
+const dayOfFunction = new Intl.DateTimeFormat('es-AR', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'long',
+  timeZone: TIME_ZONE,
+})
+
+/** ISO → "Dom 13 de septiembre". El renglón de fecha de una función. */
+export function functionDay(iso: string): string {
+  // es-AR devuelve "dom, 13 de septiembre": la coma sobra cuando abajo va la
+  // hora en su propia línea, y el día arranca en mayúscula como título.
+  const s = dayOfFunction.format(new Date(iso)).replace(',', '')
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+const dayShort = new Intl.DateTimeFormat('es-AR', {
+  day: 'numeric',
+  month: 'long',
+  timeZone: TIME_ZONE,
+})
+
+/** ISO → "13 de septiembre". Para rangos: "del X al Y". */
+export function dayAndMonth(iso: string): string {
+  return dayShort.format(new Date(iso))
+}
+
+const hourOfDay = new Intl.DateTimeFormat('es-AR', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+  timeZone: TIME_ZONE,
+})
+
+/** ISO → "21:00" en hora de Buenos Aires. */
+export function functionTime(iso: string): string {
+  return hourOfDay.format(new Date(iso))
+}

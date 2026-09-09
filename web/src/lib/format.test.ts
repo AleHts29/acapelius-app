@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { calendarDaysUntil, dayLabel, daysAgo, formatDateTime, formatMoney, isoToLocalInput, localInputToISO, pesosToCents } from './format'
+import { calendarDaysUntil, dayAndMonth, dayLabel, daysAgo, formatDateTime, formatMoney, functionDay, functionTime, isoToLocalInput, localInputToISO, pesosToCents } from './format'
 
 describe('formatMoney', () => {
   it('muestra centavos como pesos argentinos', () => {
@@ -99,5 +99,23 @@ describe('calendarDaysUntil (rótulo del hero en Inicio)', () => {
     manana.setDate(manana.getDate() + 1)
     manana.setHours(0, 30, 0, 0)
     expect(calendarDaysUntil(manana.toISOString())).toBe(1)
+  })
+})
+
+describe('fecha de una función (fila de Temporadas)', () => {
+  // 21:00 en Buenos Aires. En UTC ya es el día siguiente: si el formateo no
+  // fijara la zona, la fila mostraría la función un día corrido.
+  const nocheDelTrece = '2026-09-14T00:00:00Z'
+
+  it('functionDay arranca en mayúscula y sin la coma del locale', () => {
+    expect(functionDay(nocheDelTrece)).toBe('Dom 13 de septiembre')
+  })
+
+  it('functionTime da la hora de Buenos Aires, no la del navegador', () => {
+    expect(functionTime(nocheDelTrece)).toBe('21:00')
+  })
+
+  it('dayAndMonth arma los extremos del rango de la temporada', () => {
+    expect(dayAndMonth('2026-08-14T21:00:00-03:00')).toBe('14 de agosto')
   })
 })
