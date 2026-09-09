@@ -479,3 +479,38 @@ mientras el actual todavía vende.
 El endpoint acepta `activate` y `copy_from_season_id`, y hace las dos cosas en
 una transacción: una temporada creada a medias, con la mitad de las funciones
 copiadas, sería peor que un error.
+
+## Modo puerta: la app sabe cuál es la función
+
+La pantalla pedía "elegí la función de hoy" y mostraba las cinco de la
+temporada, tres de hace tres semanas. La app conoce la fecha y los horarios: lo
+resuelve sola. La función de hoy ocupa la pantalla —un bloque, un botón, cero
+decisiones— y el resto queda abajo. A las 20:45, en la puerta, nadie busca en
+una lista.
+
+El bloque va en carbón, el mismo fondo del modo puerta al que lleva: no es
+decoración, es la continuidad entre "estoy por empezar" y "estoy escaneando".
+Trae emitidas, ingresadas y cortesías, que es lo que hace falta para operar;
+"38 de 45 vendidas" no decía cuántos ya entraron.
+
+**El día que no hay función —casi todos— se muestra la próxima** con su cuenta
+regresiva, y abrir la puerta pasa a ser deliberado: "Abrir igual para probar",
+diciendo que los ingresos que se marquen quedan registrados. Sin esa aclaración,
+probar el escáner ensucia la asistencia de una función que todavía no pasó.
+
+**Las funciones que ya pasaron viven detrás de un link** que dice para qué
+sirven: corregir un ingreso. Es la excepción, no el default.
+
+**La copia local se baja acá, no al entrar.** El modo puerta ya funcionaba
+offline, pero la primera bajada necesita conexión y se hacía recién al abrir la
+puerta —adentro del teatro, que es justo donde puede no haber señal—. Ahora la
+pantalla de selección prepara el snapshot de la función destacada y lo dice:
+"Listo para trabajar sin conexión · sincronizado hace 2 min". Si nunca se pudo
+bajar y no hay copia previa, lo avisa en ámbar en vez de dejarlo pasar.
+
+`comp_tickets` se sumó a `ListFunctions`, que leen todos los roles. Es un
+conteo, no plata: mantiene la regla de esa query, y en la puerta importa saber
+cuántos de los que vienen no pagaron entrada.
+
+"Ver quiénes compraron" aparece sólo para dirección: Asistencia es una pantalla
+suya, y a la persona de la puerta el botón la mandaría a un redirect.

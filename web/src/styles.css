@@ -4524,6 +4524,288 @@ div.alertcard {
 }
 
 /* ==========================================================================
+   Modo puerta · elegir función (mockup design/acapelius-puerta-seleccion.html)
+
+   La app conoce la fecha y los horarios: la función de hoy ocupa la pantalla
+   y el resto queda abajo. En la puerta, a las 20:45, no se busca en una lista.
+   ========================================================================== */
+
+/* Columna angosta: el modo puerta es una tarea enfocada, no un listado. */
+.door-pick {
+  max-width: 660px;
+}
+
+.door-pick .sectrule {
+  margin-top: 22px;
+  /* En celular el rótulo y el link no entran en un renglón: antes que partir
+     "FUNCIONES / ANTERIORES" en dos, el link baja entero. */
+  flex-wrap: wrap;
+}
+
+/* El bloque protagonista va en carbón, como el modo puerta al que lleva. */
+.door-hoy {
+  position: relative;
+  overflow: hidden;
+  margin-top: 16px;
+  padding: 20px 22px;
+  border-radius: 15px;
+  background: var(--night-bg);
+  color: var(--night-text);
+}
+
+/* El anillo del fondo: la marca, sin robarle contraste al texto. */
+.door-hoy::after {
+  content: "";
+  position: absolute;
+  right: -22px;
+  bottom: -34px;
+  width: 120px;
+  height: 120px;
+  border: 2px solid rgba(242, 243, 245, 0.12);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.door-hoy__e {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--indigo-light);
+}
+
+.door-hoy__fn {
+  margin: 5px 0 0;
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.door-hoy__m {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--night-muted);
+}
+
+.door-hoy__stats {
+  display: flex;
+  margin-top: 16px;
+}
+
+.door-hoy__stats > div {
+  padding-right: 22px;
+  margin-right: 22px;
+  border-right: 1px solid var(--night-line);
+}
+
+.door-hoy__stats > div:last-child {
+  padding-right: 0;
+  margin-right: 0;
+  border-right: 0;
+}
+
+.door-hoy__stats b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.door-hoy__stats span {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--night-muted);
+}
+
+.door-hoy__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--night-text);
+  color: var(--night-bg);
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.door-hoy__cta:hover {
+  filter: brightness(0.94);
+}
+
+.door-ready {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: var(--night-muted);
+}
+
+.door-ready i {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #4bbf8a;
+}
+
+.door-ready--off {
+  color: var(--night-warn);
+}
+
+.door-ready--off i {
+  background: var(--night-warn);
+}
+
+.door-ready--wait {
+  opacity: 0.7;
+}
+
+/* Sin función hoy: la próxima, y abrir la puerta es deliberado. */
+.door-soon {
+  margin-top: 16px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+}
+
+.door-soon__e {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.door-soon__fn {
+  margin: 5px 0 0;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.door-soon__m {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.door-soon__info {
+  margin: 15px 0 0;
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: var(--indigo-soft);
+  color: var(--indigo);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.door-soon__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.door-soon__acts .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+}
+
+.door-list {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow: hidden;
+}
+
+.door-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.door-row:last-child {
+  border-bottom: 0;
+}
+
+.door-row__mid {
+  flex: 1;
+  min-width: 140px;
+}
+
+.door-row__mid b {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.door-row__mid span {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.door-row__n {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.door-row__n b {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.door-row__n b.g {
+  color: var(--ok);
+}
+
+.door-row .button {
+  text-decoration: none;
+}
+
+/* El link que acompaña a un encabezado de grupo, del lado de la línea. */
+.sectrule__lnk {
+  order: 1;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--indigo);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* ==========================================================================
    Menu (mockup design/acapelius-menus-temporadas.html)
 
    Reemplaza al <select> nativo, que se dibuja distinto en cada sistema y no

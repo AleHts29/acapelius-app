@@ -121,6 +121,8 @@ export interface ShowFunction {
   entered: number
   /** Cupo ya repartido entre coristas. La diferencia con capacity es lo que falta. */
   assigned: number
+  /** Cortesías emitidas: butacas ocupadas que no pagaron. */
+  comp_tickets: number
 }
 
 export interface FunctionInput {
