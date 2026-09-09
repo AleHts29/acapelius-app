@@ -46,7 +46,8 @@
   .side .me .av { width:23px; height:23px; border-radius:50%; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:9px; }
   .side .me b { display:block; font-size:11px; } .side .me span { color:var(--mut); font-size:9.5px; }
   .main { flex:1; padding:22px 26px 26px; min-width:0; }
-  .wrap640 { max-width:660px; }
+  .grid { display:grid; grid-template-columns:1.75fr 1fr; gap:18px; align-items:start; margin-top:18px; }
+  .col { display:flex; flex-direction:column; gap:14px; }
   .phead h2 { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
   .phead .sub { font-size:11.5px; color:var(--mut); margin-top:3px; }
   .btn { border-radius:10px; padding:11px 16px; font-size:13px; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; gap:7px; }
@@ -104,7 +105,7 @@
 
   <div class="diag">
     <div class="di"><span class="x">✕</span><b>Lista completa sin criterio:</b> funciones pasadas mezcladas con futuras, dos con el mismo nombre. <span class="y">→</span> La de hoy (o la próxima) ocupa la pantalla; las demás quedan abajo, compactas, y las pasadas detrás de un link.</div>
-    <div class="di"><span class="x">✕</span><b>Filas de 1.100 px</b> con el chevron a un metro del texto. <span class="y">→</span> Columna centrada de 660 px: el modo puerta es una tarea enfocada, no un listado.</div>
+    <div class="di"><span class="x">✕</span><b>Filas de 1.100 px</b> con el chevron a un metro del texto. <span class="y">→</span> Misma grilla asimétrica 1.75 / 1 que el resto de la app: la función de hoy a la izquierda, las otras comprimidas a la derecha.</div>
     <div class="di"><span class="x">✕</span><b>Sin datos para operar:</b> "38 de 45 vendidas" no dice cuántos ya entraron ni cuánto falta. <span class="y">→</span> Emitidas, ya ingresadas y horario de inicio en el bloque principal.</div>
     <div class="di"><span class="x">✕</span><b>Sin preparación offline:</b> se entra y recién ahí se descarga todo. <span class="y">→</span> Indicador "listo para trabajar sin conexión" con la hora de la última sincronización.</div>
   </div>
@@ -125,29 +126,53 @@
           <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
         </div>
         <div class="main">
-          <div class="wrap640">
-            <div class="phead"><h2>Modo puerta</h2><div class="sub">Domingo 13 de septiembre</div></div>
-
-            <div class="today">
-              <div class="wm"></div>
-              <div class="e">Hoy · empieza en 2 h 15 min</div>
-              <div class="fn">Cierre de temporada</div>
-              <div class="m">21:00 · Teatro Municipal</div>
-              <div class="stats">
-                <div class="st"><b>62</b><span>Entradas emitidas</span></div>
-                <div class="st"><b>0</b><span>Ingresaron</span></div>
-                <div class="st"><b>7</b><span>Cortesías</span></div>
+          <div class="phead"><h2>Modo puerta</h2><div class="sub">Domingo 13 de septiembre</div></div>
+          <div class="grid">
+            <div class="col">
+              <div class="today" style="margin-top:0;">
+                <div class="wm"></div>
+                <div class="e">Hoy · empieza en 2 h 15 min</div>
+                <div class="fn">Cierre de temporada</div>
+                <div class="m">21:00 · Teatro Municipal</div>
+                <div class="stats">
+                  <div class="st"><b>62</b><span>Entradas emitidas</span></div>
+                  <div class="st"><b>0</b><span>Ingresaron</span></div>
+                  <div class="st"><b>7</b><span>Cortesías</span></div>
+                  <div class="st"><b>9</b><span>Coristas vendieron</span></div>
+                </div>
+                <div class="cta">Abrir modo puerta →</div>
+                <div class="ready"><i></i> Listo para trabajar sin conexión · sincronizado hace 2 min</div>
               </div>
-              <div class="cta">Abrir modo puerta →</div>
-              <div class="ready"><i></i> Listo para trabajar sin conexión · sincronizado hace 2 min</div>
             </div>
-
-            <div class="sect"><b>Otras funciones</b><span class="lnk">Ver las 3 que ya pasaron ›</span></div>
-            <div class="flist">
-              <div class="frow">
-                <div class="mid"><b>Concierto de invierno</b><span>Sáb 12 de septiembre, 20:00 · fue ayer</span></div>
-                <span class="num"><b>0</b>/0 emitidas</span>
-                <div class="btn gh sm">Abrir</div>
+            <div class="col">
+              <div>
+                <div class="sect" style="margin-top:0;"><b>Otras funciones</b></div>
+                <div class="flist">
+                  <div class="frow">
+                    <div class="mid"><b>Concierto de invierno</b><span>Ayer, 20:00</span></div>
+                    <div class="btn gh sm">Abrir</div>
+                  </div>
+                  <div class="frow">
+                    <div class="mid"><b>Función de gala</b><span>26 ago · 29 de 61 ingresaron</span></div>
+                    <div class="btn gh sm">Abrir</div>
+                  </div>
+                  <div class="frow">
+                    <div class="mid"><b>Concierto de invierno</b><span>22 ago · 28 de 32 ingresaron</span></div>
+                    <div class="btn gh sm">Abrir</div>
+                  </div>
+                  <div class="frow">
+                    <div class="mid"><b>Función de apertura</b><span>14 ago · 31 de 38 ingresaron</span></div>
+                    <div class="btn gh sm">Abrir</div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div class="sect" style="margin-top:0;"><b>Antes de abrir</b></div>
+                <div class="soon" style="margin-top:0; padding:15px 17px;">
+                  <div style="font-size:12px; line-height:1.6; color:#4A4C55;">
+                    En la puerta conviene el <b>celular</b>: escanea los QR con la cámara. Desde la compu podés buscar por nombre y marcar ingresos a mano.
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -172,37 +197,37 @@
           <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
         </div>
         <div class="main">
-          <div class="wrap640">
-            <div class="phead"><h2>Modo puerta</h2><div class="sub">Martes 9 de septiembre · hoy no hay función</div></div>
-
-            <div class="soon">
+          <div class="phead"><h2>Modo puerta</h2><div class="sub">Martes 9 de septiembre · hoy no hay función</div></div>
+          <div class="grid">
+            <div class="col">
+              <div class="soon" style="margin-top:0;">
               <div class="e">Próxima función · en 4 días</div>
               <div class="fn">Cierre de temporada</div>
               <div class="m">Dom 13 de septiembre, 21:00 · Teatro Municipal</div>
               <div class="info">El modo puerta se activa solo el día de la función. Si querés probarlo antes, podés abrirlo igual: los ingresos que marques quedan registrados.</div>
-              <div class="acts">
-                <div class="btn gh">Abrir igual para probar</div>
-                <div class="btn gh">Ver quiénes compraron</div>
+                <div class="acts">
+                  <div class="btn gh">Abrir igual para probar</div>
+                  <div class="btn gh">Ver quiénes compraron</div>
+                </div>
               </div>
             </div>
-
-            <div class="sect"><b>Funciones anteriores</b><span class="lnk">Sirven para corregir ingresos ›</span></div>
-            <div class="flist">
-              <div class="frow">
-                <div class="mid"><b>Función de gala</b><span>Mié 26 de agosto, 21:00</span></div>
-                <span class="num"><b class="g">29</b> de 61 ingresaron</span>
-                <div class="btn gh sm">Abrir</div>
+            <div class="col">
+              <div class="sect" style="margin-top:0;"><b>Funciones anteriores</b></div>
+              <div class="flist">
+                <div class="frow">
+                  <div class="mid"><b>Función de gala</b><span>26 ago · <b class="g" style="font-weight:800;">29</b> de 61 ingresaron</span></div>
+                  <div class="btn gh sm">Abrir</div>
+                </div>
+                <div class="frow">
+                  <div class="mid"><b>Concierto de invierno</b><span>22 ago · <b class="g" style="font-weight:800;">28</b> de 32 ingresaron</span></div>
+                  <div class="btn gh sm">Abrir</div>
+                </div>
+                <div class="frow">
+                  <div class="mid"><b>Función de apertura</b><span>14 ago · <b class="g" style="font-weight:800;">31</b> de 38 ingresaron</span></div>
+                  <div class="btn gh sm">Abrir</div>
+                </div>
               </div>
-              <div class="frow">
-                <div class="mid"><b>Concierto de invierno</b><span>Sáb 22 de agosto, 20:00</span></div>
-                <span class="num"><b class="g">28</b> de 32 ingresaron</span>
-                <div class="btn gh sm">Abrir</div>
-              </div>
-              <div class="frow">
-                <div class="mid"><b>Función de apertura</b><span>Vie 14 de agosto, 21:00</span></div>
-                <span class="num"><b class="g">31</b> de 38 ingresaron</span>
-                <div class="btn gh sm">Abrir</div>
-              </div>
+              <div style="margin-top:10px; font-size:11px; color:var(--mut); text-align:center;">Abrilas para corregir ingresos que quedaron mal marcados.</div>
             </div>
           </div>
         </div>

@@ -170,7 +170,10 @@ SELECT
   -- Cortesias emitidas. Es un conteo, no plata: en la puerta importa saber
   -- cuantos de los que vienen no pagaron entrada.
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
-   WHERE s.function_id = f.id AND s.is_comp AND t.status <> 'void')::bigint AS comp_tickets
+   WHERE s.function_id = f.id AND s.is_comp AND t.status <> 'void')::bigint AS comp_tickets,
+  -- Cuantas coristas vendieron algo para esta funcion. Tambien un conteo.
+  (SELECT count(DISTINCT s.seller_id) FROM sales s
+   WHERE s.function_id = f.id AND s.voided_at IS NULL)::bigint AS sellers
 FROM functions f
 WHERE $1::bigint IS NULL OR f.season_id = $1::bigint
 ORDER BY f.starts_at
@@ -189,6 +192,7 @@ type ListFunctionsRow struct {
 	Entered     int64     `json:"entered"`
 	Assigned    int64     `json:"assigned"`
 	CompTickets int64     `json:"comp_tickets"`
+	Sellers     int64     `json:"sellers"`
 }
 
 // Incluye cuantas entradas vivas tiene cada funcion (para barras de progreso
@@ -217,6 +221,7 @@ func (q *Queries) ListFunctions(ctx context.Context, seasonID *int64) ([]ListFun
 			&i.Entered,
 			&i.Assigned,
 			&i.CompTickets,
+			&i.Sellers,
 		); err != nil {
 			return nil, err
 		}

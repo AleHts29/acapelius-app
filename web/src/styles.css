@@ -4530,23 +4530,32 @@ div.alertcard {
    y el resto queda abajo. En la puerta, a las 20:45, no se busca en una lista.
    ========================================================================== */
 
-/* Columna angosta: el modo puerta es una tarea enfocada, no un listado. */
-.door-pick {
-  max-width: 660px;
+/* La misma grilla asimétrica que el resto de la app: la función de hoy a la
+   izquierda, y lo que puede hacer falta —las otras funciones, el recordatorio
+   de con qué conviene abrirla— comprimido a la derecha. En celular se apila. */
+.door-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+  margin-top: 16px;
 }
 
-.door-pick .sectrule {
-  margin-top: 22px;
-  /* En celular el rótulo y el link no entran en un renglón: antes que partir
-     "FUNCIONES / ANTERIORES" en dos, el link baja entero. */
-  flex-wrap: wrap;
+.door-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.door-col .sectrule {
+  margin-bottom: 8px;
 }
 
 /* El bloque protagonista va en carbón, como el modo puerta al que lleva. */
 .door-hoy {
   position: relative;
   overflow: hidden;
-  margin-top: 16px;
   padding: 20px 22px;
   border-radius: 15px;
   background: var(--night-bg);
@@ -4678,7 +4687,6 @@ div.alertcard {
 
 /* Sin función hoy: la próxima, y abrir la puerta es deliberado. */
 .door-soon {
-  margin-top: 16px;
   padding: 20px 22px;
   border: 1px solid var(--line);
   border-radius: 15px;
@@ -4758,7 +4766,9 @@ div.alertcard {
   min-width: 140px;
 }
 
-.door-row__mid b {
+/* El > importa: adentro del subtítulo hay otro <b> —el número de ingresos— y
+   con la regla suelta se volvía bloque y partía la línea en tres. */
+.door-row__mid > b {
   display: block;
   font-size: 13px;
   font-weight: 700;
@@ -4769,26 +4779,35 @@ div.alertcard {
   color: var(--text-muted);
 }
 
-.door-row__n {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.door-row__n b {
-  font-family: var(--font-display);
-  font-size: 12.5px;
+.door-row__mid span b {
+  font-weight: 800;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
-.door-row__n b.g {
+.door-row__mid span b.g {
   color: var(--ok);
 }
 
 .door-row .button {
   text-decoration: none;
+}
+
+.door-hint {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.door-tip {
+  padding: 15px 17px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-soft);
 }
 
 /* El link que acompaña a un encabezado de grupo, del lado de la línea. */
@@ -6297,6 +6316,10 @@ div.alertcard {
     text-align: center;
     font-size: 11px;
     color: var(--text-muted);
+  }
+
+  .door-grid {
+    grid-template-columns: 1.75fr 1fr;
   }
 
   /* --- Menu: panel anclado en vez de hoja de abajo --------------------- */

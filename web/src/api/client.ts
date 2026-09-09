@@ -123,6 +123,8 @@ export interface ShowFunction {
   assigned: number
   /** Cortesías emitidas: butacas ocupadas que no pagaron. */
   comp_tickets: number
+  /** Coristas que vendieron algo para esta función. */
+  sellers: number
 }
 
 export interface FunctionInput {

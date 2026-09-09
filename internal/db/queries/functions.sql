@@ -30,7 +30,10 @@ SELECT
   -- Cortesias emitidas. Es un conteo, no plata: en la puerta importa saber
   -- cuantos de los que vienen no pagaron entrada.
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
-   WHERE s.function_id = f.id AND s.is_comp AND t.status <> 'void')::bigint AS comp_tickets
+   WHERE s.function_id = f.id AND s.is_comp AND t.status <> 'void')::bigint AS comp_tickets,
+  -- Cuantas coristas vendieron algo para esta funcion. Tambien un conteo.
+  (SELECT count(DISTINCT s.seller_id) FROM sales s
+   WHERE s.function_id = f.id AND s.voided_at IS NULL)::bigint AS sellers
 FROM functions f
 WHERE sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint
 ORDER BY f.starts_at;

@@ -498,8 +498,17 @@ regresiva, y abrir la puerta pasa a ser deliberado: "Abrir igual para probar",
 diciendo que los ingresos que se marquen quedan registrados. Sin esa aclaración,
 probar el escáner ensucia la asistencia de una función que todavía no pasó.
 
-**Las funciones que ya pasaron viven detrás de un link** que dice para qué
-sirven: corregir un ingreso. Es la excepción, no el default.
+**El resto de las funciones vive en la columna de al lado**, en la misma
+grilla asimétrica que usa Dirección: la de hoy a la izquierda, lo que puede
+hacer falta comprimido a la derecha. Cada fila dice cuándo fue y cómo terminó
+—"3 sept · 29 de 61 ingresaron"— y cuando ya no queda ninguna por delante, la
+lista aclara para qué sirve abrirlas: corregir un ingreso mal marcado.
+
+Al lado va también un recordatorio de con qué conviene abrir la puerta: el
+celular escanea los QR con la cámara, la compu sirve para buscar por nombre y
+marcar a mano. La app ya se comporta así en cada tamaño, pero eso sólo se
+descubre entrando; decirlo antes evita que alguien se plante en la puerta con
+la notebook.
 
 **La copia local se baja acá, no al entrar.** El modo puerta ya funcionaba
 offline, pero la primera bajada necesita conexión y se hacía recién al abrir la
@@ -508,9 +517,9 @@ pantalla de selección prepara el snapshot de la función destacada y lo dice:
 "Listo para trabajar sin conexión · sincronizado hace 2 min". Si nunca se pudo
 bajar y no hay copia previa, lo avisa en ámbar en vez de dejarlo pasar.
 
-`comp_tickets` se sumó a `ListFunctions`, que leen todos los roles. Es un
-conteo, no plata: mantiene la regla de esa query, y en la puerta importa saber
-cuántos de los que vienen no pagaron entrada.
+`comp_tickets` y `sellers` se sumaron a `ListFunctions`, que leen todos los
+roles. Son conteos, no plata: mantienen la regla de esa query, y en la puerta
+importa saber cuántos de los que vienen no pagaron entrada.
 
 "Ver quiénes compraron" aparece sólo para dirección: Asistencia es una pantalla
 suya, y a la persona de la puerta el botón la mandaría a un redirect.

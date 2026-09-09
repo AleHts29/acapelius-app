@@ -6,7 +6,7 @@ import { api } from '../api/client'
 import type { ShowFunction } from '../api/client'
 import { useSession } from '../auth/session'
 import { loadStoredSnapshot, saveStoredSnapshot } from '../door/db'
-import { calendarDaysUntil, functionDay, functionTime } from '../lib/format'
+import { calendarDaysUntil, dayAndMonthShort, functionDay, functionTime } from '../lib/format'
 import { EmptyState } from '../ui/controls'
 import { CalendarClock, ScanLine, Users } from 'lucide-react'
 
@@ -104,6 +104,14 @@ function Preparada({ functionId }: { functionId: number }) {
   )
 }
 
+/** Cuándo fue o va a ser, en corto: la fila de la derecha es angosta. */
+function cuando(fn: ShowFunction): string {
+  const dias = calendarDaysUntil(fn.starts_at)
+  const dia =
+    dias === 0 ? 'Hoy' : dias === 1 ? 'Mañana' : dias === -1 ? 'Ayer' : dayAndMonthShort(fn.starts_at)
+  return yaPaso(fn) ? dia : `${dia}, ${functionTime(fn.starts_at)}`
+}
+
 /** Fila compacta de una función que no es la protagonista. */
 function Otra({ fn }: { fn: ShowFunction }) {
   const pasada = yaPaso(fn)
@@ -112,20 +120,17 @@ function Otra({ fn }: { fn: ShowFunction }) {
       <span className="door-row__mid">
         <b>{nombre(fn)}</b>
         <span>
-          {functionDay(fn.starts_at)}, {functionTime(fn.starts_at)}
-          {calendarDaysUntil(fn.starts_at) === -1 && ' · fue ayer'}
+          {cuando(fn)} ·{' '}
+          {pasada ? (
+            <>
+              <b className="g">{fn.entered}</b> de {fn.sold} ingresaron
+            </>
+          ) : (
+            <>
+              <b>{fn.sold}</b> emitidas
+            </>
+          )}
         </span>
-      </span>
-      <span className="door-row__n">
-        {pasada ? (
-          <>
-            <b className="g">{fn.entered}</b> de {fn.sold} ingresaron
-          </>
-        ) : (
-          <>
-            <b>{fn.sold}</b> emitidas
-          </>
-        )}
       </span>
       <Link className="button button--ghost button--sm" to={`/puerta/${fn.id}`}>
         Abrir
@@ -137,7 +142,6 @@ function Otra({ fn }: { fn: ShowFunction }) {
 export function DoorPage() {
   const navigate = useNavigate()
   const { user } = useSession()
-  const [verPasadas, setVerPasadas] = useState(false)
   const { data, isPending } = useQuery({
     queryKey: ['functions'],
     queryFn: () => api.listFunctions(),
@@ -148,8 +152,14 @@ export function DoorPage() {
   // Sin función hoy, la próxima: es lo único que alguien puede querer abrir.
   const proxima = hoy ?? funciones.find((fn) => !yaPaso(fn))
   const destacada = hoy ?? proxima
-  const otras = funciones.filter((fn) => fn.id !== destacada?.id && !yaPaso(fn))
-  const pasadas = funciones.filter((fn) => fn.id !== destacada?.id && yaPaso(fn)).reverse()
+  // Todo lo que no es la destacada, en el orden en que puede hacer falta: lo
+  // que viene primero, y después lo que pasó, de lo más reciente para atrás.
+  const resto = funciones.filter((fn) => fn.id !== destacada?.id)
+  const otras = [
+    ...resto.filter((fn) => !yaPaso(fn)),
+    ...resto.filter(yaPaso).reverse(),
+  ]
+  const soloPasadas = otras.length > 0 && otras.every(yaPaso)
 
   // "Miércoles 9 de septiembre": es-AR mete una coma que acá sobra.
   const fecha = new Date()
@@ -173,96 +183,112 @@ export function DoorPage() {
         {!hoy && funciones.length > 0 && ' · hoy no hay función'}
       </p>
 
-      {funciones.length === 0 ? (
-        <EmptyState icon={<CalendarClock size={20} />} title="No hay funciones cargadas">
-          Cuando dirección cargue la primera función, va a aparecer acá para abrir la puerta.
-        </EmptyState>
-      ) : hoy ? (
-        // El caso que importa: un bloque, un botón, cero decisiones.
-        <div className="door-hoy">
-          <p className="door-hoy__e">Hoy · {faltan(hoy.starts_at)}</p>
-          <p className="door-hoy__fn">{nombre(hoy)}</p>
-          <p className="door-hoy__m">
-            {functionTime(hoy.starts_at)} · {hoy.venue}
-          </p>
-          <div className="door-hoy__stats">
-            <div>
-              <b>{hoy.sold}</b>
-              <span>Entradas emitidas</span>
-            </div>
-            <div>
-              <b>{hoy.entered}</b>
-              <span>Ingresaron</span>
-            </div>
-            <div>
-              <b>{hoy.comp_tickets}</b>
-              <span>Cortesías</span>
-            </div>
-          </div>
-          <button className="door-hoy__cta" type="button" onClick={() => navigate(`/puerta/${hoy.id}`)}>
-            <ScanLine size={17} aria-hidden />
-            Abrir modo puerta
-          </button>
-          <Preparada functionId={hoy.id} />
-        </div>
-      ) : proxima ? (
-        <div className="door-soon">
-          <p className="door-soon__e">Próxima función · {enCuantosDias(proxima.starts_at)}</p>
-          <p className="door-soon__fn">{nombre(proxima)}</p>
-          <p className="door-soon__m">
-            {functionDay(proxima.starts_at)}, {functionTime(proxima.starts_at)} · {proxima.venue}
-          </p>
-          <p className="door-soon__info">
-            El modo puerta se activa solo el día de la función. Si querés probarlo antes, podés
-            abrirlo igual: los ingresos que marques quedan registrados.
-          </p>
-          <div className="door-soon__acts">
-            <button
-              className="button button--ghost"
-              type="button"
-              onClick={() => navigate(`/puerta/${proxima.id}`)}
-            >
-              Abrir igual para probar
-            </button>
-            {/* Asistencia es de dirección: a la persona de la puerta el botón
-                la mandaría a una pantalla que no puede abrir. */}
-            {user?.role === 'admin' && (
-              <Link className="button button--ghost" to={`/panel/asistencia?fn=${proxima.id}`}>
-                <Users size={15} aria-hidden />
-                Ver quiénes compraron
-              </Link>
-            )}
-          </div>
-        </div>
-      ) : (
-        <EmptyState icon={<CalendarClock size={20} />} title="La temporada ya terminó">
-          No queda ninguna función por delante. Las que ya pasaron siguen abajo, por si hay que
-          corregir un ingreso.
-        </EmptyState>
-      )}
-
-      {(otras.length > 0 || pasadas.length > 0) && (
-        <>
-          <p className="sectrule">
-            <b>{otras.length > 0 ? 'Otras funciones' : 'Funciones anteriores'}</b>
-            {pasadas.length > 0 && (
-              <button className="sectrule__lnk" type="button" onClick={() => setVerPasadas(!verPasadas)}>
-                {verPasadas
-                  ? 'Ocultar las que ya pasaron'
-                  : `Ver las ${pasadas.length} que ya pasaron · sirven para corregir ingresos`}
+      <div className="door-grid">
+        <div className="door-col">
+          {funciones.length === 0 ? (
+            <EmptyState icon={<CalendarClock size={20} />} title="No hay funciones cargadas">
+              Cuando dirección cargue la primera función, va a aparecer acá para abrir la puerta.
+            </EmptyState>
+          ) : hoy ? (
+            // El caso que importa: un bloque, un botón, cero decisiones.
+            <div className="door-hoy">
+              <p className="door-hoy__e">Hoy · {faltan(hoy.starts_at)}</p>
+              <p className="door-hoy__fn">{nombre(hoy)}</p>
+              <p className="door-hoy__m">
+                {functionTime(hoy.starts_at)} · {hoy.venue}
+              </p>
+              <div className="door-hoy__stats">
+                <div>
+                  <b>{hoy.sold}</b>
+                  <span>Entradas emitidas</span>
+                </div>
+                <div>
+                  <b>{hoy.entered}</b>
+                  <span>Ingresaron</span>
+                </div>
+                <div>
+                  <b>{hoy.comp_tickets}</b>
+                  <span>Cortesías</span>
+                </div>
+                <div>
+                  <b>{hoy.sellers}</b>
+                  <span>Coristas vendieron</span>
+                </div>
+              </div>
+              <button className="door-hoy__cta" type="button" onClick={() => navigate(`/puerta/${hoy.id}`)}>
+                <ScanLine size={17} aria-hidden />
+                Abrir modo puerta
               </button>
-            )}
-          </p>
-          {(otras.length > 0 || verPasadas) && (
-            <div className="door-list">
-              {otras.map((fn) => (
-                <Otra key={fn.id} fn={fn} />
-              ))}
-              {verPasadas && pasadas.map((fn) => <Otra key={fn.id} fn={fn} />)}
+              <Preparada functionId={hoy.id} />
+            </div>
+          ) : proxima ? (
+            <div className="door-soon">
+              <p className="door-soon__e">Próxima función · {enCuantosDias(proxima.starts_at)}</p>
+              <p className="door-soon__fn">{nombre(proxima)}</p>
+              <p className="door-soon__m">
+                {functionDay(proxima.starts_at)}, {functionTime(proxima.starts_at)} · {proxima.venue}
+              </p>
+              <p className="door-soon__info">
+                El modo puerta se activa solo el día de la función. Si querés probarlo antes, podés
+                abrirlo igual: los ingresos que marques quedan registrados.
+              </p>
+              <div className="door-soon__acts">
+                <button
+                  className="button button--ghost"
+                  type="button"
+                  onClick={() => navigate(`/puerta/${proxima.id}`)}
+                >
+                  Abrir igual para probar
+                </button>
+                {/* Asistencia es de dirección: a la persona de la puerta el botón
+                    la mandaría a una pantalla que no puede abrir. */}
+                {user?.role === 'admin' && (
+                  <Link className="button button--ghost" to={`/panel/asistencia?fn=${proxima.id}`}>
+                    <Users size={15} aria-hidden />
+                    Ver quiénes compraron
+                  </Link>
+                )}
+              </div>
+            </div>
+          ) : (
+            <EmptyState icon={<CalendarClock size={20} />} title="La temporada ya terminó">
+              No queda ninguna función por delante. Las que ya pasaron siguen abajo, por si hay que
+              corregir un ingreso.
+            </EmptyState>
+          )}
+
+        </div>
+
+        <div className="door-col">
+          {otras.length > 0 && (
+            <div>
+              <p className="sectrule">
+                <b>{soloPasadas ? 'Funciones anteriores' : 'Otras funciones'}</b>
+              </p>
+              <div className="door-list">
+                {otras.map((fn) => (
+                  <Otra key={fn.id} fn={fn} />
+                ))}
+              </div>
+              {soloPasadas && (
+                <p className="door-hint">
+                  Abrilas para corregir ingresos que quedaron mal marcados.
+                </p>
+              )}
             </div>
           )}
-        </>
-      )}
+
+          <div>
+            <p className="sectrule">
+              <b>Antes de abrir</b>
+            </p>
+            <div className="door-tip">
+              En la puerta conviene el <b>celular</b>: escanea los QR con la cámara. Desde la
+              compu podés buscar por nombre y marcar ingresos a mano.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
