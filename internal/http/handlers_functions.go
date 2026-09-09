@@ -200,3 +200,61 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, functionResponse{Function: updated})
 }
+
+// handleDeleteFunction: DELETE /api/functions/{id} — saca una funcion que se
+// cargo por error. Solo si nunca se vendio nada: una funcion con ventas no se
+// da de baja con un boton, porque antes hay que decidir que pasa con las
+// entradas, con lo que las coristas ya cobraron y con lo que tienen que
+// rendir. Eso es una decision, no una accion de pantalla.
+func (s *Server) handleDeleteFunction(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrFunctionNotFound)
+		return
+	}
+
+	ctx := r.Context()
+	if _, err := s.queries.GetFunction(ctx, id); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrFunctionNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	ventas, err := s.queries.CountSalesForFunction(ctx, id)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if ventas > 0 {
+		httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+			fmt.Sprintf("La funcion ya tiene %d ventas y no se puede cancelar desde aca.", ventas))
+		return
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	q := s.queries.WithTx(tx)
+	// Las asignaciones no sobreviven a la funcion: sin funcion no hay cupo
+	// que repartir, y la FK las dejaria colgadas.
+	if err := q.DeleteAllocationsForFunction(ctx, id); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := q.DeleteFunction(ctx, id); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

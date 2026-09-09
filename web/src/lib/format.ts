@@ -142,3 +142,15 @@ const hourOfDay = new Intl.DateTimeFormat('es-AR', {
 export function functionTime(iso: string): string {
   return hourOfDay.format(new Date(iso))
 }
+
+const dayShortMonth = new Intl.DateTimeFormat('es-AR', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: TIME_ZONE,
+})
+
+/** ISO → "22 ago". Para rangos que conviven con otras columnas. */
+export function dayAndMonthShort(iso: string): string {
+  // es-AR abrevia con punto ("22 ago."): sobra cuando va dentro de un rango.
+  return dayShortMonth.format(new Date(iso)).replace('.', '')
+}

@@ -14,6 +14,7 @@ import { NewSalePage } from './pages/NewSalePage'
 import { SalesPage } from './pages/SalesPage'
 import { SalesReportPage } from './pages/SalesReportPage'
 import { SeasonPage } from './pages/SeasonPage'
+import { SeasonsPage } from './pages/SeasonsPage'
 import { SettlementsHistoryPage, SettlementsScreen } from './pages/SettlementsPage'
 import { SingleTicketPage, TicketPage } from './pages/TicketPage'
 import { UsersPage } from './pages/UsersPage'
@@ -119,7 +120,7 @@ function AuthenticatedApp() {
           path="/temporadas"
           element={
             <RequireAdmin>
-              <SeasonPage />
+              <SeasonsPage />
             </RequireAdmin>
           }
         />

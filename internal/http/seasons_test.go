@@ -4,7 +4,17 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 )
+
+// sellerID saca el id de la corista de su propia sesion: los tests no pueden
+// asumir que es el 2, porque depende de cuantos usuarios se crearon antes.
+func sellerID(t *testing.T, c *testClient) float64 {
+	t.Helper()
+	resp := c.get("/api/me")
+	assertStatus(t, resp, http.StatusOK)
+	return resp.Body["user"].(map[string]any)["id"].(float64)
+}
 
 // createSellerClient da de alta una vendedora via API (como admin) y devuelve
 // un cliente ya logueado con la password definitiva.
@@ -257,4 +267,188 @@ func TestUnaSolaTemporadaEnCurso(t *testing.T) {
 	// Solo dirección puede cambiarla.
 	corista := createSellerClient(t, env, admin, "Corista", "corista@acapelius.test")
 	assertStatus(t, corista.post(fmt.Sprintf("/api/seasons/%d/activate", int(idSegunda)), nil), http.StatusForbidden)
+}
+
+// TestTemporadaNuevaCopiaLaAnterior cubre los dos atajos del alta: copiar la
+// grilla del año pasado y crear sin mover la temporada en curso.
+func TestTemporadaNuevaCopiaLaAnterior(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+
+	base := admin.post("/api/seasons", map[string]string{"name": "Temporada 2026"})
+	assertStatus(t, base, http.StatusCreated)
+	baseID := base.Body["season"].(map[string]any)["id"].(float64)
+
+	for i, fecha := range []string{"2026-08-22T21:00:00-03:00", "2026-09-05T20:00:00-03:00"} {
+		resp := admin.post("/api/functions", map[string]any{
+			"season_id":   baseID,
+			"name":        fmt.Sprintf("Funcion %d", i+1),
+			"venue":       "Teatro Municipal",
+			"starts_at":   fecha,
+			"capacity":    80,
+			"price_cents": 900000,
+		})
+		assertStatus(t, resp, http.StatusCreated)
+	}
+
+	nueva := admin.post("/api/seasons", map[string]any{
+		"name":                "Temporada 2027",
+		"activate":            false,
+		"copy_from_season_id": baseID,
+	})
+	assertStatus(t, nueva, http.StatusCreated)
+	season := nueva.Body["season"].(map[string]any)
+	nuevaID := season["id"].(float64)
+
+	if nueva.Body["copied"].(float64) != 2 {
+		t.Fatalf("tendria que haber copiado 2 funciones; copio %v", nueva.Body["copied"])
+	}
+	// activate:false: la respuesta no puede decir que quedo activa, y la que
+	// mira el resto de la app tiene que seguir siendo la de 2026.
+	if season["is_active"] != false {
+		t.Fatalf("con activate:false la temporada no tendria que quedar activa: %v", season)
+	}
+	lista := admin.get("/api/seasons")
+	for _, raw := range lista.Body["seasons"].([]any) {
+		s := raw.(map[string]any)
+		if s["is_active"] == true && s["id"].(float64) != baseID {
+			t.Fatalf("la temporada en curso tendria que seguir siendo la de 2026; es %v", s)
+		}
+	}
+
+	copiadas := admin.get(fmt.Sprintf("/api/functions?season_id=%.0f", nuevaID))
+	assertStatus(t, copiadas, http.StatusOK)
+	filas := copiadas.Body["functions"].([]any)
+	if len(filas) != 2 {
+		t.Fatalf("la temporada copiada tendria que tener 2 funciones; tiene %d", len(filas))
+	}
+	primera := filas[0].(map[string]any)
+	if primera["capacity"].(float64) != 80 || primera["price_cents"].(float64) != 900000 {
+		t.Fatalf("la copia tendria que conservar cupo y precio: %v", primera)
+	}
+	// 364 dias = 52 semanas: la funcion cae el mismo dia de la semana.
+	inicio, err := time.Parse(time.RFC3339, primera["starts_at"].(string))
+	if err != nil {
+		t.Fatalf("starts_at ilegible: %v", err)
+	}
+	original, _ := time.Parse(time.RFC3339, "2026-08-22T21:00:00-03:00")
+	if !inicio.Equal(original.AddDate(0, 0, 364)) {
+		t.Fatalf("la fecha copiada tendria que correrse 364 dias: %v vs %v", inicio, original)
+	}
+	if inicio.Weekday() != original.Weekday() {
+		t.Fatalf("la copia tendria que caer el mismo dia de la semana: %v vs %v", inicio.Weekday(), original.Weekday())
+	}
+
+	// Copiar de una temporada que no existe es 404, no 500.
+	assertStatus(t, admin.post("/api/seasons", map[string]any{
+		"name": "Temporada fantasma", "copy_from_season_id": 999999,
+	}), http.StatusNotFound)
+}
+
+// TestCancelarFuncion: se puede sacar una funcion cargada por error, pero no
+// una que ya vendio.
+func TestCancelarFuncion(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+
+	temporada := admin.post("/api/seasons", map[string]string{"name": "Temporada 2026"})
+	seasonID := temporada.Body["season"].(map[string]any)["id"].(float64)
+
+	crear := func(nombre string) float64 {
+		t.Helper()
+		resp := admin.post("/api/functions", map[string]any{
+			"season_id": seasonID, "name": nombre, "venue": "Teatro Municipal",
+			"starts_at": "2026-12-20T21:00:00-03:00", "capacity": 50, "price_cents": 800000,
+		})
+		assertStatus(t, resp, http.StatusCreated)
+		return resp.Body["function"].(map[string]any)["id"].(float64)
+	}
+
+	sinVentas := crear("Cargada por error")
+	// Con cupo repartido igual se puede: sin funcion no hay cupo que repartir.
+	corista := createSellerClient(t, env, admin, "Corista", "corista@acapelius.test")
+	assertStatus(t, admin.do(http.MethodPut, fmt.Sprintf("/api/functions/%.0f/allocations", sinVentas),
+		map[string]any{"allocations": []map[string]any{{"user_id": sellerID(t, corista), "quantity": 5}}}), http.StatusOK)
+
+	assertStatus(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/functions/%.0f", sinVentas), nil), http.StatusNoContent)
+	assertStatus(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/functions/%.0f", sinVentas), nil), http.StatusNotFound)
+
+	conVentas := crear("Ya vendio")
+	assertStatus(t, admin.do(http.MethodPut, fmt.Sprintf("/api/functions/%.0f/allocations", conVentas),
+		map[string]any{"allocations": []map[string]any{{"user_id": sellerID(t, corista), "quantity": 5}}}), http.StatusOK)
+	venta := corista.post("/api/sales", map[string]any{
+		"function_id": conVentas, "buyer_name": "Comprador", "quantity": 1,
+	})
+	assertStatus(t, venta, http.StatusCreated)
+
+	borrado := admin.do(http.MethodDelete, fmt.Sprintf("/api/functions/%.0f", conVentas), nil)
+	assertStatus(t, borrado, http.StatusConflict)
+
+	// Y no la puede borrar una corista.
+	assertStatus(t, corista.do(http.MethodDelete, fmt.Sprintf("/api/functions/%.0f", conVentas), nil), http.StatusForbidden)
+}
+
+// TestIndiceDeTemporadas: el resumen por temporada que muestra el indice.
+func TestIndiceDeTemporadas(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+
+	temporada := admin.post("/api/seasons", map[string]string{"name": "Temporada 2026"})
+	seasonID := temporada.Body["season"].(map[string]any)["id"].(float64)
+	fn := admin.post("/api/functions", map[string]any{
+		"season_id": seasonID, "venue": "Teatro Municipal",
+		"starts_at": "2026-12-20T21:00:00-03:00", "capacity": 50, "price_cents": 800000,
+	})
+	assertStatus(t, fn, http.StatusCreated)
+	fnID := fn.Body["function"].(map[string]any)["id"].(float64)
+
+	corista := createSellerClient(t, env, admin, "Corista", "corista@acapelius.test")
+	assertStatus(t, admin.do(http.MethodPut, fmt.Sprintf("/api/functions/%.0f/allocations", fnID),
+		map[string]any{"allocations": []map[string]any{{"user_id": sellerID(t, corista), "quantity": 20}}}), http.StatusOK)
+	venta := corista.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Comprador", "quantity": 3,
+	})
+	assertStatus(t, venta, http.StatusCreated)
+	saleID := venta.Body["sale"].(map[string]any)["id"].(float64)
+	assertStatus(t, corista.do(http.MethodPatch, fmt.Sprintf("/api/sales/%.0f", saleID),
+		map[string]any{"payment_status": "paid", "payment_method": "cash"}), http.StatusOK)
+
+	resp := admin.get("/api/reports/seasons")
+	assertStatus(t, resp, http.StatusOK)
+	fila := resp.Body["seasons"].([]any)[0].(map[string]any)
+
+	if fila["functions"].(float64) != 1 || fila["capacity"].(float64) != 50 {
+		t.Fatalf("funciones y cupo mal: %v", fila)
+	}
+	if fila["sold"].(float64) != 3 {
+		t.Fatalf("vendidas = %v, se esperaban 3", fila["sold"])
+	}
+	if fila["collected_cents"].(float64) != 2400000 {
+		t.Fatalf("recaudado = %v, se esperaban 2400000", fila["collected_cents"])
+	}
+	if fila["assigned"].(float64) != 20 {
+		t.Fatalf("asignadas = %v, se esperaban 20", fila["assigned"])
+	}
+	if fila["sellers"].(float64) != 1 {
+		t.Fatalf("coristas = %v, se esperaba 1", fila["sellers"])
+	}
+	if fila["first_at"] == nil || fila["last_at"] == nil {
+		t.Fatalf("con una funcion cargada tiene que haber primera y ultima fecha: %v", fila)
+	}
+
+	// Una temporada vacia no inventa fechas.
+	vacia := admin.post("/api/seasons", map[string]any{"name": "Temporada vacia", "activate": false})
+	assertStatus(t, vacia, http.StatusCreated)
+	resp = admin.get("/api/reports/seasons")
+	for _, raw := range resp.Body["seasons"].([]any) {
+		s := raw.(map[string]any)
+		if s["name"] == "Temporada vacia" {
+			if s["first_at"] != nil || s["next_at"] != nil {
+				t.Fatalf("una temporada sin funciones no tiene fechas: %v", s)
+			}
+		}
+	}
+
+	// Lleva plata: no la puede leer una corista.
+	assertStatus(t, corista.get("/api/reports/seasons"), http.StatusForbidden)
 }

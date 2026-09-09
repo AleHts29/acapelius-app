@@ -1,11 +1,14 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Check, ChevronDown, Hand, Minus, PartyPopper, ScanLine, Search, Theater } from 'lucide-react'
+import { Check, Hand, Minus, PartyPopper, ScanLine, Search, Theater } from 'lucide-react'
 
 import { api } from '../api/client'
 import type { AttendanceSale } from '../api/client'
+import { functionDay } from '../lib/format'
 import { initials, normalizeText } from '../lib/search'
 import { useIsDesktop } from '../lib/viewport'
+import { Menu } from '../ui/Menu'
 import { EmptyState, Hl, LiveDot, ProgressBar, SearchBar, SegmentedToggle } from '../ui/controls'
 import { CounterChip } from '../ui/StatusChip'
 
@@ -141,7 +144,11 @@ function TicketBreakdown({ sale }: { sale: AttendanceSale }) {
 
 export function AttendancePage() {
   const escritorio = useIsDesktop()
-  const [functionId, setFunctionId] = useState<number | null>(null)
+  // ?fn=N llega del ⋮ de una función en Temporadas.
+  const [searchParams] = useSearchParams()
+  const [functionId, setFunctionId] = useState<number | null>(
+    Number(searchParams.get('fn')) || null,
+  )
   const [tab, setTab] = useState<'ingresaron' | 'faltan'>('ingresaron')
   const [q, setQ] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
@@ -181,6 +188,7 @@ export function AttendancePage() {
   const missingTickets = missing.reduce((acc, sale) => acc + (sale.total - sale.entered), 0)
   const occupancy = data && data.issued > 0 ? Math.round((data.entered / data.issued) * 100) : 0
 
+  const elegida = functions.data?.functions.find((fn) => fn.id === effectiveFunctionId)
   const rows = tab === 'ingresaron' ? entered : missing
   const seleccionada = rows.find((sale) => sale.sale_id === expandedId)
 
@@ -189,23 +197,28 @@ export function AttendancePage() {
       <div className="page-head">
         <h1 className="page-title">Asistencia</h1>
         {functions.data && functions.data.functions.length > 1 && (
-          <span className="att-fnsel">
-            <select
-              aria-label="Función"
-              value={effectiveFunctionId ?? ''}
-              onChange={(e) => {
-                setFunctionId(Number(e.target.value))
-                setExpandedId(null)
-              }}
-            >
-              {functions.data.functions.map((fn) => (
-                <option key={fn.id} value={fn.id}>
-                  {fnLabel(fn.name, fn.venue, fn.starts_at)}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={12} aria-hidden />
-          </span>
+          <Menu
+            trigger="pill"
+            label={
+              elegida ? fnLabel(elegida.name, elegida.venue, elegida.starts_at) : 'Elegí la función'
+            }
+            value={effectiveFunctionId === null ? undefined : String(effectiveFunctionId)}
+            align="right"
+            groups={[
+              {
+                label: 'Funciones',
+                options: functions.data.functions.map((fn) => ({
+                  id: String(fn.id),
+                  label: fn.name ?? fn.venue,
+                  hint: `${functionDay(fn.starts_at)} · ${fn.sold} entradas`,
+                  onSelect: () => {
+                    setFunctionId(fn.id)
+                    setExpandedId(null)
+                  },
+                })),
+              },
+            ]}
+          />
         )}
       </div>
 

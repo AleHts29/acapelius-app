@@ -7,7 +7,8 @@ import { Mail } from 'lucide-react'
 import { ApiError, api, publicSaleURL, shareOrCopy } from '../api/client'
 import type { EmailStatus, Sale } from '../api/client'
 import { useSession } from '../auth/session'
-import { formatDateTime, formatMoney } from '../lib/format'
+import { formatMoney, functionDay, functionTime } from '../lib/format'
+import { Menu } from '../ui/Menu'
 import { Stepper } from '../ui/controls'
 
 interface CreatedSale {
@@ -191,25 +192,40 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
           </p>
         )}
 
-        <label className="field">
+        <div className="field">
           <span className="field__label">Función</span>
-          <select
-            className="field__input"
-            value={functionId}
-            onChange={(e) => setFunctionId(e.target.value)}
-          >
-            <option value="">Elegí la función…</option>
-            {functions.data?.functions.map((fn) => {
-              const noQuota = !isAdmin && !allocationFor(fn.id)
-              return (
-                <option key={fn.id} value={fn.id} disabled={noQuota}>
-                  {fn.name ?? fn.venue} · {formatDateTime(fn.starts_at)}
-                  {noQuota ? ' · Sin cupo asignado' : ''}
-                </option>
-              )
-            })}
-          </select>
-        </label>
+          <Menu
+            trigger="field"
+            ariaLabel="Función"
+            label={
+              selectedFunction
+                ? `${selectedFunction.name ?? selectedFunction.venue} · ${functionDay(selectedFunction.starts_at)}`
+                : 'Elegí la función…'
+            }
+            value={functionId === '' ? undefined : functionId}
+            groups={[
+              {
+                options: (functions.data?.functions ?? []).map((fn) => {
+                  const cupo = allocationFor(fn.id)
+                  const cuando = `${functionDay(fn.starts_at)} · ${functionTime(fn.starts_at)}`
+                  return {
+                    id: String(fn.id),
+                    label: fn.name ?? fn.venue,
+                    // El cupo que le queda a la corista es lo que decide si
+                    // puede vender: va como contexto de cada opción, no
+                    // escondido detrás de un "disabled" sin explicación.
+                    hint: isAdmin
+                      ? cuando
+                      : `${cuando} · te quedan ${cupo?.remaining ?? 0} de ${cupo?.assigned ?? 0}`,
+                    disabled: !isAdmin && !cupo,
+                    disabledReason: `${cuando} · dirección todavía no te asignó cupo`,
+                    onSelect: () => setFunctionId(String(fn.id)),
+                  }
+                }),
+              },
+            ]}
+          />
+        </div>
 
         {!isAdmin && selectedAllocation && !isComp && (
           <div className="quota-banner">

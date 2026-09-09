@@ -4304,6 +4304,439 @@ div.alertcard {
   display: none;
 }
 
+/* --- Índice de temporadas: una fila por temporada ------------------------ */
+
+.slist {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow: hidden;
+}
+
+.slist__tip {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.seasonrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "nm    money"
+    "dt    dt"
+    "prog  prog"
+    "acts  acts";
+  gap: 8px 12px;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.seasonrow:last-child {
+  border-bottom: 0;
+}
+
+.seasonrow--live {
+  background: var(--indigo-soft);
+}
+
+.seasonrow__nm {
+  grid-area: nm;
+  min-width: 0;
+}
+
+.seasonrow__t {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.seasonrow__t b {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seasonrow__v {
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.seasonrow__dt {
+  grid-area: dt;
+  min-width: 0;
+}
+
+.seasonrow__dt b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.seasonrow__dt span {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.seasonrow__prog {
+  grid-area: prog;
+  min-width: 0;
+}
+
+.seasonrow__lg {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.seasonrow__lg b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.seasonrow__money {
+  grid-area: money;
+  text-align: right;
+}
+
+.seasonrow__money b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.seasonrow__money span {
+  display: block;
+  margin-top: 2px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.seasonrow__acts {
+  grid-area: acts;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.seasonrow__acts .menu-anchor {
+  margin-left: auto;
+}
+
+.fntag--live {
+  background: var(--ok);
+  color: var(--brand-white);
+}
+
+/* Los estados de temporada se escriben en minúscula en el código y el CSS los
+   pone en mayúscula: el chip ya es uppercase, así el texto no se duplica. */
+.seasonrow .fntag {
+  text-transform: uppercase;
+}
+
+/* Los estados de temporada se escriben en minúscula en el código y el CSS los
+   pone en mayúscula: así el texto del chip no se repite en tres lados. */
+.seasonrow .fntag {
+  text-transform: uppercase;
+}
+
+/* Casilla explicada: el título dice qué hace y el renglón de abajo qué pasa
+   si queda marcada. Es un botón, no un checkbox, porque el área clickeable es
+   la tarjeta entera. */
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-alt);
+  text-align: left;
+  font-family: var(--font-body);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.check[aria-pressed='true'] {
+  border-color: var(--indigo);
+}
+
+.check__bx {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border-radius: 5px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--brand-white);
+}
+
+.check__bx--on {
+  background: var(--indigo);
+  border-color: var(--indigo);
+}
+
+.check__tx b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.check__tx span {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* Confirmación de una acción destructiva: el botón que la ejecuta se ve como
+   lo que es. .button--danger (el que ya existe) es de bajo peso, para salidas
+   secundarias. */
+.button--danger-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--brand-white);
+}
+
+/* ==========================================================================
+   Menu (mockup design/acapelius-menus-temporadas.html)
+
+   Reemplaza al <select> nativo, que se dibuja distinto en cada sistema y no
+   puede mostrar el contexto de cada opción. Dos presentaciones, un solo
+   componente: hoja de abajo en celular, panel anclado en escritorio.
+   ========================================================================== */
+
+.menu-anchor {
+  display: inline-flex;
+  min-width: 0;
+}
+
+/* Como campo ocupa el ancho del formulario, igual que un input. */
+.menu-anchor--field {
+  display: flex;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.menu-btn__tx {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-btn__chev {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.menu-btn--pill {
+  border-radius: 999px;
+  padding: 8px 13px;
+  font-size: 11.5px;
+}
+
+.menu-btn--kebab {
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 9px;
+  color: var(--text-muted);
+}
+
+/* Como campo de formulario: mismo alto y borde que .field__input, pero con
+   el texto a la izquierda y el chevrón pegado a la derecha. */
+.menu-btn--field {
+  width: 100%;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 13px 14px;
+  border-radius: var(--radius-ctl, 13px);
+  background: var(--surface-alt);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.menu-btn:hover {
+  background: var(--surface-alt);
+}
+
+.menu-btn--open {
+  border-color: var(--indigo);
+  box-shadow: var(--focus-ring);
+}
+
+.menu-btn--kebab.menu-btn--open {
+  color: var(--indigo);
+}
+
+.menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 84;
+  border: none;
+  background: rgba(26, 28, 34, 0.45);
+  cursor: pointer;
+}
+
+.menu {
+  position: fixed;
+  z-index: 85;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 72vh;
+  overflow-y: auto;
+  padding: 8px 8px calc(12px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -8px 30px rgba(26, 28, 34, 0.14);
+  animation: menu-up 180ms ease-out;
+}
+
+.menu__lbl {
+  margin: 0;
+  padding: 8px 11px 6px;
+  font-family: var(--font-display);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.menu__i {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu__i:hover:not(:disabled),
+.menu__i:focus-visible {
+  background: var(--surface-alt);
+  outline: none;
+}
+
+.menu__i:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.menu__i--on {
+  background: var(--indigo-soft);
+}
+
+.menu__i--on .menu__tx b {
+  color: var(--indigo);
+}
+
+.menu__i--action {
+  color: var(--indigo);
+}
+
+.menu__i--action .menu__ic {
+  color: var(--indigo);
+}
+
+.menu__i--danger {
+  color: var(--danger);
+}
+
+.menu__i--danger .menu__ic {
+  color: var(--danger);
+}
+
+.menu__ck {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  flex-shrink: 0;
+  color: var(--indigo);
+}
+
+.menu__ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.menu__tx {
+  flex: 1;
+  min-width: 0;
+}
+
+.menu__tx b {
+  display: block;
+  font-weight: 700;
+}
+
+.menu__tx span {
+  display: block;
+  margin-top: 1px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.menu__sep {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--line);
+}
+
 /* ==========================================================================
    Temporadas (mockup design/acapelius-temporadas.html)
 
@@ -5584,6 +6017,21 @@ div.alertcard {
     color: var(--text-muted);
   }
 
+  /* --- Menu: panel anclado en vez de hoja de abajo --------------------- */
+  .menu {
+    right: auto;
+    bottom: auto;
+    min-width: 262px;
+    max-width: 380px;
+    max-height: min(420px, 70vh);
+    padding: 6px;
+    border-radius: 13px;
+    box-shadow:
+      0 12px 30px rgba(26, 28, 34, 0.14),
+      0 2px 6px rgba(26, 28, 34, 0.06);
+    animation: menu-in 120ms ease-out;
+  }
+
   /* --- Temporadas: la fila de función en columnas --------------------- */
   .tstrip {
     grid-template-columns: repeat(4, 1fr);
@@ -5613,6 +6061,41 @@ div.alertcard {
   .fnline__acts .iconbtn {
     margin-left: 0;
   }
+
+  /* --- Índice de temporadas en columnas -------------------------------- */
+  .seasonrow {
+    grid-template-columns: 1.5fr 1.1fr 1.3fr 1fr auto;
+    grid-template-areas: "nm dt prog money acts";
+    align-items: center;
+    gap: 20px;
+    padding: 16px 20px;
+  }
+
+  .seasonrow__acts .menu-anchor {
+    margin-left: 0;
+  }
+}
+
+@keyframes menu-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes modal-in {
@@ -5627,7 +6110,8 @@ div.alertcard {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sheet {
+  .sheet,
+  .menu {
     animation: none;
   }
 }

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronDown, Copy, Lock, MoreVertical, Pencil, Users } from 'lucide-react'
+import { CalendarDays, Copy, LayoutList, Lock, Pencil, Plus, Receipt, Trash2, UserCheck, Users, X } from 'lucide-react'
 
 import { ApiError, activeSeason, api } from '../api/client'
 import type { FunctionSummary } from '../api/client'
@@ -17,7 +17,8 @@ import {
   localInputToISO,
   pesosToCents,
 } from '../lib/format'
-import { ActionPanel, SheetAction } from '../ui/ActionPanel'
+import { ActionPanel } from '../ui/ActionPanel'
+import { Menu } from '../ui/Menu'
 import { EmptyState, PageHead, ProgressBar } from '../ui/controls'
 
 /** La misma gracia que usa Inicio: a las 21:00 la función de las 20:00 no "pasó". */
@@ -291,14 +292,17 @@ function Fila({
   destacada,
   onAsignar,
   onEditar,
-  onMas,
+  onDuplicar,
+  onCancelar,
 }: {
   fn: FunctionSummary
   destacada: boolean
   onAsignar: () => void
   onEditar: () => void
-  onMas: () => void
+  onDuplicar: () => void
+  onCancelar: () => void
 }) {
+  const navigate = useNavigate()
   const pasada = yaPaso(fn)
   const trabada = congelada(fn)
   const faltan = sinAsignar(fn)
@@ -370,9 +374,60 @@ function Fila({
             {pasada ? 'Cerrada' : 'No se edita'}
           </span>
         )}
-        <button className="iconbtn" type="button" onClick={onMas} aria-label={`Más opciones de ${nombre(fn)}`}>
-          <MoreVertical size={16} aria-hidden />
-        </button>
+        <Menu
+          trigger="kebab"
+          label={`Más opciones de ${nombre(fn)}`}
+          align="right"
+          groups={[
+            {
+              options: [
+                {
+                  id: 'editar',
+                  label: 'Editar función',
+                  icon: <Pencil size={15} />,
+                  disabled: trabada,
+                  disabledReason: `Ya tiene ${fn.entered} ingresos registrados en la puerta`,
+                  onSelect: onEditar,
+                },
+                {
+                  id: 'duplicar',
+                  label: 'Duplicar',
+                  hint: 'Mismo lugar, cupo y precio, con otra fecha',
+                  icon: <Copy size={15} />,
+                  onSelect: onDuplicar,
+                },
+                {
+                  id: 'asistencia',
+                  label: 'Ver asistencia',
+                  icon: <UserCheck size={15} />,
+                  onSelect: () => navigate(`/panel/asistencia?fn=${fn.id}`),
+                },
+                {
+                  id: 'ventas',
+                  label: 'Ver ventas',
+                  icon: <Receipt size={15} />,
+                  // /ventas es el listado de ventas (dirección lo ve completo);
+                  // /panel/ventas es el reporte agregado, sin filtro por función.
+                  onSelect: () => navigate(`/ventas?fn=${fn.id}`),
+                },
+              ],
+            },
+            {
+              separated: true,
+              options: [
+                {
+                  id: 'cancelar',
+                  label: 'Cancelar función',
+                  tone: 'danger',
+                  icon: <X size={15} />,
+                  disabled: fn.sold > 0,
+                  disabledReason: `Ya vendió ${fn.sold} entradas: primero hay que resolver los reembolsos`,
+                  onSelect: onCancelar,
+                },
+              ],
+            },
+          ]}
+        />
       </div>
     </article>
   )
@@ -383,8 +438,7 @@ function Fila({
 type Panel =
   | { kind: 'funcion'; modo: Modo; fn?: FunctionSummary }
   | { kind: 'asignar'; fn: FunctionSummary }
-  | { kind: 'mas'; fn: FunctionSummary }
-  | { kind: 'temporada' }
+  | { kind: 'cancelar'; fn: FunctionSummary }
   | null
 
 export function SeasonPage() {
@@ -397,7 +451,6 @@ export function SeasonPage() {
   const [panel, setPanel] = useState<Panel>(null)
   // Una sola vez: si no, cerrar el panel que abrió la alerta lo volvería a abrir.
   const foco = useRef(false)
-  const [nombreNueva, setNombreNueva] = useState('')
   const [errorTemporada, setErrorTemporada] = useState<string | null>(null)
 
   const seasons = useQuery({ queryKey: ['seasons'], queryFn: () => api.listSeasons() })
@@ -427,10 +480,10 @@ export function SeasonPage() {
 
   // Cambiar la temporada en curso mueve todo lo que se calcula por temporada.
   function refrescarTemporadas() {
-    setNombreNueva('')
     setErrorTemporada(null)
     for (const key of [
       ['seasons'],
+      ['seasons-overview'],
       ['settlements-report'],
       ['settlements-history'],
       ['attention'],
@@ -443,17 +496,6 @@ export function SeasonPage() {
     }
   }
 
-  const crearTemporada = useMutation({
-    mutationFn: (name: string) => api.createSeason(name),
-    onSuccess: (res) => {
-      refrescarTemporadas()
-      setPanel(null)
-      navigate(`/temporadas/${res.season.id}`)
-    },
-    onError: (err) =>
-      setErrorTemporada(err instanceof ApiError ? err.message : 'No se pudo crear la temporada.'),
-  })
-
   const activar = useMutation({
     mutationFn: (id: number) => api.activateSeason(id),
     onSuccess: refrescarTemporadas,
@@ -463,43 +505,30 @@ export function SeasonPage() {
       ),
   })
 
+  const cancelar = useMutation({
+    mutationFn: (id: number) => api.deleteFunction(id),
+    onSuccess: () => {
+      setPanel(null)
+      refrescarTemporadas()
+    },
+    onError: (err) => {
+      setPanel(null)
+      setErrorTemporada(
+        err instanceof ApiError ? err.message : 'No se pudo cancelar la función.',
+      )
+    },
+  })
+
   if (seasons.isPending) return <p className="muted">Cargando…</p>
 
+  // El alta de temporadas vive en el índice: acá no se duplica el formulario.
   if (todas.length === 0) {
     return (
       <>
-        <PageHead title="Temporadas" />
+        <PageHead title="Temporada" />
         <EmptyState icon={<CalendarDays size={20} />} title="Todavía no hay ninguna temporada">
-          Una temporada agrupa las funciones del año y todo lo que se calcula sobre ellas: lo
-          vendido, lo cobrado y lo que cada corista tiene que rendir.
+          <Link to="/temporadas">Creá la primera</Link> para empezar a cargar funciones.
         </EmptyState>
-        <form
-          className="panel"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (nombreNueva.trim() !== '') crearTemporada.mutate(nombreNueva.trim())
-          }}
-        >
-          <p className="panel__label">Crear la primera</p>
-          {errorTemporada && (
-            <p className="alert" role="alert">
-              {errorTemporada}
-            </p>
-          )}
-          <div className="form-row">
-            <input
-              className="field__input"
-              type="text"
-              value={nombreNueva}
-              onChange={(e) => setNombreNueva(e.target.value)}
-              placeholder="Temporada 2026"
-              aria-label="Nombre de la temporada"
-            />
-            <button className="button form-row__action" type="submit" disabled={crearTemporada.isPending}>
-              Crear
-            </button>
-          </div>
-        </form>
       </>
     )
   }
@@ -536,25 +565,40 @@ export function SeasonPage() {
         sub={sub}
         action={{ label: 'Agregar función', onClick: () => setPanel({ kind: 'funcion', modo: 'nueva' }) }}
       >
-        <span className="att-fnsel">
-          <select
-            aria-label="Temporada"
-            value={season.id}
-            onChange={(e) => {
-              if (e.target.value === 'nueva') setPanel({ kind: 'temporada' })
-              else navigate(`/temporadas/${e.target.value}`)
-            }}
-          >
-            {todas.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-                {s.id === enCurso?.id ? ' · en curso' : ''}
-              </option>
-            ))}
-            <option value="nueva">＋ Crear temporada…</option>
-          </select>
-          <ChevronDown size={12} aria-hidden />
-        </span>
+        <Menu
+          trigger="pill"
+          label={season.name}
+          value={String(season.id)}
+          groups={[
+            {
+              label: 'Temporadas',
+              options: todas.map((s) => ({
+                id: String(s.id),
+                label: s.name,
+                hint: s.id === enCurso?.id ? 'En curso' : 'Cerrada',
+                onSelect: () => navigate(`/temporadas/${s.id}`),
+              })),
+            },
+            {
+              separated: true,
+              options: [
+                {
+                  id: 'nueva',
+                  label: 'Crear temporada…',
+                  icon: <Plus size={15} />,
+                  tone: 'action',
+                  onSelect: () => navigate('/temporadas?nueva=1'),
+                },
+                {
+                  id: 'todas',
+                  label: 'Ver todas las temporadas',
+                  icon: <LayoutList size={15} />,
+                  onSelect: () => navigate('/temporadas'),
+                },
+              ],
+            },
+          ]}
+        />
       </PageHead>
 
       {season.id !== enCurso?.id && (
@@ -622,7 +666,8 @@ export function SeasonPage() {
                     destacada={i === 0}
                     onAsignar={() => abrirAsignar(fn)}
                     onEditar={() => setPanel({ kind: 'funcion', modo: 'editar', fn })}
-                    onMas={() => setPanel({ kind: 'mas', fn })}
+                    onDuplicar={() => setPanel({ kind: 'funcion', modo: 'duplicar', fn })}
+                    onCancelar={() => setPanel({ kind: 'cancelar', fn })}
                   />
                 ))}
               </div>
@@ -641,7 +686,8 @@ export function SeasonPage() {
                     destacada={false}
                     onAsignar={() => abrirAsignar(fn)}
                     onEditar={() => setPanel({ kind: 'funcion', modo: 'editar', fn })}
-                    onMas={() => setPanel({ kind: 'mas', fn })}
+                    onDuplicar={() => setPanel({ kind: 'funcion', modo: 'duplicar', fn })}
+                    onCancelar={() => setPanel({ kind: 'cancelar', fn })}
                   />
                 ))}
               </div>
@@ -679,89 +725,39 @@ export function SeasonPage() {
         </ActionPanel>
       )}
 
-      {panel?.kind === 'mas' && (
-        <ActionPanel label={nombre(panel.fn)} onClose={() => setPanel(null)}>
+      {panel?.kind === 'cancelar' && (
+        <ActionPanel label={`Cancelar ${nombre(panel.fn)}`} onClose={() => setPanel(null)}>
           <div className="sheet-head">
             <span>
-              <b>{nombre(panel.fn)}</b>
-              <span>{functionDay(panel.fn.starts_at)}</span>
+              <b>¿Cancelar {nombre(panel.fn)}?</b>
+              <span>
+                {functionDay(panel.fn.starts_at)} · {functionTime(panel.fn.starts_at)}
+              </span>
             </span>
           </div>
-          <SheetAction
-            icon={<Copy size={16} />}
-            hint="Mismo lugar, cupo y precio, con otra fecha"
-            onClick={() => setPanel({ kind: 'funcion', modo: 'duplicar', fn: panel.fn })}
-          >
-            Duplicar función
-          </SheetAction>
-          {congelada(panel.fn) ? (
-            <p className="muted" style={{ fontSize: 11.5, margin: '10px 2px 0' }}>
-              Ya se registraron {panel.fn.entered} ingresos en la puerta: de acá en adelante la
-              función no se edita, para que lo que se escaneó no cambie de lugar ni de fecha.
-            </p>
-          ) : (
-            <SheetAction
-              icon={<Pencil size={16} />}
-              onClick={() => setPanel({ kind: 'funcion', modo: 'editar', fn: panel.fn })}
+          <p className="muted" style={{ fontSize: 12.5, margin: '12px 2px 0', lineHeight: 1.55 }}>
+            La función se borra de la temporada junto con el cupo que tengan repartido las
+            coristas. No se puede deshacer, pero como todavía no vendió nada, no hay entradas ni
+            plata en juego.
+          </p>
+          <div className="form-row" style={{ marginTop: 14 }}>
+            <button
+              className="button button--danger-solid"
+              type="button"
+              disabled={cancelar.isPending}
+              onClick={() => cancelar.mutate(panel.fn.id)}
             >
-              Editar función
-            </SheetAction>
-          )}
-        </ActionPanel>
-      )}
-
-      {panel?.kind === 'temporada' && (
-        <ActionPanel label="Crear temporada" size="form" onClose={() => setPanel(null)}>
-          <form
-            className="sheet-form"
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (nombreNueva.trim() === '') {
-                setErrorTemporada('Poné un nombre, por ejemplo "Temporada 2026".')
-                return
-              }
-              crearTemporada.mutate(nombreNueva.trim())
-            }}
-          >
-            <div className="sheet-head">
-              <span>
-                <b>Nueva temporada</b>
-                <span>Arranca vacía y queda como la temporada en curso</span>
-              </span>
-            </div>
-            {errorTemporada && (
-              <p className="alert" role="alert">
-                {errorTemporada}
-              </p>
-            )}
-            <label className="field">
-              <span className="field__label">Nombre</span>
-              <input
-                className="field__input"
-                type="text"
-                autoFocus
-                value={nombreNueva}
-                onChange={(e) => setNombreNueva(e.target.value)}
-                placeholder="Temporada 2026"
-              />
-            </label>
-            <p className="muted" style={{ fontSize: 11, margin: '8px 0 0' }}>
-              Inicio, Rendiciones y Dirección pasan a mostrar la nueva. {season.name} queda
-              guardada y volvés cuando quieras desde este mismo selector.
-            </p>
-            <div className="form-row" style={{ marginTop: 14 }}>
-              <button className="button" type="submit" disabled={crearTemporada.isPending}>
-                {crearTemporada.isPending ? 'Creando…' : 'Crear temporada'}
-              </button>
-              <button
-                className="button button--ghost form-row__action"
-                type="button"
-                onClick={() => setPanel(null)}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+              <Trash2 size={15} aria-hidden />
+              {cancelar.isPending ? 'Cancelando…' : 'Sí, cancelar la función'}
+            </button>
+            <button
+              className="button button--ghost form-row__action"
+              type="button"
+              onClick={() => setPanel(null)}
+            >
+              No, volver
+            </button>
+          </div>
         </ActionPanel>
       )}
     </>

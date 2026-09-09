@@ -7,9 +7,10 @@ import { Banknote, HandCoins, Landmark, Link2, Mail, PartyPopper, RotateCcw, X }
 import { ApiError, api, publicSaleURL } from '../api/client'
 import type { PaymentMethod, SaleListItem, SalePayments, SaleStatusFilter } from '../api/client'
 import { useSession } from '../auth/session'
-import { dayLabel, daysAgo, formatDateTime, formatMoney, pesosToCents } from '../lib/format'
+import { dayLabel, daysAgo, formatDateTime, formatMoney, functionDay, pesosToCents } from '../lib/format'
 import { initials, normalizeText } from '../lib/search'
 import { ActionPanel, SheetAction } from '../ui/ActionPanel'
+import { Menu } from '../ui/Menu'
 import { useNuevaVenta } from '../ui/useNuevaVenta'
 import { EmptyState, FilterChips, Hl, PageHead, SearchBar, SegmentedToggle } from '../ui/controls'
 import { SaleChip } from '../ui/StatusChip'
@@ -356,7 +357,10 @@ export function SalesPage() {
   const filter = parseFilter(searchParams.get('filtro'))
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
-  const [functionId, setFunctionId] = useState<number | undefined>(undefined)
+  // ?fn=N llega del ⋮ de una función en Temporadas.
+  const [functionId, setFunctionId] = useState<number | undefined>(
+    Number(searchParams.get('fn')) || undefined,
+  )
   const [selected, setSelected] = useState<SaleListItem | null>(null)
 
   useEffect(() => {
@@ -381,6 +385,7 @@ export function SalesPage() {
 
   const sales = useMemo(() => (list.data?.pages ?? []).flatMap((p) => p.sales), [list.data])
   const summary = list.data?.pages[0]?.summary
+  const elegida = functions.data?.functions.find((fn) => fn.id === functionId)
   const searching = debouncedQ.trim() !== ''
   const flat = useMemo(
     () => (searching ? groupByMatch(sales, debouncedQ) : groupByFunction(sales, !list.hasNextPage)),
@@ -448,20 +453,38 @@ export function SalesPage() {
               { value: 'cortesias', label: 'Cortesías' },
             ]}
           />
-          <select
-            className="fchip"
-            style={{ marginTop: 8, maxWidth: 130 }}
-            aria-label="Filtrar por función"
-            value={functionId ?? ''}
-            onChange={(e) => setFunctionId(e.target.value ? Number(e.target.value) : undefined)}
-          >
-            <option value="">Todas las funciones</option>
-            {functions.data?.functions.map((fn) => (
-              <option key={fn.id} value={fn.id}>
-                {fn.name ?? fn.venue}
-              </option>
-            ))}
-          </select>
+          <div style={{ marginTop: 8 }}>
+            <Menu
+              trigger="pill"
+              label={elegida ? (elegida.name ?? elegida.venue) : 'Todas las funciones'}
+              value={functionId === undefined ? 'todas' : String(functionId)}
+              groups={[
+                {
+                  options: [
+                    {
+                      id: 'todas',
+                      label: 'Todas las funciones',
+                      hint: summary ? `${summary.total_count} ventas` : undefined,
+                      onSelect: () => setFunctionId(undefined),
+                    },
+                  ],
+                },
+                {
+                  separated: true,
+                  options: (functions.data?.functions ?? []).map((fn) => ({
+                    id: String(fn.id),
+                    label: fn.name ?? fn.venue,
+                    // Entradas, no ventas: el conteo por función sale de la
+                    // lista de funciones, que ya está cargada. Pedirle al
+                    // server un conteo de ventas por función sería una query
+                    // más para un subtítulo.
+                    hint: `${functionDay(fn.starts_at)} · ${fn.sold} entradas`,
+                    onSelect: () => setFunctionId(fn.id),
+                  })),
+                },
+              ]}
+            />
+          </div>
         </div>
       </div>
       </div>

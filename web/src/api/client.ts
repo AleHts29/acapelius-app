@@ -375,6 +375,26 @@ export interface Alert {
   since?: string
 }
 
+/** Una temporada con su resultado, para el índice de Temporadas. */
+export interface SeasonOverview {
+  id: number
+  name: string
+  is_active: boolean
+  created_at: string
+  functions: number
+  capacity: number
+  sold: number
+  collected_cents: number
+  assigned: number
+  /** Coristas que efectivamente vendieron algo en la temporada. */
+  sellers: number
+  /** null cuando la temporada todavía no tiene funciones. */
+  first_at: string | null
+  last_at: string | null
+  /** La próxima función que no pasó, o null si ya pasaron todas. */
+  next_at: string | null
+}
+
 /** Una función con su avance de venta, lo recaudado y lo asignado (C9). */
 export interface FunctionSummary {
   id: number
@@ -457,7 +477,13 @@ export const api = {
   resetPassword: (id: number) => request<UserAccessResponse>('POST', `/users/${id}/reset-password`),
 
   listSeasons: () => request<{ seasons: Season[] }>('GET', '/seasons'),
-  createSeason: (name: string) => request<{ season: Season }>('POST', '/seasons', { name }),
+  createSeason: (input: {
+    name: string
+    /** Si pasa a ser la temporada en curso. Por omisión sí. */
+    activate?: boolean
+    /** Copia la grilla de otra temporada con las fechas corridas un año. */
+    copy_from_season_id?: number
+  }) => request<{ season: Season; copied?: number }>('POST', '/seasons', input),
   activateSeason: (id: number) => request<{ season: Season }>('POST', `/seasons/${id}/activate`),
 
   listFunctions: (seasonId?: number) =>
@@ -469,6 +495,7 @@ export const api = {
     request<{ function: ShowFunction }>('POST', '/functions', input),
   updateFunction: (id: number, input: Partial<Omit<FunctionInput, 'season_id'>>) =>
     request<{ function: ShowFunction }>('PATCH', `/functions/${id}`, input),
+  deleteFunction: (id: number) => request<void>('DELETE', `/functions/${id}`),
 
   createSale: (input: NewSaleInput) =>
     request<{ sale: Sale; tickets: Ticket[]; public_url: string; email_status: EmailStatus }>(
@@ -553,6 +580,7 @@ export const api = {
     request<Direccion>('GET', `/reports/direccion?season_id=${seasonId}`),
   attention: (seasonId: number) =>
     request<{ alerts: Alert[] }>('GET', `/reports/attention?season_id=${seasonId}`),
+  seasonsOverview: () => request<{ seasons: SeasonOverview[] }>('GET', '/reports/seasons'),
   functionsSummary: (seasonId: number) =>
     request<{ functions: FunctionSummary[] }>(
       'GET',

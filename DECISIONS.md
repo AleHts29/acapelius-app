@@ -412,3 +412,70 @@ futura no se entiende; el chip tiene que decir qué es lo que no se puede hacer.
 existe en el modelo: una función no se puede dar de baja sin decidir antes qué
 pasa con las entradas vendidas, con lo que las coristas ya cobraron y con lo
 que tienen que rendir. Eso es una decisión de negocio, no un botón.
+
+## Los menús son de la app, no del sistema operativo
+
+El `<select>` nativo se dibuja distinto en cada sistema y no puede mostrar más
+que una línea de texto por opción. El componente `Menu` lo reemplaza en toda la
+app —no queda ninguno— y cada opción lleva su contexto: la función con su fecha
+y cuántas entradas vendió, la temporada con su estado, la corista con el cupo
+que le queda.
+
+Es un solo componente con dos presentaciones, igual que `ActionPanel`: en
+escritorio es un panel anclado al disparador; en celular entra desde abajo,
+donde una lista pegada al dedo se toca mejor que un popover de 260 px. Va en un
+portal porque los disparadores viven adentro de tarjetas con `overflow: hidden`
+—las filas de Temporadas— y ahí un panel absoluto queda cortado a la mitad.
+
+El teclado se escucha en `document` y no en el panel: al abrir, el foco todavía
+está en el disparador, que vive afuera del portal, y un `onKeyDown` del panel no
+vería ni la primera flecha ni el Escape.
+
+**Una opción deshabilitada dice por qué.** "Cancelar función" en gris no explica
+nada; "Ya vendió 14 entradas: primero hay que resolver los reembolsos" cierra la
+pregunta sin que haya que probar.
+
+## Cancelar una función: sólo si nunca vendió
+
+El mockup pone "Cancelar función" en el ⋮ y ahora existe, con un límite: sólo se
+puede si la función no tiene ninguna venta, ni siquiera anulada. Eso cubre el
+caso real —se cargó mal y hay que sacarla— sin meterse en el otro, que no es un
+botón: una función con entradas vendidas no se da de baja sin decidir antes qué
+pasa con los reembolsos, con lo que las coristas ya cobraron y con lo que tienen
+que rendir. El ítem queda visible pero deshabilitado, con el motivo.
+
+Las asignaciones se borran con la función en la misma transacción: sin función
+no hay cupo que repartir.
+
+## Temporadas vuelve a tener índice
+
+`/temporadas` es de nuevo el listado —cada temporada con su resultado— y
+`/temporadas/:id` el detalle de funciones. La versión anterior mandaba
+directamente al detalle de la temporada en curso; eso deja sin lugar a las
+temporadas viejas, que es donde se consulta el historial.
+
+**Tres estados, no dos.** Una temporada que se carga para el año que viene no
+está en curso, pero llamarla "cerrada" es exactamente al revés de lo que es:
+`en curso` (la activa), `cerrada` (ya pasaron todas sus funciones) y
+`preparándose` (todo lo demás). El renglón de contexto y la barra siguen ese
+estado, no `is_active`.
+
+## Alta de temporada: los dos atajos
+
+**Copiar la estructura.** Cargar cinco funciones a mano cada año era el trabajo
+que nadie quería hacer. La copia trae lugar, cupo y precio, sin ventas. El
+mockup pedía copiarlas "sin fechas", pero `starts_at` es NOT NULL y hacerlo
+nullable se propagaría a todo lo que ordena por fecha —Inicio, la puerta, la
+próxima función—. En vez de eso las fechas se corren **364 días**: 52 semanas
+exactas, así cada función cae el mismo día de la semana del año siguiente, que
+para un coro que canta los sábados es la diferencia entre ajustar y rehacer.
+
+**"Cerrar la temporada anterior" es opcional y arranca apagada.** Antes, crear
+una temporada movía Inicio, Rendiciones y Dirección de una, sin preguntar. Ahora
+la nueva se carga aparte y el resto de la app sigue mostrando la de ahora; la
+casilla es la que decide el cambio. Es el caso de preparar el año que viene
+mientras el actual todavía vende.
+
+El endpoint acepta `activate` y `copy_from_season_id`, y hace las dos cosas en
+una transacción: una temporada creada a medias, con la mitad de las funciones
+copiadas, sería peor que un error.

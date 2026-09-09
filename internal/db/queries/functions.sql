@@ -43,3 +43,27 @@ SET name        = sqlc.narg(name),
     price_cents = sqlc.arg(price_cents)::bigint
 WHERE id = sqlc.arg(id)::bigint
 RETURNING *;
+
+-- name: CountSalesForFunction :one
+-- Cualquier venta, incluso anulada: si alguna vez se vendio algo, la funcion
+-- ya no se puede borrar y hay que hablar de reembolsos, no de un boton.
+SELECT count(*)::bigint FROM sales WHERE function_id = $1;
+
+-- name: DeleteAllocationsForFunction :exec
+DELETE FROM allocations WHERE function_id = $1;
+
+-- name: DeleteFunction :exec
+DELETE FROM functions WHERE id = $1;
+
+-- name: CopySeasonFunctions :many
+-- Duplica la grilla de una temporada en otra: mismo lugar, cupo y precio, con
+-- las fechas corridas 364 dias (52 semanas exactas) para que cada funcion caiga
+-- el mismo dia de la semana del año siguiente. Las fechas se ajustan despues;
+-- lo que se ahorra es cargar la estructura entera a mano.
+INSERT INTO functions (season_id, name, venue, starts_at, capacity, price_cents)
+SELECT sqlc.arg(to_season_id)::bigint, f.name, f.venue,
+       f.starts_at + interval '364 days', f.capacity, f.price_cents
+FROM functions f
+WHERE f.season_id = sqlc.arg(from_season_id)::bigint
+ORDER BY f.starts_at
+RETURNING *;

@@ -875,6 +875,96 @@ func (q *Queries) SeasonSettled(ctx context.Context, seasonID int64) (int64, err
 	return column_1, err
 }
 
+const seasonsOverview = `-- name: SeasonsOverview :many
+SELECT
+  s.id,
+  s.name,
+  s.is_active,
+  s.created_at,
+  (SELECT count(*) FROM functions f WHERE f.season_id = s.id)::bigint AS functions,
+  (SELECT COALESCE(SUM(f.capacity), 0) FROM functions f WHERE f.season_id = s.id)::bigint AS capacity,
+  (SELECT count(*) FROM tickets t
+     JOIN sales sa ON t.sale_id = sa.id
+     JOIN functions f ON sa.function_id = f.id
+   WHERE f.season_id = s.id AND t.status <> 'void')::bigint AS sold,
+  (SELECT COALESCE(SUM(sa.paid_cents), 0) FROM sales sa
+     JOIN functions f ON sa.function_id = f.id
+   WHERE f.season_id = s.id AND NOT sa.is_comp AND sa.voided_at IS NULL)::bigint AS collected_cents,
+  -- Cupo repartido entre coristas activas: lo mismo que cuenta el tablero.
+  (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
+     JOIN functions f ON a.function_id = f.id
+     JOIN users au ON au.id = a.user_id
+   WHERE f.season_id = s.id AND au.role = 'seller' AND au.is_active)::bigint AS assigned,
+  -- Coristas que efectivamente vendieron algo en la temporada.
+  (SELECT count(DISTINCT sa.seller_id) FROM sales sa
+     JOIN functions f ON sa.function_id = f.id
+   WHERE f.season_id = s.id AND sa.voided_at IS NULL)::bigint AS sellers,
+  COALESCE((SELECT MIN(f.starts_at) FROM functions f WHERE f.season_id = s.id),
+           '0001-01-01'::timestamptz)::timestamptz AS first_at,
+  COALESCE((SELECT MAX(f.starts_at) FROM functions f WHERE f.season_id = s.id),
+           '0001-01-01'::timestamptz)::timestamptz AS last_at,
+  -- La proxima funcion, con las mismas 3 horas de gracia que usa Inicio.
+  COALESCE((SELECT MIN(f.starts_at) FROM functions f
+            WHERE f.season_id = s.id AND f.starts_at > now() - interval '3 hours'),
+           '0001-01-01'::timestamptz)::timestamptz AS next_at
+FROM seasons s
+ORDER BY s.created_at DESC, s.id DESC
+`
+
+type SeasonsOverviewRow struct {
+	ID             int64     `json:"id"`
+	Name           string    `json:"name"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	Functions      int64     `json:"functions"`
+	Capacity       int64     `json:"capacity"`
+	Sold           int64     `json:"sold"`
+	CollectedCents int64     `json:"collected_cents"`
+	Assigned       int64     `json:"assigned"`
+	Sellers        int64     `json:"sellers"`
+	FirstAt        time.Time `json:"first_at"`
+	LastAt         time.Time `json:"last_at"`
+	NextAt         time.Time `json:"next_at"`
+}
+
+// El indice de temporadas: cada una con su resultado. Es admin-only porque
+// lleva plata; ListSeasons (que leen todos los roles) sigue sin exponerla.
+// Las fechas vacias vuelven con el centinela 0001-01-01, como en
+// SellerSeasonStats: sqlc no sabe que un MIN() sin filas es NULL.
+func (q *Queries) SeasonsOverview(ctx context.Context) ([]SeasonsOverviewRow, error) {
+	rows, err := q.db.Query(ctx, seasonsOverview)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SeasonsOverviewRow{}
+	for rows.Next() {
+		var i SeasonsOverviewRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.Functions,
+			&i.Capacity,
+			&i.Sold,
+			&i.CollectedCents,
+			&i.Assigned,
+			&i.Sellers,
+			&i.FirstAt,
+			&i.LastAt,
+			&i.NextAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const sellerDebtSources = `-- name: SellerDebtSources :many
 
 SELECT

@@ -10,6 +10,67 @@ import (
 	"time"
 )
 
+const copySeasonFunctions = `-- name: CopySeasonFunctions :many
+INSERT INTO functions (season_id, name, venue, starts_at, capacity, price_cents)
+SELECT $1::bigint, f.name, f.venue,
+       f.starts_at + interval '364 days', f.capacity, f.price_cents
+FROM functions f
+WHERE f.season_id = $2::bigint
+ORDER BY f.starts_at
+RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at
+`
+
+type CopySeasonFunctionsParams struct {
+	ToSeasonID   int64 `json:"to_season_id"`
+	FromSeasonID int64 `json:"from_season_id"`
+}
+
+// Duplica la grilla de una temporada en otra: mismo lugar, cupo y precio, con
+// las fechas corridas 364 dias (52 semanas exactas) para que cada funcion caiga
+// el mismo dia de la semana del año siguiente. Las fechas se ajustan despues;
+// lo que se ahorra es cargar la estructura entera a mano.
+func (q *Queries) CopySeasonFunctions(ctx context.Context, arg CopySeasonFunctionsParams) ([]Function, error) {
+	rows, err := q.db.Query(ctx, copySeasonFunctions, arg.ToSeasonID, arg.FromSeasonID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Function{}
+	for rows.Next() {
+		var i Function
+		if err := rows.Scan(
+			&i.ID,
+			&i.SeasonID,
+			&i.Name,
+			&i.Venue,
+			&i.StartsAt,
+			&i.Capacity,
+			&i.PriceCents,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countSalesForFunction = `-- name: CountSalesForFunction :one
+SELECT count(*)::bigint FROM sales WHERE function_id = $1
+`
+
+// Cualquier venta, incluso anulada: si alguna vez se vendio algo, la funcion
+// ya no se puede borrar y hay que hablar de reembolsos, no de un boton.
+func (q *Queries) CountSalesForFunction(ctx context.Context, functionID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countSalesForFunction, functionID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createFunction = `-- name: CreateFunction :one
 INSERT INTO functions (season_id, name, venue, starts_at, capacity, price_cents)
 VALUES (
@@ -53,6 +114,24 @@ func (q *Queries) CreateFunction(ctx context.Context, arg CreateFunctionParams) 
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const deleteAllocationsForFunction = `-- name: DeleteAllocationsForFunction :exec
+DELETE FROM allocations WHERE function_id = $1
+`
+
+func (q *Queries) DeleteAllocationsForFunction(ctx context.Context, functionID int64) error {
+	_, err := q.db.Exec(ctx, deleteAllocationsForFunction, functionID)
+	return err
+}
+
+const deleteFunction = `-- name: DeleteFunction :exec
+DELETE FROM functions WHERE id = $1
+`
+
+func (q *Queries) DeleteFunction(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteFunction, id)
+	return err
 }
 
 const getFunction = `-- name: GetFunction :one

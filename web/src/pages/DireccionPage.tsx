@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown } from 'lucide-react'
 
 import { activeSeason, api } from '../api/client'
 import type { Direccion, DireccionFinding, DireccionFunction } from '../api/client'
@@ -9,6 +8,7 @@ import { AllocationsEditor } from '../components/AllocationsEditor'
 import { dayLabel, formatMoney } from '../lib/format'
 import { initials } from '../lib/search'
 import { ActionPanel } from '../ui/ActionPanel'
+import { Menu } from '../ui/Menu'
 
 /** Nombre de la función, con el lugar como respaldo. */
 function nombre(fn: DireccionFunction): string {
@@ -343,20 +343,23 @@ export function DireccionPage() {
           </p>
         </div>
         {all.length > 1 ? (
-          <span className="att-fnsel">
-            <select
-              aria-label="Temporada"
-              value={seasonId}
-              onChange={(e) => navigate(`/temporadas/${e.target.value}`)}
-            >
-              {all.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={12} aria-hidden />
-          </span>
+          <Menu
+            trigger="pill"
+            label={season.name}
+            value={String(season.id)}
+            align="right"
+            groups={[
+              {
+                label: 'Temporadas',
+                options: all.map((s) => ({
+                  id: String(s.id),
+                  label: s.name,
+                  hint: s.is_active ? 'En curso' : 'Cerrada',
+                  onSelect: () => navigate(`/temporadas/${s.id}`),
+                })),
+              },
+            ]}
+          />
         ) : (
           <Link className="season-pill" to={`/temporadas/${season.id}`}>
             {season.name}

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Menús y vista de Temporadas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#F2F3F5; --sur:#FFFFFF; --alt:#FAFBFC; --ink:#1A1C22; --mut:#7C818C; --line:#E3E5E9;
+          --indigo:#3A3FC4; --indigo-s:#E8E8FA; --carbon:#1A1C22;
+          --ok:#0E7A55; --ok-s:#E2F2EB; --warn:#9C6A0C; --warn-s:#F6EEDC; --warn-b:#E7D9B8; --bad:#B3403F; --bad-s:#F7E6E5; }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .page { max-width:1340px; margin:0 auto; padding:44px 20px 90px; }
+  .page > h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(25px,4vw,34px); }
+  .page > h1 span { color:var(--indigo); }
+  .page > p.lead { margin-top:10px; max-width:920px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .page > p.lead b { color:var(--ink); }
+  .fr { margin-top:32px; overflow-x:auto; padding-bottom:8px; }
+  .fr > .cap { font-size:13.5px; font-weight:700; color:#55575E; margin-bottom:11px; }
+  .fr > .cap b { color:var(--ink); }
+
+  /* ===== SPEC DE MENÚ ===== */
+  .specwrap { background:#fff; border:1px solid #D5D8DD; border-radius:16px; padding:24px; display:grid; gap:30px; }
+  @media(min-width:900px){ .specwrap { grid-template-columns:1fr 1fr 1fr; } }
+  .demo { }
+  .demo .lbl { font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); margin-bottom:12px; }
+  .demo .desc { margin-top:14px; font-size:12px; line-height:1.55; color:#4A4C55; }
+  .demo .desc b { color:var(--ink); }
+  .anchor { position:relative; display:inline-block; }
+
+  .pillbtn { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800; border:1.5px solid var(--line); background:var(--sur); border-radius:99px; padding:8px 13px; }
+  .pillbtn.open { border-color:var(--indigo); box-shadow:0 0 0 3px rgba(58,63,196,.12); }
+  .pillbtn .chev { color:var(--mut); font-size:10px; }
+  .kebabbtn { width:30px; height:30px; border-radius:9px; border:1.5px solid var(--line); background:var(--sur); display:inline-flex; align-items:center; justify-content:center; color:var(--mut); font-weight:800; }
+  .kebabbtn.open { border-color:var(--indigo); box-shadow:0 0 0 3px rgba(58,63,196,.12); color:var(--indigo); }
+
+  /* EL MENÚ */
+  .menu { position:absolute; top:calc(100% + 7px); left:0; min-width:262px; background:var(--sur); border:1px solid var(--line);
+          border-radius:13px; box-shadow:0 12px 30px rgba(26,28,34,.14), 0 2px 6px rgba(26,28,34,.06); padding:6px; z-index:5; }
+  .menu.right { left:auto; right:0; }
+  .menu .mlabel { padding:8px 11px 6px; font-family:'Archivo',sans-serif; font-size:8.5px; font-weight:800; letter-spacing:0.13em; text-transform:uppercase; color:var(--mut); }
+  .mi { display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:9px; font-size:13px; font-weight:600; color:var(--ink); }
+  .mi .ck { width:14px; color:var(--indigo); font-weight:800; font-size:12px; flex-shrink:0; }
+  .mi .tx { flex:1; min-width:0; }
+  .mi .tx b { font-weight:700; display:block; }
+  .mi .tx span { font-size:10.5px; color:var(--mut); font-weight:500; }
+  .mi.sel { background:var(--indigo-s); }
+  .mi.sel .tx b { color:var(--indigo); }
+  .mi.hov { background:var(--alt); }
+  .mi .ic { width:16px; text-align:center; color:var(--mut); font-size:13px; }
+  .mi.danger { color:var(--bad); } .mi.danger .ic { color:var(--bad); }
+  .msep { height:1px; background:var(--line); margin:6px 4px; }
+  .mi.action { color:var(--indigo); font-weight:800; }
+  .mi.action .ic { color:var(--indigo); }
+
+  /* ===== BROWSER ===== */
+  .browser { border:1px solid #C3C7CE; border-radius:14px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); background:var(--bg); min-width:1160px; }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome .dots i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:400px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; }
+  .app { display:flex; min-height:600px; position:relative; }
+  .side { width:200px; background:var(--sur); border-right:1px solid var(--line); display:flex; flex-direction:column; flex-shrink:0; }
+  .side .logo { padding:15px 14px 11px; font-family:'Archivo',sans-serif; font-weight:800; letter-spacing:0.2em; font-size:11px; display:flex; align-items:center; gap:7px; }
+  .side .logo .mk { width:19px; height:19px; border-radius:50%; border:1.5px solid var(--indigo); color:var(--indigo); font-size:9px; display:flex; align-items:center; justify-content:center; font-style:italic; }
+  .nav { padding:4px 8px; }
+  .nav a { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:8px; font-size:11.5px; font-weight:700; color:var(--mut); margin-bottom:2px; }
+  .nav a.on { background:var(--indigo-s); color:var(--indigo); }
+  .nav .sec { padding:11px 10px 4px; font-family:'Archivo',sans-serif; font-size:8px; font-weight:800; letter-spacing:0.14em; color:var(--mut); }
+  .nav a .b { margin-left:auto; font-size:8.5px; font-weight:800; padding:2px 6px; border-radius:99px; background:var(--warn-s); color:var(--warn); }
+  .side .grow { flex:1; }
+  .side .me { border-top:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:8px; }
+  .side .me .av { width:23px; height:23px; border-radius:50%; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:9px; }
+  .side .me b { display:block; font-size:11px; } .side .me span { color:var(--mut); font-size:9.5px; }
+  .main { flex:1; padding:20px 26px 26px; min-width:0; }
+  .phead { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; }
+  .phead h2 { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .phead .sub { font-size:11.5px; color:var(--mut); margin-top:3px; }
+  .btn { border-radius:9px; padding:9px 14px; font-size:12.5px; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }
+  .btn.pri { background:var(--indigo); color:#fff; }
+  .btn.gh { background:var(--sur); border:1.5px solid var(--line); color:var(--ink); }
+  .btn.sm { padding:7px 11px; font-size:11.5px; }
+  .tag { font-size:8.5px; font-weight:800; padding:3px 8px; border-radius:99px; background:var(--line); color:var(--mut); white-space:nowrap; }
+  .tag.live { background:var(--ok); color:#fff; }
+  .tag.next { background:var(--indigo); color:#fff; }
+
+  /* lista de temporadas */
+  .slist { background:var(--sur); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
+  .srow { display:grid; grid-template-columns:1.5fr 1.1fr 1.3fr 1fr auto; gap:20px; align-items:center; padding:16px 20px; border-bottom:1px solid var(--line); }
+  .srow:last-child { border-bottom:0; }
+  .srow.live { background:var(--indigo-s); }
+  .srow .nm .t { display:flex; align-items:center; gap:9px; }
+  .srow .nm b { font-family:'Archivo',sans-serif; font-size:15px; font-weight:800; }
+  .srow .nm .v { font-size:10.5px; color:var(--mut); margin-top:2px; }
+  .srow .dt b { font-size:12.5px; font-weight:700; display:block; }
+  .srow .dt span { font-size:10.5px; color:var(--mut); }
+  .srow .prog .bar { height:6px; border-radius:99px; background:var(--line); overflow:hidden; }
+  .srow .prog .bar i { display:block; height:100%; background:var(--indigo); }
+  .srow .prog .lg { margin-top:6px; font-size:10.5px; color:var(--mut); font-weight:600; display:flex; justify-content:space-between; }
+  .srow .prog .lg b { color:var(--ink); }
+  .srow .money b { font-family:'Archivo',sans-serif; font-size:14px; font-weight:800; display:block; text-align:right; }
+  .srow .money span { font-size:9.5px; color:var(--mut); font-weight:700; display:block; text-align:right; margin-top:2px; }
+  .srow .acts { display:flex; align-items:center; gap:7px; }
+  .empty-hint { margin-top:14px; text-align:center; font-size:11.5px; color:var(--mut); }
+
+  /* modal crear temporada */
+  .scrim { position:absolute; inset:0; background:rgba(26,28,34,.5); }
+  .modal { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:460px; background:var(--sur); border-radius:16px; box-shadow:0 24px 60px rgba(26,28,34,.35); overflow:hidden; }
+  .modal .mh { padding:16px 20px; border-bottom:1px solid var(--line); display:flex; align-items:flex-start; justify-content:space-between; }
+  .modal h3 { font-family:'Archivo',sans-serif; font-size:16px; font-weight:800; }
+  .modal .msub { font-size:11.5px; color:var(--mut); margin-top:2px; }
+  .modal .x { color:var(--mut); font-size:15px; font-weight:800; }
+  .mbody { padding:16px 20px; }
+  .fld { margin-top:13px; } .fld:first-child { margin-top:0; }
+  .fld label { display:block; font-family:'Archivo',sans-serif; font-size:9px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .inp { margin-top:6px; border:1.5px solid var(--line); border-radius:11px; padding:11px 13px; font-size:13px; background:var(--alt); }
+  .inp.f { border-color:var(--indigo); box-shadow:0 0 0 3px rgba(58,63,196,.12); background:var(--sur); }
+  .check { margin-top:14px; display:flex; align-items:flex-start; gap:10px; background:var(--alt); border:1px solid var(--line); border-radius:11px; padding:12px 13px; }
+  .check .bx { width:17px; height:17px; border-radius:5px; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex-shrink:0; margin-top:1px; }
+  .check .tx b { font-size:12.5px; display:block; }
+  .check .tx span { font-size:11px; color:var(--mut); }
+  .mfoot { padding:13px 20px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:9px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Menús desplegables <span>+ la vista de Temporadas</span></h1>
+  <p class="lead">Dos cosas: un <b>componente de menú</b> propio que reemplaza al desplegable gris del navegador (se usa en el selector de temporada, en los ⋮ de cada fila y en los filtros), y la <b>vista índice de Temporadas</b> que había desaparecido — con su listado y la creación de temporadas nuevas.</p>
+
+  <!-- SPEC DE MENÚS -->
+  <div class="fr">
+    <div class="cap"><b>1 · El componente de menú</b> — panel blanco, radio 13, borde de 1px, sombra suave, ítems de 36 px con hover, check índigo en el activo, separador antes de las acciones. Nunca <code>&lt;select&gt;</code> nativo ni menú del sistema.</div>
+    <div class="specwrap">
+
+      <div class="demo">
+        <div class="lbl">Selector de temporada</div>
+        <div class="anchor">
+          <span class="pillbtn open">Temporada 2026 <span class="chev">▾</span></span>
+          <div class="menu">
+            <div class="mlabel">Temporadas</div>
+            <div class="mi sel"><span class="ck">✓</span><span class="tx"><b>Temporada 2026</b><span>En curso · 5 funciones</span></span></div>
+            <div class="mi hov"><span class="ck"></span><span class="tx"><b>Temporada 2025</b><span>Cerrada · 6 funciones</span></span></div>
+            <div class="mi"><span class="ck"></span><span class="tx"><b>Temporada 2024</b><span>Cerrada · 4 funciones</span></span></div>
+            <div class="msep"></div>
+            <div class="mi action"><span class="ic">＋</span> Crear temporada…</div>
+            <div class="mi"><span class="ic">⌗</span> Ver todas las temporadas</div>
+          </div>
+        </div>
+        <div class="desc" style="margin-top:200px;">Cada opción trae <b>su contexto</b> (estado y cantidad de funciones), la activa lleva check índigo y fondo suave, y las acciones van separadas abajo.</div>
+      </div>
+
+      <div class="demo">
+        <div class="lbl">Menú de fila (⋮)</div>
+        <div class="anchor">
+          <span class="kebabbtn open">⋮</span>
+          <div class="menu" style="min-width:212px;">
+            <div class="mi"><span class="ic">✎</span> Editar función</div>
+            <div class="mi hov"><span class="ic">⧉</span> Duplicar</div>
+            <div class="mi"><span class="ic">👥</span> Ver asistencia</div>
+            <div class="mi"><span class="ic">📈</span> Ver ventas</div>
+            <div class="msep"></div>
+            <div class="mi danger"><span class="ic">✕</span> Cancelar función</div>
+          </div>
+        </div>
+        <div class="desc" style="margin-top:200px;">Mismo panel, más angosto. Las acciones destructivas van <b>al final, separadas y en rojo</b>. Se abre alineado al borde derecho del disparador.</div>
+      </div>
+
+      <div class="demo">
+        <div class="lbl">Filtro (multi-opción)</div>
+        <div class="anchor">
+          <span class="pillbtn open">Todas las funciones <span class="chev">▾</span></span>
+          <div class="menu" style="min-width:230px;">
+            <div class="mi sel"><span class="ck">✓</span><span class="tx"><b>Todas las funciones</b><span>50 ventas</span></span></div>
+            <div class="msep"></div>
+            <div class="mi hov"><span class="ck"></span><span class="tx"><b>Cierre de temporada</b><span>Dom 13 sept · 6 ventas</span></span></div>
+            <div class="mi"><span class="ck"></span><span class="tx"><b>Función de gala</b><span>Mié 26 ago · 22 ventas</span></span></div>
+            <div class="mi"><span class="ck"></span><span class="tx"><b>Concierto de invierno</b><span>Sáb 22 ago · 11 ventas</span></span></div>
+            <div class="mi"><span class="ck"></span><span class="tx"><b>Función de apertura</b><span>Vie 14 ago · 15 ventas</span></span></div>
+          </div>
+        </div>
+        <div class="desc" style="margin-top:246px;">Los filtros muestran <b>el conteo de cada opción</b>, así se sabe qué va a pasar antes de elegir. Con más de ~8 opciones se agrega un buscador arriba.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VISTA TEMPORADAS -->
+  <div class="fr">
+    <div class="cap"><b>2 · Vista de Temporadas (índice)</b> — la que faltaba: todas las temporadas con su resultado, la activa destacada, y "Nueva temporada" en el header. Click en una fila entra al detalle de funciones que ya diseñamos.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/temporadas</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a><a><span>🎟</span>Vender <span class="b">10</span></a><a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>📊</span>Dirección</a><a><span>💰</span>Rendiciones <span class="b">6</span></a><a><span>👥</span>Asistencia</a><a class="on"><span>📅</span>Temporadas</a><a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Temporadas</h2><div class="sub">3 temporadas · desde 2024</div></div>
+            <div class="btn pri">＋ Nueva temporada</div>
+          </div>
+
+          <div class="slist">
+            <div class="srow live">
+              <div class="nm">
+                <div class="t"><b>Temporada 2026</b><span class="tag live">EN CURSO</span></div>
+                <div class="v">5 funciones · próxima en 4 días</div>
+              </div>
+              <div class="dt"><b>14 ago – 13 sept</b><span>2026</span></div>
+              <div class="prog">
+                <div class="bar"><i style="width:46%"></i></div>
+                <div class="lg"><span><b>145</b>/315 vendidas</span><span>91 sin asignar</span></div>
+              </div>
+              <div class="money"><b>$1.016.000</b><span>RECAUDADO</span></div>
+              <div class="acts"><div class="btn gh sm">Ver funciones</div><span class="kebabbtn">⋮</span></div>
+            </div>
+
+            <div class="srow">
+              <div class="nm">
+                <div class="t"><b>Temporada 2025</b><span class="tag">CERRADA</span></div>
+                <div class="v">6 funciones · 11 coristas</div>
+              </div>
+              <div class="dt"><b>8 ago – 21 sept</b><span>2025</span></div>
+              <div class="prog">
+                <div class="bar"><i style="width:78%; background:var(--ok);"></i></div>
+                <div class="lg"><span><b>287</b>/368 vendidas</span><span>78% de ocupación</span></div>
+              </div>
+              <div class="money"><b>$1.845.000</b><span>RECAUDADO</span></div>
+              <div class="acts"><div class="btn gh sm">Ver funciones</div><span class="kebabbtn">⋮</span></div>
+            </div>
+
+            <div class="srow">
+              <div class="nm">
+                <div class="t"><b>Temporada 2024</b><span class="tag">CERRADA</span></div>
+                <div class="v">4 funciones · 9 coristas</div>
+              </div>
+              <div class="dt"><b>16 ago – 14 sept</b><span>2024</span></div>
+              <div class="prog">
+                <div class="bar"><i style="width:71%; background:var(--ok);"></i></div>
+                <div class="lg"><span><b>178</b>/250 vendidas</span><span>71% de ocupación</span></div>
+              </div>
+              <div class="money"><b>$980.000</b><span>RECAUDADO</span></div>
+              <div class="acts"><div class="btn gh sm">Ver funciones</div><span class="kebabbtn">⋮</span></div>
+            </div>
+          </div>
+
+          <div class="empty-hint">Las temporadas cerradas se conservan para consultar su historial de ventas, asistencia y rendiciones.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREAR TEMPORADA -->
+  <div class="fr">
+    <div class="cap"><b>3 · Crear temporada</b> — en pop-up, con la opción de copiar la estructura de la anterior (el atajo que evita cargar cinco funciones a mano cada año).</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/temporadas</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a><a><span>🎟</span>Vender <span class="b">10</span></a><a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>📊</span>Dirección</a><a><span>💰</span>Rendiciones <span class="b">6</span></a><a><span>👥</span>Asistencia</a><a class="on"><span>📅</span>Temporadas</a><a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Temporadas</h2><div class="sub">3 temporadas · desde 2024</div></div>
+            <div class="btn pri">＋ Nueva temporada</div>
+          </div>
+          <div class="slist">
+            <div class="srow live">
+              <div class="nm"><div class="t"><b>Temporada 2026</b><span class="tag live">EN CURSO</span></div><div class="v">5 funciones · próxima en 4 días</div></div>
+              <div class="dt"><b>14 ago – 13 sept</b><span>2026</span></div>
+              <div class="prog"><div class="bar"><i style="width:46%"></i></div><div class="lg"><span><b>145</b>/315 vendidas</span><span>91 sin asignar</span></div></div>
+              <div class="money"><b>$1.016.000</b><span>RECAUDADO</span></div>
+              <div class="acts"><div class="btn gh sm">Ver funciones</div><span class="kebabbtn">⋮</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="scrim"></div>
+        <div class="modal">
+          <div class="mh">
+            <div><h3>Nueva temporada</h3><div class="msub">Después vas a poder agregarle funciones</div></div>
+            <span class="x">✕</span>
+          </div>
+          <div class="mbody">
+            <div class="fld"><label>Nombre</label><div class="inp f">Temporada 2027</div></div>
+            <div class="check">
+              <div class="bx">✓</div>
+              <div class="tx"><b>Copiar la estructura de Temporada 2026</b><span>Crea las mismas 5 funciones con su lugar, cupo y precio, sin fechas ni ventas. Después ajustás lo que haga falta.</span></div>
+            </div>
+            <div class="check" style="margin-top:9px;">
+              <div class="bx" style="background:var(--line); color:var(--mut);"></div>
+              <div class="tx"><b>Cerrar Temporada 2026</b><span>Queda como histórico y deja de aparecer en los selectores de venta.</span></div>
+            </div>
+          </div>
+          <div class="mfoot">
+            <div class="btn gh">Cancelar</div>
+            <div class="btn pri">Crear temporada</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
