@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/oklog/ulid/v2"
 
 	"github.com/ale-hts/acapelius/internal/auth"
@@ -259,37 +260,74 @@ func (s *Server) sendTicketEmail(ctx context.Context, sale sqlcgen.Sale, functio
 	return status
 }
 
-// saleListItem es la fila del listado con last_email_at ya como puntero.
+// saleListItem es la fila del listado con last_email_at ya como puntero y el
+// estado de entrega resuelto.
 type saleListItem struct {
 	sqlcgen.ListSalesPageRow
 	LastEmailAt *time.Time `json:"last_email_at"`
+	// sent | failed | none. "Abierta" no existe: sin webhook de Resend no hay
+	// forma de saber si el comprador abrio el mail, y un cuarto estado que la
+	// app no puede distinguir seria decorativo (spec C15 §4.2 lo contempla).
+	Delivery string `json:"delivery"`
+}
+
+// entrega traduce el ultimo intento de envio al estado que muestra la columna.
+func entrega(row sqlcgen.ListSalesPageRow) string {
+	if row.BuyerEmail == nil || *row.BuyerEmail == "" {
+		return "none"
+	}
+	switch row.LastEmailStatus {
+	case emailStatusSent:
+		return "sent"
+	case emailStatusFailed:
+		return "failed"
+	default:
+		// Tiene email pero nunca se intento: pasa con ventas cargadas antes de
+		// que existiera el envio. Se muestra como no enviada.
+		return "failed"
+	}
+}
+
+// functionTotals son los subtotales del encabezado de un bloque.
+type functionTotals struct {
+	FunctionID   int64 `json:"function_id"`
+	Sales        int64 `json:"sales"`
+	Tickets      int64 `json:"tickets"`
+	PaidCents    int64 `json:"paid_cents"`
+	PendingCents int64 `json:"pending_cents"`
 }
 
 type listSalesResponse struct {
-	Sales      []saleListItem          `json:"sales"`
-	Summary    sqlcgen.SalesSummaryRow `json:"summary"`
-	NextCursor string                  `json:"next_cursor,omitempty"`
+	Sales []saleListItem `json:"sales"`
+	// Summary ignora el filtro de estado: alimenta los contadores de los chips.
+	Summary sqlcgen.SalesSummaryRow `json:"summary"`
+	// Filtered lo respeta: es lo que muestra la franja de arriba.
+	Filtered   sqlcgen.SalesFilteredSummaryRow `json:"filtered"`
+	Totals     []functionTotals                `json:"function_totals"`
+	NextCursor string                          `json:"next_cursor,omitempty"`
 }
 
 // Paginado del listado (C3). 50 filas por pagina alcanza para scrollear
 // fluido; el cursor keyset mantiene los grupos por funcion contiguos.
 const salesPageSize = 50
 
-// encodeSalesCursor / decodeSalesCursor: keyset (starts_at, sale_id).
-func encodeSalesCursor(startsAt time.Time, id int64) string {
-	return fmt.Sprintf("v1:%d:%d", startsAt.UnixNano(), id)
+// encodeSalesCursor / decodeSalesCursor: keyset (past_rank, fn_rank, sale_id),
+// las mismas tres claves que ordenan la consulta.
+func encodeSalesCursor(past int32, rank float64, id int64) string {
+	return fmt.Sprintf("v2:%d:%g:%d", past, rank, id)
 }
 
-func decodeSalesCursor(raw string) (startsAt *time.Time, id *int64, ok bool) {
+func decodeSalesCursor(raw string) (past *int32, rank pgtype.Float8, id *int64, ok bool) {
 	if raw == "" {
-		return nil, nil, true
+		return nil, pgtype.Float8{}, nil, true
 	}
-	var nanos, saleID int64
-	if _, err := fmt.Sscanf(raw, "v1:%d:%d", &nanos, &saleID); err != nil {
-		return nil, nil, false
+	var p int32
+	var r float64
+	var saleID int64
+	if _, err := fmt.Sscanf(raw, "v2:%d:%g:%d", &p, &r, &saleID); err != nil {
+		return nil, pgtype.Float8{}, nil, false
 	}
-	t := time.Unix(0, nanos)
-	return &t, &saleID, true
+	return &p, pgtype.Float8{Float64: r, Valid: true}, &saleID, true
 }
 
 // escapeLike neutraliza los comodines de LIKE en la busqueda del usuario.
@@ -312,6 +350,13 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 	// La corista solo ve lo suyo; el admin ve todo, o lo suyo con ?mine=1.
 	if user.Role != domain.RoleAdmin || query.Get("mine") == "1" {
 		sellerID = &user.ID
+	} else if raw := query.Get("seller_id"); raw != "" {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "seller_id tiene que ser un numero.")
+			return
+		}
+		sellerID = &id
 	}
 
 	var functionID *int64
@@ -327,10 +372,10 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 	var status *string
 	switch raw := query.Get("status"); raw {
 	case "":
-	case "pending", "paid", "comp":
+	case "pending", "paid", "comp", "void":
 		status = &raw
 	default:
-		httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "status tiene que ser pending, paid o comp.")
+		httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "status tiene que ser pending, paid, comp o void.")
 		return
 	}
 
@@ -340,27 +385,29 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 		q = &escaped
 	}
 
-	cursorStarts, cursorID, ok := decodeSalesCursor(query.Get("cursor"))
+	cursorPast, cursorRank, cursorID, ok := decodeSalesCursor(query.Get("cursor"))
 	if !ok {
 		httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "cursor invalido.")
 		return
 	}
 
-	rows, err := s.queries.ListSalesPage(r.Context(), sqlcgen.ListSalesPageParams{
-		SellerID:     sellerID,
-		FunctionID:   functionID,
-		Status:       status,
-		Q:            q,
-		CursorStarts: cursorStarts,
-		CursorID:     cursorID,
-		PageSize:     salesPageSize,
+	ctx := r.Context()
+	rows, err := s.queries.ListSalesPage(ctx, sqlcgen.ListSalesPageParams{
+		SellerID:   sellerID,
+		FunctionID: functionID,
+		Status:     status,
+		Q:          q,
+		CursorPast: cursorPast,
+		CursorRank: cursorRank,
+		CursorID:   cursorID,
+		PageSize:   salesPageSize,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
 
-	summary, err := s.queries.SalesSummary(r.Context(), sqlcgen.SalesSummaryParams{
+	summary, err := s.queries.SalesSummary(ctx, sqlcgen.SalesSummaryParams{
 		SellerID:   sellerID,
 		FunctionID: functionID,
 		Q:          q,
@@ -370,9 +417,31 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	filtered, err := s.queries.SalesFilteredSummary(ctx, sqlcgen.SalesFilteredSummaryParams{
+		SellerID:   sellerID,
+		FunctionID: functionID,
+		Status:     status,
+		Q:          q,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	totales, err := s.queries.SalesFunctionTotals(ctx, sqlcgen.SalesFunctionTotalsParams{
+		SellerID:   sellerID,
+		FunctionID: functionID,
+		Status:     status,
+		Q:          q,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
 	items := make([]saleListItem, 0, len(rows))
 	for _, row := range rows {
-		item := saleListItem{ListSalesPageRow: row}
+		item := saleListItem{ListSalesPageRow: row, Delivery: entrega(row)}
 		if row.LastEmailAt.Year() > 1 {
 			at := row.LastEmailAt
 			item.LastEmailAt = &at
@@ -380,10 +449,26 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 		items = append(items, item)
 	}
 
-	resp := listSalesResponse{Sales: items, Summary: summary}
+	porFuncion := make([]functionTotals, 0, len(totales))
+	for _, t := range totales {
+		porFuncion = append(porFuncion, functionTotals{
+			FunctionID:   t.FunctionID,
+			Sales:        t.Sales,
+			Tickets:      t.Tickets,
+			PaidCents:    t.PaidCents,
+			PendingCents: t.PendingCents,
+		})
+	}
+
+	resp := listSalesResponse{
+		Sales:    items,
+		Summary:  summary,
+		Filtered: filtered,
+		Totals:   porFuncion,
+	}
 	if len(rows) == salesPageSize {
 		last := rows[len(rows)-1]
-		resp.NextCursor = encodeSalesCursor(last.FunctionStartsAt, last.ID)
+		resp.NextCursor = encodeSalesCursor(last.PastRank, last.FnRank, last.ID)
 	}
 	httpx.JSON(w, http.StatusOK, resp)
 }
@@ -739,3 +824,11 @@ func (s *Server) handleVoidTicket(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, map[string]sqlcgen.Ticket{"ticket": ticket})
 }
+
+// Helpers del cursor para el export, que arma sus propias paginas.
+func ptrInt32(v int32) *int32 { return &v }
+func ptrInt64(v int64) *int64 { return &v }
+
+func float8(v float64) pgtype.Float8 { return pgtype.Float8{Float64: v, Valid: true} }
+
+func pgtypeFloat8Null() pgtype.Float8 { return pgtype.Float8{} }

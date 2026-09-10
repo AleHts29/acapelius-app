@@ -4298,12 +4298,6 @@ div.alertcard {
   display: none;
 }
 
-/* --- C11 · Ventas como tabla (columnas ocultas en celular) --------------- */
-.srow__col,
-.thead {
-  display: none;
-}
-
 /* --- Índice de temporadas: una fila por temporada ------------------------ */
 
 .slist {
@@ -4521,6 +4515,272 @@ div.alertcard {
   background: var(--danger);
   border-color: var(--danger);
   color: var(--brand-white);
+}
+
+/* ==========================================================================
+   Vender · listado (spec C15, mockup design/acapelius-vender-final.html)
+
+   Cada función es una caja aparte y no una tabla larga con bandas adentro:
+   el nombre de la función aparece una sola vez, arriba, y por eso las filas
+   no necesitan una columna "Función" que repita lo mismo en cada renglón.
+   ========================================================================== */
+
+.sblocks {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sblock {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+}
+
+/* Acento lateral: índigo mientras se vende, verde cuando ya pasó. */
+.sblock::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--indigo);
+}
+
+.sblock--done::before {
+  background: var(--ok);
+}
+
+.sblock__h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 11px 14px 11px 18px;
+}
+
+.sblock__fold {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.sblock__fold:hover {
+  background: var(--surface-alt);
+  color: var(--ink);
+}
+
+.sblock__nm {
+  flex: 1;
+  min-width: 0;
+}
+
+.sblock__nm b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sblock__nm span {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+/* En celular los subtotales bajan de línea: si compiten por el ancho con el
+   nombre, "CIERRE DE TEMPORADA" se parte en cuatro renglones. */
+.sblock__t {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  flex: 1 1 100%;
+  padding-left: 32px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sblock__t b {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.sblock__t b.g {
+  color: var(--ok);
+}
+
+.sblock__t b.y {
+  color: var(--warn);
+}
+
+/* Los encabezados de columna sólo existen en la tabla de escritorio. */
+.sthead {
+  display: none;
+}
+
+.srow__pick,
+.srow__act,
+.srow__mail {
+  display: none;
+}
+
+/* La fila en celular: la de siempre —avatar, nombre, qué compró, chip— con
+   el resto de las columnas apagadas. */
+.srow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.srow:last-child {
+  border-bottom: 0;
+}
+
+.srow--void {
+  opacity: 0.6;
+}
+
+.srow__buyer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.srow__who {
+  min-width: 0;
+}
+
+.srow__who b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.srow__sub {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.srow__col {
+  display: none;
+}
+
+.srow__dots {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.stoolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Barra flotante de selección múltiple. En carbón porque no es parte de la
+   lista: es un modo, y mientras está abierto lo que se toca son N ventas. */
+.selbar {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  padding: 9px 10px 9px 16px;
+  border-radius: 999px;
+  background: var(--night-bg);
+  color: var(--night-text);
+  box-shadow: 0 12px 30px rgba(26, 28, 34, 0.28);
+  animation: menu-up 160ms ease-out;
+}
+
+.selbar > b {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.selbar button,
+.selbar a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--night-card);
+  color: var(--night-text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.selbar button:hover:not(:disabled),
+.selbar a:hover {
+  background: var(--night-line);
+}
+
+.selbar button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.selbar__x {
+  padding: 8px !important;
+  background: none !important;
+  color: var(--night-muted) !important;
+}
+
+/* El aviso de una acción en lote se va solo: es una confirmación, no algo
+   que haya que cerrar a mano. */
+.selbar__msg {
+  position: fixed;
+  left: 50%;
+  bottom: 78px;
+  animation: aviso 5s ease-in-out forwards;
+  z-index: 60;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: 11.5px;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(26, 28, 34, 0.12);
 }
 
 /* ==========================================================================
@@ -5920,19 +6180,17 @@ div.alertcard {
     padding-top: 16px;
   }
 
-  /* --- Ventas: tabla densa (frame 2) ------------------------------------ */
+  /* --- Ventas: franja arriba, toolbar abajo (spec C15 §2) --------------- */
   .salesbar {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
   }
 
-  /* La barra de búsqueda y filtros manda; el resumen se va a la derecha. */
+  /* Búsqueda, chips y menús en una sola línea. */
   .salesbar .sticky-bar {
     position: static;
-    flex: 1;
-    min-width: 0;
     padding: 0;
     margin: 0;
     display: flex;
@@ -5952,86 +6210,143 @@ div.alertcard {
     margin-top: 0 !important;
   }
 
-  .salesbar .sumstrip {
-    order: 2;
-    background: none;
-    border: 0;
-    padding: 0;
-    gap: 20px;
-    flex-shrink: 0;
+  .salesbar .tstrip {
+    margin-bottom: 0;
   }
 
-  /* Ocho columnas, no siete: el avatar es su propia celda. Con siete, la
-     última celda de cada fila caía a una fila implícita y aparecían ⋮ sueltos
-     debajo de cada renglón. */
-  .thead,
+  /* Con ancho de sobra los subtotales vuelven al renglón del nombre. */
+  .sblock__t {
+    flex: 0 0 auto;
+    padding-left: 0;
+  }
+
+  /* --- La tabla de un bloque de función (spec C15 §3.2) ----------------- */
+  /* Diez columnas. Los anchos fijos de la derecha son lo que mantiene el
+     borde de los chips en una línea recta con y sin hover: si "Cobrar"
+     empujara al chip, el estado se movería justo cuando se lo va a cambiar. */
+  .sthead,
   .srow {
     display: grid;
-    grid-template-columns: 28px 1.8fr 1.2fr 1.1fr 0.5fr 0.9fr 1.1fr 30px;
-    gap: 8px;
+    grid-template-columns: 26px 1.7fr 1.1fr 50px 92px 86px 110px 92px 96px 30px;
+    gap: 10px;
     align-items: center;
-    padding: 0 16px;
+    padding: 0 14px;
   }
 
-  .thead {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    height: 38px;
+  .sthead {
+    display: grid;
+    height: 32px;
     background: var(--surface-alt);
-    border: 1px solid var(--line);
-    border-bottom: 0;
-    border-radius: 14px 14px 0 0;
+    border-bottom: 1px solid var(--line);
     font-family: var(--font-display);
-    font-size: 9.5px;
+    font-size: 8.5px;
     font-weight: 800;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text-muted);
   }
 
-  /* Las filas viven adentro de una sola tarjeta, no una por fila. */
-  .stable {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-top: 0;
-    border-radius: 0 0 14px 14px;
-    overflow: hidden;
+  .sthead__s {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .sthead__s:hover {
+    color: var(--ink);
+  }
+
+  .sthead__s svg {
+    color: var(--indigo);
+  }
+
+  .sthead__s svg.up,
+  .sblock__fold svg.up {
+    transform: rotate(-90deg);
+  }
+
+  .sthead__s--r,
+  .sthead__r {
+    justify-content: flex-end;
+    text-align: right;
   }
 
   .srow {
-    height: 46px;
-    background: none;
-    border: 0;
+    height: 44px;
+    padding: 0 14px;
     border-bottom: 1px solid var(--line);
-    border-radius: 0;
-    margin: 0;
-    padding: 0 16px;
     font-size: 12.5px;
+    cursor: pointer;
   }
 
-  .srow:hover {
+  .srow:last-child {
+    border-bottom: 0;
+  }
+
+  .srow:hover,
+  .srow:focus-visible {
     background: var(--surface-alt);
+    outline: none;
   }
 
   .srow--sel {
     background: var(--indigo-soft);
   }
 
+  .srow--void {
+    opacity: 0.6;
+  }
+
+  .srow__pick {
+    display: flex;
+    align-items: center;
+  }
+
+  .srow__buyer {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+  }
+
   .srow .ini {
     width: 28px;
     height: 28px;
+    flex-shrink: 0;
     border-radius: 8px;
     font-size: 11px;
   }
 
-  /* El avatar y el nombre son una sola celda. */
-  .srow .mrow__mid {
-    display: flex;
-    align-items: center;
+  .srow__who {
     min-width: 0;
   }
 
+  .srow__who b {
+    display: block;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .srow__mail {
+    display: block;
+    font-size: 10px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* El subtítulo de celular: en la tabla cada dato tiene su columna. */
   .srow__sub {
     display: none;
   }
@@ -6044,32 +6359,102 @@ div.alertcard {
     white-space: nowrap;
   }
 
-  .srow__fn,
-  .srow__seller {
+  .srow__seller,
+  .srow__when {
     color: var(--text-muted);
     font-size: 11.5px;
   }
 
+  .srow__qty,
   .srow__total {
+    text-align: right;
+    font-family: var(--font-display);
+    font-weight: 800;
     font-variant-numeric: tabular-nums;
   }
 
-  /* El chip abraza su texto: como celda de grilla se estiraba a lo ancho de
-     la columna y parecía una barra de color. */
-  .srow .chip {
-    justify-self: start;
+  .srow__deliv {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
   }
 
-  .srow .mrow__dots {
+  .dot {
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+    border-radius: 50%;
+  }
+
+  .dot--ok {
+    background: var(--ok);
+  }
+
+  .dot--warn {
+    background: var(--warn);
+  }
+
+  .dot--blue {
+    background: var(--indigo);
+  }
+
+  /* El chip pegado a la derecha, con ancho mínimo y sin el monto: así el
+     borde contra el ⋮ es una línea recta y no un serrucho. El saldo ya tiene
+     su columna (Total) y el método vive en el ⋮. */
+  .srow .chip {
+    justify-self: end;
+    min-width: 70px;
+    justify-content: center;
     text-align: center;
   }
 
-  /* Banda de grupo por función, adentro de la tabla. */
-  .stable .ghead {
-    margin: 0;
-    padding: 7px 16px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--line);
+  .srow .chip small {
+    display: none;
+  }
+
+  /* Columna de acción rápida: existe siempre, aunque esté vacía. Si apareciera
+     y desapareciera, la fila entera se movería al pasar el mouse. */
+  .srow__act {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .srow__do {
+    display: none;
+    padding: 5px 9px;
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--ink);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .srow:hover .srow__do,
+  .srow:focus-within .srow__do {
+    display: inline-flex;
+  }
+
+  .srow__do--ok {
+    border-color: #c9e6d9;
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+
+  .srow__dots {
+    display: flex;
+    justify-content: center;
+  }
+
+  .srow__dots .menu-btn--kebab {
+    width: 26px;
+    height: 26px;
+    border: 0;
   }
 
   /* --- Formularios de página: centrados, no estirados -------------------- */
@@ -6378,6 +6763,22 @@ div.alertcard {
 
   .seasonrow__acts .menu-anchor {
     margin-left: 0;
+  }
+}
+
+@keyframes aviso {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  8%,
+  86% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0);
   }
 }
 

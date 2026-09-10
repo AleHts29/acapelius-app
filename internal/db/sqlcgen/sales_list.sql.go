@@ -8,6 +8,8 @@ package sqlcgen
 import (
 	"context"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const listSalesPage = `-- name: ListSalesPage :many
@@ -15,14 +17,27 @@ const listSalesPage = `-- name: ListSalesPage :many
 SELECT
   s.id, s.code, s.buyer_name, s.buyer_email, s.quantity, s.amount_cents,
   s.payment_status, s.payment_method, s.paid_cents, s.is_comp, s.voided_at, s.created_at,
-  s.function_id,
+  s.function_id, s.seller_id,
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
   f.name AS function_name,
   u.name AS seller_name,
   -- COALESCE al año 1 = "nunca se envio"; el handler lo convierte a null.
   COALESCE((SELECT max(e.created_at) FROM email_sends e
-   WHERE e.sale_id = s.id AND e.status = 'sent'), '0001-01-01'::timestamptz)::timestamptz AS last_email_at
+   WHERE e.sale_id = s.id AND e.status = 'sent'), '0001-01-01'::timestamptz)::timestamptz AS last_email_at,
+  -- Como termino el ultimo intento de envio: 'sent', 'failed' o '' si nunca
+  -- se intento. Es lo que la columna Entrada muestra como estado.
+  COALESCE((SELECT e.status FROM email_sends e
+   WHERE e.sale_id = s.id ORDER BY e.created_at DESC LIMIT 1), '')::text AS last_email_status,
+  -- Cuantas de las entradas de esta venta ya entraron: el menu de la fila lo
+  -- muestra ("2 de 3 entraron") y el drawer tambien.
+  (SELECT count(*) FROM checkins c
+     JOIN tickets t ON c.ticket_id = t.id
+   WHERE t.sale_id = s.id)::bigint AS entered,
+  (f.starts_at < now() - interval '3 hours')::integer AS past_rank,
+  (CASE WHEN f.starts_at < now() - interval '3 hours'
+        THEN -extract(epoch FROM f.starts_at)
+        ELSE  extract(epoch FROM f.starts_at) END)::double precision AS fn_rank
 FROM sales s
 JOIN functions f ON s.function_id = f.id
 JOIN users u ON s.seller_id = u.id
@@ -33,6 +48,7 @@ WHERE ($1::bigint IS NULL OR s.seller_id = $1::bigint)
     OR ($3::text = 'pending' AND NOT s.is_comp AND s.payment_status = 'pending' AND s.voided_at IS NULL)
     OR ($3::text = 'paid'    AND NOT s.is_comp AND s.payment_status = 'paid'    AND s.voided_at IS NULL)
     OR ($3::text = 'comp'    AND s.is_comp AND s.voided_at IS NULL)
+    OR ($3::text = 'void'    AND s.voided_at IS NOT NULL)
   )
   AND (
     $4::text IS NULL
@@ -42,21 +58,32 @@ WHERE ($1::bigint IS NULL OR s.seller_id = $1::bigint)
        LIKE '%' || translate(lower($4::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
   )
   AND (
-    $5::timestamptz IS NULL
-    OR (f.starts_at, s.id) > ($5::timestamptz, $6::bigint)
+    $5::integer IS NULL
+    OR (
+      (f.starts_at < now() - interval '3 hours')::integer,
+      (CASE WHEN f.starts_at < now() - interval '3 hours'
+            THEN -extract(epoch FROM f.starts_at)
+            ELSE  extract(epoch FROM f.starts_at) END)::double precision,
+      s.id
+    ) > (
+      $5::integer,
+      $6::double precision,
+      $7::bigint
+    )
   )
-ORDER BY f.starts_at, s.id
-LIMIT $7::integer
+ORDER BY past_rank, fn_rank, s.id
+LIMIT $8::integer
 `
 
 type ListSalesPageParams struct {
-	SellerID     *int64     `json:"seller_id"`
-	FunctionID   *int64     `json:"function_id"`
-	Status       *string    `json:"status"`
-	Q            *string    `json:"q"`
-	CursorStarts *time.Time `json:"cursor_starts"`
-	CursorID     *int64     `json:"cursor_id"`
-	PageSize     int32      `json:"page_size"`
+	SellerID   *int64        `json:"seller_id"`
+	FunctionID *int64        `json:"function_id"`
+	Status     *string       `json:"status"`
+	Q          *string       `json:"q"`
+	CursorPast *int32        `json:"cursor_past"`
+	CursorRank pgtype.Float8 `json:"cursor_rank"`
+	CursorID   *int64        `json:"cursor_id"`
+	PageSize   int32         `json:"page_size"`
 }
 
 type ListSalesPageRow struct {
@@ -73,28 +100,37 @@ type ListSalesPageRow struct {
 	VoidedAt         *time.Time `json:"voided_at"`
 	CreatedAt        time.Time  `json:"created_at"`
 	FunctionID       int64      `json:"function_id"`
+	SellerID         int64      `json:"seller_id"`
 	FunctionVenue    string     `json:"function_venue"`
 	FunctionStartsAt time.Time  `json:"function_starts_at"`
 	FunctionName     *string    `json:"function_name"`
 	SellerName       string     `json:"seller_name"`
 	LastEmailAt      time.Time  `json:"last_email_at"`
+	LastEmailStatus  string     `json:"last_email_status"`
+	Entered          int64      `json:"entered"`
+	PastRank         int32      `json:"past_rank"`
+	FnRank           float64    `json:"fn_rank"`
 }
 
-// Listado escalable de ventas (CAMBIOS_V2 §C3).
+// Listado escalable de ventas (CAMBIOS_V2 §C3, spec C15).
 //
 // Busqueda insensible a mayusculas y acentos con translate() (sin extension
 // unaccent: portable a cualquier Postgres; ver DECISIONS.md). El mismo
 // normalizado se aplica a ambos lados del LIKE.
 //
-// Paginacion por keyset (f.starts_at, s.id): los grupos por funcion quedan
-// contiguos entre paginas.
+// Orden: primero las funciones que todavia se venden (la mas cercana
+// primero), despues las que ya pasaron (la mas reciente primero). Se expresa
+// como dos claves numericas —past_rank y fn_rank— para que el keyset siga
+// siendo monotono: si el orden de los bloques lo decidiera el cliente, cada
+// pagina nueva insertaria bloques arriba de lo que estas leyendo.
 func (q *Queries) ListSalesPage(ctx context.Context, arg ListSalesPageParams) ([]ListSalesPageRow, error) {
 	rows, err := q.db.Query(ctx, listSalesPage,
 		arg.SellerID,
 		arg.FunctionID,
 		arg.Status,
 		arg.Q,
-		arg.CursorStarts,
+		arg.CursorPast,
+		arg.CursorRank,
 		arg.CursorID,
 		arg.PageSize,
 	)
@@ -119,11 +155,224 @@ func (q *Queries) ListSalesPage(ctx context.Context, arg ListSalesPageParams) ([
 			&i.VoidedAt,
 			&i.CreatedAt,
 			&i.FunctionID,
+			&i.SellerID,
 			&i.FunctionVenue,
 			&i.FunctionStartsAt,
 			&i.FunctionName,
 			&i.SellerName,
 			&i.LastEmailAt,
+			&i.LastEmailStatus,
+			&i.Entered,
+			&i.PastRank,
+			&i.FnRank,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const salesByIDs = `-- name: SalesByIDs :many
+SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, u.name AS seller_name
+FROM sales s
+JOIN users u ON s.seller_id = u.id
+WHERE s.id = ANY($1::bigint[])
+`
+
+type SalesByIDsRow struct {
+	ID            int64      `json:"id"`
+	FunctionID    int64      `json:"function_id"`
+	SellerID      int64      `json:"seller_id"`
+	Code          string     `json:"code"`
+	BuyerName     string     `json:"buyer_name"`
+	BuyerEmail    *string    `json:"buyer_email"`
+	BuyerPhone    *string    `json:"buyer_phone"`
+	Quantity      int32      `json:"quantity"`
+	AmountCents   int64      `json:"amount_cents"`
+	PaymentStatus string     `json:"payment_status"`
+	PaymentMethod *string    `json:"payment_method"`
+	IsComp        bool       `json:"is_comp"`
+	Notes         *string    `json:"notes"`
+	VoidedAt      *time.Time `json:"voided_at"`
+	CreatedAt     time.Time  `json:"created_at"`
+	PaidCents     int64      `json:"paid_cents"`
+	SellerName    string     `json:"seller_name"`
+}
+
+// Las ventas de una seleccion, con lo que hace falta para operarlas en lote.
+func (q *Queries) SalesByIDs(ctx context.Context, ids []int64) ([]SalesByIDsRow, error) {
+	rows, err := q.db.Query(ctx, salesByIDs, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SalesByIDsRow{}
+	for rows.Next() {
+		var i SalesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FunctionID,
+			&i.SellerID,
+			&i.Code,
+			&i.BuyerName,
+			&i.BuyerEmail,
+			&i.BuyerPhone,
+			&i.Quantity,
+			&i.AmountCents,
+			&i.PaymentStatus,
+			&i.PaymentMethod,
+			&i.IsComp,
+			&i.Notes,
+			&i.VoidedAt,
+			&i.CreatedAt,
+			&i.PaidCents,
+			&i.SellerName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const salesFilteredSummary = `-- name: SalesFilteredSummary :one
+SELECT
+  COALESCE(SUM(s.quantity) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS tickets_sold,
+  COALESCE(SUM(s.paid_cents) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS paid_cents,
+  COALESCE(SUM(s.amount_cents - s.paid_cents) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS pending_cents,
+  COALESCE(SUM(s.quantity) FILTER (WHERE s.is_comp AND s.voided_at IS NULL), 0)::bigint AS comp_tickets,
+  COUNT(*)::bigint AS total_count
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+JOIN users u ON s.seller_id = u.id
+WHERE ($1::bigint IS NULL OR s.seller_id = $1::bigint)
+  AND ($2::bigint IS NULL OR s.function_id = $2::bigint)
+  AND (
+    $3::text IS NULL
+    OR ($3::text = 'pending' AND NOT s.is_comp AND s.payment_status = 'pending' AND s.voided_at IS NULL)
+    OR ($3::text = 'paid'    AND NOT s.is_comp AND s.payment_status = 'paid'    AND s.voided_at IS NULL)
+    OR ($3::text = 'comp'    AND s.is_comp AND s.voided_at IS NULL)
+    OR ($3::text = 'void'    AND s.voided_at IS NOT NULL)
+  )
+  AND (
+    $4::text IS NULL
+    OR translate(lower(s.buyer_name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
+       LIKE '%' || translate(lower($4::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+    OR translate(lower(u.name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
+       LIKE '%' || translate(lower($4::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+  )
+`
+
+type SalesFilteredSummaryParams struct {
+	SellerID   *int64  `json:"seller_id"`
+	FunctionID *int64  `json:"function_id"`
+	Status     *string `json:"status"`
+	Q          *string `json:"q"`
+}
+
+type SalesFilteredSummaryRow struct {
+	TicketsSold  int64 `json:"tickets_sold"`
+	PaidCents    int64 `json:"paid_cents"`
+	PendingCents int64 `json:"pending_cents"`
+	CompTickets  int64 `json:"comp_tickets"`
+	TotalCount   int64 `json:"total_count"`
+}
+
+// El mismo resumen pero CON el filtro de estado aplicado: la franja de arriba
+// tiene que responder al filtro activo (spec C15 §2.2), y sumarlo en el
+// cliente sobre la pagina cargada daria un numero distinto en cada scroll.
+func (q *Queries) SalesFilteredSummary(ctx context.Context, arg SalesFilteredSummaryParams) (SalesFilteredSummaryRow, error) {
+	row := q.db.QueryRow(ctx, salesFilteredSummary,
+		arg.SellerID,
+		arg.FunctionID,
+		arg.Status,
+		arg.Q,
+	)
+	var i SalesFilteredSummaryRow
+	err := row.Scan(
+		&i.TicketsSold,
+		&i.PaidCents,
+		&i.PendingCents,
+		&i.CompTickets,
+		&i.TotalCount,
+	)
+	return i, err
+}
+
+const salesFunctionTotals = `-- name: SalesFunctionTotals :many
+SELECT
+  f.id AS function_id,
+  COUNT(*)::bigint AS sales,
+  COALESCE(SUM(s.quantity) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS tickets,
+  COALESCE(SUM(s.paid_cents) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS paid_cents,
+  COALESCE(SUM(s.amount_cents - s.paid_cents) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS pending_cents
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+JOIN users u ON s.seller_id = u.id
+WHERE ($1::bigint IS NULL OR s.seller_id = $1::bigint)
+  AND ($2::bigint IS NULL OR s.function_id = $2::bigint)
+  AND (
+    $3::text IS NULL
+    OR ($3::text = 'pending' AND NOT s.is_comp AND s.payment_status = 'pending' AND s.voided_at IS NULL)
+    OR ($3::text = 'paid'    AND NOT s.is_comp AND s.payment_status = 'paid'    AND s.voided_at IS NULL)
+    OR ($3::text = 'comp'    AND s.is_comp AND s.voided_at IS NULL)
+    OR ($3::text = 'void'    AND s.voided_at IS NOT NULL)
+  )
+  AND (
+    $4::text IS NULL
+    OR translate(lower(s.buyer_name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
+       LIKE '%' || translate(lower($4::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+    OR translate(lower(u.name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
+       LIKE '%' || translate(lower($4::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+  )
+GROUP BY f.id
+`
+
+type SalesFunctionTotalsParams struct {
+	SellerID   *int64  `json:"seller_id"`
+	FunctionID *int64  `json:"function_id"`
+	Status     *string `json:"status"`
+	Q          *string `json:"q"`
+}
+
+type SalesFunctionTotalsRow struct {
+	FunctionID   int64 `json:"function_id"`
+	Sales        int64 `json:"sales"`
+	Tickets      int64 `json:"tickets"`
+	PaidCents    int64 `json:"paid_cents"`
+	PendingCents int64 `json:"pending_cents"`
+}
+
+// Subtotales por funcion con el filtro activo (spec C15 §6): el encabezado de
+// cada bloque tiene que decir la verdad de TODA la funcion, no de las filas
+// que se alcanzaron a cargar.
+func (q *Queries) SalesFunctionTotals(ctx context.Context, arg SalesFunctionTotalsParams) ([]SalesFunctionTotalsRow, error) {
+	rows, err := q.db.Query(ctx, salesFunctionTotals,
+		arg.SellerID,
+		arg.FunctionID,
+		arg.Status,
+		arg.Q,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SalesFunctionTotalsRow{}
+	for rows.Next() {
+		var i SalesFunctionTotalsRow
+		if err := rows.Scan(
+			&i.FunctionID,
+			&i.Sales,
+			&i.Tickets,
+			&i.PaidCents,
+			&i.PendingCents,
 		); err != nil {
 			return nil, err
 		}
@@ -142,8 +391,11 @@ SELECT
   -- cobro parcial suma su parte de cada lado, no todo de uno.
   COALESCE(SUM(s.paid_cents) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS paid_cents,
   COALESCE(SUM(s.amount_cents - s.paid_cents) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS pending_cents,
+  COALESCE(SUM(s.quantity) FILTER (WHERE s.is_comp AND s.voided_at IS NULL), 0)::bigint AS comp_tickets,
   COUNT(*)::bigint AS total_count,
-  COUNT(*) FILTER (WHERE s.payment_status = 'pending' AND NOT s.is_comp AND s.voided_at IS NULL)::bigint AS pending_count
+  COUNT(*) FILTER (WHERE s.payment_status = 'pending' AND NOT s.is_comp AND s.voided_at IS NULL)::bigint AS pending_count,
+  COUNT(*) FILTER (WHERE s.payment_status = 'paid' AND NOT s.is_comp AND s.voided_at IS NULL)::bigint AS paid_count,
+  COUNT(*) FILTER (WHERE s.is_comp AND s.voided_at IS NULL)::bigint AS comp_count
 FROM sales s
 JOIN functions f ON s.function_id = f.id
 JOIN users u ON s.seller_id = u.id
@@ -168,8 +420,11 @@ type SalesSummaryRow struct {
 	TicketsSold  int64 `json:"tickets_sold"`
 	PaidCents    int64 `json:"paid_cents"`
 	PendingCents int64 `json:"pending_cents"`
+	CompTickets  int64 `json:"comp_tickets"`
 	TotalCount   int64 `json:"total_count"`
 	PendingCount int64 `json:"pending_count"`
+	PaidCount    int64 `json:"paid_count"`
+	CompCount    int64 `json:"comp_count"`
 }
 
 // Resumen del mismo alcance (vendedora/funcion/busqueda) SIN el filtro de
@@ -181,8 +436,49 @@ func (q *Queries) SalesSummary(ctx context.Context, arg SalesSummaryParams) (Sal
 		&i.TicketsSold,
 		&i.PaidCents,
 		&i.PendingCents,
+		&i.CompTickets,
 		&i.TotalCount,
 		&i.PendingCount,
+		&i.PaidCount,
+		&i.CompCount,
 	)
 	return i, err
+}
+
+const sellersWithSales = `-- name: SellersWithSales :many
+SELECT u.id, u.name, COUNT(*)::bigint AS sales
+FROM sales s
+JOIN functions f ON s.function_id = f.id
+JOIN users u ON s.seller_id = u.id
+WHERE ($1::bigint IS NULL OR s.function_id = $1::bigint)
+GROUP BY u.id, u.name
+ORDER BY u.name
+`
+
+type SellersWithSalesRow struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Sales int64  `json:"sales"`
+}
+
+// Las coristas que aparecen en el alcance actual, con cuantas ventas tienen:
+// alimenta el menu "Todas las vendedoras" con su conteo.
+func (q *Queries) SellersWithSales(ctx context.Context, functionID *int64) ([]SellersWithSalesRow, error) {
+	rows, err := q.db.Query(ctx, sellersWithSales, functionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SellersWithSalesRow{}
+	for rows.Next() {
+		var i SellersWithSalesRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Sales); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

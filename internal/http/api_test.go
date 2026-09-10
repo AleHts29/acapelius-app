@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -221,6 +222,30 @@ func (c *testClient) do(method, path string, body any) apiResponse {
 
 func (c *testClient) get(path string) apiResponse         { return c.do(http.MethodGet, path, nil) }
 func (c *testClient) post(path string, b any) apiResponse { return c.do(http.MethodPost, path, b) }
+
+// rawResponse: para los endpoints que no devuelven JSON (el CSV del export).
+type rawResponse struct {
+	Status int
+	Text   string
+}
+
+func (c *testClient) getRaw(path string) rawResponse {
+	c.t.Helper()
+	req, err := http.NewRequest(http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		c.t.Fatalf("armar request: %v", err)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		c.t.Fatalf("GET %s: %v", path, err)
+	}
+	defer resp.Body.Close()
+	cuerpo, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.t.Fatalf("leer cuerpo: %v", err)
+	}
+	return rawResponse{Status: resp.StatusCode, Text: string(cuerpo)}
+}
 
 func assertStatus(t *testing.T, got apiResponse, want int) {
 	t.Helper()

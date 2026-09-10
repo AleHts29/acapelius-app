@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -125,5 +126,131 @@ func TestListadoEscalable(t *testing.T) {
 	own := carolina.get("/api/sales")
 	if own.Body["summary"].(map[string]any)["total_count"].(float64) != 57 { // 55+Carola+Zulema
 		t.Fatalf("resumen de Carolina: %v", own.Body["summary"])
+	}
+}
+
+// TestVenderC15 cubre lo que agrega la spec C15 del lado del server:
+// subtotales por función, resumen filtrado, estado de entrega, filtro por
+// vendedora, acciones en lote y export.
+func TestVenderC15(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	fnID := setupCatalog(t, admin, 100)
+	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	josefina := createSellerClient(t, env, admin, "Josefina", "jose@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 30)
+	assignQuota(t, admin, fnID, 3, 30)
+
+	venta := func(c *testClient, nombre, email string, cantidad int) float64 {
+		t.Helper()
+		body := map[string]any{"function_id": fnID, "buyer_name": nombre, "quantity": cantidad}
+		if email != "" {
+			body["buyer_email"] = email
+		}
+		resp := c.post("/api/sales", body)
+		assertStatus(t, resp, http.StatusCreated)
+		return resp.Body["sale"].(map[string]any)["id"].(float64)
+	}
+
+	conEmail := venta(carolina, "Con Email", "conemail@demo.acapelius.local", 2)
+	sinEmail := venta(carolina, "Sin Email", "", 1)
+	deJosefina := venta(josefina, "De Josefina", "", 3)
+	markPaid(t, admin, conEmail, "cash")
+
+	// 1. Estado de entrega: la que tiene email quedó enviada (driver log), la
+	//    que no tiene queda en "none". Nunca "opened": no hay webhook.
+	lista := admin.get("/api/sales")
+	assertStatus(t, lista, http.StatusOK)
+	entregas := map[float64]string{}
+	for _, raw := range lista.Body["sales"].([]any) {
+		v := raw.(map[string]any)
+		entregas[v["id"].(float64)] = v["delivery"].(string)
+	}
+	if entregas[conEmail] != "sent" {
+		t.Fatalf("la venta con email tendría que estar enviada; está %q", entregas[conEmail])
+	}
+	if entregas[sinEmail] != "none" {
+		t.Fatalf("la venta sin email tendría que ser 'none'; es %q", entregas[sinEmail])
+	}
+
+	// 2. Subtotales por función: los del bloque, no los de la página.
+	totales := lista.Body["function_totals"].([]any)
+	if len(totales) != 1 {
+		t.Fatalf("una sola función, hay %d bloques de subtotales", len(totales))
+	}
+	bloque := totales[0].(map[string]any)
+	if bloque["sales"].(float64) != 3 || bloque["tickets"].(float64) != 6 {
+		t.Fatalf("subtotales del bloque mal: %v", bloque)
+	}
+	if bloque["paid_cents"].(float64) != 1600000 {
+		t.Fatalf("recaudado del bloque = %v, se esperaban 1600000", bloque["paid_cents"])
+	}
+	if bloque["pending_cents"].(float64) != 3200000 {
+		t.Fatalf("adeudado del bloque = %v, se esperaban 3200000", bloque["pending_cents"])
+	}
+
+	// 3. El resumen filtrado respeta el estado; el otro no (alimenta los chips).
+	deben := admin.get("/api/sales?status=pending")
+	assertStatus(t, deben, http.StatusOK)
+	filtrado := deben.Body["filtered"].(map[string]any)
+	if filtrado["total_count"].(float64) != 2 {
+		t.Fatalf("con filtro 'deben' el resumen tendría que contar 2; contó %v", filtrado["total_count"])
+	}
+	if filtrado["paid_cents"].(float64) != 0 {
+		t.Fatalf("con filtro 'deben' lo cobrado tendría que ser 0; es %v", filtrado["paid_cents"])
+	}
+	sinFiltrar := deben.Body["summary"].(map[string]any)
+	if sinFiltrar["total_count"].(float64) != 3 {
+		t.Fatalf("el summary de los chips tendría que ignorar el filtro; contó %v", sinFiltrar["total_count"])
+	}
+
+	// 4. Filtro por vendedora (solo dirección).
+	soloJose := admin.get(fmt.Sprintf("/api/sales?seller_id=%.0f", sellerID(t, josefina)))
+	assertStatus(t, soloJose, http.StatusOK)
+	ventas := soloJose.Body["sales"].([]any)
+	if len(ventas) != 1 || ventas[0].(map[string]any)["id"].(float64) != deJosefina {
+		t.Fatalf("el filtro por vendedora tendría que dejar solo la de Josefina: %v", ventas)
+	}
+
+	// 5. Cobro en lote: cobra lo que falta y saltea lo que no aplica.
+	lote := admin.post("/api/sales/bulk-payment", map[string]any{
+		"sale_ids": []float64{conEmail, sinEmail, deJosefina}, "method": "cash",
+	})
+	assertStatus(t, lote, http.StatusOK)
+	if lote.Body["charged"].(float64) != 2 {
+		t.Fatalf("tendría que haber cobrado 2 (la tercera ya estaba paga); cobró %v", lote.Body["charged"])
+	}
+	if lote.Body["skipped"].(float64) != 1 {
+		t.Fatalf("tendría que haber salteado 1; salteó %v", lote.Body["skipped"])
+	}
+	despues := admin.get("/api/sales")
+	if despues.Body["filtered"].(map[string]any)["pending_cents"].(float64) != 0 {
+		t.Fatalf("después del lote no tendría que quedar nada por cobrar: %v", despues.Body["filtered"])
+	}
+
+	// 6. Reenvío en lote: informa cuántas se omitieron por no tener email.
+	reenvio := admin.post("/api/sales/bulk-resend", map[string]any{
+		"sale_ids": []float64{conEmail, sinEmail},
+	})
+	assertStatus(t, reenvio, http.StatusOK)
+	if reenvio.Body["sent"].(float64) != 1 || reenvio.Body["no_email"].(float64) != 1 {
+		t.Fatalf("reenvío en lote mal contado: %v", reenvio.Body)
+	}
+
+	// 7. Una corista no puede operar en lote ventas ajenas.
+	assertStatus(t, carolina.post("/api/sales/bulk-payment", map[string]any{
+		"sale_ids": []float64{deJosefina}, "method": "cash",
+	}), http.StatusForbidden)
+
+	// 8. Export: CSV con encabezado y una fila por venta del filtro.
+	csv := admin.getRaw("/api/sales/export")
+	if csv.Status != http.StatusOK {
+		t.Fatalf("export status = %d", csv.Status)
+	}
+	if !strings.Contains(csv.Text, "Comprador") || !strings.Contains(csv.Text, "De Josefina") {
+		t.Fatalf("el CSV no tiene lo que debería: %q", csv.Text)
+	}
+	if lineas := strings.Count(strings.TrimSpace(csv.Text), "\n"); lineas != 3 {
+		t.Fatalf("el CSV tendría que tener encabezado + 3 ventas; tiene %d saltos", lineas)
 	}
 }

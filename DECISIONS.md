@@ -523,3 +523,85 @@ importa saber cuántos de los que vienen no pagaron entrada.
 
 "Ver quiénes compraron" aparece sólo para dirección: Asistencia es una pantalla
 suya, y a la persona de la puerta el botón la mandaría a un redirect.
+
+## Vender: una caja por función (C15)
+
+La tabla larga con bandas adentro obligaba a repetir el nombre de la función en
+cada fila. Ahora cada función es su propia caja, con acento lateral índigo si
+todavía se vende y verde si ya pasó, y el nombre aparece una sola vez arriba.
+Por eso **no existe columna "Función"**: sería la misma palabra cincuenta veces.
+
+Los encabezados de columna se repiten adentro de cada bloque. En un scroll
+largo, un encabezado único allá arriba deja de servir a la tercera función.
+
+**El orden de los bloques lo decide el server.** Primero las que se venden (la
+más cercana primero), después las que pasaron (la más reciente primero). Se
+expresa como dos claves numéricas —`past_rank` y `fn_rank`— para que el keyset
+de la paginación siga siendo monótono: si el orden lo decidiera el cliente,
+cada página nueva insertaría bloques arriba de lo que estás leyendo.
+
+### El chip dice el estado, nada más
+
+`Pagó` · `Debe` · `Cortesía` · `Anulada`, todos con el mismo ancho mínimo y
+pegados a la derecha, así el borde contra el ⋮ es una línea recta. El monto y
+el método viven adentro de un `<small>` que la tabla esconde: ahí el monto ya
+tiene su columna y el método está en el ⋮, y repetirlos era lo que producía
+chips de 46 a 108px. En celular no hay columnas, así que el `<small>` se ve y
+el saldo sigue en el chip.
+
+### La acción rápida tiene su propia columna
+
+Reservada siempre, aunque esté vacía. Si apareciera en el lugar del chip, el
+estado desaparecería justo cuando se lo va a cambiar; si no tuviera columna
+propia, la fila entera se movería al pasar el mouse. Verificado: con y sin
+hover la fila mide 44px y el borde derecho del chip no se mueve un píxel.
+
+### Estado de entrega: tres, no cuatro
+
+`Enviada`, `No llegó` y `Sin email` salen de `email_sends`. **`Abierta` no
+existe**: saber si el comprador abrió el mail necesita un webhook de Resend con
+su secreto de firma y una tabla nueva, y un cuarto estado que la app no puede
+distinguir sería decorativo. La spec lo contempla en §4.2.
+
+### Ordenar carga todo primero
+
+Ordenar por total sobre media lista y llamarlo "ordenado por total" es mentir
+sobre lo que todavía no se cargó. Por eso ordenar es una acción explícita que
+primero termina de traer las páginas que falten (con tope de 20, o sea 1.000
+ventas) y recién después reordena. El orden es por bloque: entre funciones el
+orden lo sigue mandando el server.
+
+### Los subtotales los calcula el server
+
+El encabezado de cada bloque dice la verdad de toda la función, no de las filas
+que se alcanzaron a cargar. Lo mismo la franja de arriba, que además responde
+al filtro activo: hay dos resúmenes, uno con el filtro de estado (la franja) y
+otro sin él (los contadores de los chips, que tienen que seguir diciendo
+cuántas hay de cada tipo aunque estés mirando una sola).
+
+### Acciones en lote
+
+`bulk-payment` cobra lo que falte de cada venta y saltea las anuladas, las
+cortesías y las ya cobradas: en una selección de veinte, que una no aplique no
+puede frenar al resto. Cada cobro entra al historial como cualquier otro —en
+lote o de a una, la venta termina contando lo mismo—. Pide confirmación porque
+mueve plata de verdad, y el método se elige en esa confirmación.
+
+`bulk-resend` informa cuántas se omitieron por no tener email. El export es del
+server y no del cliente para que salga **todo el filtro** y no las filas
+cargadas; acepta `ids` para exportar solo una selección.
+
+La selección múltiple es de escritorio: en un celular la barra flotante tapa la
+lista y compite con la barra de pestañas.
+
+### Lo que quedó afuera
+
+**Virtualizar dentro de un bloque.** El listado paginado ya limita lo montado
+(50 por página, más a medida que scrolleás) y una temporada real tiene decenas
+o pocos cientos de ventas. Virtualizar por bloque recién importa arriba de unas
+500 en una sola función; con la caja por función y el virtualizador de ventana
+no componen sin acrobacias, así que se difiere hasta que haga falta.
+
+**Anular desde el ⋮.** El ítem está, pero abre el drawer en vez de anular:
+anular desde un menú, sin ver la venta entera, es demasiado fácil de hacer sin
+querer. La confirmación vive donde están todos los datos.

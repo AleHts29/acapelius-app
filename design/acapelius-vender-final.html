@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Vender (estado final)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg:#F2F3F5; --sur:#FFFFFF; --alt:#FAFBFC; --ink:#1A1C22; --mut:#7C818C; --line:#E3E5E9;
+    --indigo:#3A3FC4; --indigo-s:#E8E8FA; --carbon:#1A1C22;
+    --ok:#0E7A55; --ok-s:#E2F2EB; --ok-b:#C9E6D9;
+    --warn:#9C6A0C; --warn-s:#F6EEDC; --warn-b:#E7D9B8;
+    --bad:#B3403F; --bad-s:#F7E6E5;
+  }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .page { max-width:1360px; margin:0 auto; padding:44px 20px 90px; }
+  .page > h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(25px,4vw,34px); }
+  .page > h1 span { color:var(--indigo); }
+  .page > p.lead { margin-top:10px; max-width:900px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .page > p.lead b { color:var(--ink); }
+  .fr { margin-top:32px; overflow-x:auto; padding-bottom:8px; }
+  .fr > .cap { font-size:13.5px; font-weight:700; color:#55575E; margin-bottom:11px; }
+  .fr > .cap b { color:var(--ink); }
+
+  .browser { border:1px solid #C3C7CE; border-radius:14px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); background:var(--bg); min-width:1200px; }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome .dots i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:400px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; }
+  .app { display:flex; min-height:700px; position:relative; }
+
+  /* sidebar */
+  .side { width:200px; background:var(--sur); border-right:1px solid var(--line); display:flex; flex-direction:column; flex-shrink:0; }
+  .side .logo { padding:15px 14px 11px; font-family:'Archivo',sans-serif; font-weight:800; letter-spacing:0.2em; font-size:11px; display:flex; align-items:center; gap:7px; }
+  .side .logo .mk { width:19px; height:19px; border-radius:50%; border:1.5px solid var(--indigo); color:var(--indigo); font-size:9px; display:flex; align-items:center; justify-content:center; font-style:italic; }
+  .nav { padding:4px 8px; }
+  .nav a { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:8px; font-size:11.5px; font-weight:700; color:var(--mut); margin-bottom:2px; }
+  .nav a.on { background:var(--indigo-s); color:var(--indigo); }
+  .nav .sec { padding:11px 10px 4px; font-family:'Archivo',sans-serif; font-size:8px; font-weight:800; letter-spacing:0.14em; color:var(--mut); }
+  .nav a .b { margin-left:auto; font-size:8.5px; font-weight:800; padding:2px 6px; border-radius:99px; background:var(--warn-s); color:var(--warn); }
+  .side .grow { flex:1; }
+  .side .me { border-top:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:8px; }
+  .side .me .av { width:23px; height:23px; border-radius:50%; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:9px; }
+  .side .me b { display:block; font-size:11px; } .side .me span { color:var(--mut); font-size:9.5px; }
+
+  .main { flex:1; padding:20px 24px 26px; min-width:0; }
+  .phead { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
+  .phead h2 { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .phead .sub { font-size:11.5px; color:var(--mut); margin-top:3px; }
+
+  .btn { border-radius:9px; padding:9px 14px; font-size:12.5px; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }
+  .btn.pri { background:var(--indigo); color:#fff; }
+  .btn.gh { background:var(--sur); border:1.5px solid var(--line); color:var(--ink); }
+  .btn.xs { padding:6px 10px; font-size:10.5px; border-radius:8px; }
+  .btn.cobrar { background:var(--ok-s); border:1.5px solid var(--ok-b); color:var(--ok); }
+  .btn.link { background:var(--sur); border:1.5px solid var(--line); color:var(--mut); }
+
+  /* franja resumen */
+  .strip { background:var(--sur); border:1px solid var(--line); border-radius:12px; display:grid; grid-template-columns:repeat(4,1fr); margin-bottom:14px; }
+  .strip .s { padding:12px 17px; border-left:1px solid var(--line); }
+  .strip .s:first-child { border-left:0; }
+  .strip .s b { font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; display:block; letter-spacing:-0.01em; }
+  .strip .s b.g { color:var(--ok); } .strip .s b.y { color:var(--warn); }
+  .strip .s span { font-size:9.5px; color:var(--mut); font-weight:800; letter-spacing:0.06em; text-transform:uppercase; margin-top:3px; display:block; }
+
+  /* toolbar */
+  .toolbar { display:flex; align-items:center; gap:9px; margin-bottom:16px; flex-wrap:wrap; }
+  .search { flex:1; min-width:230px; max-width:340px; display:flex; align-items:center; gap:8px; background:var(--sur); border:1.5px solid var(--line); border-radius:10px; padding:9px 12px; font-size:12.5px; color:var(--mut); }
+  .f { font-size:11.5px; font-weight:800; padding:8px 12px; border-radius:99px; border:1.5px solid var(--line); background:var(--sur); color:#5A5D66; white-space:nowrap; }
+  .f.on { background:var(--carbon); border-color:var(--carbon); color:#fff; }
+  .f.onwarn { background:var(--warn); border-color:var(--warn); color:#fff; }
+  .f .chev { color:var(--mut); font-size:9px; margin-left:3px; }
+  .f.on .chev, .f.onwarn .chev { color:rgba(255,255,255,.6); }
+
+  /* bloques por función */
+  .blocks { display:flex; flex-direction:column; gap:20px; }
+  .grp { background:var(--sur); border:1px solid #D7DBE0; border-radius:13px; overflow:hidden; box-shadow:0 6px 18px rgba(26,28,34,.07); }
+  .gband { display:flex; align-items:center; gap:10px; padding:13px 16px; border-bottom:1px solid var(--line); border-left:4px solid var(--indigo); }
+  .gband.done { border-left-color:var(--ok); }
+  .gband .gt { font-family:'Archivo',sans-serif; font-size:11.5px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; }
+  .gband .gd { font-size:10.5px; color:var(--mut); font-weight:700; }
+  .gband .sp { flex:1; }
+  .gband .sub { display:flex; gap:16px; font-size:10.5px; color:var(--mut); font-weight:700; }
+  .gband .sub b { color:var(--ink); font-family:'Archivo',sans-serif; }
+  .gband .sub b.y { color:var(--warn); } .gband .sub b.g { color:var(--ok); }
+  .gband .cl { color:var(--mut); font-size:11px; }
+
+  /* tabla */
+  .th, .tr { display:grid; grid-template-columns:26px 1.7fr 1.1fr 50px 92px 86px 110px 92px 96px 30px; gap:10px; align-items:center; padding:0 14px; }
+  .th { height:32px; background:var(--alt); border-bottom:1px solid var(--line); font-family:'Archivo',sans-serif; font-size:8.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--mut); }
+  .th .r, .tr .r { text-align:right; }
+  .th .srt { color:var(--indigo); }
+  .tr { height:44px; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .tr:last-child { border-bottom:0; }
+  .tr.hov { background:var(--alt); }
+  .tr.sel { background:var(--indigo-s); }
+  .cbx { width:15px; height:15px; border-radius:4px; border:1.5px solid var(--line); background:var(--sur); display:block; }
+  .cbx.on { background:var(--indigo); border-color:var(--indigo); color:#fff; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .who { display:flex; align-items:center; gap:9px; min-width:0; }
+  .who .ini { width:26px; height:26px; border-radius:8px; background:var(--indigo-s); color:var(--indigo); font-family:'Archivo',sans-serif; font-weight:800; font-size:9.5px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .who .tx { min-width:0; }
+  .who .tx b { font-weight:700; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .who .tx span { font-size:10px; color:var(--mut); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+  .dim { color:var(--mut); }
+  .num { font-family:'Archivo',sans-serif; font-weight:800; }
+  .del { font-size:11px; color:var(--mut); display:flex; align-items:center; gap:6px; }
+  .del i { width:6px; height:6px; border-radius:50%; display:block; flex-shrink:0; }
+  .del i.sent { background:var(--ok); } .del i.none { background:var(--warn); } .del i.open { background:var(--indigo); }
+  .stcell { text-align:right; }
+  .pill { font-size:10px; font-weight:800; padding:4px 9px; border-radius:99px; white-space:nowrap; display:inline-block; min-width:70px; text-align:center; }
+  .pill.ok { background:var(--ok-s); color:var(--ok); }
+  .pill.debt { background:var(--warn-s); color:var(--warn); }
+  .pill.comp { background:var(--indigo-s); color:var(--indigo); }
+  .pill.void { background:var(--bad-s); color:var(--bad); text-decoration:line-through; }
+  .actcell { text-align:right; }
+  .kebab { color:var(--mut); font-weight:800; text-align:center; }
+
+  /* barra de selección */
+  .selbar { position:absolute; left:calc(50% + 100px); transform:translateX(-50%); bottom:22px; background:var(--carbon); color:#F2F3F5; border-radius:12px; padding:11px 15px; display:flex; align-items:center; gap:13px; box-shadow:0 14px 34px rgba(26,28,34,.32); }
+  .selbar .n { font-size:12.5px; font-weight:800; }
+  .selbar .sep { width:1px; height:20px; background:rgba(242,243,245,.2); }
+  .selbar .a { font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px; }
+  .selbar .x { color:rgba(242,243,245,.6); font-weight:800; margin-left:2px; }
+
+  /* drawer */
+  .split { display:flex; gap:16px; align-items:flex-start; }
+  .drawer { width:320px; flex-shrink:0; background:var(--sur); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
+  .drawer .dh { padding:15px 17px; border-bottom:1px solid var(--line); }
+  .drawer .dh .top { display:flex; align-items:flex-start; gap:11px; }
+  .drawer .dh .ini { width:38px; height:38px; border-radius:11px; background:var(--indigo-s); color:var(--indigo); font-family:'Archivo',sans-serif; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .drawer .dh b.nm { font-family:'Archivo',sans-serif; font-size:15px; font-weight:800; display:block; }
+  .drawer .dh span.em { font-size:10.5px; color:var(--mut); }
+  .drawer .dh .x { margin-left:auto; color:var(--mut); font-weight:800; }
+  .drawer .meta { margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .drawer .meta .m { background:var(--alt); border:1px solid var(--line); border-radius:9px; padding:8px 10px; }
+  .drawer .meta .m b { font-family:'Archivo',sans-serif; font-size:12.5px; font-weight:800; display:block; }
+  .drawer .meta .m span { font-size:8.5px; color:var(--mut); font-weight:800; letter-spacing:0.06em; text-transform:uppercase; margin-top:2px; display:block; }
+  .drawer .act { display:flex; align-items:center; gap:11px; padding:12px 17px; border-bottom:1px solid var(--line); font-size:13px; font-weight:700; }
+  .drawer .act:last-child { border-bottom:0; }
+  .drawer .act .ic { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; background:var(--bg); }
+  .drawer .act.pri .ic { background:var(--ok-s); }
+  .drawer .act.danger { color:var(--bad); } .drawer .act.danger .ic { background:var(--bad-s); }
+  .drawer .act small { margin-left:auto; font-size:10px; color:var(--mut); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Vender — <span>estado final</span></h1>
+  <p class="lead">Referencia visual para implementar <b>C15</b>. Tres estados de la misma vista: listado por defecto, filtro con selección múltiple, y el drawer de acciones de una venta. Todo con los tokens de Papel pautado y los componentes ya definidos.</p>
+
+  <!-- 1 · LISTADO -->
+  <div class="fr">
+    <div class="cap"><b>1 · Listado por defecto</b> — franja resumen, toolbar, una caja por función con acento lateral (índigo = en venta, verde = pasada), encabezados de columna repetidos dentro de cada bloque y acción rápida al hover (fila de Ana María).</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/ventas</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a><a class="on"><span>🎟</span>Vender <span class="b">10</span></a><a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>📊</span>Dirección</a><a><span>💰</span>Rendiciones <span class="b">6</span></a><a><span>👥</span>Asistencia</a><a><span>📅</span>Temporadas</a><a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Ventas</h2><div class="sub">Temporada 2026 · 50 ventas</div></div>
+            <div class="btn pri">＋ Nueva venta</div>
+          </div>
+
+          <div class="strip">
+            <div class="s"><b>138</b><span>Entradas vendidas</span></div>
+            <div class="s"><b class="g">$1.016.000</b><span>Cobrado</span></div>
+            <div class="s"><b class="y">$218.000</b><span>Por cobrar</span></div>
+            <div class="s"><b>11</b><span>Cortesías</span></div>
+          </div>
+
+          <div class="toolbar">
+            <div class="search">🔍 Buscar comprador o vendedora…</div>
+            <div class="f on">Todas · 50</div>
+            <div class="f">Deben · 10</div>
+            <div class="f">Pagas · 39</div>
+            <div class="f">Cortesías · 11</div>
+            <div class="f">Todas las funciones <span class="chev">▾</span></div>
+            <div class="f">Todas las vendedoras <span class="chev">▾</span></div>
+          </div>
+
+          <div class="blocks">
+
+            <div class="grp">
+              <div class="gband">
+                <span class="cl">▾</span>
+                <span class="gt">Cierre de temporada</span>
+                <span class="gd">Dom 13 sept, 21:00 · en venta</span>
+                <span class="sp"></span>
+                <span class="sub"><span>6 ventas</span><span><b>14</b> entradas</span><span>Recaudó <b>$36.000</b></span><span>Debe <b class="y">$96.000</b></span></span>
+              </div>
+              <div class="th">
+                <span><span class="cbx"></span></span>
+                <span>Comprador</span><span>Vendedora</span>
+                <span class="r">Entr.</span><span class="r">Total <span class="srt">↓</span></span>
+                <span>Vendida</span><span>Entrada</span><span class="r">Estado</span><span></span><span></span>
+              </div>
+              <div class="tr">
+                <span><span class="cbx"></span></span>
+                <span class="who"><span class="ini">RS</span><span class="tx"><b>Rosa Suárez</b><span>rosasuarez@gmail.com</span></span></span>
+                <span class="dim">Carolina Vega</span>
+                <span class="r num">4</span><span class="r num">$40.000</span>
+                <span class="dim">hace 6 d</span>
+                <span class="del"><i class="open"></i> Abierta</span>
+                <span class="stcell"><span class="pill debt">Debe</span></span>
+                <span class="actcell"></span>
+                <span class="kebab">⋮</span>
+              </div>
+              <div class="tr">
+                <span><span class="cbx"></span></span>
+                <span class="who"><span class="ini">LM</span><span class="tx"><b>Lucía Molina</b><span>luciamolina@gmail.com</span></span></span>
+                <span class="dim">Carolina Vega</span>
+                <span class="r num">2</span><span class="r num">$20.000</span>
+                <span class="dim">hace 3 d</span>
+                <span class="del"><i class="sent"></i> Enviada</span>
+                <span class="stcell"><span class="pill ok">Pagó</span></span>
+                <span class="actcell"></span>
+                <span class="kebab">⋮</span>
+              </div>
+              <div class="tr">
+                <span><span class="cbx"></span></span>
+                <span class="who"><span class="ini">GT</span><span class="tx"><b>Graciela Torres</b><span>Sin email</span></span></span>
+                <span class="dim">Beatriz Coria</span>
+                <span class="r num">1</span><span class="r num">$10.000</span>
+                <span class="dim">hace 2 d</span>
+                <span class="del"><i class="none"></i> Sin email</span>
+                <span class="stcell"><span class="pill debt">Debe</span></span>
+                <span class="actcell"></span>
+                <span class="kebab">⋮</span>
+              </div>
+            </div>
+
+            <div class="grp">
+              <div class="gband done">
+                <span class="cl">▾</span>
+                <span class="gt">Función de apertura</span>
+                <span class="gd">Vie 14 ago, 21:00 · hecha</span>
+                <span class="sp"></span>
+                <span class="sub"><span>15 ventas</span><span><b>38</b> entradas</span><span>Recaudó <b>$296.000</b></span><span>Debe <b class="y">$32.000</b></span></span>
+              </div>
+              <div class="th">
+                <span><span class="cbx"></span></span>
+                <span>Comprador</span><span>Vendedora</span>
+                <span class="r">Entr.</span><span class="r">Total</span>
+                <span>Vendida</span><span>Entrada</span><span class="r">Estado</span><span></span><span></span>
+              </div>
+              <div class="tr">
+                <span><span class="cbx"></span></span>
+                <span class="who"><span class="ini">MD</span><span class="tx"><b>María Dutra</b><span>maria.dutra@gmail.com</span></span></span>
+                <span class="dim">Carolina Vega</span>
+                <span class="r num">3</span><span class="r num">$24.000</span>
+                <span class="dim">14 ago</span>
+                <span class="del"><i class="open"></i> Abierta</span>
+                <span class="stcell"><span class="pill ok">Pagó</span></span>
+                <span class="actcell"></span>
+                <span class="kebab">⋮</span>
+              </div>
+              <div class="tr">
+                <span><span class="cbx"></span></span>
+                <span class="who"><span class="ini">PB</span><span class="tx"><b>Padre Benítez</b><span>Sin email</span></span></span>
+                <span class="dim">Eli</span>
+                <span class="r num">2</span><span class="r dim">—</span>
+                <span class="dim">12 ago</span>
+                <span class="del"><i class="none"></i> Sin email</span>
+                <span class="stcell"><span class="pill comp">Cortesía</span></span>
+                <span class="actcell"><span class="btn link xs">Copiar link</span></span>
+                <span class="kebab">⋮</span>
+              </div>
+              <div class="tr hov">
+                <span><span class="cbx"></span></span>
+                <span class="who"><span class="ini">AM</span><span class="tx"><b>Ana María</b><span>anamaria58@gmail.com</span></span></span>
+                <span class="dim">Alejandro</span>
+                <span class="r num">1</span><span class="r num">$8.000</span>
+                <span class="dim">hace 26 d</span>
+                <span class="del"><i class="sent"></i> Enviada</span>
+                <span class="stcell"><span class="pill debt">Debe</span></span>
+                <span class="actcell"><span class="btn cobrar xs">Cobrar</span></span>
+                <span class="kebab">⋮</span>
+              </div>
+              <div class="tr">
+                <span><span class="cbx"></span></span>
+                <span class="who"><span class="ini">FS</span><span class="tx"><b>Fran Sponton</b><span>fransponton@gmail.com</span></span></span>
+                <span class="dim">Alejandro</span>
+                <span class="r num">3</span><span class="r num">$24.000</span>
+                <span class="dim">hace 26 d</span>
+                <span class="del"><i class="none"></i> No llegó</span>
+                <span class="stcell"><span class="pill debt">Debe</span></span>
+                <span class="actcell"></span>
+                <span class="kebab">⋮</span>
+              </div>
+              <div class="tr">
+                <span><span class="cbx"></span></span>
+                <span class="who"><span class="ini">CS</span><span class="tx"><b>Clara Suárez</b><span>clarasuarez@gmail.com</span></span></span>
+                <span class="dim">Marta Ledesma</span>
+                <span class="r num">2</span><span class="r num">$16.000</span>
+                <span class="dim">13 ago</span>
+                <span class="del"><i class="sent"></i> Enviada</span>
+                <span class="stcell"><span class="pill void">Anulada</span></span>
+                <span class="actcell"></span>
+                <span class="kebab">⋮</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 · SELECCIÓN -->
+  <div class="fr">
+    <div class="cap"><b>2 · Filtro "Deben" + selección múltiple</b> — el chip activo va en ámbar (no en carbón), el resumen y los subtotales se recalculan, y la barra flotante trae las acciones masivas.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/ventas?estado=deben</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a><a class="on"><span>🎟</span>Vender <span class="b">10</span></a><a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>📊</span>Dirección</a><a><span>💰</span>Rendiciones <span class="b">6</span></a><a><span>👥</span>Asistencia</a><a><span>📅</span>Temporadas</a><a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Ventas</h2><div class="sub">Temporada 2026 · 10 ventas con pago pendiente</div></div>
+            <div class="btn pri">＋ Nueva venta</div>
+          </div>
+
+          <div class="strip">
+            <div class="s"><b>27</b><span>Entradas vendidas</span></div>
+            <div class="s"><b class="g">$0</b><span>Cobrado</span></div>
+            <div class="s"><b class="y">$218.000</b><span>Por cobrar</span></div>
+            <div class="s"><b>0</b><span>Cortesías</span></div>
+          </div>
+
+          <div class="toolbar">
+            <div class="search">🔍 Buscar comprador o vendedora…</div>
+            <div class="f">Todas · 50</div>
+            <div class="f onwarn">Deben · 10</div>
+            <div class="f">Pagas · 39</div>
+            <div class="f">Cortesías · 11</div>
+            <div class="f">Todas las funciones <span class="chev">▾</span></div>
+            <div class="f">Todas las vendedoras <span class="chev">▾</span></div>
+          </div>
+
+          <div class="blocks">
+            <div class="grp">
+              <div class="gband">
+                <span class="cl">▾</span>
+                <span class="gt">Cierre de temporada</span>
+                <span class="gd">Dom 13 sept, 21:00 · en venta</span>
+                <span class="sp"></span>
+                <span class="sub"><span>2 ventas</span><span><b>5</b> entradas</span><span>Debe <b class="y">$50.000</b></span></span>
+              </div>
+              <div class="th">
+                <span><span class="cbx on">✓</span></span>
+                <span>Comprador</span><span>Vendedora</span>
+                <span class="r">Entr.</span><span class="r">Total</span>
+                <span>Vendida <span class="srt">↓</span></span><span>Entrada</span><span class="r">Estado</span><span></span><span></span>
+              </div>
+              <div class="tr sel">
+                <span><span class="cbx on">✓</span></span>
+                <span class="who"><span class="ini">RS</span><span class="tx"><b>Rosa Suárez</b><span>rosasuarez@gmail.com</span></span></span>
+                <span class="dim">Carolina Vega</span>
+                <span class="r num">4</span><span class="r num">$40.000</span>
+                <span class="dim">hace 6 d</span>
+                <span class="del"><i class="open"></i> Abierta</span>
+                <span class="stcell"><span class="pill debt">Debe</span></span>
+                <span class="actcell"></span>
+                <span class="kebab">⋮</span>
+              </div>
+              <div class="tr sel">
+                <span><span class="cbx on">✓</span></span>
+                <span class="who"><span class="ini">GT</span><span class="tx"><b>Graciela Torres</b><span>Sin email</span></span></span>
+                <span class="dim">Beatriz Coria</span>
+                <span class="r num">1</span><span class="r num">$10.000</span>
+                <span class="dim">hace 2 d</span>
+                <span class="del"><i class="none"></i> Sin email</span>
+                <span class="stcell"><span class="pill debt">Debe</span></span>
+                <span class="actcell"></span>
+                <span class="kebab">⋮</span>
+              </div>
+            </div>
+
+            <div class="grp">
+              <div class="gband done">
+                <span class="cl">▾</span>
+                <span class="gt">Función de apertura</span>
+                <span class="gd">Vie 14 ago, 21:00 · hecha</span>
+                <span class="sp"></span>
+                <span class="sub"><span>2 ventas</span><span><b>4</b> entradas</span><span>Debe <b class="y">$32.000</b></span></span>
+              </div>
+              <div class="th">
+                <span><span class="cbx"></span></span>
+                <span>Comprador</span><span>Vendedora</span>
+                <span class="r">Entr.</span><span class="r">Total</span>
+                <span>Vendida</span><span>Entrada</span><span class="r">Estado</span><span></span><span></span>
+              </div>
+              <div class="tr sel">
+                <span><span class="cbx on">✓</span></span>
+                <span class="who"><span class="ini">AM</span><span class="tx"><b>Ana María</b><span>anamaria58@gmail.com</span></span></span>
+                <span class="dim">Alejandro</span>
+                <span class="r num">1</span><span class="r num">$8.000</span>
+                <span class="dim">hace 26 d</span>
+                <span class="del"><i class="sent"></i> Enviada</span>
+                <span class="stcell"><span class="pill debt">Debe</span></span>
+                <span class="actcell"></span>
+                <span class="kebab">⋮</span>
+              </div>
+              <div class="tr">
+                <span><span class="cbx"></span></span>
+                <span class="who"><span class="ini">FS</span><span class="tx"><b>Fran Sponton</b><span>fransponton@gmail.com</span></span></span>
+                <span class="dim">Alejandro</span>
+                <span class="r num">3</span><span class="r num">$24.000</span>
+                <span class="dim">hace 26 d</span>
+                <span class="del"><i class="none"></i> No llegó</span>
+                <span class="stcell"><span class="pill debt">Debe</span></span>
+                <span class="actcell"></span>
+                <span class="kebab">⋮</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="selbar">
+            <span class="n">3 ventas · $58.000</span>
+            <span class="sep"></span>
+            <span class="a">💵 Marcar como pagadas</span>
+            <span class="sep"></span>
+            <span class="a">✉ Reenviar entradas</span>
+            <span class="sep"></span>
+            <span class="a">⤓ Exportar</span>
+            <span class="x">✕</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 · DRAWER -->
+  <div class="fr">
+    <div class="cap"><b>3 · Drawer de una venta</b> — se abre al hacer click en la fila (en mobile es bottom sheet, mismo componente). El método de pago vive acá, no en el chip.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/ventas</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a><a class="on"><span>🎟</span>Vender <span class="b">10</span></a><a><span>⛶</span>Puerta</a>
+            <div class="sec">DIRECCIÓN</div>
+            <a><span>📊</span>Dirección</a><a><span>💰</span>Rendiciones <span class="b">6</span></a><a><span>👥</span>Asistencia</a><a><span>📅</span>Temporadas</a><a><span>🎤</span>Equipo</a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Ventas</h2><div class="sub">Temporada 2026 · 50 ventas</div></div>
+            <div class="btn pri">＋ Nueva venta</div>
+          </div>
+
+          <div class="split">
+            <div style="flex:1; min-width:0;">
+              <div class="blocks">
+                <div class="grp">
+                  <div class="gband done">
+                    <span class="cl">▾</span>
+                    <span class="gt">Función de apertura</span>
+                    <span class="gd">Vie 14 ago, 21:00 · hecha</span>
+                    <span class="sp"></span>
+                    <span class="sub"><span>15 ventas</span><span>Debe <b class="y">$32.000</b></span></span>
+                  </div>
+                  <div class="th" style="grid-template-columns:26px 1.7fr 1.1fr 50px 92px 92px 30px;">
+                    <span><span class="cbx"></span></span>
+                    <span>Comprador</span><span>Vendedora</span>
+                    <span class="r">Entr.</span><span class="r">Total</span><span class="r">Estado</span><span></span>
+                  </div>
+                  <div class="tr sel" style="grid-template-columns:26px 1.7fr 1.1fr 50px 92px 92px 30px;">
+                    <span><span class="cbx"></span></span>
+                    <span class="who"><span class="ini">MD</span><span class="tx"><b>María Dutra</b><span>maria.dutra@gmail.com</span></span></span>
+                    <span class="dim">Carolina Vega</span>
+                    <span class="r num">3</span><span class="r num">$24.000</span>
+                    <span class="stcell"><span class="pill ok">Pagó</span></span>
+                    <span class="kebab">⋮</span>
+                  </div>
+                  <div class="tr" style="grid-template-columns:26px 1.7fr 1.1fr 50px 92px 92px 30px;">
+                    <span><span class="cbx"></span></span>
+                    <span class="who"><span class="ini">PG</span><span class="tx"><b>Pedro Gómez</b><span>pgomez@hotmail.com</span></span></span>
+                    <span class="dim">Carolina Vega</span>
+                    <span class="r num">2</span><span class="r num">$16.000</span>
+                    <span class="stcell"><span class="pill ok">Pagó</span></span>
+                    <span class="kebab">⋮</span>
+                  </div>
+                  <div class="tr" style="grid-template-columns:26px 1.7fr 1.1fr 50px 92px 92px 30px;">
+                    <span><span class="cbx"></span></span>
+                    <span class="who"><span class="ini">AM</span><span class="tx"><b>Ana María</b><span>anamaria58@gmail.com</span></span></span>
+                    <span class="dim">Alejandro</span>
+                    <span class="r num">1</span><span class="r num">$8.000</span>
+                    <span class="stcell"><span class="pill debt">Debe</span></span>
+                    <span class="kebab">⋮</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="drawer">
+              <div class="dh">
+                <div class="top">
+                  <div class="ini">MD</div>
+                  <div>
+                    <b class="nm">María Dutra</b>
+                    <span class="em">maria.dutra@gmail.com</span>
+                  </div>
+                  <span class="x">✕</span>
+                </div>
+                <div class="meta">
+                  <div class="m"><b>3</b><span>Entradas</span></div>
+                  <div class="m"><b>$24.000</b><span>Total</span></div>
+                  <div class="m"><b>14 ago</b><span>Vendida</span></div>
+                  <div class="m"><b>Carolina</b><span>Vendedora</span></div>
+                </div>
+              </div>
+              <div class="act pri"><div class="ic">💵</div> Marcar pagó — efectivo</div>
+              <div class="act pri"><div class="ic">🏦</div> Marcar pagó — transferencia</div>
+              <div class="act"><div class="ic">🔗</div> Copiar link de la entrada</div>
+              <div class="act"><div class="ic">✉️</div> Reenviar email <small>hace 3 días</small></div>
+              <div class="act"><div class="ic">👥</div> Ver ingresos <small>2 de 3 entraron</small></div>
+              <div class="act danger"><div class="ic">✕</div> Anular venta</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

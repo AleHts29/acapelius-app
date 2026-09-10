@@ -188,19 +188,47 @@ export interface SaleListItem {
   function_venue: string
   function_starts_at: string
   function_name: string | null
+  seller_id: number
   seller_name: string
   last_email_at: string | null
+  /** Estado de entrega: `sent` llegó al proveedor, `failed` no salió,
+   *  `none` la venta no tiene email. "Abierta" no existe: sin webhook de
+   *  Resend la app no puede saberlo (spec C15 §4.2). */
+  delivery: 'sent' | 'failed' | 'none'
+  /** Cuántas de sus entradas ya ingresaron por la puerta. */
+  entered: number
 }
 
 export interface SalesSummary {
   tickets_sold: number
   paid_cents: number
   pending_cents: number
+  comp_tickets: number
   total_count: number
   pending_count: number
+  paid_count: number
+  comp_count: number
 }
 
-export type SaleStatusFilter = 'pending' | 'paid' | 'comp'
+/** El mismo resumen pero con el filtro de estado aplicado. */
+export interface SalesFilteredSummary {
+  tickets_sold: number
+  paid_cents: number
+  pending_cents: number
+  comp_tickets: number
+  total_count: number
+}
+
+/** Subtotales del encabezado de un bloque de función. */
+export interface SalesFunctionTotals {
+  function_id: number
+  sales: number
+  tickets: number
+  paid_cents: number
+  pending_cents: number
+}
+
+export type SaleStatusFilter = 'pending' | 'paid' | 'comp' | 'void'
 
 export interface NewSaleInput {
   function_id: number
@@ -507,24 +535,39 @@ export const api = {
       '/sales',
       input,
     ),
-  listSales: (opts?: {
-    mine?: boolean
-    functionId?: number
-    q?: string
-    status?: SaleStatusFilter
-    cursor?: string
-  }) => {
-    const params = new URLSearchParams()
-    if (opts?.mine) params.set('mine', '1')
-    if (opts?.functionId !== undefined) params.set('function_id', String(opts.functionId))
-    if (opts?.q) params.set('q', opts.q)
-    if (opts?.status) params.set('status', opts.status)
+  listSales: (opts?: SalesQuery & { cursor?: string }) => {
+    const params = salesParams(opts)
     if (opts?.cursor) params.set('cursor', opts.cursor)
     const qs = params.toString()
-    return request<{ sales: SaleListItem[]; summary: SalesSummary; next_cursor?: string }>(
+    return request<{
+      sales: SaleListItem[]
+      summary: SalesSummary
+      filtered: SalesFilteredSummary
+      function_totals: SalesFunctionTotals[]
+      next_cursor?: string
+    }>('GET', qs ? `/sales?${qs}` : '/sales')
+  },
+  sellersWithSales: (functionId?: number) =>
+    request<{ sellers: Array<{ id: number; name: string; sales: number }> }>(
       'GET',
-      qs ? `/sales?${qs}` : '/sales',
-    )
+      functionId === undefined ? '/reports/sellers' : `/reports/sellers?function_id=${functionId}`,
+    ),
+  bulkPayment: (saleIds: number[], method: PaymentMethod) =>
+    request<{ charged: number; skipped: number; amount_cents: number }>(
+      'POST',
+      '/sales/bulk-payment',
+      { sale_ids: saleIds, method },
+    ),
+  bulkResend: (saleIds: number[]) =>
+    request<{ sent: number; failed: number; no_email: number }>('POST', '/sales/bulk-resend', {
+      sale_ids: saleIds,
+    }),
+  /** URL del CSV. Se abre en una pestaña: el navegador maneja la descarga. */
+  salesExportURL: (opts?: SalesQuery & { ids?: number[] }) => {
+    const params = salesParams(opts)
+    if (opts?.ids && opts.ids.length > 0) params.set('ids', opts.ids.join(','))
+    const qs = params.toString()
+    return `/api/sales/export${qs ? `?${qs}` : ''}`
   },
   updateSalePayment: (id: number, status: PaymentStatus, method?: PaymentMethod) =>
     request<{ sale: Sale }>('PATCH', `/sales/${id}`, {
@@ -767,6 +810,25 @@ export interface Home {
  * antes tomaban `seasons[0]` — la mas nueva — y crear una temporada nueva
  * dejaba Rendiciones en cero con plata sin rendir.
  */
+/** Los filtros del listado de ventas, compartidos por la lista y el export. */
+export interface SalesQuery {
+  mine?: boolean
+  functionId?: number
+  sellerId?: number
+  q?: string
+  status?: SaleStatusFilter
+}
+
+function salesParams(opts?: SalesQuery): URLSearchParams {
+  const params = new URLSearchParams()
+  if (opts?.mine) params.set('mine', '1')
+  if (opts?.functionId !== undefined) params.set('function_id', String(opts.functionId))
+  if (opts?.sellerId !== undefined) params.set('seller_id', String(opts.sellerId))
+  if (opts?.q) params.set('q', opts.q)
+  if (opts?.status) params.set('status', opts.status)
+  return params
+}
+
 export function activeSeason(seasons: Season[] | undefined): Season | undefined {
   if (!seasons || seasons.length === 0) return undefined
   return seasons.find((s) => s.is_active) ?? seasons[0]

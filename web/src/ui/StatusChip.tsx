@@ -15,6 +15,11 @@ export function Chip({ tone, children }: { tone: ChipTone; children: React.React
  * Chip de estado de una venta, derivado siempre con la misma regla. Lo que
  * muestra cuando falta plata es el SALDO, no el total: con cobros parciales
  * una venta de $24.000 con $16.000 cobrados debe $8.000.
+ *
+ * El monto y el método van adentro de un <small> que la tabla de escritorio
+ * esconde (spec C15 §4.1): ahí el monto ya tiene su columna y el método vive
+ * en el ⋮, y repetirlos daba chips de 46 a 108px con el borde dentado. En
+ * celular no hay columnas, así que el saldo se queda en el chip.
  */
 export function SaleChip({
   sale,
@@ -25,9 +30,17 @@ export function SaleChip({
   if (sale.is_comp) return <Chip tone="blue">Cortesía</Chip>
   const falta = sale.amount_cents - sale.paid_cents
   if (falta <= 0) {
-    return <Chip tone="ok">{sale.payment_method === 'transfer' ? 'Pagó (transf.)' : 'Pagó'}</Chip>
+    return (
+      <Chip tone="ok">
+        Pagó{sale.payment_method === 'transfer' && <small> (transf.)</small>}
+      </Chip>
+    )
   }
-  return <Chip tone="warn">Debe {formatMoney(falta)}</Chip>
+  return (
+    <Chip tone="warn">
+      Debe <small>{formatMoney(falta)}</small>
+    </Chip>
+  )
 }
 
 /** Chip de saldo a rendir de una corista. */
