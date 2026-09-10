@@ -117,13 +117,16 @@ export function tabsFor(role: Role): NavItem[] {
 }
 
 /**
- * Cuál de los ítems está activo. Gana el más específico: parada en
- * /panel/rendiciones se prende Rendiciones, no Dirección, aunque las dos
- * coincidan. En el celular sólo existe el primer nivel, así que ahí gana
- * Dirección igual.
+ * Cuál de los ítems está activo. Gana el del segundo nivel: parada en
+ * /usuarios se prende Equipo, no Dirección, aunque las dos coincidan —
+ * Dirección matchea todo el panel a propósito, para la barra del celular,
+ * donde el segundo nivel no existe.
+ *
+ * Antes esto desempataba por el largo de `to`, que no dice nada sobre cuán
+ * específico fue el match: "/direccion" tiene diez caracteres y "/usuarios"
+ * nueve, así que estando en Equipo se prendía Dirección.
  */
 export function activeItem(items: NavItem[], path: string): NavItem | undefined {
-  return items
-    .filter((item) => item.matches(path))
-    .sort((a, b) => b.to.length - a.to.length)[0]
+  const coinciden = items.filter((item) => item.matches(path))
+  return coinciden.find((item) => item.section !== undefined) ?? coinciden[0]
 }
