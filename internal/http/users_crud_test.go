@@ -28,21 +28,32 @@ func TestCRUDDeCoristas(t *testing.T) {
 		t.Fatalf("edicion incompleta: %v", user)
 	}
 
-	// Baja logica: desactivada no puede entrar (mismo error que credencial mala).
+	// Sacarla de la temporada no le saca la cuenta: entra igual, pero se queda
+	// sin rol y no puede vender. Su historial de otras temporadas es lo unico
+	// que le queda para mirar.
 	tempPassword, _ := created.Body["temp_password"].(string)
 	assertStatus(t, admin.do(http.MethodPatch, path, map[string]any{
 		"name": "Carolina Perez", "email": "carop@acapelius.test", "role": "seller", "is_active": false,
 	}), http.StatusOK)
-	assertErrorCode(t, env.client(t).post("/api/auth/login", map[string]string{
+	afuera := env.client(t)
+	fueraLogin := afuera.post("/api/auth/login", map[string]string{
 		"email": "carop@acapelius.test", "password": tempPassword,
-	}), http.StatusUnauthorized, "invalid_credentials")
+	})
+	assertStatus(t, fueraLogin, http.StatusOK)
+	if rol := fueraLogin.Body["user"].(map[string]any)["role"]; rol != "" {
+		t.Fatalf("sin participar de la temporada no tendria que tener rol; tiene %v", rol)
+	}
+	assertStatus(t, afuera.post("/api/auth/change-password", map[string]string{
+		"current_password": tempPassword, "new_password": "afuera-del-coro",
+	}), http.StatusOK)
+	assertStatus(t, afuera.get("/api/reports/attention?season_id=1"), http.StatusForbidden)
 
-	// Reactivada vuelve a entrar.
+	// Reincorporada vuelve a tener su rol.
 	assertStatus(t, admin.do(http.MethodPatch, path, map[string]any{
 		"name": "Carolina Perez", "email": "carop@acapelius.test", "role": "seller", "is_active": true,
 	}), http.StatusOK)
 	assertStatus(t, env.client(t).post("/api/auth/login", map[string]string{
-		"email": "carop@acapelius.test", "password": tempPassword,
+		"email": "carop@acapelius.test", "password": "afuera-del-coro",
 	}), http.StatusOK)
 
 	// El admin no puede auto-bloquearse: ni desactivarse ni dejar de ser admin.
@@ -145,7 +156,7 @@ func TestInvitacionesDelEquipo(t *testing.T) {
 	}
 
 	var josefinaRow map[string]any
-	for _, raw := range admin.get("/api/users").Body["users"].([]any) {
+	for _, raw := range admin.get("/api/users").Body["members"].([]any) {
 		if u := raw.(map[string]any); u["email"] == "jose@acapelius.test" {
 			josefinaRow = u
 		}

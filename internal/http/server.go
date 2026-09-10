@@ -121,15 +121,23 @@ func (s *Server) Handler() http.Handler {
 				ready.Get("/seasons", s.handleListSeasons)
 				ready.Get("/functions", s.handleListFunctions)
 
+				// Mirar lo propio: quien este año no esta en el coro igual
+				// entra a ver sus ventas y su rendicion.
+				ready.Group(func(historia chi.Router) {
+					historia.Use(s.auth.RequireHistory)
+					historia.Get("/sales", s.handleListSales)
+					historia.Get("/sales/export", s.handleExportSales)
+					historia.Get("/reports/settlements", s.handleSettlementsReport)
+					historia.Get("/settlements", s.handleListSettlements)
+				})
+
 				ready.Group(func(seller chi.Router) {
 					seller.Use(auth.RequireRole(domain.RoleSeller))
 					seller.Post("/sales", s.handleCreateSale)
-					seller.Get("/sales", s.handleListSales)
 					seller.Patch("/sales/{id}", s.handleUpdateSalePayment)
 					seller.Post("/sales/{id}/resend-email", s.handleResendEmail)
 					seller.Post("/sales/bulk-payment", s.handleBulkPayment)
 					seller.Post("/sales/bulk-resend", s.handleBulkResend)
-					seller.Get("/sales/export", s.handleExportSales)
 					seller.Get("/sales/{id}/payments", s.handleListSalePayments)
 					seller.Post("/sales/{id}/payments", s.handleCreateSalePayment)
 					seller.Delete("/sales/{id}/payments/{paymentID}", s.handleDeleteSalePayment)
@@ -145,14 +153,6 @@ func (s *Server) Handler() http.Handler {
 					door.Post("/checkins/sync", s.handleSyncCheckins)
 				})
 
-				// El reporte de rendiciones tambien lo consulta la vendedora
-				// (ve solo su fila: su saldo a rendir, spec §3).
-				ready.Group(func(sellerReports chi.Router) {
-					sellerReports.Use(auth.RequireRole(domain.RoleSeller))
-					sellerReports.Get("/reports/settlements", s.handleSettlementsReport)
-					sellerReports.Get("/settlements", s.handleListSettlements)
-				})
-
 				ready.Group(func(admin chi.Router) {
 					admin.Use(auth.RequireRole(domain.RoleAdmin))
 					admin.Post("/users", s.handleCreateUser)
@@ -164,6 +164,8 @@ func (s *Server) Handler() http.Handler {
 					admin.Put("/functions/{id}/allocations", s.handlePutAllocations)
 					admin.Post("/seasons", s.handleCreateSeason)
 					admin.Post("/seasons/{id}/activate", s.handleActivateSeason)
+					admin.Post("/seasons/{id}/members", s.handleAddMember)
+					admin.Delete("/seasons/{id}/members/{userId}", s.handleRemoveMember)
 					admin.Post("/functions", s.handleCreateFunction)
 					admin.Patch("/functions/{id}", s.handleUpdateFunction)
 					admin.Delete("/functions/{id}", s.handleDeleteFunction)

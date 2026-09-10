@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/ale-hts/acapelius/internal/db/sqlcgen"
 
 	"github.com/ale-hts/acapelius/internal/auth"
 	"github.com/ale-hts/acapelius/internal/domain"
@@ -173,15 +176,269 @@ func (s *Server) resetUserPassword(w http.ResponseWriter, r *http.Request) (*dom
 	return user, password, true
 }
 
-type listUsersResponse struct {
-	Users []domain.User `json:"users"`
+// --- Equipo por temporada (spec acapelius-equipo) ---------------------------
+
+// teamMember es una fila de Equipo: quien es, que rol tiene ESTA temporada y
+// que hizo en ella.
+type teamMember struct {
+	ID          int64      `json:"id"`
+	Name        string     `json:"name"`
+	Email       string     `json:"email"`
+	Role        string     `json:"role"`
+	JoinedAt    time.Time  `json:"joined_at"`
+	LeftAt      *time.Time `json:"left_at"`
+	LastLoginAt *time.Time `json:"last_login_at"`
+
+	TicketsSold  int64 `json:"tickets_sold"`
+	Assigned     int64 `json:"assigned"`
+	BalanceCents int64 `json:"balance_cents"`
+	Checkins     int64 `json:"checkins"`
+	// Cuantas temporadas lleva, contando esta.
+	Seasons int64 `json:"seasons"`
 }
 
+// formerMember es alguien que participo antes pero no de esta temporada.
+type formerMember struct {
+	ID              int64      `json:"id"`
+	Name            string     `json:"name"`
+	Email           string     `json:"email"`
+	LastLoginAt     *time.Time `json:"last_login_at"`
+	LastSeasonName  string     `json:"last_season_name"`
+	LastRole        string     `json:"last_role"`
+	LastTicketsSold int64      `json:"last_tickets_sold"`
+}
+
+type teamResponse struct {
+	Members []teamMember   `json:"members"`
+	Former  []formerMember `json:"former"`
+	Summary struct {
+		Active    int64 `json:"active"`
+		Pending   int64 `json:"pending"`
+		LeftChoir int64 `json:"left_choir"`
+		Total     int64 `json:"total"`
+		// Los agregados que muestra la franja.
+		TicketsSold  int64 `json:"tickets_sold"`
+		BalanceCents int64 `json:"balance_cents"`
+	} `json:"summary"`
+}
+
+// handleListUsers: GET /api/users?season_id= — el equipo de una temporada.
+// Sin season_id, el de la que esta en curso.
 func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := s.auth.ListUsers(r.Context())
+	ctx := r.Context()
+
+	var seasonID int64
+	if raw := r.URL.Query().Get("season_id"); raw != "" {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "season_id tiene que ser un numero.")
+			return
+		}
+		seasonID = id
+	} else {
+		season, err := s.queries.GetActiveSeason(ctx)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				httpx.JSON(w, http.StatusOK, teamResponse{Members: []teamMember{}, Former: []formerMember{}})
+				return
+			}
+			httpx.Internal(w, r, err)
+			return
+		}
+		seasonID = season.ID
+	}
+
+	rows, err := s.queries.TeamForSeason(ctx, seasonID)
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, listUsersResponse{Users: users})
+	formerRows, err := s.queries.FormerMembers(ctx, seasonID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	summary, err := s.queries.SeasonTeamSummary(ctx, seasonID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	resp := teamResponse{Members: make([]teamMember, 0, len(rows)), Former: []formerMember{}}
+	for _, row := range rows {
+		// Cuantas temporadas lleva: se cuenta aca y no en la query principal
+		// para no meter otro subselect por fila en la consulta que ya trae
+		// cinco agregados.
+		temporadas, err := s.queries.CountMembershipsOfUser(ctx, row.ID)
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		resp.Members = append(resp.Members, teamMember{
+			ID:           row.ID,
+			Name:         row.Name,
+			Email:        row.Email,
+			Role:         row.Role,
+			JoinedAt:     row.JoinedAt,
+			LeftAt:       row.LeftAt,
+			LastLoginAt:  row.LastLoginAt,
+			TicketsSold:  row.TicketsSold,
+			Assigned:     row.Assigned,
+			BalanceCents: row.BalanceCents,
+			Checkins:     row.Checkins,
+			Seasons:      temporadas,
+		})
+		resp.Summary.TicketsSold += row.TicketsSold
+		if row.BalanceCents > 0 {
+			resp.Summary.BalanceCents += row.BalanceCents
+		}
+	}
+	for _, row := range formerRows {
+		resp.Former = append(resp.Former, formerMember{
+			ID:              row.ID,
+			Name:            row.Name,
+			Email:           row.Email,
+			LastLoginAt:     row.LastLoginAt,
+			LastSeasonName:  row.LastSeasonName,
+			LastRole:        row.LastRole,
+			LastTicketsSold: row.LastTicketsSold,
+		})
+	}
+	resp.Summary.Active = summary.Active
+	resp.Summary.Pending = summary.Pending
+	resp.Summary.LeftChoir = summary.LeftChoir
+	resp.Summary.Total = summary.Total
+
+	httpx.JSON(w, http.StatusOK, resp)
+}
+
+// --- Membresias -------------------------------------------------------------
+
+type membershipRequest struct {
+	UserID int64  `json:"user_id"`
+	Role   string `json:"role"`
+}
+
+// handleAddMember: POST /api/seasons/{id}/members — suma (o reincorpora) a una
+// persona a una temporada. Es lo que usa "Reincorporar" y el paso de equipo
+// del alta de temporada.
+func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
+	seasonID, ok := seasonFromPath(w, r)
+	if !ok {
+		return
+	}
+	var req membershipRequest
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+	role := domain.Role(req.Role)
+	if !role.IsValid() {
+		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "El rol no es valido.")
+		return
+	}
+
+	ctx := r.Context()
+	if _, err := s.queries.GetUserByID(ctx, req.UserID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrUserNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+	member, err := s.queries.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
+		SeasonID: seasonID, UserID: req.UserID, Role: string(role),
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"member": member})
+}
+
+// handleRemoveMember: DELETE /api/seasons/{id}/members/{userId} — la saca de
+// la temporada. Si ya vendio algo queda como baja (left_at) y no se borra: sus
+// ventas y su deuda siguen contando. Si no hizo nada, se borra la fila.
+func (s *Server) handleRemoveMember(w http.ResponseWriter, r *http.Request) {
+	seasonID, ok := seasonFromPath(w, r)
+	if !ok {
+		return
+	}
+	userID, err := strconv.ParseInt(chi.URLParam(r, "userId"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrUserNotFound)
+		return
+	}
+
+	ctx := r.Context()
+	actor := auth.MustUserFrom(ctx)
+	if actor.ID == userID {
+		// ErrSelfLockout no es un error de dominio mapeado: se escribe aca,
+		// como en handleUpdateUser.
+		httpx.Error(w, http.StatusConflict, httpx.CodeConflict, capitalize(domain.ErrSelfLockout.Error()))
+		return
+	}
+
+	miembro, err := s.queries.GetMembership(ctx, sqlcgen.GetMembershipParams{
+		SeasonID: seasonID, UserID: userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	// Nunca una temporada sin direccion.
+	if miembro.Role == string(domain.RoleAdmin) {
+		admins, err := s.queries.CountAdminsInSeason(ctx, seasonID)
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		if admins <= 1 {
+			httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+				"Es la unica persona de direccion de la temporada: sumá otra antes de sacarla.")
+			return
+		}
+	}
+
+	ventas, err := s.queries.CountSalesBySellerInSeason(ctx, sqlcgen.CountSalesBySellerInSeasonParams{
+		SellerID: userID, SeasonID: seasonID,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	if ventas > 0 {
+		if err := s.queries.LeaveMembership(ctx, sqlcgen.LeaveMembershipParams{
+			SeasonID: seasonID, UserID: userID,
+		}); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+	} else if err := s.queries.DeleteMembership(ctx, sqlcgen.DeleteMembershipParams{
+		SeasonID: seasonID, UserID: userID,
+	}); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	// Sin cupo que reservar: se sueltan las asignaciones que tuviera.
+	if err := s.queries.DeleteAllocationsForUser(ctx, userID); err != nil {
+		slog.ErrorContext(ctx, "no se pudieron soltar los cupos", "user_id", userID, "error", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func seasonFromPath(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrSeasonNotFound)
+		return 0, false
+	}
+	return id, true
 }

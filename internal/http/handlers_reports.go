@@ -517,7 +517,7 @@ func (s *Server) attentionAlerts(ctx context.Context, seasonID int64) ([]attenti
 	if err != nil {
 		return nil, err
 	}
-	invites, err := s.queries.AttentionPendingInvites(ctx)
+	invites, err := s.queries.AttentionPendingInvites(ctx, seasonID)
 	if err != nil {
 		return nil, err
 	}

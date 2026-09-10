@@ -36,6 +36,22 @@ func (q *Queries) DeactivateAllSeasons(ctx context.Context) error {
 	return err
 }
 
+const getActiveSeason = `-- name: GetActiveSeason :one
+SELECT id, name, is_active, created_at FROM seasons WHERE is_active LIMIT 1
+`
+
+func (q *Queries) GetActiveSeason(ctx context.Context) (Season, error) {
+	row := q.db.QueryRow(ctx, getActiveSeason)
+	var i Season
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.IsActive,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getSeason = `-- name: GetSeason :one
 SELECT id, name, is_active, created_at FROM seasons WHERE id = $1
 `

@@ -140,3 +140,8 @@ FROM (
 ) c
 WHERE s.id = sqlc.arg(sale_id)::bigint
 RETURNING s.*;
+
+-- name: CountSalesBySellerInSeason :one
+SELECT count(*)::bigint FROM sales s
+JOIN functions f ON f.id = s.function_id
+WHERE s.seller_id = sqlc.arg(seller_id)::bigint AND f.season_id = sqlc.arg(season_id)::bigint;

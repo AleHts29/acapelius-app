@@ -17,3 +17,6 @@ UPDATE seasons SET is_active = (id = sqlc.arg(id)::bigint);
 
 -- name: GetSeason :one
 SELECT * FROM seasons WHERE id = $1;
+
+-- name: GetActiveSeason :one
+SELECT * FROM seasons WHERE is_active LIMIT 1;

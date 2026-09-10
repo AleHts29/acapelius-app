@@ -21,8 +21,10 @@ SELECT
    WHERE s.seller_id = u.id AND s.function_id = sqlc.arg(function_id)::bigint
      AND NOT s.is_comp AND t.status <> 'void')::bigint AS sold
 FROM users u
+JOIN functions f ON f.id = sqlc.arg(function_id)::bigint
+JOIN season_members m ON m.user_id = u.id AND m.season_id = f.season_id
 LEFT JOIN allocations a ON a.user_id = u.id AND a.function_id = sqlc.arg(function_id)::bigint
-WHERE u.role = 'seller' AND u.is_active
+WHERE m.role = 'seller' AND m.left_at IS NULL
 ORDER BY u.name;
 
 -- name: SoldBySellerInFunction :one
@@ -46,9 +48,10 @@ WHERE user_id = sqlc.arg(user_id)::bigint AND function_id = sqlc.arg(function_id
 -- estaban en ningun lado.
 SELECT COALESCE(SUM(a.quantity), 0)::bigint
 FROM allocations a
-JOIN users u ON u.id = a.user_id
+JOIN functions f ON f.id = a.function_id
+JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
 WHERE a.function_id = sqlc.arg(function_id)::bigint
-  AND u.role = 'seller' AND u.is_active;
+  AND m.role = 'seller' AND m.left_at IS NULL;
 
 -- name: DeleteAllocationsForUser :exec
 -- Al salir del rol de corista (o al desactivarse) se le sueltan los cupos:

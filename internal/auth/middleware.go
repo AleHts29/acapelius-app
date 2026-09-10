@@ -77,6 +77,36 @@ func RequirePasswordChanged(next http.Handler) http.Handler {
 	})
 }
 
+// RequireHistory deja pasar a quien participa de la temporada en curso y
+// tambien a quien participo de alguna anterior. Es el permiso de "mirar lo
+// mio": una corista que este año no esta en el coro puede entrar a ver sus
+// ventas y su rendicion, pero no a vender (eso lo sigue cortando RequireRole).
+func (s *Service) RequireHistory(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := MustUserFrom(r.Context())
+		if user.Role.CanAny(domain.RoleSeller) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// Quien tiene otro rol este año (la puerta) no pasa por antiguedad:
+		// el permiso es sobre ventas propias, y no tiene.
+		if user.Role != "" {
+			httpx.Error(w, http.StatusForbidden, httpx.CodeForbidden, "No tenes permiso para hacer esto.")
+			return
+		}
+		tiene, err := s.HasHistory(r.Context(), user.ID)
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		if !tiene {
+			httpx.Error(w, http.StatusForbidden, httpx.CodeForbidden, "No tenes permiso para hacer esto.")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // RequireRole exige que el usuario cumpla al menos uno de los roles. El admin
 // siempre pasa (ver domain.Role.Can).
 func RequireRole(roles ...domain.Role) func(http.Handler) http.Handler {

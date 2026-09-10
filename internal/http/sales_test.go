@@ -19,12 +19,27 @@ func assignQuota(t *testing.T, admin *testClient, fnID float64, userID, qty int)
 
 // setupCatalog crea una temporada con una funcion y devuelve el id de la
 // funcion. Requiere un admin logueado.
+// activeSeasonID: la temporada en curso, la que crea el arranque.
+func activeSeasonID(t *testing.T, admin *testClient) float64 {
+	t.Helper()
+	resp := admin.get("/api/seasons")
+	assertStatus(t, resp, http.StatusOK)
+	for _, raw := range resp.Body["seasons"].([]any) {
+		if s := raw.(map[string]any); s["is_active"] == true {
+			return s["id"].(float64)
+		}
+	}
+	t.Fatal("no hay temporada en curso")
+	return 0
+}
+
 func setupCatalog(t *testing.T, admin *testClient, capacity int) float64 {
 	t.Helper()
 
-	season := admin.post("/api/seasons", map[string]string{"name": "Temporada 2026"})
-	assertStatus(t, season, http.StatusCreated)
-	seasonID := season.Body["season"].(map[string]any)["id"].(float64)
+	// La temporada la deja el arranque, igual que en produccion: `make seed`
+	// crea el admin y la primera temporada juntos, porque el rol vive en
+	// season_members y sin temporada nadie tendria rol.
+	seasonID := activeSeasonID(t, admin)
 
 	fn := admin.post("/api/functions", map[string]any{
 		"season_id":   seasonID,

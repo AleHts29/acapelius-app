@@ -24,6 +24,24 @@ func (q *Queries) CountActiveTickets(ctx context.Context, functionID int64) (int
 	return count, err
 }
 
+const countSalesBySellerInSeason = `-- name: CountSalesBySellerInSeason :one
+SELECT count(*)::bigint FROM sales s
+JOIN functions f ON f.id = s.function_id
+WHERE s.seller_id = $1::bigint AND f.season_id = $2::bigint
+`
+
+type CountSalesBySellerInSeasonParams struct {
+	SellerID int64 `json:"seller_id"`
+	SeasonID int64 `json:"season_id"`
+}
+
+func (q *Queries) CountSalesBySellerInSeason(ctx context.Context, arg CountSalesBySellerInSeasonParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSalesBySellerInSeason, arg.SellerID, arg.SeasonID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countTicketsBySaleAndStatus = `-- name: CountTicketsBySaleAndStatus :one
 SELECT count(*) FROM tickets WHERE sale_id = $1 AND status = $2::text
 `

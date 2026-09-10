@@ -77,10 +77,12 @@ func TestAceptacionFase1(t *testing.T) {
 		t.Fatalf("se esperaban 4 funciones, hay %d", got)
 	}
 
-	users := admin.get("/api/users")
-	assertStatus(t, users, http.StatusOK)
-	if got := len(users.Body["users"].([]any)); got != 6 { // admin + 5 vendedoras
-		t.Fatalf("se esperaban 6 usuarios, hay %d", got)
+	// El equipo de la temporada nueva: quien la creo entra como direccion y
+	// las cinco vendedoras se dieron de alta despues, ya con esta activa.
+	equipo := admin.get(fmt.Sprintf("/api/users?season_id=%.0f", seasonID))
+	assertStatus(t, equipo, http.StatusOK)
+	if got := len(equipo.Body["members"].([]any)); got != 6 { // admin + 5 vendedoras
+		t.Fatalf("se esperaban 6 personas en la temporada, hay %d: %v", got, equipo.Body)
 	}
 }
 

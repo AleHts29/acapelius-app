@@ -161,11 +161,20 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 			httpx.Internal(w, r, err)
 			return
 		}
-		// Solo coristas activas: el tablero muestra esas y solo esas se cuentan
-		// al validar. Un cupo para otra persona quedaria invisible en pantalla.
-		if seller.Role != string(domain.RoleSeller) || !seller.IsActive {
+		// Solo coristas de la temporada de esta funcion: el tablero muestra
+		// esas y solo esas se cuentan al validar. Un cupo para otra persona
+		// quedaria invisible en pantalla.
+		miembro, err := q.GetMembership(ctx, sqlcgen.GetMembershipParams{
+			SeasonID: function.SeasonID,
+			UserID:   entry.UserID,
+		})
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			httpx.Internal(w, r, err)
+			return
+		}
+		if errors.Is(err, pgx.ErrNoRows) || miembro.Role != string(domain.RoleSeller) || miembro.LeftAt != nil {
 			httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
-				fmt.Sprintf("%s no es una corista activa: no se le puede asignar cupo.", seller.Name))
+				fmt.Sprintf("%s no es una corista de esta temporada: no se le puede asignar cupo.", seller.Name))
 			return
 		}
 		sold, err := q.SoldBySellerInFunction(ctx, sqlcgen.SoldBySellerInFunctionParams{

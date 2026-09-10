@@ -80,6 +80,15 @@ type Season struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type SeasonMember struct {
+	ID       int64      `json:"id"`
+	SeasonID int64      `json:"season_id"`
+	UserID   int64      `json:"user_id"`
+	Role     string     `json:"role"`
+	JoinedAt time.Time  `json:"joined_at"`
+	LeftAt   *time.Time `json:"left_at"`
+}
+
 type Session struct {
 	Token  string    `json:"token"`
 	Data   []byte    `json:"data"`
@@ -119,9 +128,7 @@ type User struct {
 	Name               string     `json:"name"`
 	Email              string     `json:"email"`
 	PasswordHash       string     `json:"password_hash"`
-	Role               string     `json:"role"`
 	MustChangePassword bool       `json:"must_change_password"`
 	CreatedAt          time.Time  `json:"created_at"`
-	IsActive           bool       `json:"is_active"`
 	LastLoginAt        *time.Time `json:"last_login_at"`
 }

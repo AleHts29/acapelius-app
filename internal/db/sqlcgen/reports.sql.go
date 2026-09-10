@@ -74,10 +74,11 @@ func (q *Queries) AttendanceBySale(ctx context.Context, functionID int64) ([]Att
 }
 
 const attentionPendingInvites = `-- name: AttentionPendingInvites :many
-SELECT id AS user_id, name, role, created_at
-FROM users
-WHERE is_active AND last_login_at IS NULL
-ORDER BY created_at
+SELECT u.id AS user_id, u.name, m.role, u.created_at
+FROM users u
+JOIN season_members m ON m.user_id = u.id AND m.season_id = $1::bigint
+WHERE m.left_at IS NULL AND u.last_login_at IS NULL
+ORDER BY u.created_at
 `
 
 type AttentionPendingInvitesRow struct {
@@ -87,9 +88,9 @@ type AttentionPendingInvitesRow struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// Gente del equipo que nunca entro a la app (C7 + C9).
-func (q *Queries) AttentionPendingInvites(ctx context.Context) ([]AttentionPendingInvitesRow, error) {
-	rows, err := q.db.Query(ctx, attentionPendingInvites)
+// Gente de la temporada que nunca entro a la app (C7 + C9).
+func (q *Queries) AttentionPendingInvites(ctx context.Context, seasonID int64) ([]AttentionPendingInvitesRow, error) {
+	rows, err := q.db.Query(ctx, attentionPendingInvites, seasonID)
 	if err != nil {
 		return nil, err
 	}
@@ -194,14 +195,15 @@ SELECT
   f.venue,
   f.starts_at,
   f.capacity,
-  COALESCE(SUM(a.quantity) FILTER (WHERE au.id IS NOT NULL), 0)::bigint AS assigned
+  COALESCE(SUM(a.quantity) FILTER (WHERE m.id IS NOT NULL), 0)::bigint AS assigned
 FROM functions f
 LEFT JOIN allocations a ON a.function_id = f.id
-LEFT JOIN users au ON au.id = a.user_id AND au.role = 'seller' AND au.is_active
+LEFT JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
+  AND m.role = 'seller' AND m.left_at IS NULL
 WHERE f.season_id = $1::bigint
   AND f.starts_at > now()
 GROUP BY f.id
-HAVING f.capacity > COALESCE(SUM(a.quantity) FILTER (WHERE au.id IS NOT NULL), 0)
+HAVING f.capacity > COALESCE(SUM(a.quantity) FILTER (WHERE m.id IS NOT NULL), 0)
 ORDER BY f.starts_at
 `
 
@@ -349,8 +351,8 @@ SELECT
   (SELECT COALESCE(SUM(s.paid_cents), 0) FROM sales s
    WHERE s.function_id = f.id AND NOT s.is_comp AND s.voided_at IS NULL)::bigint AS collected_cents,
   (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
-   JOIN users au ON au.id = a.user_id
-   WHERE a.function_id = f.id AND au.role = 'seller' AND au.is_active)::bigint AS assigned,
+   JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
+   WHERE a.function_id = f.id AND m.role = 'seller' AND m.left_at IS NULL)::bigint AS assigned,
   -- Cortesias emitidas: no son plata, pero ocupan butaca.
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
    WHERE s.function_id = f.id AND s.is_comp AND t.status <> 'void')::bigint AS comp_tickets,
@@ -893,8 +895,8 @@ SELECT
   -- Cupo repartido entre coristas activas: lo mismo que cuenta el tablero.
   (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
      JOIN functions f ON a.function_id = f.id
-     JOIN users au ON au.id = a.user_id
-   WHERE f.season_id = s.id AND au.role = 'seller' AND au.is_active)::bigint AS assigned,
+     JOIN season_members m ON m.user_id = a.user_id AND m.season_id = s.id
+   WHERE f.season_id = s.id AND m.role = 'seller' AND m.left_at IS NULL)::bigint AS assigned,
   -- Coristas que efectivamente vendieron algo en la temporada.
   (SELECT count(DISTINCT sa.seller_id) FROM sales sa
      JOIN functions f ON sa.function_id = f.id
@@ -1102,7 +1104,8 @@ SELECT
 FROM users u
 LEFT JOIN collected c ON c.seller_id = u.id
 LEFT JOIN settled st ON st.seller_id = u.id
-WHERE u.role = 'seller' OR c.seller_id IS NOT NULL OR st.seller_id IS NOT NULL
+LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = $1::bigint
+WHERE m.role = 'seller' OR c.seller_id IS NOT NULL OR st.seller_id IS NOT NULL
 ORDER BY u.name
 `
 
@@ -1119,6 +1122,8 @@ type SettlementsReportRow struct {
 // cobro, y rendido. El saldo a rendir es collected - settled (spec §4). Lista
 // a toda vendedora, mas cualquier otro usuario con movimientos (p. ej. el
 // admin si vendio).
+// Las coristas de la temporada, mas cualquiera que haya movido plata en ella
+// aunque ya no este: su deuda no desaparece porque dejo el coro.
 func (q *Queries) SettlementsReport(ctx context.Context, seasonID int64) ([]SettlementsReportRow, error) {
 	rows, err := q.db.Query(ctx, settlementsReport, seasonID)
 	if err != nil {

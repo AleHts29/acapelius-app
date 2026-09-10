@@ -83,11 +83,25 @@ func run() error {
 		Name:               name,
 		Email:              domain.NormalizeEmail(email),
 		PasswordHash:       hash,
-		Role:               string(domain.RoleAdmin),
 		MustChangePassword: true,
 	})
 	if err != nil {
 		return errors.Join(errors.New("crear admin"), err)
+	}
+
+	// El arranque crea tambien la primera temporada: el rol vive en
+	// season_members, asi que sin temporada el admin no tendria rol y no
+	// podria ni crearla. Se le pone el año en curso como nombre.
+	season, err := queries.CreateSeason(ctx, fmt.Sprintf("Temporada %d", time.Now().Year()))
+	if err != nil {
+		return errors.Join(errors.New("crear la primera temporada"), err)
+	}
+	if _, err := queries.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
+		SeasonID: season.ID,
+		UserID:   user.ID,
+		Role:     string(domain.RoleAdmin),
+	}); err != nil {
+		return errors.Join(errors.New("sumar el admin a la temporada"), err)
 	}
 
 	fmt.Printf("\n  Admin creado\n  ------------\n  email:      %s\n  contrasena: %s\n", user.Email, password)

@@ -10,6 +10,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/ale-hts/acapelius/internal/auth"
+
 	"github.com/ale-hts/acapelius/internal/db/sqlcgen"
 	"github.com/ale-hts/acapelius/internal/domain"
 	"github.com/ale-hts/acapelius/internal/httpx"
@@ -25,6 +27,17 @@ type createSeasonRequest struct {
 	// fechas corridas un año. Cargar cinco funciones a mano cada año era el
 	// trabajo que nadie queria hacer.
 	CopyFromSeasonID *int64 `json:"copy_from_season_id"`
+	// Si el equipo de esa temporada pasa tambien. Por omision si.
+	CopyMembers *bool `json:"copy_members"`
+	// Solo estas personas (con su rol) entran a la temporada nueva. Es el
+	// resultado del paso de equipo del asistente; sin esto se copia el equipo
+	// entero de la anterior.
+	Members []seasonMemberInput `json:"members"`
+}
+
+type seasonMemberInput struct {
+	UserID int64  `json:"user_id"`
+	Role   string `json:"role"`
 }
 
 type seasonResponse struct {
@@ -107,6 +120,42 @@ func (s *Server) handleCreateSeason(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Quien crea la temporada entra como direccion: una temporada sin
+	// direccion no la puede administrar nadie, y quedaria trabada.
+	actor := auth.MustUserFrom(ctx)
+	if _, err := q.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
+		SeasonID: season.ID, UserID: actor.ID, Role: string(domain.RoleAdmin),
+	}); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	// El equipo de la temporada anterior pasa con su rol. Es el default del
+	// asistente: vienen todas tildadas y se destilda a las que se fueron.
+	if len(req.Members) > 0 {
+		for _, m := range req.Members {
+			role := domain.Role(m.Role)
+			if !role.IsValid() {
+				httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "El rol no es valido.")
+				return
+			}
+			if _, err := q.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
+				SeasonID: season.ID, UserID: m.UserID, Role: string(role),
+			}); err != nil {
+				httpx.Internal(w, r, err)
+				return
+			}
+		}
+	} else if req.CopyFromSeasonID != nil && (req.CopyMembers == nil || *req.CopyMembers) {
+		if err := q.CopySeasonMembers(ctx, sqlcgen.CopySeasonMembersParams{
+			ToSeasonID:   season.ID,
+			FromSeasonID: *req.CopyFromSeasonID,
+		}); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+	}
+
 	copiadas := 0
 	if req.CopyFromSeasonID != nil {
 		if _, err := q.GetSeason(ctx, *req.CopyFromSeasonID); err != nil {
@@ -152,6 +201,23 @@ func (s *Server) handleActivateSeason(w http.ResponseWriter, r *http.Request) {
 		}
 		httpx.Internal(w, r, err)
 		return
+	}
+
+	// Cambiar a una temporada donde no hay direccion dejaria la app trabada:
+	// quien la activa entra como direccion de esa temporada.
+	admins, err := s.queries.CountAdminsInSeason(ctx, id)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if admins == 0 {
+		actor := auth.MustUserFrom(ctx)
+		if _, err := s.queries.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
+			SeasonID: id, UserID: actor.ID, Role: string(domain.RoleAdmin),
+		}); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
 	}
 
 	if err := s.queries.SetActiveSeason(ctx, id); err != nil {

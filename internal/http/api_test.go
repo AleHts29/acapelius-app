@@ -123,21 +123,39 @@ func (e *testEnv) seedUser(t *testing.T, name, email, password string, role doma
 	if err != nil {
 		t.Fatalf("hashear password de test: %v", err)
 	}
-	row, err := sqlcgen.New(e.pool).CreateUser(context.Background(), sqlcgen.CreateUserParams{
+	ctx := context.Background()
+	q := sqlcgen.New(e.pool)
+	row, err := q.CreateUser(ctx, sqlcgen.CreateUserParams{
 		Name:               name,
 		Email:              domain.NormalizeEmail(email),
 		PasswordHash:       hash,
-		Role:               string(role),
 		MustChangePassword: true,
 	})
 	if err != nil {
 		t.Fatalf("crear usuario de test: %v", err)
 	}
+
+	// El rol vive en season_members: sin temporada nadie tiene rol. Es el
+	// mismo arranque que hace `make seed`, que crea la primera temporada
+	// junto con el admin.
+	season, err := q.GetActiveSeason(ctx)
+	if err != nil {
+		season, err = q.CreateSeason(ctx, "Temporada 2026")
+		if err != nil {
+			t.Fatalf("crear temporada de test: %v", err)
+		}
+	}
+	if _, err := q.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
+		SeasonID: season.ID, UserID: row.ID, Role: string(role),
+	}); err != nil {
+		t.Fatalf("sumar a la temporada de test: %v", err)
+	}
+
 	return domain.User{
 		ID:                 row.ID,
 		Name:               row.Name,
 		Email:              row.Email,
-		Role:               domain.Role(row.Role),
+		Role:               role,
 		MustChangePassword: row.MustChangePassword,
 	}
 }
@@ -412,7 +430,7 @@ func TestSoloElAdminAdministraUsuarios(t *testing.T) {
 	// El admin si las ve a las dos.
 	list := admin.get("/api/users")
 	assertStatus(t, list, http.StatusOK)
-	users, _ := list.Body["users"].([]any)
+	users, _ := list.Body["members"].([]any)
 	if len(users) != 2 {
 		t.Fatalf("se esperaban 2 usuarios, hay %d: %v", len(users), list.Body)
 	}

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Equipo por temporada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#F2F3F5; --sur:#FFFFFF; --alt:#FAFBFC; --ink:#1A1C22; --mut:#7C818C; --line:#E3E5E9;
+          --indigo:#3A3FC4; --indigo-s:#E8E8FA; --carbon:#1A1C22;
+          --ok:#0E7A55; --ok-s:#E2F2EB; --ok-b:#C9E6D9; --warn:#9C6A0C; --warn-s:#F6EEDC; --warn-b:#E7D9B8;
+          --bad:#B3403F; --bad-s:#F7E6E5; }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .page { max-width:1360px; margin:0 auto; padding:44px 20px 90px; }
+  .page > h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(25px,4vw,34px); }
+  .page > h1 span { color:var(--indigo); }
+  .page > p.lead { margin-top:10px; max-width:920px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .page > p.lead b { color:var(--ink); }
+
+  .sec { margin-top:34px; }
+  .sec > h2 { font-family:'Archivo',sans-serif; font-size:18px; font-weight:800; }
+  .sec > p { margin-top:8px; max-width:900px; font-size:13.5px; line-height:1.65; color:#4A4C55; }
+  .sec > p b { color:var(--ink); }
+
+  .box { margin-top:14px; background:#fff; border:1px solid #D5D8DD; border-radius:14px; padding:18px 20px; }
+  pre { font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.7; background:var(--alt); border:1px solid var(--line); border-radius:10px; padding:14px 16px; overflow-x:auto; color:#31343B; }
+  pre b { color:var(--indigo); font-weight:600; }
+  .rules { margin-top:14px; display:grid; gap:9px; }
+  @media(min-width:900px){ .rules { grid-template-columns:1fr 1fr; gap:9px 20px; } }
+  .r { font-size:12.5px; line-height:1.55; color:#4A4C55; padding-left:22px; position:relative; }
+  .r::before { content:"→"; position:absolute; left:0; color:var(--indigo); font-weight:800; }
+  .r b { color:var(--ink); }
+
+  .states { margin-top:14px; border:1px solid var(--line); border-radius:11px; overflow:hidden; }
+  .sh { display:grid; grid-template-columns:150px 1fr 1fr; background:var(--alt); border-bottom:1px solid var(--line); }
+  .sh div { padding:9px 14px; font-family:'Archivo',sans-serif; font-size:8.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--mut); }
+  .sr { display:grid; grid-template-columns:150px 1fr 1fr; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .sr:last-child { border-bottom:0; }
+  .sr > div { padding:11px 14px; color:#4A4C55; border-left:1px solid var(--line); line-height:1.5; }
+  .sr > div:first-child { border-left:0; }
+  .pill { font-size:10px; font-weight:800; padding:4px 9px; border-radius:99px; display:inline-block; }
+  .pill.act { background:var(--ok-s); color:var(--ok); }
+  .pill.pend { background:var(--warn-s); color:var(--warn); }
+  .pill.left { background:var(--warn-s); color:var(--warn); }
+  .pill.no { background:var(--line); color:var(--mut); }
+
+  .fr { margin-top:16px; overflow-x:auto; padding-bottom:8px; }
+  .fr > .cap { font-size:13px; font-weight:700; color:#55575E; margin-bottom:10px; }
+  .fr > .cap b { color:var(--ink); }
+  .browser { border:1px solid #C3C7CE; border-radius:14px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); background:var(--bg); min-width:1120px; }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome .dots i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:380px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; }
+  .app { display:flex; min-height:560px; position:relative; }
+  .side { width:196px; background:var(--sur); border-right:1px solid var(--line); display:flex; flex-direction:column; flex-shrink:0; }
+  .side .logo { padding:15px 14px 11px; font-family:'Archivo',sans-serif; font-weight:800; letter-spacing:0.2em; font-size:10.5px; display:flex; align-items:center; gap:7px; }
+  .side .logo .mk { width:18px; height:18px; border-radius:50%; border:1.5px solid var(--indigo); color:var(--indigo); font-size:9px; display:flex; align-items:center; justify-content:center; font-style:italic; }
+  .nav { padding:4px 8px; }
+  .nav a { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:8px; font-size:11.5px; font-weight:700; color:var(--mut); margin-bottom:2px; }
+  .nav a.on { background:var(--indigo-s); color:var(--indigo); }
+  .nav .sec2 { padding:11px 10px 4px; font-family:'Archivo',sans-serif; font-size:8px; font-weight:800; letter-spacing:0.14em; color:var(--mut); }
+  .side .grow { flex:1; }
+  .side .me { border-top:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:8px; }
+  .side .me .av { width:23px; height:23px; border-radius:50%; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:9px; }
+  .side .me b { display:block; font-size:11px; } .side .me span { color:var(--mut); font-size:9.5px; }
+  .main { flex:1; padding:20px 24px 24px; min-width:0; }
+  .phead { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
+  .phead h2 { font-family:'Archivo',sans-serif; font-size:20px; font-weight:800; }
+  .phead .sub { font-size:11.5px; color:var(--mut); margin-top:3px; }
+  .phead .r2 { display:flex; gap:9px; align-items:center; }
+  .btn { border-radius:9px; padding:9px 14px; font-size:12.5px; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }
+  .btn.pri { background:var(--indigo); color:#fff; }
+  .btn.gh { background:var(--sur); border:1.5px solid var(--line); color:var(--ink); }
+  .btn.xs { padding:6px 10px; font-size:10.5px; border-radius:8px; }
+  .btn.warn { background:var(--warn-s); border:1.5px solid var(--warn-b); color:var(--warn); }
+  .pillbtn { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:800; border:1.5px solid var(--line); background:var(--sur); border-radius:99px; padding:8px 13px; }
+  .pillbtn .chev { color:var(--mut); font-size:9px; }
+
+  .blocks { display:flex; flex-direction:column; gap:18px; }
+  .grp { background:var(--sur); border:1px solid #D7DBE0; border-radius:13px; overflow:hidden; box-shadow:0 6px 18px rgba(26,28,34,.07); }
+  .gband { display:flex; align-items:center; gap:10px; padding:13px 16px; border-bottom:1px solid var(--line); border-left:4px solid var(--indigo); }
+  .gband.grey { border-left-color:var(--line); }
+  .gband .gt { font-family:'Archivo',sans-serif; font-size:11.5px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; }
+  .gband .gd { font-size:10.5px; color:var(--mut); font-weight:700; }
+  .gband .sp { flex:1; }
+  .gband .sub { font-size:10.5px; color:var(--mut); font-weight:700; }
+  .gband .sub b { color:var(--ink); font-family:'Archivo',sans-serif; }
+  .gband .cl { color:var(--mut); font-size:11px; }
+
+  .tr { display:grid; grid-template-columns:1.6fr 90px 110px 118px 104px 30px; gap:10px; align-items:center; padding:0 15px; height:46px; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .tr:last-child { border-bottom:0; }
+  .th { display:grid; grid-template-columns:1.6fr 90px 110px 118px 104px 30px; gap:10px; padding:0 15px; height:31px; align-items:center; background:var(--alt); border-bottom:1px solid var(--line); font-family:'Archivo',sans-serif; font-size:8.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--mut); }
+  .th .r3, .tr .r3 { text-align:right; }
+  .who { display:flex; align-items:center; gap:10px; min-width:0; }
+  .who .ini { width:28px; height:28px; border-radius:9px; background:var(--indigo-s); color:var(--indigo); font-family:'Archivo',sans-serif; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .who .tx b { font-weight:700; display:block; }
+  .who .tx span { font-size:10px; color:var(--mut); display:block; }
+  .dim { color:var(--mut); }
+  .num { font-family:'Archivo',sans-serif; font-weight:800; }
+  .num.y { color:var(--warn); } .num.g { color:var(--ok); }
+  .kebab { color:var(--mut); font-weight:800; text-align:center; }
+  .tr.off { opacity:.6; }
+  .stc { text-align:right; }
+
+  /* modal armar equipo */
+  .scrim { position:absolute; inset:0; background:rgba(26,28,34,.5); }
+  .modal { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:560px; background:var(--sur); border-radius:16px; box-shadow:0 24px 60px rgba(26,28,34,.35); overflow:hidden; }
+  .modal .mh { padding:16px 20px; border-bottom:1px solid var(--line); display:flex; align-items:flex-start; justify-content:space-between; }
+  .modal h3 { font-family:'Archivo',sans-serif; font-size:16px; font-weight:800; }
+  .modal .msub { font-size:11.5px; color:var(--mut); margin-top:2px; }
+  .modal .x { color:var(--mut); font-size:15px; font-weight:800; }
+  .steps { padding:11px 20px; background:var(--alt); border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center; font-size:10.5px; font-weight:800; color:var(--mut); }
+  .steps .st { display:flex; align-items:center; gap:6px; }
+  .steps .st .n { width:17px; height:17px; border-radius:50%; background:var(--line); color:var(--mut); display:flex; align-items:center; justify-content:center; font-size:9px; }
+  .steps .st.on .n { background:var(--indigo); color:#fff; }
+  .steps .st.on { color:var(--indigo); }
+  .steps .ar { color:var(--line); }
+  .mlist { max-height:280px; overflow:hidden; }
+  .mrow { display:flex; align-items:center; gap:11px; padding:10px 20px; border-bottom:1px solid var(--line); }
+  .mrow:last-child { border-bottom:0; }
+  .cbx { width:17px; height:17px; border-radius:5px; border:1.5px solid var(--line); background:var(--sur); flex-shrink:0; }
+  .cbx.on { background:var(--indigo); border-color:var(--indigo); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .mrow .ini { width:28px; height:28px; border-radius:9px; background:var(--indigo-s); color:var(--indigo); font-family:'Archivo',sans-serif; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; }
+  .mrow .mid { flex:1; min-width:0; }
+  .mrow .mid b { font-size:12.5px; font-weight:700; display:block; }
+  .mrow .mid span { font-size:10.5px; color:var(--mut); }
+  .mrow .tag { font-size:10px; font-weight:800; color:var(--mut); }
+  .mfoot { padding:13px 20px; border-top:1px solid var(--line); display:flex; align-items:center; gap:9px; }
+  .mfoot .left { flex:1; font-size:11.5px; color:var(--mut); font-weight:700; }
+  .mfoot .left b { color:var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>El coro cambia todos los años: <span>equipo por temporada</span></h1>
+  <p class="lead">Hoy <code>users</code> es una lista global con un <code>is_active</code>: no hay forma de decir "Norma cantó en 2025 pero no en 2026" sin desactivarla, y desactivarla la borra visualmente del año en que sí vendió. La solución es separar <b>quién es una persona</b> (permanente) de <b>quién participa en cada temporada</b> (cambia todos los años).</p>
+
+  <div class="sec">
+    <h2>1 · El modelo</h2>
+    <p>Una tabla intermedia. <code>users</code> guarda identidad y credenciales para siempre; <code>season_members</code> dice quién está en cada temporada y con qué rol. Las ventas y asignaciones ya cuelgan de funciones, que cuelgan de temporadas — así que <b>el histórico queda intacto sin tocar nada más</b>.</p>
+    <div class="box">
+<pre><b>users</b>                      identidad permanente
+  id · name · email · password_hash · created_at
+  <span style="color:#B3403F;">— se va: role, is_active (pasan a season_members)</span>
+
+<b>season_members</b>             quién participa en qué temporada
+  id
+  season_id      → seasons(id)
+  user_id        → users(id)
+  role           'admin' | 'seller' | 'door'
+  joined_at      cuándo se sumó
+  left_at        NULL si sigue; con fecha si dejó a mitad de temporada
+  UNIQUE (season_id, user_id)</pre>
+      <div class="rules">
+        <div class="r"><b>El rol es por temporada.</b> Alguien puede ser corista un año y estar en la puerta al siguiente. Los permisos se resuelven contra la temporada activa.</div>
+        <div class="r"><b>Nunca se borra una persona.</b> Si no participa este año, simplemente no tiene fila en <code>season_members</code> para esta temporada.</div>
+        <div class="r"><b>Las ventas viven en la temporada donde se hicieron.</b> Norma sigue apareciendo en los números de 2025 aunque no esté en 2026.</div>
+        <div class="r"><b>Baja a mitad de temporada:</b> <code>left_at</code>. Deja de poder vender, su cupo no asignado se libera, pero <b>su deuda de rendición sigue visible</b> hasta saldarse.</div>
+        <div class="r"><b>Login sin temporada activa:</b> si alguien entra y no participa este año, ve solo su historial con un aviso claro, sin poder vender.</div>
+        <div class="r"><b>Al menos un admin siempre.</b> El sistema impide dejar una temporada sin dirección.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>2 · Los estados de una persona</h2>
+    <p>Se separan dos cosas que hoy se confunden: <b>si participa</b> de esta temporada y <b>si ya activó su cuenta</b>.</p>
+    <div class="box" style="padding:0;">
+      <div class="states" style="margin:0; border:0;">
+        <div class="sh"><div>Estado</div><div>Qué significa</div><div>Qué puede hacer</div></div>
+        <div class="sr">
+          <div><span class="pill act">Activa</span></div>
+          <div>Participa de esta temporada y ya entró a la app al menos una vez.</div>
+          <div>Todo lo de su rol.</div>
+        </div>
+        <div class="sr">
+          <div><span class="pill pend">Pendiente</span></div>
+          <div>Fue sumada a la temporada pero nunca activó su cuenta.</div>
+          <div>Nada hasta entrar. Se le puede reenviar la invitación.</div>
+        </div>
+        <div class="sr">
+          <div><span class="pill left">Dejó el coro</span></div>
+          <div>Participó y se fue a mitad de temporada (<code>left_at</code>).</div>
+          <div>No vende. Sus ventas y su deuda siguen contando.</div>
+        </div>
+        <div class="sr">
+          <div><span class="pill no">No participa</span></div>
+          <div>No está en esta temporada. Puede haber estado en otras.</div>
+          <div>Ve su historial. Se la puede reincorporar con un click.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>3 · Armar el equipo al crear la temporada</h2>
+    <p>El momento natural para resolverlo: al crear la temporada nueva, un paso pregunta <b>quién sigue</b>. Viene con todas las de la temporada anterior tildadas y su rol precargado; destildás a las que se fueron y sumás a las nuevas. Es el mismo asistente donde ya se copia la estructura de funciones.</p>
+    <div class="fr">
+      <div class="cap"><b>Paso 2 del asistente</b> — con el dato que hace falta para decidir: cuánto vendió cada una el año pasado.</div>
+      <div class="browser">
+        <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/temporadas</div></div>
+        <div class="app">
+          <div class="side">
+            <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+            <div class="nav">
+              <a><span>♪</span>Inicio</a><a><span>🎟</span>Vender</a><a><span>⛶</span>Puerta</a>
+              <div class="sec2">DIRECCIÓN</div>
+              <a><span>📊</span>Dirección</a><a><span>💰</span>Rendiciones</a><a><span>👥</span>Asistencia</a><a class="on"><span>📅</span>Temporadas</a><a><span>🎤</span>Equipo</a>
+            </div>
+            <div class="grow"></div>
+            <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+          </div>
+          <div class="main">
+            <div class="phead"><div><h2>Temporadas</h2><div class="sub">3 temporadas · desde 2024</div></div><div class="btn pri">＋ Nueva temporada</div></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="modal">
+            <div class="mh">
+              <div><h3>¿Quiénes siguen en el coro?</h3><div class="msub">Temporada 2027 · vienen tildadas las de 2026</div></div>
+              <span class="x">✕</span>
+            </div>
+            <div class="steps">
+              <span class="st"><span class="n">✓</span> Nombre y fechas</span>
+              <span class="ar">›</span>
+              <span class="st on"><span class="n">2</span> Equipo</span>
+              <span class="ar">›</span>
+              <span class="st"><span class="n">3</span> Funciones</span>
+            </div>
+            <div class="mlist">
+              <div class="mrow"><span class="cbx on">✓</span><span class="ini">CV</span><div class="mid"><b>Carolina Vega</b><span>Corista · vendió 32 entradas en 2026</span></div><span class="tag">Corista ▾</span></div>
+              <div class="mrow"><span class="cbx on">✓</span><span class="ini">ML</span><div class="mid"><b>Marta Ledesma</b><span>Corista · vendió 28 entradas en 2026</span></div><span class="tag">Corista ▾</span></div>
+              <div class="mrow"><span class="cbx on">✓</span><span class="ini">VS</span><div class="mid"><b>Virginia Sosa</b><span>Corista · vendió 24 entradas en 2026</span></div><span class="tag">Corista ▾</span></div>
+              <div class="mrow"><span class="cbx"></span><span class="ini">BC</span><div class="mid"><b>Beatriz Coria</b><span>Corista · vendió 11 entradas · <span style="color:var(--warn); font-weight:700;">debe rendir $112.000</span></span></div><span class="tag">Corista ▾</span></div>
+              <div class="mrow"><span class="cbx on">✓</span><span class="ini">SR</span><div class="mid"><b>Silvia Rey</b><span>Corista · vendió 19 entradas en 2026</span></div><span class="tag">Puerta ▾</span></div>
+              <div class="mrow"><span class="cbx"></span><span class="ini">JP</span><div class="mid"><b>Josefina Paz</b><span>Nunca activó su cuenta en 2026</span></div><span class="tag">Corista ▾</span></div>
+            </div>
+            <div class="mfoot">
+              <div class="left">Seguirán <b>9 de 11</b> · <span style="color:var(--warn);">Beatriz queda fuera con deuda pendiente</span></div>
+              <div class="btn gh">＋ Sumar persona</div>
+              <div class="btn pri">Continuar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>4 · La vista Equipo, por temporada</h2>
+    <p>El selector de temporada pasa a mandar también acá. Quienes no participan este año no desaparecen: quedan en un bloque plegado abajo, con su historial y un botón para reincorporarlas.</p>
+    <div class="fr">
+      <div class="cap"><b>Equipo</b> — con selector de temporada, el caso de baja a mitad de año (Mercedes) y el bloque de quienes no participan.</div>
+      <div class="browser">
+        <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/equipo</div></div>
+        <div class="app">
+          <div class="side">
+            <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+            <div class="nav">
+              <a><span>♪</span>Inicio</a><a><span>🎟</span>Vender</a><a><span>⛶</span>Puerta</a>
+              <div class="sec2">DIRECCIÓN</div>
+              <a><span>📊</span>Dirección</a><a><span>💰</span>Rendiciones</a><a><span>👥</span>Asistencia</a><a><span>📅</span>Temporadas</a><a class="on"><span>🎤</span>Equipo</a>
+            </div>
+            <div class="grow"></div>
+            <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+          </div>
+          <div class="main">
+            <div class="phead">
+              <div><h2>Equipo</h2><div class="sub">11 personas participan de esta temporada</div></div>
+              <div class="r2">
+                <span class="pillbtn">Temporada 2026 <span class="chev">▾</span></span>
+                <div class="btn pri">＋ Sumar persona</div>
+              </div>
+            </div>
+
+            <div class="blocks">
+              <div class="grp">
+                <div class="gband">
+                  <span class="cl">▾</span>
+                  <span class="gt">Coristas</span>
+                  <span class="gd">Temporada 2026</span>
+                  <span class="sp"></span>
+                  <span class="sub"><b>9</b> activas · <b>1</b> pendiente · <b>1</b> dejó el coro</span>
+                </div>
+                <div class="th"><span>Persona</span><span class="r3">Vendidas</span><span class="r3">Uso del cupo</span><span class="r3">Sin rendir</span><span class="r3">Estado</span><span></span></div>
+                <div class="tr">
+                  <span class="who"><span class="ini">CV</span><span class="tx"><b>Carolina Vega</b><span>Desde 2024 · 3ª temporada</span></span></span>
+                  <span class="r3 num">32</span><span class="r3 num">94%</span><span class="r3 num y">$44.000</span>
+                  <span class="stc"><span class="pill act">Activa</span></span><span class="kebab">⋮</span>
+                </div>
+                <div class="tr">
+                  <span class="who"><span class="ini">BC</span><span class="tx"><b>Beatriz Coria</b><span>Desde 2026 · 1ª temporada</span></span></span>
+                  <span class="r3 num">11</span><span class="r3 num">31%</span><span class="r3 num y">$112.000</span>
+                  <span class="stc"><span class="pill act">Activa</span></span><span class="kebab">⋮</span>
+                </div>
+                <div class="tr">
+                  <span class="who"><span class="ini">MI</span><span class="tx"><b>Mercedes Ibarra</b><span>Dejó el coro el 2 de septiembre</span></span></span>
+                  <span class="r3 num">14</span><span class="r3 dim">—</span><span class="r3 num y">$30.000</span>
+                  <span class="stc"><span class="pill left">Dejó el coro</span></span><span class="kebab">⋮</span>
+                </div>
+                <div class="tr">
+                  <span class="who"><span class="ini">JP</span><span class="tx"><b>Josefina Paz</b><span>Sumada hace 32 días</span></span></span>
+                  <span class="r3 dim">—</span><span class="r3 dim">—</span><span class="r3 dim">—</span>
+                  <span class="stc"><span class="pill pend">Pendiente</span></span><span class="kebab">⋮</span>
+                </div>
+              </div>
+
+              <div class="grp">
+                <div class="gband grey">
+                  <span class="cl">▸</span>
+                  <span class="gt" style="color:var(--mut);">No participan de esta temporada</span>
+                  <span class="gd">Participaron en años anteriores</span>
+                  <span class="sp"></span>
+                  <span class="sub"><b>3</b> personas</span>
+                </div>
+                <div class="tr off">
+                  <span class="who"><span class="ini">NQ</span><span class="tx"><b>Norma Quiroga</b><span>Última temporada: 2025 · vendió 34 entradas</span></span></span>
+                  <span class="r3 dim">—</span><span class="r3 dim">—</span><span class="r3 num g">$0</span>
+                  <span class="stc"><span class="btn gh xs">Reincorporar</span></span><span class="kebab">⋮</span>
+                </div>
+                <div class="tr off">
+                  <span class="who"><span class="ini">LP</span><span class="tx"><b>Laura Prieto</b><span>Última temporada: 2024 · vendió 21 entradas</span></span></span>
+                  <span class="r3 dim">—</span><span class="r3 dim">—</span><span class="r3 num g">$0</span>
+                  <span class="stc"><span class="btn gh xs">Reincorporar</span></span><span class="kebab">⋮</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

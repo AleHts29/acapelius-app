@@ -4,16 +4,12 @@ SELECT * FROM users WHERE id = $1;
 -- name: GetUserByEmail :one
 SELECT * FROM users WHERE lower(email) = lower(sqlc.arg(email)::text);
 
--- name: ListUsers :many
-SELECT * FROM users ORDER BY role, name;
-
 -- name: CreateUser :one
-INSERT INTO users (name, email, password_hash, role, must_change_password)
+INSERT INTO users (name, email, password_hash, must_change_password)
 VALUES (
   sqlc.arg(name)::text,
   sqlc.arg(email)::text,
   sqlc.arg(password_hash)::text,
-  sqlc.arg(role)::text,
   sqlc.arg(must_change_password)::boolean
 )
 RETURNING *;
@@ -25,11 +21,10 @@ SET password_hash = sqlc.arg(password_hash)::text,
 WHERE id = sqlc.arg(id)::bigint;
 
 -- name: UpdateUser :one
+-- Identidad nada mas: el rol y la participacion viven en season_members.
 UPDATE users
-SET name      = sqlc.arg(name)::text,
-    email     = sqlc.arg(email)::text,
-    role      = sqlc.arg(role)::text,
-    is_active = sqlc.arg(is_active)::boolean
+SET name  = sqlc.arg(name)::text,
+    email = sqlc.arg(email)::text
 WHERE id = sqlc.arg(id)::bigint
 RETURNING *;
 
@@ -39,3 +34,179 @@ UPDATE users SET last_login_at = now() WHERE id = sqlc.arg(id)::bigint;
 
 -- name: CountUsers :one
 SELECT count(*) FROM users;
+
+-- ============================================================================
+-- Participacion por temporada (season_members)
+-- ============================================================================
+
+-- name: GetUserWithMembership :one
+-- El usuario mas su rol en la temporada en curso. `role` viene vacio cuando
+-- no participa de esta temporada: ahi solo puede mirar su historial.
+--
+-- Sin ninguna temporada cargada se cae a la membresia mas reciente que tenga.
+-- Es el arranque: quien instala la app entra antes de que exista la primera
+-- temporada, y sin esto no podria crearla.
+SELECT
+  u.*,
+  -- Con left_at el rol se apaga: dejo el coro a mitad de temporada, no vende
+  -- mas. Sus ventas y su deuda siguen contando, y su historial lo sigue
+  -- viendo (RequireHistory).
+  COALESCE(CASE WHEN m.left_at IS NULL THEN m.role END, fallback.role, '')::text AS season_role,
+  (m.id IS NOT NULL AND m.left_at IS NULL) AS participates,
+  m.left_at
+FROM users u
+LEFT JOIN seasons s ON s.is_active
+LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = s.id
+LEFT JOIN LATERAL (
+  SELECT m2.role FROM season_members m2
+  WHERE m2.user_id = u.id AND NOT EXISTS (SELECT 1 FROM seasons WHERE is_active)
+  ORDER BY m2.joined_at DESC LIMIT 1
+) fallback ON TRUE
+WHERE u.id = sqlc.arg(id)::bigint;
+
+-- name: GetUserWithMembershipByEmail :one
+SELECT
+  u.*,
+  -- Con left_at el rol se apaga: dejo el coro a mitad de temporada, no vende
+  -- mas. Sus ventas y su deuda siguen contando, y su historial lo sigue
+  -- viendo (RequireHistory).
+  COALESCE(CASE WHEN m.left_at IS NULL THEN m.role END, fallback.role, '')::text AS season_role,
+  (m.id IS NOT NULL AND m.left_at IS NULL) AS participates,
+  m.left_at
+FROM users u
+LEFT JOIN seasons s ON s.is_active
+LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = s.id
+LEFT JOIN LATERAL (
+  SELECT m2.role FROM season_members m2
+  WHERE m2.user_id = u.id AND NOT EXISTS (SELECT 1 FROM seasons WHERE is_active)
+  ORDER BY m2.joined_at DESC LIMIT 1
+) fallback ON TRUE
+WHERE lower(u.email) = lower(sqlc.arg(email)::text);
+
+-- name: CountMembershipsOfUser :one
+-- Cuantas temporadas lleva.
+SELECT count(*)::bigint FROM season_members WHERE user_id = sqlc.arg(user_id)::bigint;
+
+-- name: CountSellerMembershipsOfUser :one
+-- Si alguna vez fue corista: es lo que habilita a mirar SUS ventas y SU
+-- rendicion aunque este año no este en el coro. Quien solo estuvo en la
+-- puerta no tiene ventas propias que mirar.
+SELECT count(*)::bigint FROM season_members
+WHERE user_id = sqlc.arg(user_id)::bigint AND role IN ('seller', 'admin');
+
+-- name: UpsertMembership :one
+INSERT INTO season_members (season_id, user_id, role)
+VALUES (sqlc.arg(season_id)::bigint, sqlc.arg(user_id)::bigint, sqlc.arg(role)::text)
+ON CONFLICT (season_id, user_id) DO UPDATE
+  SET role = EXCLUDED.role, left_at = NULL
+RETURNING *;
+
+-- name: LeaveMembership :exec
+-- Baja a mitad de temporada: deja de vender, pero sus ventas y su deuda
+-- siguen contando.
+UPDATE season_members SET left_at = now()
+WHERE season_id = sqlc.arg(season_id)::bigint AND user_id = sqlc.arg(user_id)::bigint;
+
+-- name: DeleteMembership :exec
+DELETE FROM season_members
+WHERE season_id = sqlc.arg(season_id)::bigint AND user_id = sqlc.arg(user_id)::bigint;
+
+-- name: CountAdminsInSeason :one
+-- Nunca una temporada sin direccion.
+SELECT count(*)::bigint FROM season_members
+WHERE season_id = sqlc.arg(season_id)::bigint AND role = 'admin' AND left_at IS NULL;
+
+-- name: CopySeasonMembers :exec
+-- El equipo de una temporada pasa a la siguiente con su rol. Es el default
+-- del asistente: vienen todas tildadas y se destilda a las que se fueron.
+INSERT INTO season_members (season_id, user_id, role)
+SELECT sqlc.arg(to_season_id)::bigint, m.user_id, m.role
+FROM season_members m
+WHERE m.season_id = sqlc.arg(from_season_id)::bigint AND m.left_at IS NULL
+ON CONFLICT (season_id, user_id) DO NOTHING;
+
+-- name: GetMembership :one
+SELECT * FROM season_members
+WHERE season_id = sqlc.arg(season_id)::bigint AND user_id = sqlc.arg(user_id)::bigint;
+
+-- name: TeamForSeason :many
+-- El equipo de una temporada con lo que hace falta para decidir: cuanto
+-- vendio cada una, cuanto de su cupo uso, cuanto le falta rendir y cuando
+-- entro por ultima vez. Todo acotado a la temporada, para que el año pasado
+-- no contamine el de ahora.
+SELECT
+  u.id,
+  u.name,
+  u.email,
+  u.created_at,
+  u.last_login_at,
+  m.role,
+  m.joined_at,
+  m.left_at,
+  (SELECT count(*) FROM tickets t
+     JOIN sales sa ON t.sale_id = sa.id
+     JOIN functions f ON sa.function_id = f.id
+   WHERE sa.seller_id = u.id AND f.season_id = m.season_id
+     AND NOT sa.is_comp AND t.status <> 'void')::bigint AS tickets_sold,
+  (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
+     JOIN functions f ON a.function_id = f.id
+   WHERE a.user_id = u.id AND f.season_id = m.season_id)::bigint AS assigned,
+  -- Lo cobrado menos lo rendido: lo que todavia tiene en la mano.
+  (COALESCE((SELECT SUM(sa.paid_cents) FROM sales sa
+     JOIN functions f ON sa.function_id = f.id
+   WHERE sa.seller_id = u.id AND f.season_id = m.season_id
+     AND NOT sa.is_comp AND sa.voided_at IS NULL), 0)
+   - COALESCE((SELECT SUM(st.amount_cents) FROM settlements st
+   WHERE st.seller_id = u.id AND st.season_id = m.season_id), 0))::bigint AS balance_cents,
+  -- Ingresos que registro en la puerta, en esta temporada: es lo unico que
+  -- hace quien esta ahi.
+  (SELECT count(*) FROM checkins c
+     JOIN tickets t ON t.id = c.ticket_id
+     JOIN sales sa ON sa.id = t.sale_id
+     JOIN functions f ON f.id = sa.function_id
+   WHERE c.user_id = u.id AND f.season_id = m.season_id)::bigint AS checkins
+FROM season_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.season_id = sqlc.arg(season_id)::bigint
+ORDER BY m.role, u.name;
+
+-- name: FormerMembers :many
+-- Quienes participaron alguna vez pero no de esta temporada. No desaparecen:
+-- quedan abajo, con su historia, y se las puede reincorporar.
+SELECT
+  u.id,
+  u.name,
+  u.email,
+  u.last_login_at,
+  ultima.season_name AS last_season_name,
+  ultima.role AS last_role,
+  (SELECT count(*) FROM tickets t
+     JOIN sales sa ON t.sale_id = sa.id
+     JOIN functions f ON sa.function_id = f.id
+   WHERE sa.seller_id = u.id AND f.season_id = ultima.season_id
+     AND NOT sa.is_comp AND t.status <> 'void')::bigint AS last_tickets_sold
+FROM users u
+JOIN LATERAL (
+  SELECT m.season_id, m.role, s.name AS season_name
+  FROM season_members m
+  JOIN seasons s ON s.id = m.season_id
+  WHERE m.user_id = u.id
+  ORDER BY m.joined_at DESC
+  LIMIT 1
+) ultima ON TRUE
+WHERE NOT EXISTS (
+  SELECT 1 FROM season_members m2
+  WHERE m2.user_id = u.id AND m2.season_id = sqlc.arg(season_id)::bigint
+)
+ORDER BY u.name;
+
+-- name: SeasonTeamSummary :one
+-- La franja de arriba de Equipo.
+SELECT
+  count(*) FILTER (WHERE m.left_at IS NULL AND u.last_login_at IS NOT NULL)::bigint AS active,
+  count(*) FILTER (WHERE m.left_at IS NULL AND u.last_login_at IS NULL)::bigint AS pending,
+  count(*) FILTER (WHERE m.left_at IS NOT NULL)::bigint AS left_choir,
+  count(*)::bigint AS total
+FROM season_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.season_id = sqlc.arg(season_id)::bigint;

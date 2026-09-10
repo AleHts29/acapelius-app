@@ -605,3 +605,55 @@ no componen sin acrobacias, así que se difiere hasta que haga falta.
 **Anular desde el ⋮.** El ítem está, pero abre el drawer en vez de anular:
 anular desde un menú, sin ver la venta entera, es demasiado fácil de hacer sin
 querer. La confirmación vive donde están todos los datos.
+
+## Quién es una persona y quién participa de una temporada
+
+`users.role` + `users.is_active` mezclaban dos cosas distintas. No había forma
+de decir "Norma cantó en 2025 pero no en 2026": desactivarla la borraba también
+del año en que sí vendió, porque el rol vivía en la persona y no en su
+participación.
+
+Ahora `users` guarda identidad y credenciales, para siempre, y
+**`season_members`** dice quién está en cada temporada y con qué rol. Las
+ventas y las asignaciones ya colgaban de funciones, que cuelgan de temporadas,
+así que el histórico quedó intacto sin tocar nada más.
+
+**El rol es por temporada.** Alguien puede ser corista un año y estar en la
+puerta al siguiente. Los permisos se resuelven contra la temporada en curso: el
+rol efectivo sale de `season_members`, y con `left_at` puesto se apaga —dejó el
+coro a mitad de año, no vende más, pero sus ventas y su deuda siguen contando—.
+
+**Nunca se borra una persona.** Si este año no participa, simplemente no tiene
+fila para esta temporada. Sigue existiendo, sigue apareciendo en los números de
+los años en que estuvo, y se la reincorpora con un click.
+
+**Sacar a alguien de la temporada ya no le saca la cuenta.** Antes,
+`is_active = false` bloqueaba el login. Ahora entra igual pero sin rol, y sin
+rol no puede hacer nada: lo único que le queda es mirar su propio historial de
+ventas y su rendición. Eso es lo que habilita `RequireHistory`, que pasa a quien
+es corista ahora o lo fue alguna vez —quien sólo estuvo en la puerta no tiene
+ventas propias que mirar, así que no pasa—.
+
+### El arranque
+
+Con el rol adentro de `season_members`, sin temporada nadie tiene rol, y sin
+rol nadie puede crear la primera temporada. Por eso `make seed` ahora crea el
+admin **y** la primera temporada juntos. Y por las dudas, cuando no hay ninguna
+temporada cargada el rol se cae a la membresía más reciente que la persona
+tenga: es el único caso en que mirar el pasado es lo correcto.
+
+**Crear una temporada te mete en ella como dirección**, y activar una temporada
+que no tiene dirección también. Sin eso, cambiar de temporada era una forma de
+quedarse afuera de la propia app.
+
+### El backfill
+
+Quien tuvo actividad en una temporada —ventas, asignaciones o rendiciones—
+queda como miembro de esa temporada con el rol que tenía. Es la parte que
+arregla el histórico. Y la temporada en curso se lleva a todo el que estaba
+activo, tenga o no actividad todavía: ese es el equipo de ahora. Quien estaba
+desactivado no entra en la temporada en curso, que es exactamente lo que era.
+
+Verificado sobre los datos reales: 12 usuarios (1 dirección, 10 coristas, 1
+puerta) → 12 membresías con su rol, y los $458.000 sin rendir siguen dando lo
+mismo.
