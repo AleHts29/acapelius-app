@@ -54,7 +54,7 @@ describe('api', () => {
     expect(unauth.isUnauthenticated).toBe(true)
 
     mockFetch(403, { error: { code: 'password_change_required', message: 'Cambia tu contrasena.' } })
-    const pending = (await api.listUsers().catch((e: unknown) => e)) as ApiError
+    const pending = (await api.team().catch((e: unknown) => e)) as ApiError
     expect(pending.needsPasswordChange).toBe(true)
   })
 

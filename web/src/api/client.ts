@@ -15,6 +15,50 @@ export interface User {
   last_login_at: string | null
 }
 
+/** Una persona en una temporada: quién es, qué rol tiene ESTA temporada y qué
+ *  hizo en ella. */
+export interface TeamMember {
+  id: number
+  name: string
+  email: string
+  role: Role
+  joined_at: string
+  /** Con fecha: dejó el coro a mitad de temporada. */
+  left_at: string | null
+  last_login_at: string | null
+  tickets_sold: number
+  assigned: number
+  /** Lo cobrado menos lo rendido: lo que todavía tiene en la mano. */
+  balance_cents: number
+  checkins: number
+  /** Cuántas temporadas lleva, contando ésta. */
+  seasons: number
+}
+
+/** Alguien que participó antes pero no de esta temporada. */
+export interface FormerMember {
+  id: number
+  name: string
+  email: string
+  last_login_at: string | null
+  last_season_name: string
+  last_role: Role
+  last_tickets_sold: number
+}
+
+export interface TeamResponse {
+  members: TeamMember[]
+  former: FormerMember[]
+  summary: {
+    active: number
+    pending: number
+    left_choir: number
+    total: number
+    tickets_sold: number
+    balance_cents: number
+  }
+}
+
 /** Respuesta del alta, del reenvío de invitación y del reseteo (C7). */
 export interface UserAccessResponse {
   user: User
@@ -498,7 +542,16 @@ export const api = {
       current_password: currentPassword,
       new_password: newPassword,
     }),
-  listUsers: () => request<{ users: User[] }>('GET', '/users'),
+  /** El equipo de una temporada. Sin id, el de la que está en curso. */
+  team: (seasonId?: number) =>
+    request<TeamResponse>('GET', seasonId === undefined ? '/users' : `/users?season_id=${seasonId}`),
+  addMember: (seasonId: number, userId: number, role: Role) =>
+    request<{ member: unknown }>('POST', `/seasons/${seasonId}/members`, {
+      user_id: userId,
+      role,
+    }),
+  removeMember: (seasonId: number, userId: number) =>
+    request<void>('DELETE', `/seasons/${seasonId}/members/${userId}`),
   createUser: (input: { name: string; email: string; role: Role; password?: string }) =>
     request<UserAccessResponse>('POST', '/users', input),
   updateUser: (
@@ -515,6 +568,10 @@ export const api = {
     activate?: boolean
     /** Copia la grilla de otra temporada con las fechas corridas un año. */
     copy_from_season_id?: number
+    /** Si el equipo de esa temporada pasa también. Por omisión sí. */
+    copy_members?: boolean
+    /** El equipo elegido en el asistente. Manda sobre copy_members. */
+    members?: Array<{ user_id: number; role: Role }>
   }) => request<{ season: Season; copied?: number }>('POST', '/seasons', input),
   activateSeason: (id: number) => request<{ season: Season }>('POST', `/seasons/${id}/activate`),
 

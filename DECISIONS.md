@@ -657,3 +657,41 @@ desactivado no entra en la temporada en curso, que es exactamente lo que era.
 Verificado sobre los datos reales: 12 usuarios (1 dirección, 10 coristas, 1
 puerta) → 12 membresías con su rol, y los $458.000 sin rendir siguen dando lo
 mismo.
+
+## Equipo: bloques por rol y las columnas que Eli necesita
+
+La vista mostraba nombre y mail, nada más, con el chip "Corista" repetido once
+veces debajo del encabezado "Coristas · 11". Ahora **el rol lo dice el bloque**
+—con su acento lateral: carbón dirección, índigo coristas, verde puerta— y la
+columna Estado dice lo que sí varía: activa, invitación pendiente o dejó el
+coro. Son cosas distintas y ahora viven en lugares distintos: antes
+"Invitación pendiente" pisaba el rol y de esas dos personas no se sabía qué
+eran.
+
+Las cuatro columnas nuevas responden por qué se entra a Equipo: **vendidas**,
+**uso del cupo** —con barra, porque un 94% al lado de un 31% se compara de un
+vistazo y los números solos obligan a leer fila por fila—, **sin rendir** con
+enlace a Rendiciones, y **último acceso**. Arriba de 100% el porcentaje se
+pinta en ámbar: no es que aprovechó bien el cupo, es que vendió más de lo que
+tiene asignado, y eso hay que mirarlo.
+
+**El avatar es siempre índigo.** El rol lo comunica el bloque; que Eli tuviera
+avatar negro y el resto índigo hacía que el color de una persona pareciera
+significar algo.
+
+El selector de temporada manda también acá, y quienes no participan de este año
+quedan en un bloque plegado abajo, con su historia y un botón para
+reincorporarlas.
+
+## El asistente de temporada pregunta quién sigue
+
+Es el momento natural para resolverlo: al crear la temporada nueva, un segundo
+paso trae a todo el equipo anterior **tildado y con su rol precargado**, y con
+el dato que hace falta para decidir —cuánto vendió cada una y si debe rendir—.
+Se destilda a las que se fueron y se les cambia el rol a las que pasan a la
+puerta.
+
+El pie no es decorativo: dice *"Seguirán 11 de 12 · Beatriz queda fuera con
+deuda pendiente"*. Dejar afuera a alguien que todavía debe plata es una
+decisión válida, pero no puede ser una que se tome sin verla; por eso el pie
+vive fuera de la lista que scrollea.
