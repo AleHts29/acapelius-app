@@ -4333,8 +4333,6 @@ div.alertcard {
 
 .quienes {
   margin-top: 12px;
-  max-height: 46vh;
-  overflow-y: auto;
 }
 
 .quienes__r {
@@ -6907,6 +6905,11 @@ div.alertcard {
 
   .fnline__acts .iconbtn {
     margin-left: 0;
+  }
+
+  .quienes {
+    max-height: 46vh;
+    overflow-y: auto;
   }
 
   /* --- Equipo: nueve columnas ------------------------------------------ */

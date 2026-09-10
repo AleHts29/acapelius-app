@@ -116,11 +116,29 @@ function ultimoAcceso(iso: string | null): string {
   return texto === 'hoy' ? 'Hoy' : texto === 'ayer' ? 'Ayer' : texto
 }
 
-/** El renglón bajo el nombre: cuánto lleva o cuándo se fue. */
+/** El renglón bajo el nombre en escritorio: cuánto lleva o cuándo se fue. */
 function contextoDe(m: TeamMember): string {
-  if (m.left_at !== null) return `Dejó el coro el ${daysAgo(m.left_at)}`
+  if (m.left_at !== null) return `Dejó el coro ${daysAgo(m.left_at)}`
   if (m.last_login_at === null) return `Sumada ${daysAgo(m.joined_at)}`
   return m.seasons === 1 ? '1ª temporada' : `${m.seasons}ª temporada`
+}
+
+/**
+ * El mismo renglón en celular, donde no hay columnas: ahí tiene que llevar lo
+ * que es la razón de entrar a Equipo —cuánto vendió y cuánto debe rendir—, no
+ * el número de temporada, que en la tabla es apenas contexto.
+ */
+function resumenMovil(m: TeamMember, esCorista: boolean): string {
+  if (m.left_at !== null) return `Dejó el coro · vendió ${m.tickets_sold}`
+  if (m.last_login_at === null) return 'Nunca entró · invitación pendiente'
+  if (esCorista) {
+    const vendidas = `${m.tickets_sold} ${m.tickets_sold === 1 ? 'vendida' : 'vendidas'}`
+    return m.balance_cents > 0
+      ? `${vendidas} · debe rendir ${formatMoney(m.balance_cents)}`
+      : `${vendidas} · al día`
+  }
+  if (m.checkins > 0) return `${m.checkins} ingresos registrados`
+  return contextoDe(m)
 }
 
 // --- Fila de persona --------------------------------------------------------
@@ -177,8 +195,12 @@ function PersonaRow({
           <b>
             <Hl text={m.name} q={q} />
           </b>
-          <span className="srow__mail">{m.email}</span>
-          <span className="srow__sub">{contextoDe(m)}</span>
+          {/* Para quien se fue, cuándo fue importa más que el mail: es el
+              dato con el que se entiende su fila entera. */}
+          <span className="srow__mail">
+            {m.left_at !== null ? `Dejó el coro ${daysAgo(m.left_at)}` : m.email}
+          </span>
+          <span className="srow__sub">{resumenMovil(m, esCorista)}</span>
         </span>
       </span>
 
