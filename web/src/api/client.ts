@@ -520,7 +520,8 @@ export interface AttendanceReport {
 
 export const api = {
   me: () => request<{ user: User }>('GET', '/me'),
-  home: () => request<Home>('GET', '/home'),
+  home: (seasonId?: number) =>
+    request<Home>('GET', seasonId === undefined ? '/home' : `/home?season_id=${seasonId}`),
   login: (email: string, password: string) =>
     request<{ user: User }>('POST', '/auth/login', { email, password }),
   logout: () => request<void>('POST', '/auth/logout'),
@@ -591,11 +592,16 @@ export const api = {
       next_cursor?: string
     }>('GET', qs ? `/sales?${qs}` : '/sales')
   },
-  sellersWithSales: (functionId?: number) =>
-    request<{ sellers: Array<{ id: number; name: string; sales: number }> }>(
+  sellersWithSales: (opts?: { seasonId?: number; functionId?: number }) => {
+    const params = new URLSearchParams()
+    if (opts?.seasonId !== undefined) params.set('season_id', String(opts.seasonId))
+    if (opts?.functionId !== undefined) params.set('function_id', String(opts.functionId))
+    const qs = params.toString()
+    return request<{ sellers: Array<{ id: number; name: string; sales: number }> }>(
       'GET',
-      functionId === undefined ? '/reports/sellers' : `/reports/sellers?function_id=${functionId}`,
-    ),
+      qs ? `/reports/sellers?${qs}` : '/reports/sellers',
+    )
+  },
   bulkPayment: (saleIds: number[], method: PaymentMethod) =>
     request<{ charged: number; skipped: number; amount_cents: number }>(
       'POST',
@@ -860,6 +866,8 @@ export interface MySettlement {
  */
 /** Los filtros del listado de ventas, compartidos por la lista y el export. */
 export interface SalesQuery {
+  /** La temporada que se está mirando. Sin esto el listado mezcla años. */
+  seasonId?: number
   mine?: boolean
   functionId?: number
   sellerId?: number
@@ -869,6 +877,7 @@ export interface SalesQuery {
 
 function salesParams(opts?: SalesQuery): URLSearchParams {
   const params = new URLSearchParams()
+  if (opts?.seasonId !== undefined) params.set('season_id', String(opts.seasonId))
   if (opts?.mine) params.set('mine', '1')
   if (opts?.functionId !== undefined) params.set('function_id', String(opts.functionId))
   if (opts?.sellerId !== undefined) params.set('seller_id', String(opts.sellerId))

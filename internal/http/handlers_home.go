@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -122,10 +123,34 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		LastSales: []homeSale{},
 	}
 
-	season, err := s.activeSeason(ctx)
-	if err != nil {
-		httpx.Internal(w, r, err)
-		return
+	// La temporada la manda el selector global (C16 §Fase 2): si la home se
+	// quedara siempre en la que esta en curso, el selector diria 2025 y la
+	// pantalla mostraria 2026 sin avisar. Solo direccion elige: la corista y
+	// la puerta operan siempre sobre la temporada en curso.
+	var season *sqlcgen.Season
+	if raw := r.URL.Query().Get("season_id"); raw != "" && user.Role == domain.RoleAdmin {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "season_id tiene que ser un numero.")
+			return
+		}
+		elegida, err := s.queries.GetSeason(ctx, id)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				mapDomainError(w, domain.ErrSeasonNotFound)
+				return
+			}
+			httpx.Internal(w, r, err)
+			return
+		}
+		season = &elegida
+	} else {
+		enCurso, err := s.activeSeason(ctx)
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		season = enCurso
 	}
 	if season == nil {
 		httpx.JSON(w, http.StatusOK, resp)

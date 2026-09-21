@@ -1,4 +1,7 @@
--- Listado escalable de ventas (CAMBIOS_V2 §C3, spec C15).
+-- Listado escalable de ventas (CAMBIOS_V2 §C3, spec C15, C16 §Fase 2).
+--
+-- Todo el listado esta acotado a una temporada: sin eso, cambiar de temporada
+-- en el selector global dejaba Ventas mostrando las cinco temporadas juntas.
 --
 -- Busqueda insensible a mayusculas y acentos con translate() (sin extension
 -- unaccent: portable a cualquier Postgres; ver DECISIONS.md). El mismo
@@ -38,7 +41,8 @@ SELECT
 FROM sales s
 JOIN functions f ON s.function_id = f.id
 JOIN users u ON s.seller_id = u.id
-WHERE (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
+WHERE (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
+  AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
   AND (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
   AND (
     sqlc.narg(status)::text IS NULL
@@ -88,7 +92,8 @@ SELECT
 FROM sales s
 JOIN functions f ON s.function_id = f.id
 JOIN users u ON s.seller_id = u.id
-WHERE (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
+WHERE (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
+  AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
   AND (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
   AND (
     sqlc.narg(q)::text IS NULL
@@ -111,7 +116,8 @@ SELECT
 FROM sales s
 JOIN functions f ON s.function_id = f.id
 JOIN users u ON s.seller_id = u.id
-WHERE (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
+WHERE (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
+  AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
   AND (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
   AND (
     sqlc.narg(status)::text IS NULL
@@ -141,7 +147,8 @@ SELECT
 FROM sales s
 JOIN functions f ON s.function_id = f.id
 JOIN users u ON s.seller_id = u.id
-WHERE (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
+WHERE (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
+  AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
   AND (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
   AND (
     sqlc.narg(status)::text IS NULL
@@ -166,7 +173,8 @@ SELECT u.id, u.name, COUNT(*)::bigint AS sales
 FROM sales s
 JOIN functions f ON s.function_id = f.id
 JOIN users u ON s.seller_id = u.id
-WHERE (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
+WHERE (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
+  AND (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
 GROUP BY u.id, u.name
 ORDER BY u.name;
 

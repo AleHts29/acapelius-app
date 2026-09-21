@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
-import { activeSeason, api } from '../api/client'
+import { api } from '../api/client'
 import type { Direccion, DireccionFinding, DireccionFunction } from '../api/client'
 import { AllocationsEditor } from '../components/AllocationsEditor'
+import { useSeason } from '../season/SeasonProvider'
 import { dayLabel, formatMoney } from '../lib/format'
 import { initials } from '../lib/search'
 import { ActionPanel } from '../ui/ActionPanel'
-import { Menu } from '../ui/Menu'
 
 /** Nombre de la función, con el lugar como respaldo. */
 function nombre(fn: DireccionFunction): string {
@@ -300,10 +300,9 @@ function Comparacion({ data, onClose }: { data: Direccion; onClose: () => void }
  * contexto para entenderse vive detrás de un click — acá van conclusiones.
  */
 export function DireccionPage() {
-  const navigate = useNavigate()
-  const seasons = useQuery({ queryKey: ['seasons'], queryFn: () => api.listSeasons() })
-  const all = seasons.data?.seasons ?? []
-  const season = activeSeason(all)
+  // La temporada la manda el selector global (C16): esta pantalla ya no
+  // guarda su propia elección ni pide la lista por su cuenta.
+  const { season } = useSeason()
   const seasonId = season?.id
 
   const [comparando, setComparando] = useState(false)
@@ -342,29 +341,6 @@ export function DireccionPage() {
             {enVenta > 0 && `, ${enVenta} en venta`}
           </p>
         </div>
-        {all.length > 1 ? (
-          <Menu
-            trigger="pill"
-            label={season.name}
-            value={String(season.id)}
-            align="right"
-            groups={[
-              {
-                label: 'Temporadas',
-                options: all.map((s) => ({
-                  id: String(s.id),
-                  label: s.name,
-                  hint: s.is_active ? 'En curso' : 'Cerrada',
-                  onSelect: () => navigate(`/temporadas/${s.id}`),
-                })),
-              },
-            ]}
-          />
-        ) : (
-          <Link className="season-pill" to={`/temporadas/${season.id}`}>
-            {season.name}
-          </Link>
-        )}
       </div>
 
       <Plata money={d.money} />

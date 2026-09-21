@@ -229,6 +229,11 @@ func (s *Server) handleExportSales(w http.ResponseWriter, r *http.Request) {
 		q = &escaped
 	}
 
+	seasonID, ok := s.seasonDelListado(w, r)
+	if !ok {
+		return
+	}
+
 	// Se pagina con el mismo keyset del listado hasta juntar todo: el CSV es
 	// del filtro entero, no de una pagina.
 	var filas []sqlcgen.ListSalesPageRow
@@ -237,6 +242,7 @@ func (s *Server) handleExportSales(w http.ResponseWriter, r *http.Request) {
 	var cursorID *int64
 	for range 200 { // 200 * 50 = 10.000 ventas, mas que una temporada entera
 		page, err := s.queries.ListSalesPage(r.Context(), sqlcgen.ListSalesPageParams{
+			SeasonID:   seasonID,
 			SellerID:   sellerID,
 			FunctionID: functionID,
 			Status:     status,
@@ -338,7 +344,14 @@ func (s *Server) handleSellersWithSales(w http.ResponseWriter, r *http.Request) 
 		}
 		functionID = &id
 	}
-	rows, err := s.queries.SellersWithSales(r.Context(), functionID)
+	seasonID, ok := s.seasonDelListado(w, r)
+	if !ok {
+		return
+	}
+	rows, err := s.queries.SellersWithSales(r.Context(), sqlcgen.SellersWithSalesParams{
+		SeasonID:   seasonID,
+		FunctionID: functionID,
+	})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return

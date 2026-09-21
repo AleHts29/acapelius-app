@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 
+import { SeasonSelector } from '../season/SeasonSelector'
 import { useSession } from '../auth/session'
 import { SideNav } from './SideNav'
 import { TabBar } from './TabBar'
@@ -28,6 +29,9 @@ export function Layout() {
           <img className="app-header__logo" src="/logo-mark-indigo.png" alt="" />
           <span className="app-header__word">ACAPELIUS</span>
         </Link>
+        {/* En celular el selector va en el header: es lo único que está en
+            todas las pantallas. */}
+        <SeasonSelector />
         <div style={{ position: 'relative' }}>
           <button
             className="avatar"

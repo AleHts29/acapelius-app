@@ -15,6 +15,7 @@ import type {
   SettlementReportRow,
 } from '../api/client'
 import { RegisterSheet } from './SettlementsPage'
+import { useSeason } from '../season/SeasonProvider'
 import { useSession } from '../auth/session'
 import { calendarDaysUntil, dayLabel, daysAgo, formatDateTime, formatMoney } from '../lib/format'
 import { initials } from '../lib/search'
@@ -251,7 +252,11 @@ function ToDoRow({ item, onAction }: { item: HomeToDo; onAction: (item: HomeToDo
 export function HomePage() {
   const { user } = useSession()
   const navigate = useNavigate()
-  const home = useQuery({ queryKey: ['home'], queryFn: () => api.home() })
+  const { seasonId } = useSeason()
+  const home = useQuery({
+    queryKey: ['home', seasonId],
+    queryFn: () => api.home(seasonId),
+  })
   const nuevaVenta = useNuevaVenta()
   // La rendición se resuelve acá mismo (C14): la alerta abre el pop-up y al
   // confirmar desaparece sola, porque la mutación invalida ['home'].
@@ -287,8 +292,8 @@ export function HomePage() {
         <div>
           <h1 className="page-title">Hola, {data.name.split(' ')[0]}</h1>
           <p className="page-head__sub">
+            {/* Sin repetir la temporada: el selector, arriba, ya la dice. */}
             {hoy.charAt(0).toUpperCase() + hoy.slice(1)}
-            {data.season && ` · ${data.season.name}`}
           </p>
         </div>
         {/* Una sola acción primaria por pantalla (C16). "Modo puerta" salió

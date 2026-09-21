@@ -4250,6 +4250,59 @@ div.alertcard {
   display: none;
 }
 
+/* --- Selector de temporada: el contexto de toda la app (C16) ------------- */
+
+.seasonsel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.seasonsel .menu-btn--pill {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Un punto verde alcanza para "es la de ahora": el nombre ya está al lado. */
+.seasonsel__dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+/* Mirar una temporada cerrada tiene que verse sin abrir el menú. */
+.seasonsel__tag {
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* En el header del celular compite con la marca y el avatar: se achica. */
+.app-header .seasonsel {
+  margin-left: auto;
+  margin-right: 10px;
+  min-width: 0;
+}
+
+.app-header .seasonsel .menu-btn--pill {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.app-header .seasonsel .menu-btn__tx {
+  max-width: 34vw;
+}
+
 /* --- "Tenés que rendir": la plata del coro que la corista tiene en la mano.
    Va en ámbar porque es una deuda con el coro, no un logro. ------------- */
 .rendir {
@@ -5890,6 +5943,14 @@ div.alertcard {
     padding: 18px 10px 12px;
     background: var(--surface);
     border-right: 1px solid var(--line);
+  }
+
+  .sidenav .seasonsel {
+    margin: 0 4px 12px;
+  }
+
+  .sidenav .seasonsel .menu-btn--pill {
+    flex: 1;
   }
 
   .sidenav__brand {

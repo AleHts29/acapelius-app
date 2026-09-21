@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, Copy, LayoutList, Lock, Pencil, Plus, Receipt, Trash2, UserCheck, Users, X } from 'lucide-react'
+import { CalendarDays, Copy, Lock, Pencil, Receipt, Trash2, UserCheck, Users, X } from 'lucide-react'
 
-import { ApiError, activeSeason, api } from '../api/client'
+import { ApiError, api } from '../api/client'
 import type { FunctionSummary } from '../api/client'
 import { AllocationsEditor } from '../components/AllocationsEditor'
+import { useSeason } from '../season/SeasonProvider'
 import {
   calendarDaysUntil,
   dayAndMonth,
@@ -441,7 +442,6 @@ type Panel =
 
 export function SeasonPage() {
   const { seasonId: rawSeasonId } = useParams()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   // ?fn=N llega de las alertas de Dirección: esa función abre asignaciones.
   const [searchParams] = useSearchParams()
@@ -451,13 +451,16 @@ export function SeasonPage() {
   const foco = useRef(false)
   const [errorTemporada, setErrorTemporada] = useState<string | null>(null)
 
-  const seasons = useQuery({ queryKey: ['seasons'], queryFn: () => api.listSeasons() })
-  const todas = seasons.data?.seasons ?? []
-  const enCurso = activeSeason(todas)
-  // Sin :seasonId en la URL se mira la temporada en curso, que es lo que
-  // quiere ver dirección el 99% de las veces.
-  const season = rawSeasonId ? todas.find((s) => s.id === Number(rawSeasonId)) : enCurso
+  // La temporada la manda el selector global (C16). La ruta vieja
+  // /temporadas/:id sigue andando: al entrar, alinea el selector.
+  const { seasons: todas, season, current: enCurso, elegir, loading } = useSeason()
   const seasonId = season?.id
+  const dePath = Number(rawSeasonId) || undefined
+  useEffect(() => {
+    if (dePath !== undefined && dePath !== seasonId && todas.some((s) => s.id === dePath)) {
+      elegir(dePath)
+    }
+  }, [dePath, seasonId, todas, elegir])
 
   const summary = useQuery({
     queryKey: ['functions-summary', seasonId],
@@ -517,7 +520,7 @@ export function SeasonPage() {
     },
   })
 
-  if (seasons.isPending) return <p className="muted">Cargando…</p>
+  if (loading) return <p className="muted">Cargando…</p>
 
   // El alta de temporadas vive en el índice: acá no se duplica el formulario.
   if (todas.length === 0) {
@@ -562,42 +565,7 @@ export function SeasonPage() {
         title={season.name}
         sub={sub}
         action={{ label: 'Agregar función', onClick: () => setPanel({ kind: 'funcion', modo: 'nueva' }) }}
-      >
-        <Menu
-          trigger="pill"
-          label={season.name}
-          value={String(season.id)}
-          groups={[
-            {
-              label: 'Temporadas',
-              options: todas.map((s) => ({
-                id: String(s.id),
-                label: s.name,
-                hint: s.id === enCurso?.id ? 'En curso' : 'Cerrada',
-                onSelect: () => navigate(`/temporadas/${s.id}`),
-              })),
-            },
-            {
-              separated: true,
-              options: [
-                {
-                  id: 'nueva',
-                  label: 'Crear temporada…',
-                  icon: <Plus size={15} />,
-                  tone: 'action',
-                  onSelect: () => navigate('/temporadas?nueva=1'),
-                },
-                {
-                  id: 'todas',
-                  label: 'Ver todas las temporadas',
-                  icon: <LayoutList size={15} />,
-                  onSelect: () => navigate('/temporadas'),
-                },
-              ],
-            },
-          ]}
-        />
-      </PageHead>
+      />
 
       {season.id !== enCurso?.id && (
         <div className="seasonbar">

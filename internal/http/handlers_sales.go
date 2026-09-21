@@ -369,6 +369,13 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 		functionID = &id
 	}
 
+	// El listado vive dentro de una temporada. Sin season_id se usa la que
+	// esta en curso: es lo que espera quien entra sin elegir nada.
+	seasonID, ok := s.seasonDelListado(w, r)
+	if !ok {
+		return
+	}
+
 	var status *string
 	switch raw := query.Get("status"); raw {
 	case "":
@@ -393,6 +400,7 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	rows, err := s.queries.ListSalesPage(ctx, sqlcgen.ListSalesPageParams{
+		SeasonID:   seasonID,
 		SellerID:   sellerID,
 		FunctionID: functionID,
 		Status:     status,
@@ -408,6 +416,7 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 	}
 
 	summary, err := s.queries.SalesSummary(ctx, sqlcgen.SalesSummaryParams{
+		SeasonID:   seasonID,
 		SellerID:   sellerID,
 		FunctionID: functionID,
 		Q:          q,
@@ -418,6 +427,7 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filtered, err := s.queries.SalesFilteredSummary(ctx, sqlcgen.SalesFilteredSummaryParams{
+		SeasonID:   seasonID,
 		SellerID:   sellerID,
 		FunctionID: functionID,
 		Status:     status,
@@ -429,6 +439,7 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 	}
 
 	totales, err := s.queries.SalesFunctionTotals(ctx, sqlcgen.SalesFunctionTotalsParams{
+		SeasonID:   seasonID,
 		SellerID:   sellerID,
 		FunctionID: functionID,
 		Status:     status,
@@ -832,3 +843,26 @@ func ptrInt64(v int64) *int64 { return &v }
 func float8(v float64) pgtype.Float8 { return pgtype.Float8{Float64: v, Valid: true} }
 
 func pgtypeFloat8Null() pgtype.Float8 { return pgtype.Float8{} }
+
+// seasonDelListado resuelve la temporada de una consulta de ventas: la que
+// venga en ?season_id=, o la que este en curso. Devuelve nil solo si no hay
+// ninguna temporada cargada, y ahi el listado sale vacio, que es la verdad.
+func (s *Server) seasonDelListado(w http.ResponseWriter, r *http.Request) (*int64, bool) {
+	if raw := r.URL.Query().Get("season_id"); raw != "" {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "season_id tiene que ser un numero.")
+			return nil, false
+		}
+		return &id, true
+	}
+	season, err := s.activeSeason(r.Context())
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return nil, false
+	}
+	if season == nil {
+		return nil, true
+	}
+	return &season.ID, true
+}

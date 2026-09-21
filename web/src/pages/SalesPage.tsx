@@ -24,6 +24,7 @@ import type {
 import { useSession } from '../auth/session'
 import { daysAgo, formatMoney, functionDay, functionTime } from '../lib/format'
 import { initials } from '../lib/search'
+import { useSeason } from '../season/SeasonProvider'
 import { useIsDesktop } from '../lib/viewport'
 import { ActionPanel } from '../ui/ActionPanel'
 import { Menu } from '../ui/Menu'
@@ -598,6 +599,7 @@ export function SalesPage() {
   const escritorio = useIsDesktop()
   const queryClient = useQueryClient()
   const nuevaVenta = useNuevaVenta()
+  const { seasonId } = useSeason()
 
   const [searchParams, setSearchParams] = useSearchParams()
   const filter = parseFilter(searchParams.get('filtro'))
@@ -618,6 +620,9 @@ export function SalesPage() {
   }, [q])
 
   const filtros = {
+    // El listado vive dentro de la temporada del selector global (C16): sin
+    // esto, cambiar de temporada dejaba Ventas mostrando todos los años.
+    seasonId,
     q: debouncedQ || undefined,
     status: FILTER_TO_STATUS[filter],
     functionId,
@@ -631,10 +636,14 @@ export function SalesPage() {
     getNextPageParam: (last) => last.next_cursor,
   })
 
-  const funciones = useQuery({ queryKey: ['functions'], queryFn: () => api.listFunctions() })
+  const funciones = useQuery({
+    queryKey: ['functions', seasonId],
+    queryFn: () => api.listFunctions(seasonId),
+    enabled: seasonId !== undefined,
+  })
   const vendedoras = useQuery({
-    queryKey: ['sellers-with-sales', functionId],
-    queryFn: () => api.sellersWithSales(functionId),
+    queryKey: ['sellers-with-sales', seasonId, functionId],
+    queryFn: () => api.sellersWithSales({ seasonId, functionId }),
     enabled: isAdmin,
   })
 

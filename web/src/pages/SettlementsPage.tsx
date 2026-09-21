@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, History, Mail } from 'lucide-react'
 
-import { ApiError, activeSeason, api } from '../api/client'
+import { ApiError, api } from '../api/client'
+import { useSeason } from '../season/SeasonProvider'
 import { useIsDesktop } from '../lib/viewport'
 import type {
   PaymentMethod,
@@ -19,12 +20,6 @@ import { BalanceChip } from '../ui/StatusChip'
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?'
-}
-
-/** La temporada en curso, la que dirección marcó activa. */
-function useSeason() {
-  const seasons = useQuery({ queryKey: ['seasons'], queryFn: () => api.listSeasons() })
-  return activeSeason(seasons.data?.seasons)
 }
 
 function useReport(seasonId: number | undefined) {
@@ -242,7 +237,7 @@ export function SettlementsPage({
   selectedId?: number
 } = {}) {
   const navigate = useNavigate()
-  const season = useSeason()
+  const { season } = useSeason()
   const report = useReport(season?.id)
   const [sheetFor, setSheetFor] = useState<SettlementReportRow | null>(null)
 
@@ -384,7 +379,7 @@ export function SettlementDetailPage({
   const queryClient = useQueryClient()
   const { sellerId: raw } = useParams()
   const sellerId = sellerIdProp ?? Number(raw)
-  const season = useSeason()
+  const { season } = useSeason()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
 
@@ -597,7 +592,7 @@ function tituloTimeline(item: TimelineItem): string {
  * ========================================================================== */
 
 export function SettlementsHistoryPage() {
-  const season = useSeason()
+  const { season } = useSeason()
   const report = useReport(season?.id)
   const [sellerFilter, setSellerFilter] = useState<string>('all')
 
@@ -660,7 +655,7 @@ export function SettlementsHistoryPage() {
  */
 function SinSeleccion() {
   const queryClient = useQueryClient()
-  const season = useSeason()
+  const { season } = useSeason()
   const report = useReport(season?.id)
   const [aviso, setAviso] = useState<string | null>(null)
   const [confirmando, setConfirmando] = useState(false)

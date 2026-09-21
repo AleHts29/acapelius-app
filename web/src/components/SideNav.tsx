@@ -4,6 +4,8 @@ import { LogOut } from 'lucide-react'
 
 import { api, roleLabel } from '../api/client'
 import type { User } from '../api/client'
+import { SeasonSelector } from '../season/SeasonSelector'
+import { useSeason } from '../season/SeasonProvider'
 import { activeItem, navFor } from './nav'
 import type { NavItem } from './nav'
 
@@ -25,7 +27,11 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
 
   // Los contadores salen de la home, que ya está en caché cuando se navega
   // desde ahí; si todavía no se pidió, los ítems van sin número.
-  const home = useQuery({ queryKey: ['home'], queryFn: () => api.home() })
+  const { seasonId } = useSeason()
+  const home = useQuery({
+    queryKey: ['home', seasonId],
+    queryFn: () => api.home(seasonId),
+  })
   const badges = home.data?.badges
 
   const fila = (item: NavItem) => {
@@ -55,6 +61,10 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
         <img className="sidenav__logo" src="/logo-mark-indigo.png" alt="" />
         <span>ACAPELIUS</span>
       </Link>
+
+      {/* Arriba de la navegación: la temporada es el contexto de todo lo que
+          está debajo, no una opción de una pantalla. */}
+      <SeasonSelector />
 
       <div className="sidenav__items">
         {primerNivel.map(fila)}

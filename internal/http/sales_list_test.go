@@ -254,3 +254,82 @@ func TestVenderC15(t *testing.T) {
 		t.Fatalf("el CSV tendría que tener encabezado + 3 ventas; tiene %d saltos", lineas)
 	}
 }
+
+// TestVentasPorTemporada: el listado vive dentro de una temporada. Sin esto,
+// el selector global decía 2025 y Ventas mostraba los dos años juntos.
+func TestVentasPorTemporada(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	fn2026 := setupCatalog(t, admin, 50)
+	season2026 := activeSeasonID(t, admin)
+	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	caroID := sellerID(t, carolina)
+	assignQuota(t, admin, fn2026, int(caroID), 10)
+	assertStatus(t, carolina.post("/api/sales", map[string]any{
+		"function_id": fn2026, "buyer_name": "De 2026", "quantity": 2,
+	}), http.StatusCreated)
+
+	// Una temporada nueva, con su propia función y su propia venta.
+	nueva := admin.post("/api/seasons", map[string]any{"name": "Temporada 2027"})
+	assertStatus(t, nueva, http.StatusCreated)
+	season2027 := nueva.Body["season"].(map[string]any)["id"].(float64)
+	fnResp := admin.post("/api/functions", map[string]any{
+		"season_id": season2027, "venue": "Teatro Municipal",
+		"starts_at": "2027-12-10T21:00:00-03:00", "capacity": 50, "price_cents": 900000,
+	})
+	assertStatus(t, fnResp, http.StatusCreated)
+	fn2027 := fnResp.Body["function"].(map[string]any)["id"].(float64)
+	assertStatus(t, admin.post(fmt.Sprintf("/api/seasons/%.0f/members", season2027),
+		map[string]any{"user_id": caroID, "role": "seller"}), http.StatusOK)
+	assignQuota(t, admin, fn2027, int(caroID), 10)
+	assertStatus(t, carolina.post("/api/sales", map[string]any{
+		"function_id": fn2027, "buyer_name": "De 2027", "quantity": 3,
+	}), http.StatusCreated)
+
+	compradores := func(qs string) []string {
+		t.Helper()
+		resp := admin.get("/api/sales" + qs)
+		assertStatus(t, resp, http.StatusOK)
+		var out []string
+		for _, raw := range resp.Body["sales"].([]any) {
+			out = append(out, raw.(map[string]any)["buyer_name"].(string))
+		}
+		return out
+	}
+
+	// Cada temporada muestra la suya, y sólo la suya.
+	if got := compradores(fmt.Sprintf("?season_id=%.0f", season2026)); len(got) != 1 || got[0] != "De 2026" {
+		t.Fatalf("2026 tendría que traer sólo su venta; trajo %v", got)
+	}
+	if got := compradores(fmt.Sprintf("?season_id=%.0f", season2027)); len(got) != 1 || got[0] != "De 2027" {
+		t.Fatalf("2027 tendría que traer sólo su venta; trajo %v", got)
+	}
+
+	// Sin season_id manda la temporada en curso, que es la recién creada.
+	if got := compradores(""); len(got) != 1 || got[0] != "De 2027" {
+		t.Fatalf("sin season_id tendría que usar la temporada en curso; trajo %v", got)
+	}
+
+	// El resumen y los subtotales del bloque siguen el mismo alcance.
+	resp := admin.get(fmt.Sprintf("/api/sales?season_id=%.0f", season2026))
+	if resp.Body["filtered"].(map[string]any)["tickets_sold"].(float64) != 2 {
+		t.Fatalf("el resumen de 2026 tendría que contar 2 entradas: %v", resp.Body["filtered"])
+	}
+	if len(resp.Body["function_totals"].([]any)) != 1 {
+		t.Fatalf("2026 tiene una sola función con ventas: %v", resp.Body["function_totals"])
+	}
+
+	// Y la home de dirección también: es lo que hace cierto al selector.
+	home := admin.get(fmt.Sprintf("/api/home?season_id=%.0f", season2026))
+	assertStatus(t, home, http.StatusOK)
+	if home.Body["season"].(map[string]any)["id"].(float64) != season2026 {
+		t.Fatalf("la home tendría que responder por la temporada pedida: %v", home.Body["season"])
+	}
+
+	// La corista no elige temporada: opera siempre sobre la que está en curso.
+	suHome := carolina.get(fmt.Sprintf("/api/home?season_id=%.0f", season2026))
+	assertStatus(t, suHome, http.StatusOK)
+	if suHome.Body["season"].(map[string]any)["id"].(float64) != season2027 {
+		t.Fatalf("la corista tendría que ver la temporada en curso: %v", suHome.Body["season"])
+	}
+}

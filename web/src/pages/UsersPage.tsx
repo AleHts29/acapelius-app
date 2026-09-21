@@ -13,11 +13,12 @@ import {
   X,
 } from 'lucide-react'
 
-import { ApiError, activeSeason, api, roleLabel } from '../api/client'
+import { ApiError, api, roleLabel } from '../api/client'
 import type { FormerMember, Role, TeamMember, User, UserAccessResponse } from '../api/client'
 import { useSession } from '../auth/session'
 import { daysAgo, formatMoney } from '../lib/format'
 import { initials, normalizeText } from '../lib/search'
+import { useSeason } from '../season/SeasonProvider'
 import { useIsDesktop } from '../lib/viewport'
 import { ActionPanel, SheetAction } from '../ui/ActionPanel'
 import { Menu } from '../ui/Menu'
@@ -787,11 +788,10 @@ export function UsersPage() {
   const [seleccion, setSeleccion] = useState<Set<number>>(new Set())
   const [aviso, setAviso] = useState<string | null>(null)
 
-  const seasons = useQuery({ queryKey: ['seasons'], queryFn: () => api.listSeasons() })
-  const todas = seasons.data?.seasons ?? []
-  const enCurso = activeSeason(todas)
-  const [seasonId, setSeasonId] = useState<number | undefined>(undefined)
-  const mirando = seasonId ?? enCurso?.id
+  // La temporada la manda el selector global (C16): se va el selector propio
+  // de esta pantalla, que podía estar mirando un año distinto que Plata.
+  const { season, current: enCurso } = useSeason()
+  const mirando = season?.id
   const esLaEnCurso = mirando === enCurso?.id
 
   const { data, isPending } = useQuery({
@@ -880,30 +880,7 @@ export function UsersPage() {
             : undefined
         }
         action={{ label: 'Sumar persona', onClick: () => setCreating(true) }}
-      >
-        {todas.length > 1 && (
-          <Menu
-            trigger="pill"
-            label={todas.find((s) => s.id === mirando)?.name ?? 'Temporada'}
-            value={mirando === undefined ? undefined : String(mirando)}
-            align="right"
-            groups={[
-              {
-                label: 'Temporadas',
-                options: todas.map((s) => ({
-                  id: String(s.id),
-                  label: s.name,
-                  hint: s.id === enCurso?.id ? 'En curso' : 'Cerrada',
-                  onSelect: () => {
-                    setSeasonId(s.id)
-                    setSeleccion(new Set())
-                  },
-                })),
-              },
-            ]}
-          />
-        )}
-      </PageHead>
+      />
 
       {access && <AccessCard access={access} onClose={() => setAccess(null)} />}
 

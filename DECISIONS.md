@@ -737,3 +737,45 @@ cuatro links era justamente el que estaba roto.
 
 **"Vender" pasa a "Ventas"** en la navegación: la pantalla es el listado;
 vender es una acción adentro.
+
+## C16 · Fase 2 — una sola temporada para toda la app
+
+`SeasonPage`, `SettlementsPage`, `DireccionPage` y `UsersPage` llamaban cada
+una a `listSeasons` y guardaban su propia elección. Cambiar de temporada en
+Rendiciones no cambiaba Temporadas, y las cuatro podían estar mirando años
+distintos a la vez sin que nada lo dijera.
+
+Ahora hay un `SeasonProvider` y el selector vive **arriba de la navegación**,
+no adentro de una pantalla: la temporada es contexto de todo lo que está
+debajo, no una opción de una vista.
+
+**La fuente de verdad es `?t=<id>` en la URL**, con `localStorage` como memoria
+entre sesiones y la temporada en curso como default. La URL primero porque así
+un link comparte lo que la persona está viendo; y si se eligió una que no es la
+en curso, el provider la escribe en la URL aunque se haya llegado por un link
+sin parámetro — recargar cae en la misma temporada.
+
+**Que no sea la temporada en curso se ve sin abrir el menú**: un punto verde
+cuando lo es, un chip "Cerrada" cuando no. Es la diferencia entre mirar el año
+pasado y creer que estás mirando el de ahora.
+
+Sólo dirección elige. La corista y la puerta operan siempre sobre la temporada
+en curso: para ellas ni se pide la lista, y `GET /api/home?season_id=` ignora
+el parámetro si no es admin.
+
+### Dos cosas que el selector obligó a arreglar
+
+**Ventas no estaba acotada a una temporada.** El listado mezclaba todos los
+años: con una sola temporada cargada no se notaba, pero el selector lo habría
+vuelto mentira al toque. `ListSalesPage` y sus tres agregados —el resumen, el
+resumen filtrado y los subtotales por función— ahora filtran por
+`f.season_id`, igual que el export y el menú de vendedoras.
+
+**La home tampoco.** `GET /api/home` usaba siempre la temporada activa, así que
+el selector podía decir 2025 mientras la home mostraba la próxima función de
+2026. Acepta `season_id` para dirección. El subtítulo dejó de repetir el nombre
+de la temporada: lo dice el selector, dos centímetros más arriba.
+
+El asistente de alta salió de `SeasonsPage` a `season/NuevaTemporada.tsx`, para
+que "Crear temporada…" se pueda abrir desde el selector sin pasar por el
+índice. `SeasonsPage` lo importa; no hay dos formularios.
