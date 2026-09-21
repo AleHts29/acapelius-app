@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Limpieza y lavado de cara</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#F2F3F5; --sur:#FFFFFF; --alt:#FAFBFC; --ink:#1A1C22; --mut:#7C818C; --line:#E3E5E9;
+          --indigo:#3A3FC4; --indigo-s:#E8E8FA; --indigo-l:#8A8DEA; --carbon:#1A1C22;
+          --ok:#0E7A55; --ok-s:#E2F2EB; --ok-b:#C9E6D9; --warn:#9C6A0C; --warn-s:#F6EEDC; --warn-b:#E7D9B8;
+          --bad:#B3403F; --bad-s:#F7E6E5; }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .page { max-width:1360px; margin:0 auto; padding:44px 20px 100px; }
+  .page > h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(26px,4vw,36px); }
+  .page > h1 span { color:var(--indigo); }
+  .page > p.lead { margin-top:10px; max-width:940px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .page > p.lead b { color:var(--ink); }
+  code { font-family:ui-monospace,Menlo,monospace; font-size:.9em; background:#E8E9EC; padding:1px 5px; border-radius:4px; }
+
+  .h2 { margin-top:40px; font-family:'Archivo',sans-serif; font-size:19px; font-weight:800; }
+  .h2 small { font-family:'Inter'; font-size:12.5px; font-weight:600; color:var(--mut); margin-left:8px; }
+  .p { margin-top:7px; max-width:920px; font-size:13.5px; line-height:1.65; color:#4A4C55; }
+  .p b { color:var(--ink); }
+
+  /* números */
+  .nums { margin-top:16px; display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+  .nm { background:#fff; border:1px solid #D5D8DD; border-radius:13px; padding:14px 16px; }
+  .nm .a { font-family:'Archivo',sans-serif; font-size:13px; font-weight:800; color:var(--mut); text-decoration:line-through; }
+  .nm .b { font-family:'Archivo',sans-serif; font-size:24px; font-weight:800; color:var(--indigo); }
+  .nm span { display:block; font-size:10.5px; color:var(--mut); font-weight:700; margin-top:3px; }
+
+  /* hallazgos */
+  .finds { margin-top:14px; display:grid; gap:10px; }
+  @media(min-width:900px){ .finds { grid-template-columns:1fr 1fr; } }
+  .fd { background:#fff; border:1px solid #D5D8DD; border-radius:13px; padding:14px 16px; }
+  .fd.bug { border-color:#E8C2C1; background:#FFF9F9; }
+  .fd .t { display:flex; align-items:center; gap:8px; }
+  .fd .t b { font-size:13.5px; font-weight:800; }
+  .fd .k { font-family:'Archivo',sans-serif; font-size:8.5px; font-weight:800; letter-spacing:0.1em; padding:3px 8px; border-radius:99px; background:var(--warn-s); color:var(--warn); }
+  .fd.bug .k { background:var(--bad-s); color:var(--bad); }
+  .fd p { margin-top:6px; font-size:12.5px; line-height:1.6; color:#4A4C55; }
+  .fd p b { color:var(--ink); }
+  .fd .fix { margin-top:8px; font-size:12px; color:var(--ok); font-weight:700; }
+
+  /* mapa antes/después */
+  .map { margin-top:16px; display:grid; grid-template-columns:1fr 60px 1fr; gap:0; align-items:stretch; }
+  .col { background:#fff; border:1px solid #D5D8DD; border-radius:14px; padding:16px; }
+  .col h4 { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.13em; text-transform:uppercase; color:var(--mut); margin-bottom:11px; }
+  .col.new h4 { color:var(--indigo); }
+  .it { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:9px; font-size:12.5px; font-weight:700; margin-bottom:4px; background:var(--alt); border:1px solid var(--line); }
+  .it .r { margin-left:auto; font-size:10px; color:var(--mut); font-weight:600; font-family:ui-monospace,Menlo,monospace; }
+  .it.gone { background:var(--bad-s); border-color:#EDD3D2; color:var(--bad); text-decoration:line-through; }
+  .it.gone .r { color:var(--bad); }
+  .it.sub { margin-left:18px; font-weight:600; font-size:12px; }
+  .it.newi { background:var(--indigo-s); border-color:#D3D4F4; color:var(--indigo); }
+  .col .note { margin-top:10px; font-size:11px; color:var(--mut); line-height:1.5; }
+  .arrow { display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--mut); }
+
+  .dest { margin-top:14px; background:#fff; border:1px solid #D5D8DD; border-radius:14px; overflow:hidden; }
+  .dh, .dr { display:grid; grid-template-columns:230px 1fr 1fr; }
+  .dh { background:var(--alt); border-bottom:1px solid var(--line); }
+  .dh div { padding:9px 15px; font-family:'Archivo',sans-serif; font-size:8.5px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--mut); }
+  .dr { border-bottom:1px solid var(--line); font-size:12.5px; }
+  .dr:last-child { border-bottom:0; }
+  .dr > div { padding:10px 15px; color:#4A4C55; line-height:1.5; border-left:1px solid var(--line); }
+  .dr > div:first-child { border-left:0; font-weight:700; color:var(--ink); }
+
+  /* ===== MOCKUPS ===== */
+  .fr { margin-top:18px; overflow-x:auto; padding-bottom:8px; }
+  .fr > .cap { font-size:13px; font-weight:700; color:#55575E; margin-bottom:10px; }
+  .fr > .cap b { color:var(--ink); }
+  .browser { border:1px solid #C3C7CE; border-radius:14px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); background:var(--bg); min-width:1180px; }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome .dots i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:380px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; }
+  .app { display:flex; min-height:620px; position:relative; }
+
+  .side { width:204px; background:var(--sur); border-right:1px solid var(--line); display:flex; flex-direction:column; flex-shrink:0; }
+  .side .logo { padding:16px 15px 10px; font-family:'Archivo',sans-serif; font-weight:800; letter-spacing:0.2em; font-size:11px; display:flex; align-items:center; gap:8px; }
+  .side .logo .mk { width:19px; height:19px; border-radius:50%; border:1.5px solid var(--indigo); color:var(--indigo); font-size:9px; display:flex; align-items:center; justify-content:center; font-style:italic; }
+  .season { margin:4px 10px 10px; border:1.5px solid var(--line); border-radius:10px; padding:8px 11px; display:flex; align-items:center; justify-content:space-between; }
+  .season b { font-size:12px; font-weight:800; display:block; }
+  .season span { font-size:9.5px; color:var(--ok); font-weight:800; }
+  .season .ch { color:var(--mut); font-size:10px; }
+  .nav { padding:2px 8px; }
+  .nav a { display:flex; align-items:center; gap:10px; padding:8px 11px; border-radius:9px; font-size:12.5px; font-weight:700; color:var(--mut); margin-bottom:2px; }
+  .nav a.on { background:var(--indigo-s); color:var(--indigo); }
+  .nav a .b { margin-left:auto; font-size:9px; font-weight:800; padding:2px 7px; border-radius:99px; background:var(--warn-s); color:var(--warn); }
+  .side .grow { flex:1; }
+  .side .me { border-top:1px solid var(--line); padding:10px 12px; display:flex; align-items:center; gap:8px; }
+  .side .me .av { width:24px; height:24px; border-radius:50%; background:var(--indigo); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:9.5px; }
+  .side .me b { display:block; font-size:11.5px; } .side .me span { color:var(--mut); font-size:9.5px; }
+
+  .main { flex:1; padding:22px 26px 26px; min-width:0; }
+  .phead { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:16px; }
+  .phead h2 { font-family:'Archivo',sans-serif; font-size:21px; font-weight:800; }
+  .phead .sub { font-size:11.5px; color:var(--mut); margin-top:3px; }
+  .phead .rt { display:flex; gap:9px; align-items:center; }
+  .btn { border-radius:9px; padding:9px 14px; font-size:12.5px; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }
+  .btn.pri { background:var(--indigo); color:#fff; }
+  .btn.gh { background:var(--sur); border:1.5px solid var(--line); color:var(--ink); }
+  .btn.xs { padding:6px 10px; font-size:10.5px; border-radius:8px; }
+  .btn.warn { background:var(--warn-s); border:1.5px solid var(--warn-b); color:var(--warn); }
+  .btn.cream { background:#F2F3F5; color:var(--carbon); }
+
+  .grid { display:grid; grid-template-columns:1.75fr 1fr; gap:18px; align-items:start; }
+  .stack { display:flex; flex-direction:column; gap:16px; }
+  .card { background:var(--sur); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
+  .chead { padding:11px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; background:var(--alt); }
+  .chead b { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; }
+  .chead .cnt { font-size:10px; font-weight:800; padding:2px 8px; border-radius:99px; background:var(--warn-s); color:var(--warn); }
+  .chead .lnk { font-size:11px; font-weight:800; color:var(--indigo); }
+  .grp { padding:7px 16px 5px; font-family:'Archivo',sans-serif; font-size:8.5px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); background:var(--alt); border-bottom:1px solid var(--line); }
+  .row { display:flex; align-items:center; gap:11px; padding:10px 16px; border-bottom:1px solid var(--line); }
+  .row:last-child { border-bottom:0; }
+  .row .ic { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; background:var(--warn-s); color:var(--warn); }
+  .row .ic.ind { background:var(--indigo-s); color:var(--indigo); }
+  .row .ic.ok { background:var(--ok-s); color:var(--ok); }
+  .row .md { flex:1; min-width:0; }
+  .row .md b { font-size:12.5px; font-weight:700; display:block; }
+  .row .md span { font-size:10.5px; color:var(--mut); }
+  .row .amt { font-family:'Archivo',sans-serif; font-size:13px; font-weight:800; color:var(--warn); }
+  .row .amt.g { color:var(--ok); } .row .amt.k { color:var(--ink); }
+  .row .go { font-size:11px; font-weight:800; color:var(--indigo); min-width:62px; text-align:right; }
+  .row .when { font-size:10px; color:var(--mut); font-weight:700; white-space:nowrap; }
+  .more { padding:9px 16px; text-align:center; font-size:11px; font-weight:800; color:var(--indigo); background:var(--alt); border-top:1px solid var(--line); }
+
+  .hero { background:var(--carbon); color:#F2F3F5; border-radius:15px; padding:17px 20px; display:flex; align-items:center; gap:24px; position:relative; overflow:hidden; margin-bottom:18px; }
+  .hero .wm { position:absolute; right:-20px; bottom:-34px; width:118px; height:118px; border:2px solid rgba(242,243,245,.12); border-radius:50%; }
+  .hero .l { flex:1; }
+  .hero .e { font-family:'Archivo',sans-serif; font-size:9px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--indigo-l); }
+  .hero .fn { margin-top:4px; font-family:'Archivo',sans-serif; font-size:19px; font-weight:800; }
+  .hero .m { font-size:12px; opacity:.72; margin-top:1px; }
+  .hero .bar { margin-top:10px; height:5px; border-radius:99px; background:rgba(242,243,245,.18); overflow:hidden; max-width:340px; }
+  .hero .bar i { display:block; height:100%; background:var(--indigo-l); }
+  .hero .bl { margin-top:5px; font-size:10.5px; opacity:.78; font-weight:600; }
+  .hero .stats { display:flex; gap:22px; padding-left:22px; border-left:1px solid rgba(242,243,245,.16); }
+  .hero .st b { font-family:'Archivo',sans-serif; font-size:18px; display:block; }
+  .hero .st b.w { color:#F3C969; }
+  .hero .st span { font-size:8.5px; opacity:.65; font-weight:800; letter-spacing:0.07em; }
+
+  .strip { background:var(--sur); border:1px solid var(--line); border-radius:12px; display:grid; grid-template-columns:repeat(4,1fr); margin-bottom:16px; }
+  .strip .s { padding:12px 17px; border-left:1px solid var(--line); }
+  .strip .s:first-child { border-left:0; }
+  .strip .s b { font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; display:block; }
+  .strip .s b.g { color:var(--ok); } .strip .s b.y { color:var(--warn); }
+  .strip .s span { font-size:9.5px; color:var(--mut); font-weight:800; letter-spacing:0.06em; text-transform:uppercase; margin-top:3px; display:block; }
+
+  .tabs2 { display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:16px; }
+  .tb { padding:9px 14px; font-size:12.5px; font-weight:700; color:var(--mut); border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tb.on { color:var(--indigo); border-bottom-color:var(--indigo); }
+  .tb small { font-size:10px; font-weight:800; color:var(--mut); margin-left:4px; }
+
+  /* funciones master-detail */
+  .md2 { display:grid; grid-template-columns:1fr 1.15fr; gap:16px; align-items:start; }
+  .frow { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); }
+  .frow:last-child { border-bottom:0; }
+  .frow.sel { background:var(--indigo-s); box-shadow:inset 3px 0 0 var(--indigo); }
+  .frow .md { flex:1; min-width:0; }
+  .frow .md .t { display:flex; align-items:center; gap:7px; }
+  .frow .md b { font-size:13px; font-weight:800; font-family:'Archivo',sans-serif; }
+  .frow .md .v { font-size:10.5px; color:var(--mut); margin-top:2px; }
+  .frow .bar { margin-top:6px; height:5px; border-radius:99px; background:var(--line); overflow:hidden; }
+  .frow .bar i { display:block; height:100%; background:var(--indigo); }
+  .frow .rt2 { text-align:right; font-size:10.5px; color:var(--mut); font-weight:700; }
+  .frow .rt2 b { display:block; font-family:'Archivo',sans-serif; font-size:13px; color:var(--ink); }
+  .tag { font-size:8.5px; font-weight:800; padding:2px 7px; border-radius:99px; background:var(--line); color:var(--mut); white-space:nowrap; }
+  .tag.next { background:var(--indigo); color:#fff; }
+
+  .fdet { background:var(--sur); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
+  .fdet .fh { padding:15px 18px; border-bottom:1px solid var(--line); display:flex; align-items:flex-start; gap:12px; }
+  .fdet .fh b.nm { font-family:'Archivo',sans-serif; font-size:17px; font-weight:800; display:block; }
+  .fdet .fh span.v { font-size:11px; color:var(--mut); }
+  .fdet .fh .sp { flex:1; }
+  .kb { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--line); }
+  .kb .k { padding:12px 18px; border-left:1px solid var(--line); }
+  .kb .k:first-child { border-left:0; }
+  .kb .k b { font-family:'Archivo',sans-serif; font-size:16px; font-weight:800; display:block; }
+  .kb .k b.r { color:var(--bad); } .kb .k b.g { color:var(--ok); }
+  .kb .k span { font-size:9px; color:var(--mut); font-weight:800; letter-spacing:0.06em; text-transform:uppercase; margin-top:2px; display:block; }
+  .seg { margin:14px 18px 0; display:inline-flex; border:1.5px solid var(--line); border-radius:10px; overflow:hidden; }
+  .seg div { padding:7px 13px; font-size:11.5px; font-weight:800; color:var(--mut); background:var(--alt); }
+  .seg div.on { background:var(--carbon); color:#fff; }
+  .insight { margin:12px 18px 0; background:var(--bad-s); color:var(--bad); border-radius:10px; padding:10px 12px; font-size:11.5px; font-weight:700; }
+  .alist { margin-top:10px; }
+  .arow { display:flex; align-items:center; gap:11px; padding:9px 18px; border-top:1px solid var(--line); font-size:12.5px; }
+  .arow .ini { width:26px; height:26px; border-radius:8px; background:var(--indigo-s); color:var(--indigo); font-family:'Archivo',sans-serif; font-weight:800; font-size:9.5px; display:flex; align-items:center; justify-content:center; }
+  .arow .md { flex:1; }
+  .arow .md b { font-weight:700; display:block; }
+  .arow .md span { font-size:10.5px; color:var(--mut); }
+  .cnt2 { font-family:'Archivo',sans-serif; font-size:11px; font-weight:800; padding:3px 8px; border-radius:99px; }
+  .cnt2.p { background:var(--warn-s); color:var(--warn); } .cnt2.z { background:var(--bad-s); color:var(--bad); }
+
+  /* plata */
+  .money { background:var(--sur); border:1px solid var(--line); border-radius:13px; padding:17px 20px; margin-bottom:18px; }
+  .money .lbl { font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:0.13em; text-transform:uppercase; color:var(--mut); }
+  .money .big { font-family:'Archivo',sans-serif; font-size:34px; font-weight:800; letter-spacing:-0.02em; margin-top:4px; line-height:1; }
+  .money .st3 { margin-top:14px; height:12px; border-radius:6px; overflow:hidden; display:flex; gap:3px; }
+  .money .st3 i { display:block; height:100%; border-radius:3px; }
+  .money .lg { margin-top:12px; display:flex; gap:34px; }
+  .money .lg div { font-size:11.5px; color:var(--mut); font-weight:600; }
+  .money .lg .d { display:flex; align-items:center; gap:7px; }
+  .money .lg i { width:9px; height:9px; border-radius:3px; display:block; }
+  .money .lg b { display:block; font-family:'Archivo',sans-serif; font-size:16px; color:var(--ink); font-weight:800; margin-top:3px; }
+
+  /* mobile */
+  .phones { margin-top:18px; display:flex; gap:26px; flex-wrap:wrap; }
+  .ph { width:300px; }
+  .mini { width:300px; height:620px; border-radius:32px; overflow:hidden; border:6px solid #15161A; box-shadow:0 16px 34px rgba(26,28,34,.2); display:flex; flex-direction:column; background:var(--bg); position:relative; }
+  .mt { padding:14px 16px 8px; display:flex; align-items:center; justify-content:space-between; }
+  .mt .br { font-family:'Archivo',sans-serif; font-weight:800; font-size:11.5px; letter-spacing:0.2em; }
+  .mt .av { width:26px; height:26px; border-radius:50%; background:var(--indigo); color:#fff; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .mb { flex:1; padding:2px 16px 0; overflow:hidden; }
+  .mb h3 { font-family:'Archivo',sans-serif; font-size:19px; font-weight:800; }
+  .mb .ms { font-size:11px; color:var(--mut); margin:1px 0 11px; }
+  .mhero { background:var(--carbon); color:#F2F3F5; border-radius:14px; padding:13px 14px; }
+  .mhero .e { font-family:'Archivo',sans-serif; font-size:8px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:var(--indigo-l); }
+  .mhero .fn { margin-top:3px; font-family:'Archivo',sans-serif; font-size:15.5px; font-weight:800; }
+  .mhero .m { font-size:10.5px; opacity:.72; margin-top:1px; }
+  .mhero .bar { margin-top:9px; height:5px; border-radius:99px; background:rgba(242,243,245,.18); overflow:hidden; }
+  .mhero .bar i { display:block; height:100%; background:var(--indigo-l); }
+  .mhero .bl { margin-top:5px; font-size:10px; opacity:.8; font-weight:600; display:flex; justify-content:space-between; }
+  .mcta { margin-top:10px; background:var(--indigo); color:#fff; border-radius:11px; padding:12px; text-align:center; font-size:13px; font-weight:800; }
+  .msect { display:flex; align-items:center; gap:8px; margin:14px 0 7px; }
+  .msect b { font-family:'Archivo',sans-serif; font-size:9px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .msect::after { content:""; flex:1; height:1px; background:var(--line); }
+  .mcard { background:var(--sur); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
+  .mcard .row { padding:9px 12px; }
+  .mcard .row .md b { font-size:11.5px; }
+  .mcard .row .md span { font-size:9.5px; }
+  .owe { background:var(--warn-s); border:1px solid var(--warn-b); border-radius:13px; padding:12px 14px; }
+  .owe b { font-family:'Archivo',sans-serif; font-size:17px; color:var(--warn); display:block; }
+  .owe span { font-size:10.5px; color:var(--warn); font-weight:600; }
+  .mtabs { border-top:1px solid var(--line); background:var(--sur); display:grid; padding:8px 4px 13px; }
+  .mtab { text-align:center; font-size:8.5px; font-weight:700; color:var(--mut); }
+  .mtab .i { font-size:15px; display:block; margin-bottom:2px; }
+  .mtab.on { color:var(--indigo); }
+  .pcap { margin-top:10px; text-align:center; font-size:12px; font-weight:600; color:#5A5D66; }
+  .pnote { flex:1; min-width:280px; max-width:440px; background:#fff; border:1px solid #D5D8DD; border-radius:14px; padding:18px 20px; align-self:flex-start; }
+  .pnote h5 { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--mut); }
+  .pnote p { margin-top:9px; font-size:12.5px; line-height:1.6; color:#4A4C55; }
+  .pnote p b { color:var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Acapelius: <span>limpieza y lavado de cara</span></h1>
+  <p class="lead">Revisé el frontend completo del repo (<code>web/src</code> en <code>fd8847a</code>: 16 rutas, 18 vistas, ~8.800 líneas). La app creció <b>agregando pantallas en vez de consolidarlas</b>: hoy Eli tiene dos dashboards, hay un "Panel de ventas" sin un solo dato propio, las asignaciones viven en tres lugares, la asistencia en cuatro, cada pantalla tiene su propio selector de temporada, y "Nueva venta" aparece cinco veces. La propuesta reduce la navegación a <b>cinco destinos planos, sin segundo nivel</b>, donde cada dato vive en un solo lugar.</p>
+
+  <div class="nums">
+    <div class="nm"><div class="a">8 ítems · 2 niveles</div><div class="b">5 · plano</div><span>Navegación de dirección</span></div>
+    <div class="nm"><div class="a">16 rutas</div><div class="b">10</div><span>Rutas de la app</span></div>
+    <div class="nm"><div class="a">2 dashboards</div><div class="b">1</div><span>Pantallas de resumen</span></div>
+    <div class="nm"><div class="a">4 selectores</div><div class="b">1</div><span>Selector de temporada</span></div>
+    <div class="nm"><div class="a">5 botones</div><div class="b">1 por pantalla</div><span>"Nueva venta"</span></div>
+  </div>
+
+  <!-- HALLAZGOS -->
+  <div class="h2">1 · Lo que encontré <small>ordenado por impacto</small></div>
+  <div class="finds">
+    <div class="fd bug">
+      <div class="t"><span class="k">BUG</span><b>"Mi rendición" de la corista es un link muerto</b></div>
+      <p>El acceso rápido de la home de la corista apunta a <code>/panel/rendiciones</code>, pero esa ruta está envuelta en <code>RequireAdmin</code> (<code>App.tsx</code>). La corista toca, rebota al inicio y nunca ve lo que tiene que rendir.</p>
+      <div class="fix">→ "Lo que tenés que rendir" pasa a ser un bloque de su propia home.</div>
+    </div>
+    <div class="fd">
+      <div class="t"><span class="k">DUPLICADO</span><b>Inicio y Dirección son dos dashboards</b></div>
+      <p><code>HomePage</code> (próxima función, atención, últimas ventas, la temporada) y <code>DireccionPage</code> (plata, hallazgos, asignaciones, las funciones) comparten el listado de funciones, el faltante de cupo y la deuda de rendiciones. Eli tiene que decidir cuál abrir para responder la misma pregunta.</p>
+      <div class="fix">→ Una sola home. Dirección se reparte: la plata a Plata, las funciones a Temporada.</div>
+    </div>
+    <div class="fd">
+      <div class="t"><span class="k">SOBRA</span><b>"Panel de ventas" no tiene nada propio</b></div>
+      <p><code>SalesReportPage</code> (138 líneas) muestra cobrado / por cobrar / vendidas / cortesías —la misma franja de Ventas— y agrupa por corista o por función, que ya resuelven los filtros de Ventas y la columna "Vendidas" de Equipo.</p>
+      <div class="fix">→ Se elimina la ruta <code>/panel/ventas</code>.</div>
+    </div>
+    <div class="fd">
+      <div class="t"><span class="k">DUPLICADO</span><b>Asignaciones en tres lugares</b></div>
+      <p><code>AllocationsEditor</code> se monta en <code>DireccionPage</code> y en <code>SeasonPage</code>; la home suma una alerta y un stat de "sin asignar". Tres entradas distintas para la misma tarea, con tres textos distintos.</p>
+      <div class="fix">→ Se asigna desde la función (Temporada); la home solo avisa.</div>
+    </div>
+    <div class="fd">
+      <div class="t"><span class="k">DUPLICADO</span><b>Asistencia en cuatro lugares</b></div>
+      <p><code>AttendancePage</code>, la lista de funciones de <code>DoorPage</code> ("29 de 61 ingresaron"), el hallazgo y la tabla de <code>DireccionPage</code>, y las filas de <code>SeasonPage</code>.</p>
+      <div class="fix">→ La asistencia es una pestaña del detalle de cada función.</div>
+    </div>
+    <div class="fd">
+      <div class="t"><span class="k">DUPLICADO</span><b>"Sin rendir" en cuatro pantallas</b></div>
+      <p>Rendiciones, la columna de Equipo, la barra de plata de Dirección y las alertas de la home muestran el mismo número, calculado desde tres endpoints distintos.</p>
+      <div class="fix">→ Vive en Plata. Las demás pantallas, si lo necesitan, linkean.</div>
+    </div>
+    <div class="fd">
+      <div class="t"><span class="k">RUIDO</span><b>Cuatro selectores de temporada independientes</b></div>
+      <p><code>SeasonPage</code>, <code>SettlementsPage</code>, <code>DireccionPage</code> y <code>UsersPage</code> llaman cada una a <code>listSeasons</code> y guardan su propia elección: cambiar de temporada en una no cambia las otras.</p>
+      <div class="fix">→ Un solo selector, arriba en la lateral, que manda sobre toda la app.</div>
+    </div>
+    <div class="fd">
+      <div class="t"><span class="k">RUIDO</span><b>Los mismos accesos, una y otra vez</b></div>
+      <p>"Nueva venta" tiene cinco botones; "Modo puerta", cuatro (pestaña, header, fila del celular, acceso rápido). Los "Accesos rápidos" de la home repiten la lateral. Hay 12 links a <code>/ventas</code>, 12 a <code>/panel/rendiciones</code> y 13 a <code>/temporadas</code> fuera de la navegación.</p>
+      <div class="fix">→ Una acción primaria por pantalla; sin accesos rápidos.</div>
+    </div>
+  </div>
+
+  <!-- MAPA -->
+  <div class="h2">2 · El mapa <small>de 8 ítems en dos niveles a 5 planos</small></div>
+  <p class="p">Cada destino responde <b>una pregunta</b> y no comparte datos con los demás. El segundo nivel "Dirección" desaparece: sus ítems pasan a ser destinos de primer nivel o se absorben en otro.</p>
+  <div class="map">
+    <div class="col">
+      <h4>Hoy · dirección</h4>
+      <div class="it">Inicio <span class="r">/</span></div>
+      <div class="it">Vender <span class="r">/ventas</span></div>
+      <div class="it">Puerta <span class="r">/puerta</span></div>
+      <div class="it gone">Dirección <span class="r">/direccion</span></div>
+      <div class="it sub">Rendiciones <span class="r">/panel/rendiciones</span></div>
+      <div class="it sub gone">Asistencia <span class="r">/panel/asistencia</span></div>
+      <div class="it sub">Temporadas <span class="r">/temporadas</span></div>
+      <div class="it sub">Equipo <span class="r">/usuarios</span></div>
+      <div class="it gone">Panel de ventas <span class="r">/panel/ventas</span></div>
+      <div class="note">En el celular, la pestaña "Dirección" esconde cinco destinos detrás de una sola.</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col new">
+      <h4>Propuesta · dirección</h4>
+      <div class="it newi">Inicio <span class="r">¿qué hago hoy?</span></div>
+      <div class="it newi">Ventas <span class="r">¿quién compró y quién pagó?</span></div>
+      <div class="it newi">Puerta <span class="r">¿quién entra?</span></div>
+      <div class="it newi">Temporada <span class="r">¿cómo van las funciones y el coro?</span></div>
+      <div class="it newi">Plata <span class="r">¿dónde está la plata?</span></div>
+      <div class="note"><b>Corista:</b> Inicio · Ventas · Puerta. &nbsp;<b>Puerta:</b> solo Puerta.<br>Cinco pestañas entran enteras en la barra del celular: se acaba el "Dirección" que esconde cosas.</div>
+    </div>
+  </div>
+
+  <div class="dest">
+    <div class="dh"><div>Lo que hoy existe</div><div>Adónde va</div><div>Por qué</div></div>
+    <div class="dr"><div>Dirección · la plata</div><div>Plata, arriba de todo</div><div>Es la pregunta de esa pantalla.</div></div>
+    <div class="dr"><div>Dirección · hallazgos</div><div>Inicio (lo accionable) y detalle de función (lo analítico)</div><div>Un hallazgo sin acción es ruido en la home.</div></div>
+    <div class="dr"><div>Dirección · asignaciones y funciones</div><div>Temporada → Funciones</div><div>Se asigna desde la función, en un solo lugar.</div></div>
+    <div class="dr"><div>Asistencia</div><div>Temporada → función → pestaña Asistencia</div><div>La asistencia es de una función, no de la app.</div></div>
+    <div class="dr"><div>Temporadas (índice)</div><div>El selector de temporada de la lateral</div><div>"Ver todas / crear temporada" viven en ese menú.</div></div>
+    <div class="dr"><div>Equipo</div><div>Temporada → Equipo</div><div>Con <code>season_members</code>, el equipo es de una temporada.</div></div>
+    <div class="dr"><div>Panel de ventas</div><div>Se elimina</div><div>Todo su contenido ya está en Ventas y Equipo.</div></div>
+    <div class="dr"><div>Home · accesos rápidos</div><div>Se eliminan</div><div>Repetían la lateral.</div></div>
+    <div class="dr"><div>Home · "La temporada"</div><div>Se elimina de la home</div><div>Es literalmente Temporada → Funciones.</div></div>
+  </div>
+
+  <!-- ===================== VISTAS ===================== -->
+  <div class="h2">3 · Cómo quedan las vistas</div>
+  <p class="p">Ventas y Puerta quedan como ya las diseñamos (C15 y el modo puerta con grilla asimétrica): no se tocan. Cambian Inicio, Temporada y la nueva Plata, más la home del celular.</p>
+
+  <!-- INICIO -->
+  <div class="fr">
+    <div class="cap"><b>Inicio · dirección</b> — una sola home. Arriba el selector de temporada que manda sobre toda la app; el hero lleva la acción de asignar (el faltante de cupo deja de ser alerta porque ya está ahí); a la izquierda lo pendiente, a la derecha lo que pasó. Sin "Accesos rápidos", sin "La temporada", un solo botón de nueva venta.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="season"><div><b>Temporada 2026</b><span>● En curso</span></div><span class="ch">▾</span></div>
+          <div class="nav">
+            <a class="on"><span>♪</span>Inicio</a>
+            <a><span>🎟</span>Ventas <span class="b">10</span></a>
+            <a><span>⛶</span>Puerta</a>
+            <a><span>📅</span>Temporada</a>
+            <a><span>💰</span>Plata <span class="b">6</span></a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Hola, Eli</h2><div class="sub">Martes 9 de septiembre</div></div>
+            <div class="btn pri">＋ Nueva venta</div>
+          </div>
+
+          <div class="hero">
+            <div class="wm"></div>
+            <div class="l">
+              <div class="e">Próxima función · en 4 días</div>
+              <div class="fn">Cierre de temporada</div>
+              <div class="m">Dom 13 sept, 21:00 · Teatro Municipal</div>
+              <div class="bar"><i style="width:18%"></i></div>
+              <div class="bl">14 de 80 vendidas · 18%</div>
+            </div>
+            <div class="stats">
+              <div class="st"><b>$36.000</b><span>RECAUDÓ</span></div>
+              <div class="st"><b class="w">31</b><span>SIN ASIGNAR</span></div>
+            </div>
+            <div class="btn cream">Asignar entradas</div>
+          </div>
+
+          <div class="grid">
+            <div class="card">
+              <div class="chead"><b>Pendiente</b><span class="cnt">8</span></div>
+              <div class="grp">Rendiciones · $378.000 sin rendir</div>
+              <div class="row"><div class="ic">💰</div><div class="md"><b>Beatriz Coria</b><span>Cobró hace 13 días</span></div><span class="amt">$112.000</span><span class="go">Registrar ›</span></div>
+              <div class="row"><div class="ic">💰</div><div class="md"><b>Marta Ledesma</b><span>Cobró hace 16 días</span></div><span class="amt">$106.000</span><span class="go">Registrar ›</span></div>
+              <div class="row"><div class="ic">💰</div><div class="md"><b>Silvia Rey</b><span>Cobró hace 15 días</span></div><span class="amt">$62.000</span><span class="go">Registrar ›</span></div>
+              <div class="grp">Invitaciones sin usar</div>
+              <div class="row"><div class="ic ind">✉</div><div class="md"><b>Josefina Paz y Roxana Nieves</b><span>Invitadas hace 32 días · nunca entraron</span></div><span class="go">Reenviar ›</span></div>
+              <div class="more">Ver las 6 rendiciones en Plata ›</div>
+            </div>
+
+            <div class="card">
+              <div class="chead"><b>Qué pasó</b><span class="lnk">Últimos 7 días</span></div>
+              <div class="row"><div class="ic ok">🎟</div><div class="md"><b>Carolina vendió 2 entradas</b><span>Lucía Molina · Cierre</span></div><span class="when">hace 2 h</span></div>
+              <div class="row"><div class="ic ok">✓</div><div class="md"><b>Virginia rindió $90.000</b><span>Transferencia</span></div><span class="when">ayer</span></div>
+              <div class="row"><div class="ic ok">🎟</div><div class="md"><b>Beatriz vendió 1 entrada</b><span>Graciela Torres · Cierre</span></div><span class="when">hace 2 d</span></div>
+              <div class="row"><div class="ic ind">✉</div><div class="md"><b>Recordatorio a Beatriz</b><span>Por email</span></div><span class="when">hace 3 d</span></div>
+              <div class="row"><div class="ic ok">🎟</div><div class="md"><b>Marta vendió 4 entradas</b><span>Rosa Suárez · Cierre</span></div><span class="when">hace 6 d</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEMPORADA -->
+  <div class="fr">
+    <div class="cap"><b>Temporada · Funciones</b> — absorbe Dirección, Temporadas, Asistencia y Equipo en un solo destino con dos pestañas. Lista de funciones a la izquierda; al elegir una, su detalle a la derecha con <b>Asignación</b> y <b>Asistencia</b>. El hallazgo del 48% de la Gala aparece acá, donde se entiende, y no como tarjeta suelta.</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/temporada/funciones/3</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="season"><div><b>Temporada 2026</b><span>● En curso</span></div><span class="ch">▾</span></div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a>
+            <a><span>🎟</span>Ventas <span class="b">10</span></a>
+            <a><span>⛶</span>Puerta</a>
+            <a class="on"><span>📅</span>Temporada</a>
+            <a><span>💰</span>Plata <span class="b">6</span></a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Temporada 2026</h2><div class="sub">14 ago – 13 sept · 4 funciones · 11 coristas</div></div>
+            <div class="btn gh">＋ Agregar función</div>
+          </div>
+          <div class="tabs2">
+            <div class="tb on">Funciones <small>4</small></div>
+            <div class="tb">Equipo <small>11</small></div>
+          </div>
+
+          <div class="md2">
+            <div class="card">
+              <div class="frow">
+                <div class="md"><div class="t"><b>Cierre de temporada</b><span class="tag next">EN 4 DÍAS</span></div><div class="v">Dom 13 sept · 31 sin asignar</div><div class="bar"><i style="width:18%"></i></div></div>
+                <div class="rt2"><b>14/80</b>vendidas</div>
+              </div>
+              <div class="frow sel">
+                <div class="md"><div class="t"><b>Función de gala</b><span class="tag">HECHA</span></div><div class="v">Mié 26 ago · entró el 48%</div><div class="bar"><i style="width:76%; background:var(--ok);"></i></div></div>
+                <div class="rt2"><b>61/80</b>vendidas</div>
+              </div>
+              <div class="frow">
+                <div class="md"><div class="t"><b>Concierto de invierno</b><span class="tag">HECHA</span></div><div class="v">Sáb 22 ago · entró el 88%</div><div class="bar"><i style="width:64%; background:var(--ok);"></i></div></div>
+                <div class="rt2"><b>32/50</b>vendidas</div>
+              </div>
+              <div class="frow">
+                <div class="md"><div class="t"><b>Función de apertura</b><span class="tag">HECHA</span></div><div class="v">Vie 14 ago · entró el 82%</div><div class="bar"><i style="width:84%; background:var(--ok);"></i></div></div>
+                <div class="rt2"><b>38/45</b>vendidas</div>
+              </div>
+            </div>
+
+            <div class="fdet">
+              <div class="fh">
+                <div><b class="nm">Función de gala</b><span class="v">Miércoles 26 de agosto, 21:00 · Teatro Municipal</span></div>
+                <div class="sp"></div>
+                <div class="btn gh xs">Editar</div>
+              </div>
+              <div class="kb">
+                <div class="k"><b>61/80</b><span>Vendidas</span></div>
+                <div class="k"><b>$500.000</b><span>Recaudó</span></div>
+                <div class="k"><b class="r">29</b><span>Entraron</span></div>
+                <div class="k"><b>4</b><span>Cortesías</span></div>
+              </div>
+              <div class="seg"><div>Asignación</div><div class="on">Asistencia</div></div>
+              <div class="insight">Entró menos de la mitad de quienes compraron: 29 de 61. Las otras funciones superaron el 80%.</div>
+              <div class="alist">
+                <div class="arow"><span class="ini">RS</span><div class="md"><b>Rosa Suárez</b><span>vendió Marta Ledesma</span></div><span class="cnt2 z">0/4</span></div>
+                <div class="arow"><span class="ini">HD</span><div class="md"><b>Hugo Díaz</b><span>vendió Beatriz Coria</span></div><span class="cnt2 z">0/3</span></div>
+                <div class="arow"><span class="ini">AH</span><div class="md"><b>Alejandro Huertas</b><span>vendió Eli</span></div><span class="cnt2 p">2/3</span></div>
+                <div class="arow"><span class="ini">LF</span><div class="md"><b>Lucía Fernández</b><span>vendió Virginia Sosa</span></div><span class="cnt2 p">1/4</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLATA -->
+  <div class="fr">
+    <div class="cap"><b>Plata</b> — reemplaza a Rendiciones y se queda con la barra de plata que estaba en Dirección. Responde una sola pregunta, "¿dónde está la plata?", en tres etapas; debajo, quién la tiene y qué se entregó. Click en una corista abre su detalle (el que ya diseñamos, sin cambios).</div>
+    <div class="browser">
+      <div class="chrome"><div class="dots"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i></div><div class="url">acapelius.app/plata</div></div>
+      <div class="app">
+        <div class="side">
+          <div class="logo"><div class="mk">A</div>ACAPELIUS</div>
+          <div class="season"><div><b>Temporada 2026</b><span>● En curso</span></div><span class="ch">▾</span></div>
+          <div class="nav">
+            <a><span>♪</span>Inicio</a>
+            <a><span>🎟</span>Ventas <span class="b">10</span></a>
+            <a><span>⛶</span>Puerta</a>
+            <a><span>📅</span>Temporada</a>
+            <a class="on"><span>💰</span>Plata <span class="b">6</span></a>
+          </div>
+          <div class="grow"></div>
+          <div class="me"><div class="av">E</div><div><b>Eli</b><span>Dirección</span></div></div>
+        </div>
+        <div class="main">
+          <div class="phead">
+            <div><h2>Plata</h2><div class="sub">Temporada 2026</div></div>
+            <div class="btn gh">✉ Recordar a las 6</div>
+          </div>
+
+          <div class="money">
+            <div class="lbl">Vendido en la temporada</div>
+            <div class="big">$1.394.000</div>
+            <div class="st3"><i style="width:46%; background:var(--ok);"></i><i style="width:27%; background:var(--warn);"></i><i style="width:27%; background:var(--line);"></i></div>
+            <div class="lg">
+              <div><div class="d"><i style="background:var(--ok);"></i>En tu poder</div><b>$638.000</b></div>
+              <div><div class="d"><i style="background:var(--warn);"></i>La tienen las coristas</div><b>$378.000</b></div>
+              <div><div class="d"><i style="background:var(--line);"></i>Todavía sin cobrar</div><b>$378.000</b></div>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="card">
+              <div class="chead"><b>Quién tiene que rendir</b><span class="cnt">6</span></div>
+              <div class="row"><div class="ic">BC</div><div class="md"><b>Beatriz Coria</b><span>Nunca rindió · cobró hace 13 días</span></div><span class="amt">$112.000</span><span class="go">Registrar ›</span></div>
+              <div class="row"><div class="ic">ML</div><div class="md"><b>Marta Ledesma</b><span>Nunca rindió · cobró hace 16 días</span></div><span class="amt">$106.000</span><span class="go">Registrar ›</span></div>
+              <div class="row"><div class="ic">SR</div><div class="md"><b>Silvia Rey</b><span>Rindió la mitad</span></div><span class="amt">$62.000</span><span class="go">Registrar ›</span></div>
+              <div class="row"><div class="ic">CV</div><div class="md"><b>Carolina Vega</b><span>Rindió $80.000</span></div><span class="amt">$44.000</span><span class="go">Registrar ›</span></div>
+              <div class="row"><div class="ic">MI</div><div class="md"><b>Mercedes Ibarra</b><span>Dejó el coro · rindió $56.000</span></div><span class="amt">$30.000</span><span class="go">Registrar ›</span></div>
+              <div class="row"><div class="ic">E</div><div class="md"><b>Eli</b><span>Tus propias ventas</span></div><span class="amt">$24.000</span><span class="go">Registrar ›</span></div>
+            </div>
+            <div class="card">
+              <div class="chead"><b>Entregas</b><span class="lnk">Todas ›</span></div>
+              <div class="row"><div class="ic ok">✓</div><div class="md"><b>Virginia · $90.000</b><span>Transferencia</span></div><span class="when">ayer</span></div>
+              <div class="row"><div class="ic ok">✓</div><div class="md"><b>Carolina · $80.000</b><span>Efectivo · "en el ensayo"</span></div><span class="when">hace 5 d</span></div>
+              <div class="row"><div class="ic ok">✓</div><div class="md"><b>Silvia · $62.000</b><span>Transferencia</span></div><span class="when">hace 9 d</span></div>
+              <div class="row"><div class="ic ok">✓</div><div class="md"><b>Mercedes · $56.000</b><span>Efectivo</span></div><span class="when">hace 12 d</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE -->
+  <div class="h2">4 · En el celular</div>
+  <div class="phones">
+    <div class="ph">
+      <div class="mini">
+        <div class="mt"><div class="br">ACAPELIUS</div><div class="av">E</div></div>
+        <div class="mb">
+          <h3>Hola, Eli</h3>
+          <div class="ms">Martes 9 de septiembre · Temporada 2026</div>
+          <div class="mhero">
+            <div class="e">Próxima función · en 4 días</div>
+            <div class="fn">Cierre de temporada</div>
+            <div class="m">Dom 13 sept, 21:00</div>
+            <div class="bar"><i style="width:18%"></i></div>
+            <div class="bl"><span>14 de 80 vendidas</span><span style="color:#F3C969;">31 sin asignar</span></div>
+          </div>
+          <div class="mcta">＋ Nueva venta</div>
+          <div class="msect"><b>Pendiente · 8</b></div>
+          <div class="mcard">
+            <div class="row"><div class="ic">💰</div><div class="md"><b>Beatriz debe rendir</b><span>hace 13 días</span></div><span class="amt">$112.000</span></div>
+            <div class="row"><div class="ic">💰</div><div class="md"><b>Marta debe rendir</b><span>hace 16 días</span></div><span class="amt">$106.000</span></div>
+            <div class="row"><div class="ic ind">✉</div><div class="md"><b>2 invitaciones sin usar</b><span>hace 32 días</span></div><span class="go">›</span></div>
+          </div>
+        </div>
+        <div class="mtabs" style="grid-template-columns:repeat(5,1fr);">
+          <div class="mtab on"><span class="i">♪</span>Inicio</div>
+          <div class="mtab"><span class="i">🎟</span>Ventas</div>
+          <div class="mtab"><span class="i">⛶</span>Puerta</div>
+          <div class="mtab"><span class="i">📅</span>Temporada</div>
+          <div class="mtab"><span class="i">💰</span>Plata</div>
+        </div>
+      </div>
+      <div class="pcap">Dirección · cinco pestañas, ninguna escondida</div>
+    </div>
+
+    <div class="ph">
+      <div class="mini">
+        <div class="mt"><div class="br">ACAPELIUS</div><div class="av">C</div></div>
+        <div class="mb">
+          <h3>Hola, Carolina</h3>
+          <div class="ms">Martes 9 de septiembre</div>
+          <div class="mhero">
+            <div class="e">Próxima función · en 4 días</div>
+            <div class="fn">Cierre de temporada</div>
+            <div class="m">Dom 13 sept, 21:00</div>
+            <div class="bar"><i style="width:85%"></i></div>
+            <div class="bl"><span>Vendiste 17 de 20</span><span>te quedan 3</span></div>
+          </div>
+          <div class="mcta">＋ Nueva venta</div>
+          <div class="msect"><b>Tenés que rendir</b></div>
+          <div class="owe"><b>$44.000</b><span>Lo que cobraste y todavía no le diste a Eli · 3 ventas</span></div>
+          <div class="msect"><b>Te falta cobrar · 2</b></div>
+          <div class="mcard">
+            <div class="row"><div class="ic">💵</div><div class="md"><b>Rosa Suárez</b><span>4 entradas · hace 6 días</span></div><span class="amt">$40.000</span></div>
+            <div class="row"><div class="ic">💵</div><div class="md"><b>Lucía Molina</b><span>2 entradas · hace 3 días</span></div><span class="amt">$20.000</span></div>
+          </div>
+        </div>
+        <div class="mtabs" style="grid-template-columns:repeat(3,1fr);">
+          <div class="mtab on"><span class="i">♪</span>Inicio</div>
+          <div class="mtab"><span class="i">🎟</span>Ventas</div>
+          <div class="mtab"><span class="i">⛶</span>Puerta</div>
+        </div>
+      </div>
+      <div class="pcap">Corista · "Tenés que rendir" arregla el link muerto</div>
+    </div>
+
+    <div class="pnote">
+      <h5>Qué cambia para la corista</h5>
+      <p>Hoy su home tiene cuatro accesos rápidos: <b>"Links"</b> (lleva a la misma lista que la pestaña Ventas), <b>"Mi rendición"</b> (link muerto), <b>"Modo puerta"</b> (repite la pestaña) y "Mis últimas ventas → Ver todas" (otra vez Ventas).</p>
+      <p>Queda: su cupo en el hero, <b>un</b> botón de nueva venta, lo que tiene que rendir —que hoy no puede ver en ningún lado— y a quién le falta cobrar. Todo lo demás está a una pestaña de distancia.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

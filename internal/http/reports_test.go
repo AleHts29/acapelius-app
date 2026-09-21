@@ -60,22 +60,20 @@ func TestAceptacionFase5(t *testing.T) {
 		"function_id": fnID, "method": "manual", "code": jorgeCode,
 	})
 
-	// ¿Cuanto vendio Carolina? — reporte de ventas filtrado.
-	report := admin.get("/api/reports/sales?seller_id=2") // Carolina es el user 2
+	// ¿Cuanto vendio Carolina? — el listado filtrado por vendedora (C15). El
+	// "Panel de ventas" que respondia esto se elimino en C16: su contenido ya
+	// estaba en Ventas y en la columna "Vendidas" de Equipo.
+	report := admin.get("/api/sales?seller_id=2") // Carolina es el user 2
 	assertStatus(t, report, http.StatusOK)
-	rows := report.Body["rows"].([]any)
-	if len(rows) != 1 {
-		t.Fatalf("se esperaba 1 fila para Carolina, hay %d", len(rows))
+	resumen := report.Body["filtered"].(map[string]any)
+	if resumen["tickets_sold"].(float64) != 6 {
+		t.Fatalf("Carolina vendio 6 entradas: %v", resumen)
 	}
-	row := rows[0].(map[string]any)
-	if row["tickets_sold"].(float64) != 6 {
-		t.Fatalf("Carolina vendio 6 entradas: %v", row)
+	if resumen["paid_cents"].(float64) != 4000000 { // 5 pagas x $8.000
+		t.Fatalf("cobrado de Carolina = %v, se esperaba 4000000", resumen["paid_cents"])
 	}
-	if row["paid_cents"].(float64) != 4000000 { // 5 pagas x $8.000
-		t.Fatalf("cobrado de Carolina = %v, se esperaba 4000000", row["paid_cents"])
-	}
-	if row["pending_cents"].(float64) != 800000 { // 1 pendiente
-		t.Fatalf("pendiente de Carolina = %v, se esperaba 800000", row["pending_cents"])
+	if resumen["pending_cents"].(float64) != 800000 { // 1 pendiente
+		t.Fatalf("pendiente de Carolina = %v, se esperaba 800000", resumen["pending_cents"])
 	}
 
 	// ¿Cuanto me debe? — rendiciones: cobro $40.000, rinde $25.000, debe $15.000.
@@ -228,7 +226,6 @@ func TestRendicionesValidacionYPermisos(t *testing.T) {
 	assertErrorCode(t, carolina.post("/api/settlements", map[string]any{
 		"seller_id": 2, "season_id": 1, "amount_cents": 100, "method": "cash",
 	}), http.StatusForbidden, "forbidden")
-	assertErrorCode(t, carolina.get("/api/reports/sales"), http.StatusForbidden, "forbidden")
 	assertErrorCode(t, carolina.get("/api/reports/attendance?function_id=1"), http.StatusForbidden, "forbidden")
 
 	// Pero si ve su propio saldo, y solo el suyo.
@@ -250,7 +247,7 @@ func TestRendicionesValidacionYPermisos(t *testing.T) {
 	}
 }
 
-func TestReporteDeVentasExcluyeAnuladas(t *testing.T) {
+func TestVentasAnuladasNoCuentan(t *testing.T) {
 	env := newTestEnv(t)
 	admin := loginAdmin(t, env)
 	fnID := setupCatalog(t, admin, 50)
@@ -269,11 +266,11 @@ func TestReporteDeVentasExcluyeAnuladas(t *testing.T) {
 	markPaid(t, carolina, dropID, "cash")
 	assertStatus(t, admin.post(fmt.Sprintf("/api/sales/%.0f/void", dropID), nil), http.StatusOK)
 
-	// El reporte de ventas no cuenta la anulada...
-	report := admin.get("/api/reports/sales")
-	row := report.Body["rows"].([]any)[0].(map[string]any)
-	if row["tickets_sold"].(float64) != 2 || row["paid_cents"].(float64) != 1600000 {
-		t.Fatalf("la venta anulada no puede contar: %v", row)
+	// El listado no cuenta la anulada...
+	report := admin.get("/api/sales")
+	resumen := report.Body["filtered"].(map[string]any)
+	if resumen["tickets_sold"].(float64) != 2 || resumen["paid_cents"].(float64) != 1600000 {
+		t.Fatalf("la venta anulada no puede contar: %v", resumen)
 	}
 
 	// ...ni el saldo a rendir.

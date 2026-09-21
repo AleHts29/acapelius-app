@@ -392,19 +392,6 @@ export type CheckinInput =
   | { function_id: number; method: 'scan'; payload: string; device_id?: string }
   | { function_id: number; method: 'manual'; code: string; device_id?: string }
 
-export interface SalesReportRow {
-  function_id: number
-  function_venue: string
-  function_starts_at: string
-  function_name: string | null
-  seller_id: number
-  seller_name: string
-  tickets_sold: number
-  comp_tickets: number
-  paid_cents: number
-  pending_cents: number
-}
-
 export interface SettlementReportRow {
   seller_id: number
   seller_name: string
@@ -668,13 +655,6 @@ export const api = {
     checkins: Array<{ payload?: string; code?: string; method: 'scan' | 'manual'; at: string }>
   }) => request<{ results: CheckinResponse[] }>('POST', '/checkins/sync', input),
 
-  salesReport: (opts?: { functionId?: number; sellerId?: number }) => {
-    const params = new URLSearchParams()
-    if (opts?.functionId !== undefined) params.set('function_id', String(opts.functionId))
-    if (opts?.sellerId !== undefined) params.set('seller_id', String(opts.sellerId))
-    const qs = params.toString()
-    return request<{ rows: SalesReportRow[] }>('GET', qs ? `/reports/sales?${qs}` : '/reports/sales')
-  },
   settlementsReport: (seasonId: number) =>
     request<{ rows: SettlementReportRow[]; settlements: Settlement[] }>(
       'GET',
@@ -858,6 +838,17 @@ export interface Home {
   todo_total: number
   last_sales: HomeSale[]
   badges: { sales_pending: number; settlements_pending: number }
+  /** Solo para la corista: lo que cobró y todavía no entregó. */
+  my_settlement?: MySettlement
+}
+
+/** Lo que una corista tiene que rendir, del mismo cálculo que usa Plata. */
+export interface MySettlement {
+  collected_cents: number
+  settled_cents: number
+  balance_cents: number
+  /** Ventas que efectivamente cobró: es lo que hace entendible el monto. */
+  sales: number
 }
 
 /**

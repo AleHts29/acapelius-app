@@ -695,3 +695,45 @@ El pie no es decorativo: dice *"Seguirán 11 de 12 · Beatriz queda fuera con
 deuda pendiente"*. Dejar afuera a alguien que todavía debe plata es una
 decisión válida, pero no puede ser una que se tome sin verla; por eso el pie
 vive fuera de la lista que scrollea.
+
+## C16 · Fase 1 — el saldo de la corista y los accesos que sobraban
+
+**El bug.** "Mi rendición" en la home de la corista apuntaba a
+`/panel/rendiciones`, que está bajo `RequireAdmin`: tocaba y rebotaba al
+inicio. El número no se veía en ningún lado, así que la única forma de saber
+cuánto tenía que entregar era preguntárselo a Eli.
+
+Ahora viaja en `GET /api/home` como `my_settlement` y se muestra en su home.
+Sale de **la misma consulta que usa Plata** —`SettlementsReport` filtrada por
+su fila— y no de un cálculo nuevo: dos cuentas del mismo saldo terminan
+discrepando, y esa discusión la pierde siempre la corista. Hay un test que
+compara los dos números y falla si divergen.
+
+El bloque tiene dos estados, y el segundo importa tanto como el primero: con
+saldo va en ámbar con el monto y cuántas ventas lo componen; sin saldo dice
+**"Estás al día"** en verde. Un bloque que desaparece cuando no hay deuda deja
+a la persona sin saber si está al día o si la app no se enteró.
+
+**El panel de ventas se fue.** `SalesReportPage` mostraba la misma franja que
+Ventas y agrupaba por corista o por función, que ya resuelven los filtros de
+Ventas y la columna "Vendidas" de Equipo. Se eliminó la pantalla, el cliente,
+el handler y la query `SalesReport`. Los dos tests que lo usaban ahora le
+hacen la misma pregunta al listado (`GET /api/sales`), que es donde vive: la
+invariante de que una venta anulada no cuenta sigue cubierta.
+
+`/panel/ventas` queda como redirect a `/ventas`. Todas las rutas que C16
+elimina quedan redirigiendo: hay links en emails y favoritos en celulares que
+no se pueden romper.
+
+**Una acción primaria por pantalla.** La home tenía tres botones de "Nueva
+venta" —header, fila del celular y CTA del hero de la corista— y dos de "Modo
+puerta". Queda uno de nueva venta por viewport: el del header en escritorio, el
+de abajo del hero en celular. Es la misma acción declarada una vez por
+breakpoint, no dos botones. "Modo puerta" salió de la home: es una pestaña de
+la navegación.
+
+Los "Accesos rápidos" se eliminaron enteros. Repetían la lateral, y uno de sus
+cuatro links era justamente el que estaba roto.
+
+**"Vender" pasa a "Ventas"** en la navegación: la pantalla es el listado;
+vender es una acción adentro.

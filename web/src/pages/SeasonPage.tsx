@@ -406,8 +406,6 @@ function Fila({
                   id: 'ventas',
                   label: 'Ver ventas',
                   icon: <Receipt size={15} />,
-                  // /ventas es el listado de ventas (dirección lo ve completo);
-                  // /panel/ventas es el reporte agregado, sin filtro por función.
                   onSelect: () => navigate(`/ventas?fn=${fn.id}`),
                 },
               ],

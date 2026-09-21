@@ -1,12 +1,19 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { BarChart3, Link2, Mail, ScanLine, Ticket, Wallet } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { Check, Mail, Ticket, Wallet } from 'lucide-react'
 
 import { useState } from 'react'
 
 import { api, publicSaleURL } from '../api/client'
-import type { Alert, Home, HomeFunction, HomeSale, HomeToDo, SettlementReportRow } from '../api/client'
+import type {
+  Alert,
+  Home,
+  HomeFunction,
+  HomeSale,
+  HomeToDo,
+  MySettlement,
+  SettlementReportRow,
+} from '../api/client'
 import { RegisterSheet } from './SettlementsPage'
 import { useSession } from '../auth/session'
 import { calendarDaysUntil, dayLabel, daysAgo, formatDateTime, formatMoney } from '../lib/format'
@@ -38,7 +45,7 @@ function Stat({ value, label }: { value: string; label: string }) {
  * función; para la corista, su venta contra su cupo — el mismo bloque contando
  * la historia que le toca a cada una.
  */
-function Hero({ home, fn, onVender }: { home: Home; fn: HomeFunction; onVender: () => void }) {
+function Hero({ home, fn }: { home: Home; fn: HomeFunction }) {
   const navigate = useNavigate()
   const esCorista = home.role === 'seller'
   const sinCupo = esCorista && fn.no_allocation
@@ -86,16 +93,18 @@ function Hero({ home, fn, onVender }: { home: Home; fn: HomeFunction; onVender: 
         )}
       </div>
 
-      <button
-        className="hero__cta"
-        type="button"
-        disabled={sinCupo}
-        onClick={() =>
-          esCorista ? onVender() : navigate(`/temporadas/${home.season?.id}?fn=${fn.id}`)
-        }
-      >
-        {esCorista ? '＋ Vender' : 'Ver función'}
-      </button>
+      {/* La corista no lleva CTA acá: "Nueva venta" ya está una sola vez por
+          viewport (C16). Para dirección el botón no es una acción repetida,
+          es ir a la función. */}
+      {!esCorista && (
+        <button
+          className="hero__cta"
+          type="button"
+          onClick={() => navigate(`/temporadas/${home.season?.id}?fn=${fn.id}`)}
+        >
+          Ver función
+        </button>
+      )}
     </div>
   )
 }
@@ -176,25 +185,40 @@ function FnRow({ fn, esCorista }: { fn: HomeFunction; esCorista: boolean }) {
   )
 }
 
-function QuickAccess({
-  to,
-  icon,
-  title,
-  subtitle,
-}: {
-  to: string
-  icon: ReactNode
-  title: string
-  subtitle: string
-}) {
+/**
+ * "Tenés que rendir": lo que la corista cobró y todavía no le dio a Eli. Sale
+ * del mismo cálculo que Plata —cobrado menos entregado— porque dos cuentas del
+ * mismo número terminan discrepando, y esa discusión la pierde ella.
+ */
+function MiRendicion({ mio }: { mio: MySettlement }) {
+  if (mio.balance_cents <= 0) {
+    return (
+      <div className="rendir rendir--ok">
+        <span className="rendir__ic" aria-hidden>
+          <Check size={16} />
+        </span>
+        <span className="rendir__tx">
+          <b>Estás al día</b>
+          <span>
+            {mio.settled_cents > 0
+              ? `Ya entregaste ${formatMoney(mio.settled_cents)} de la temporada.`
+              : 'No tenés plata del coro en la mano.'}
+          </span>
+        </span>
+      </div>
+    )
+  }
   return (
-    <Link className="q" to={to}>
-      <span className="q__i" aria-hidden>
-        {icon}
+    <div className="rendir">
+      <span className="rendir__n">{formatMoney(mio.balance_cents)}</span>
+      <span className="rendir__tx">
+        <b>Tenés que rendir</b>
+        <span>
+          Lo que cobraste y todavía no le diste a Eli · {mio.sales}{' '}
+          {mio.sales === 1 ? 'venta' : 'ventas'}
+        </span>
       </span>
-      <b>{title}</b>
-      <span>{subtitle}</span>
-    </Link>
+    </div>
   )
 }
 
@@ -267,12 +291,9 @@ export function HomePage() {
             {data.season && ` · ${data.season.name}`}
           </p>
         </div>
+        {/* Una sola acción primaria por pantalla (C16). "Modo puerta" salió
+            de acá: es una pestaña de la navegación, no un botón de la home. */}
         <div className="page-head__right">
-          {!esCorista && (
-            <Link className="button button--ghost home-cta" to="/puerta">
-              Modo puerta
-            </Link>
-          )}
           <button className="button home-cta" type="button" onClick={nuevaVenta.abrir}>
             ＋ Nueva venta
           </button>
@@ -280,7 +301,7 @@ export function HomePage() {
       </div>
 
       {data.next_function ? (
-        <Hero home={data} fn={data.next_function} onVender={nuevaVenta.abrir} />
+        <Hero home={data} fn={data.next_function} />
       ) : (
         <p className="muted">
           Todavía no hay funciones cargadas.{' '}
@@ -288,18 +309,19 @@ export function HomePage() {
         </p>
       )}
 
-      {/* En celular las acciones van debajo del hero; en escritorio ya están
-          arriba a la derecha y este bloque no se muestra. */}
+      {/* El mismo botón del header, renderizado donde el pulgar lo alcanza.
+          En escritorio este bloque no se muestra y manda el del header: es la
+          misma acción declarada una vez por breakpoint, no dos botones. */}
       <div className="home-actions">
         <button className="button" type="button" onClick={nuevaVenta.abrir}>
           ＋ Nueva venta
         </button>
-        {!esCorista && (
-          <Link className="button button--ghost" to="/puerta">
-            Modo puerta
-          </Link>
-        )}
       </div>
+
+      {/* Lo que tiene que rendir. Hasta acá este número no se veía en ningún
+          lado: el acceso de su home apuntaba a /panel/rendiciones, que está
+          bajo RequireAdmin, así que rebotaba al inicio. */}
+      {esCorista && data.my_settlement && <MiRendicion mio={data.my_settlement} />}
 
       <div className="home-cols">
         <div className="home-cols__main">
@@ -424,55 +446,6 @@ export function HomePage() {
             </div>
           )}
 
-          <Sect title="Accesos rápidos" />
-          <div className="qa">
-            {esCorista ? (
-              <>
-                <QuickAccess
-                  to="/ventas?filtro=todas"
-                  icon={<Link2 size={16} />}
-                  title="Links"
-                  subtitle="Compartir entradas"
-                />
-                <QuickAccess
-                  to="/panel/rendiciones"
-                  icon={<Wallet size={16} />}
-                  title="Mi rendición"
-                  subtitle="Lo que tengo que entregar"
-                />
-              </>
-            ) : (
-              <>
-                <QuickAccess
-                  to="/panel/rendiciones"
-                  icon={<Wallet size={16} />}
-                  title="Rendiciones"
-                  subtitle={
-                    data.badges.settlements_pending === 1
-                      ? '1 pendiente'
-                      : `${data.badges.settlements_pending} pendientes`
-                  }
-                />
-                <QuickAccess
-                  to="/panel/ventas"
-                  icon={<BarChart3 size={16} />}
-                  title="Panel de ventas"
-                  subtitle="Por corista"
-                />
-              </>
-            )}
-          </div>
-
-          {esCorista && (
-            <div className="qa qa--solo">
-              <QuickAccess
-                to="/puerta"
-                icon={<ScanLine size={16} />}
-                title="Modo puerta"
-                subtitle="Escanear ingresos"
-              />
-            </div>
-          )}
         </div>
       </div>
 

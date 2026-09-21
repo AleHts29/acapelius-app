@@ -27,8 +27,8 @@ describe('activeItem: qué se prende en la navegación', () => {
 
   it('el primer nivel no se pisa entre sí', () => {
     expect(prendido('/')).toBe('Inicio')
-    expect(prendido('/ventas')).toBe('Vender')
-    expect(prendido('/ventas/nueva')).toBe('Vender')
+    expect(prendido('/ventas')).toBe('Ventas')
+    expect(prendido('/ventas/nueva')).toBe('Ventas')
     expect(prendido('/puerta/4')).toBe('Puerta')
   })
 
@@ -40,6 +40,6 @@ describe('activeItem: qué se prende en la navegación', () => {
 
   it('una corista no tiene los ítems de dirección', () => {
     const suyos = navFor('seller').map((i) => i.label)
-    expect(suyos).toEqual(['Inicio', 'Vender', 'Puerta'])
+    expect(suyos).toEqual(['Inicio', 'Ventas', 'Puerta'])
   })
 })

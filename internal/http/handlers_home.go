@@ -84,6 +84,20 @@ type homeResponse struct {
 	ToDoTotal  int              `json:"todo_total"`
 	LastSales  []homeSale       `json:"last_sales"`
 	Badges     homeBadges       `json:"badges"`
+	// Solo para la corista: nil para direccion, que lo ve en Plata.
+	MySettlement *homeSettlement `json:"my_settlement,omitempty"`
+}
+
+// homeSettlement es lo que la corista tiene que rendir: lo que cobro menos lo
+// que ya entrego. Hasta C16 este numero no se veia en ningun lado —el acceso
+// de su home apuntaba a una ruta de admin y rebotaba—, asi que la unica forma
+// de saberlo era preguntarle a Eli.
+type homeSettlement struct {
+	CollectedCents int64 `json:"collected_cents"`
+	SettledCents   int64 `json:"settled_cents"`
+	BalanceCents   int64 `json:"balance_cents"`
+	// Ventas que efectivamente cobro: es lo que hace entendible el monto.
+	Sales int64 `json:"sales"`
 }
 
 // homeBadges alimenta los numeritos de la navegacion.
@@ -241,6 +255,35 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		resp.Badges.SalesPending = pendientes
+
+		// Lo que tiene que rendir sale de la MISMA consulta que Rendiciones:
+		// dos calculos distintos del mismo numero terminan discrepando, y esa
+		// discusion la pierde siempre la corista.
+		filas, err := s.queries.SettlementsReport(ctx, season.ID)
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		stats, err := s.queries.SellerSeasonStats(ctx, sqlcgen.SellerSeasonStatsParams{
+			SellerID: user.ID,
+			SeasonID: season.ID,
+		})
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		// Sin fila en el reporte no vendio nada todavia: el bloque igual se
+		// muestra, en cero, que es su estado real.
+		mio := homeSettlement{Sales: stats.PaidSales}
+		for _, fila := range filas {
+			if fila.SellerID == user.ID {
+				mio.CollectedCents = fila.CollectedCents
+				mio.SettledCents = fila.SettledCents
+				mio.BalanceCents = fila.CollectedCents - fila.SettledCents
+				break
+			}
+		}
+		resp.MySettlement = &mio
 	}
 
 	// Ultimas ventas: todas para direccion, las propias para la corista.

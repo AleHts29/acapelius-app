@@ -12,7 +12,6 @@ import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { NewSalePage } from './pages/NewSalePage'
 import { SalesPage } from './pages/SalesPage'
-import { SalesReportPage } from './pages/SalesReportPage'
 import { SeasonPage } from './pages/SeasonPage'
 import { SeasonsPage } from './pages/SeasonsPage'
 import { SettlementsHistoryPage, SettlementsScreen } from './pages/SettlementsPage'
@@ -140,14 +139,11 @@ function AuthenticatedApp() {
             </RequireAdmin>
           }
         />
-        <Route
-          path="/panel/ventas"
-          element={
-            <RequireAdmin>
-              <SalesReportPage />
-            </RequireAdmin>
-          }
-        />
+        {/* C16: el panel de ventas no tenía contenido propio —su franja es la
+            de Ventas y su agrupación, los filtros de Ventas y la columna
+            "Vendidas" de Equipo—. La ruta queda redirigiendo: hay favoritos
+            en celulares que apuntan acá. */}
+        <Route path="/panel/ventas" element={<Navigate to="/ventas" replace />} />
         <Route
           path="/panel/rendiciones"
           element={

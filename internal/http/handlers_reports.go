@@ -32,32 +32,6 @@ func parseOptionalID(w http.ResponseWriter, r *http.Request, name string) (*int6
 	return &id, true
 }
 
-type salesReportResponse struct {
-	Rows []sqlcgen.SalesReportRow `json:"rows"`
-}
-
-// handleSalesReport: ventas por funcion x vendedora, pagas vs. pendientes.
-func (s *Server) handleSalesReport(w http.ResponseWriter, r *http.Request) {
-	functionID, ok := parseOptionalID(w, r, "function_id")
-	if !ok {
-		return
-	}
-	sellerID, ok := parseOptionalID(w, r, "seller_id")
-	if !ok {
-		return
-	}
-
-	rows, err := s.queries.SalesReport(r.Context(), sqlcgen.SalesReportParams{
-		FunctionID: functionID,
-		SellerID:   sellerID,
-	})
-	if err != nil {
-		httpx.Internal(w, r, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, salesReportResponse{Rows: rows})
-}
-
 // settlementRow agrega el saldo calculado a la fila del reporte.
 type settlementRow struct {
 	sqlcgen.SettlementsReportRow

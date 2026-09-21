@@ -35,7 +35,8 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     to: '/ventas',
-    label: 'Vender',
+    // La pantalla es el listado; vender es una acción adentro (C16).
+    label: 'Ventas',
     icon: Ticket,
     activeClass: 'on-blue',
     matches: (p) => p.startsWith('/ventas'),

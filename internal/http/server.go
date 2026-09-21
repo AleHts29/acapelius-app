@@ -171,7 +171,6 @@ func (s *Server) Handler() http.Handler {
 					admin.Delete("/functions/{id}", s.handleDeleteFunction)
 					admin.Post("/sales/{id}/void", s.handleVoidSale)
 					admin.Post("/tickets/{id}/void", s.handleVoidTicket)
-					admin.Get("/reports/sales", s.handleSalesReport)
 					admin.Get("/reports/attendance", s.handleAttendanceReport)
 					admin.Get("/reports/attention", s.handleAttention)
 					admin.Get("/reports/direccion", s.handleDireccion)
