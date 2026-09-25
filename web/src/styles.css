@@ -73,8 +73,58 @@
   --ok-on-ink: #6dc79a;
   --warn-on-ink: #e8a33d;
   --night-muted: rgba(244, 241, 234, 0.6);
+  /* El naranja como TEXTO. En claro es --ticket; en oscuro necesita la
+     variante clara (C4401E sobre 141414 da 3.6). Los fondos naranja siguen
+     siendo --ticket en los dos modos, con --on-ticket encima. */
+  --ticket-text: var(--ticket);
+  --on-ticket: #f4f1ea;
+  /* El hero y el bloque de la puerta son negros en los dos modos: son el
+     "talon" de la marca, no una superficie mas. */
+  --hero-bg: var(--ink);
+  --hero-fg: #f4f1ea;
+  --hero-fade: rgba(244, 241, 234, 0.7);
+  --hero-line: rgba(244, 241, 234, 0.35);
+  --hero-track: rgba(244, 241, 234, 0.2);
 
   color-scheme: light;
+}
+
+/* --- Modo oscuro (elegido en la cuenta, o el del sistema) -------------------
+   El mismo sistema, invertido: papel oscuro, tinta clara. Los semanticos
+   usan sus variantes "sobre tinta" para seguir en AA; el naranja de fondo
+   no cambia (--on-ticket es claro en los dos modos). */
+:root[data-theme='dark'] {
+  --paper: #141414;
+  --paper2: #1c1b19;
+  --paper3: #26251f;
+  --hair: #3a3832;
+  --ink: #f4f1ea;
+  --ink2: #b4b1a9;
+  --ok: #6dc79a;
+  --warn: #e8a33d;
+  --bad: #e5736b;
+  --indigo: #9b9df0;
+  --ticket-text: #ec6e4c;
+  --hero-bg: #0a0a09;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #141414;
+    --paper2: #1c1b19;
+    --paper3: #26251f;
+    --hair: #3a3832;
+    --ink: #f4f1ea;
+    --ink2: #b4b1a9;
+    --ok: #6dc79a;
+    --warn: #e8a33d;
+    --bad: #e5736b;
+    --indigo: #9b9df0;
+    --ticket-text: #ec6e4c;
+    --hero-bg: #0a0a09;
+    color-scheme: dark;
+  }
 }
 
 * {
@@ -260,6 +310,37 @@ button {
   min-width: 190px;
 }
 
+/* Selector de modo claro/oscuro/sistema: tres botones mono. */
+.themesel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1.5px solid var(--ink);
+  margin-top: 10px;
+}
+
+.themesel button {
+  min-height: 32px;
+  border: 0;
+  border-right: 1px solid var(--hair);
+  background: transparent;
+  color: var(--ink2);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.themesel button:last-child {
+  border-right: 0;
+}
+
+.themesel button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
 /* --- Titulos y textos ------------------------------------------------------- */
 
 .page-title {
@@ -391,8 +472,8 @@ button {
 
 /* Hero de funcion: talon negro con troqueles verticales (mockup .hero). */
 .hero {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--hero-bg);
+  color: var(--hero-fg);
   border: 2px solid var(--ink);
   padding: 16px;
   position: relative;
@@ -423,13 +504,13 @@ button {
   font-size: 10.5px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: rgba(244, 241, 234, 0.7);
+  color: var(--hero-fade);
 }
 
 .hero__bar {
   margin-top: 12px;
   height: 6px;
-  background: rgba(244, 241, 234, 0.2);
+  background: var(--hero-track);
   overflow: hidden;
 }
 
@@ -445,7 +526,7 @@ button {
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(244, 241, 234, 0.7);
+  color: var(--hero-fade);
   display: flex;
   justify-content: space-between;
 }
@@ -612,7 +693,7 @@ button {
 }
 
 .field__input:focus-visible {
-  border-color: var(--ticket);
+  border-color: var(--ticket-text);
   outline: 2px solid var(--ticket);
   outline-offset: 0;
 }
@@ -740,7 +821,7 @@ input[type='datetime-local'].field__input {
   padding: 11px 16px;
   border: 2px solid var(--ticket);
   background: var(--ticket);
-  color: var(--paper);
+  color: var(--on-ticket);
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
@@ -1279,7 +1360,7 @@ input[type='datetime-local'].field__input {
   min-width: 180px;
   border: 2px solid var(--ticket);
   background: var(--ticket);
-  color: var(--paper);
+  color: var(--on-ticket);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
@@ -1307,7 +1388,7 @@ input[type='datetime-local'].field__input {
   width: 26px;
   height: 26px;
   border: 3px solid var(--door-hair);
-  border-top-color: var(--ticket);
+  border-top-color: var(--ticket-text);
   animation: camspin 0.8s linear infinite;
 }
 
@@ -1642,7 +1723,7 @@ input[type='datetime-local'].field__input {
   align-items: center;
   gap: 6px;
   background: var(--ticket);
-  color: var(--paper);
+  color: var(--on-ticket);
   border: 2px solid var(--ticket);
   padding: 12px 16px;
   font-family: var(--font-mono);
@@ -1674,7 +1755,7 @@ input[type='datetime-local'].field__input {
 }
 
 .searchbar:focus-within {
-  border-color: var(--ticket);
+  border-color: var(--ticket-text);
   outline: 2px solid var(--ticket);
   outline-offset: 0;
 }
@@ -1764,7 +1845,7 @@ input[type='datetime-local'].field__input {
 .fchip--on.fchip--warn {
   background: var(--warn);
   border-color: var(--warn);
-  color: var(--paper);
+  color: var(--on-ticket);
 }
 
 /* Cabecera de grupo en listados */
@@ -2898,7 +2979,7 @@ div.alertcard {
 
 /* Tarjeta traida por una alerta (?fn=): se distingue de las demas. */
 .panel--focused {
-  border-color: var(--ticket);
+  border-color: var(--ticket-text);
 }
 
 /* Cobros parciales: formulario dentro de la hoja de la venta e historial. */
@@ -4198,8 +4279,8 @@ div.alertcard {
 }
 
 .tag--next {
-  border-color: var(--ticket);
-  color: var(--ticket);
+  border-color: var(--ticket-text);
+  color: var(--ticket-text);
 }
 
 
@@ -4988,8 +5069,8 @@ div.alertcard {
   position: relative;
   overflow: hidden;
   padding: 20px 22px;
-  background: var(--night-bg);
-  color: var(--night-text);
+  background: var(--hero-bg);
+  color: var(--hero-fg);
 }
 
 /* El anillo del fondo: la marca, sin robarle contraste al texto. */
@@ -5032,7 +5113,7 @@ div.alertcard {
 .door-hoy__stats > div {
   padding-right: 22px;
   margin-right: 22px;
-  border-right: 1px dashed rgba(244, 241, 234, 0.35);
+  border-right: 1px dashed var(--hero-line);
 }
 
 .door-hoy__stats > div:last-child {
@@ -5068,9 +5149,9 @@ div.alertcard {
   min-height: 50px;
   margin-top: 18px;
   padding: 14px;
-  border: 2px solid var(--night-text);
-  background: var(--night-text);
-  color: var(--night-bg);
+  border: 2px solid var(--hero-fg);
+  background: var(--hero-fg);
+  color: var(--hero-bg);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
@@ -5347,13 +5428,13 @@ div.alertcard {
 }
 
 .menu-btn--open {
-  border-color: var(--ticket);
+  border-color: var(--ticket-text);
   outline: 2px solid var(--ticket);
   outline-offset: 0;
 }
 
 .menu-btn--kebab.menu-btn--open {
-  color: var(--ticket);
+  color: var(--ticket-text);
 }
 
 .menu-scrim {
@@ -5427,11 +5508,11 @@ div.alertcard {
 }
 
 .menu__i--action {
-  color: var(--ticket);
+  color: var(--ticket-text);
 }
 
 .menu__i--action .menu__ic {
-  color: var(--ticket);
+  color: var(--ticket-text);
 }
 
 .menu__i--danger {
@@ -5448,7 +5529,7 @@ div.alertcard {
   justify-content: center;
   width: 14px;
   flex-shrink: 0;
-  color: var(--ticket);
+  color: var(--ticket-text);
 }
 
 .menu__ic {
@@ -5728,7 +5809,7 @@ div.alertcard {
 }
 
 .fntag--next {
-  color: var(--ticket);
+  color: var(--ticket-text);
 }
 
 .fntag--lock {
@@ -5994,12 +6075,20 @@ div.alertcard {
   .sidenav__item--on:hover {
     background: var(--ink);
     color: var(--paper);
-    border-left-color: var(--ticket);
+    border-left-color: var(--ticket-text);
     font-weight: 700;
   }
 
-  .sidenav__account {
+  .sidenav__theme {
     margin-top: auto;
+    padding: 0 12px 8px;
+  }
+
+  .sidenav__theme .themesel {
+    margin-top: 0;
+  }
+
+  .sidenav__account {
     display: flex;
     align-items: center;
     gap: 9px;
@@ -6248,7 +6337,7 @@ div.alertcard {
     display: flex;
     gap: 22px;
     padding-left: 22px;
-    border-left: 1px dashed rgba(244, 241, 234, 0.35);
+    border-left: 1px dashed var(--hero-line);
     flex-shrink: 0;
     align-self: stretch;
     align-items: center;
@@ -6268,7 +6357,7 @@ div.alertcard {
     font-size: 9px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(244, 241, 234, 0.6);
+    color: var(--hero-fade);
   }
 
   .hero__cta {
@@ -6276,8 +6365,8 @@ div.alertcard {
     align-items: center;
     flex-shrink: 0;
     background: transparent;
-    color: var(--paper);
-    border: 2px solid var(--paper);
+    color: var(--hero-fg);
+    border: 2px solid var(--hero-fg);
     min-height: 44px;
     padding: 10px 16px;
     font-family: var(--font-mono);
@@ -6290,8 +6379,8 @@ div.alertcard {
   }
 
   .hero__cta:hover:not(:disabled) {
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--hero-fg);
+    color: var(--hero-bg);
   }
 
   .hero__cta:disabled {
@@ -6477,7 +6566,7 @@ div.alertcard {
   }
 
   .sthead__s svg {
-    color: var(--ticket);
+    color: var(--ticket-text);
   }
 
   .sthead__s svg.up,
@@ -6707,7 +6796,7 @@ div.alertcard {
   }
 
   .mrow--sel {
-    border-color: var(--ticket);
+    border-color: var(--ticket-text);
   }
 
   .att-detail__h {
@@ -6776,7 +6865,7 @@ div.alertcard {
 
   .debt-card--sel,
   .okrow--sel {
-    border-color: var(--ticket);
+    border-color: var(--ticket-text);
   }
 
   /* --- Modo puerta en escritorio: la mesa de entrada (frame 5) ---------- */
@@ -6824,7 +6913,7 @@ div.alertcard {
   }
 
   .desk__row--on {
-    border-color: var(--ticket);
+    border-color: var(--ticket-text);
   }
 
   .desk__mid {

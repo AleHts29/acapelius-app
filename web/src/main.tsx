@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { App } from './App'
 import { SessionProvider } from './auth/session'
+import { applyTheme, getTheme } from './lib/theme'
 import './styles.css'
 
 const queryClient = new QueryClient({
@@ -25,6 +26,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     void navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' })
   })
 }
+
+// El modo de color se aplica antes de pintar: sin flash del modo equivocado.
+applyTheme(getTheme())
 
 // La app vive bajo /app (C17 §B.1). Las paginas publicas de entradas (/e/,
 // /t/) quedan en la raiz —hay links en emails ya enviados— y son las unicas

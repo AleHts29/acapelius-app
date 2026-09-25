@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { SeasonSelector } from '../season/SeasonSelector'
 import { useSession } from '../auth/session'
 import { SideNav } from './SideNav'
+import { ThemeToggle } from './ThemeToggle'
 import { TabBar } from './TabBar'
 
 export function Layout() {
@@ -55,7 +56,8 @@ export function Layout() {
               <p className="muted" style={{ margin: '0 0 10px', fontSize: 11.5 }}>
                 {user.email}
               </p>
-              <button className="button button--ghost" style={{ width: '100%' }} type="button" onClick={() => void logout()}>
+              <ThemeToggle />
+              <button className="button button--ghost" style={{ width: '100%', marginTop: 10 }} type="button" onClick={() => void logout()}>
                 Cerrar sesión
               </button>
             </div>

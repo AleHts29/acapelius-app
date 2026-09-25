@@ -5,6 +5,7 @@ import { LogOut } from 'lucide-react'
 import { api, roleLabel } from '../api/client'
 import type { User } from '../api/client'
 import { SeasonSelector } from '../season/SeasonSelector'
+import { ThemeToggle } from './ThemeToggle'
 import { useSeason } from '../season/SeasonProvider'
 import { activeItem, navFor } from './nav'
 import type { NavItem } from './nav'
@@ -76,6 +77,9 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
         )}
       </div>
 
+      <div className="sidenav__theme">
+        <ThemeToggle />
+      </div>
       <div className="sidenav__account">
         <span className="avatar avatar--sm" aria-hidden>
           {initial}

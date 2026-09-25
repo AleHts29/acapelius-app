@@ -1152,3 +1152,37 @@ landing (`web/src/public/`) no importa nada de la app ni al revés.
 pantalla (ni siquiera para reproducir el listado en números romanos del
 mockup de Inicio); es un reemplazo de estilo, como manda el spec. Y
 `useTerms()` sigue sin barrer los "corista" escritos: es otra tarea.
+
+## Modo claro / oscuro de la app
+
+**Tres opciones, no dos: Claro, Oscuro y Sistema.** Vive en el menú de la
+cuenta (abajo de la sidebar en escritorio, bajo el avatar en celular).
+Sin elegir nada manda `prefers-color-scheme`; elegir guarda
+`acapelius-theme` por dispositivo y fija `data-theme` en `<html>`. Se
+aplica en `main.tsx` antes de que React pinte, para que no haya un flash del
+modo equivocado. Es independiente del nocturno del modo puerta, que sigue
+decidiéndose por la hora de la función.
+
+**Es el mismo sistema, invertido.** Papel oscuro (`#141414`, paneles
+`#1C1B19`, bandas `#26251F`, líneas `#3A3832`), tinta clara (`#F4F1EA`,
+secundario `#B4B1A9`). Los semánticos usan sus variantes claras (`--ok
+#6DC79A`, `--warn #E8A33D`, `--bad #E5736B`, `--indigo #9B9DF0`) porque los
+del spec no llegan a AA sobre `#141414`. Cero radios, cero sombras, misma
+tipografía; solo cambian los tokens.
+
+**El naranja se partió en dos tokens.** Como fondo (botón primario, FAB,
+acento lateral) `--ticket` no cambia y lleva `--on-ticket` (papel claro)
+encima en los dos modos: texto oscuro sobre `#C4401E` daba 3.2. Como texto
+(cifras en Dirección, eyebrows, tags "próxima") es `--ticket-text`, que en
+oscuro pasa a `#EC6E4C`. Las 17 reglas con `color: var(--ticket)` usan ahora
+`--ticket-text`.
+
+**El hero y el bloque de la puerta son negros en los dos modos.** Son el
+"talón" de la marca, no una superficie más; invertidos quedaban blancos con
+los velos claros invisibles. Tienen tokens propios (`--hero-bg`, `--hero-fg`,
+`--hero-fade`, `--hero-line`, `--hero-track`); en oscuro el fondo baja a
+`#0A0A09` para despegarse del papel, y el borde de 2px los recorta.
+
+**Lo que no cambia con el modo:** la landing y el alta (papel siempre: son
+un afiche), la entrada pública, la barra de la demo y los paneles verde y
+rojo de la puerta.
