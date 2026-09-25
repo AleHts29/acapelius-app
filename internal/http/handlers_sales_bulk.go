@@ -133,7 +133,7 @@ func (s *Server) handleBulkResend(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	enviados, fallidos, sinEmail := 0, 0, 0
+	enviados, fallidos, sinEmail, preview := 0, 0, 0, 0
 	for _, v := range ventas {
 		if v.BuyerEmail == nil || *v.BuyerEmail == "" {
 			sinEmail++
@@ -158,15 +158,18 @@ func (s *Server) handleBulkResend(w http.ResponseWriter, r *http.Request) {
 			httpx.Internal(w, r, err)
 			return
 		}
-		if s.sendTicketEmail(ctx, sale, function, tickets) == emailStatusSent {
+		switch s.sendTicketEmail(ctx, sale, function, tickets) {
+		case emailStatusSent:
 			enviados++
-		} else {
+		case emailStatusPreview:
+			preview++
+		default:
 			fallidos++
 		}
 	}
 
 	httpx.JSON(w, http.StatusOK, map[string]int{
-		"sent": enviados, "failed": fallidos, "no_email": sinEmail,
+		"sent": enviados, "failed": fallidos, "no_email": sinEmail, "preview": preview,
 	})
 }
 

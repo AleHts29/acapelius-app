@@ -66,15 +66,21 @@ function AccessCard({ access, onClose }: { access: UserAccessResponse; onClose: 
   }
 
   return (
-    <div className={`accesscard ${emailStatus === 'sent' ? '' : 'accesscard--warn'}`}>
+    <div className={`accesscard ${emailStatus === 'failed' ? 'accesscard--warn' : ''}`}>
       <p className="eyebrow">
-        {emailStatus === 'sent' ? `Invitación enviada a ${user.email}` : 'No salió el email'}
+        {emailStatus === 'sent'
+          ? `Invitación enviada a ${user.email}`
+          : emailStatus === 'preview'
+            ? 'En la demo no se mandan mails'
+            : 'No salió el email'}
       </p>
       <b className="accesscard__pw">{tempPassword}</b>
       <p className="muted" style={{ fontSize: 11, margin: '4px 0 10px' }}>
         {emailStatus === 'sent'
           ? 'Contraseña provisoria, por si te la pide. Cambia al primer ingreso.'
-          : 'Pasale estos datos por WhatsApp: el email no se pudo entregar.'}
+          : emailStatus === 'preview'
+            ? 'Esto es lo que le llegaría por mail. Cambia al primer ingreso.'
+            : 'Pasale estos datos por WhatsApp: el email no se pudo entregar.'}
       </p>
       <div className="form-row">
         <button className="button" type="button" onClick={() => void copy()}>

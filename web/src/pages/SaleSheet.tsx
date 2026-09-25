@@ -107,6 +107,7 @@ export function SaleSheet({
     onSuccess: ({ email_status }) => {
       refresh()
       if (email_status === 'sent') setNotice('Email enviado ✓')
+      else if (email_status === 'preview') setNotice('En la demo no se mandan mails: abrí la entrada desde el link.')
       else setError('El email no salió. Probá de nuevo.')
     },
     onError: (err) => fail(err, 'No se pudo reenviar el email.'),

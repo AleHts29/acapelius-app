@@ -63,6 +63,9 @@ func (s *Server) sendInviteEmail(ctx context.Context, user domain.User, tempPass
 		Reset:        reset,
 	})
 
+	if auth.IsDemo(ctx) {
+		return emailStatusPreview
+	}
 	sendCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	if err := s.mailer.Send(sendCtx, msg); err != nil {

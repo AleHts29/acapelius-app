@@ -137,11 +137,9 @@ sqlc: $(SQLC) ## Regenera el codigo de las queries
 seed: ## Crea el primer admin si la base esta vacia
 	@$(LOAD_ENV); $(GO) run ./cmd/seed
 
-.PHONY: seed-demo
-seed-demo: ## Reemplaza los datos por una temporada de prueba (borra la actual)
-	@$(MAKE) --no-print-directory seed
-	@$(GO) run ./cmd/seeddemo | docker compose exec -T postgres psql -q -U acapelius -d acapelius -v ON_ERROR_STOP=1
-	@echo "  Temporada de prueba cargada. Coristas: <nombre.apellido>@demo.acapelius.local / acapelius-demo"
+.PHONY: demo-reset
+demo-reset: ## Borra y vuelve a sembrar la organizacion demo (lo mismo que el job nocturno)
+	@$(GO) run ./cmd/demoreset
 
 # --- Desarrollo -------------------------------------------------------------
 

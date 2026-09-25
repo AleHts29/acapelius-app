@@ -37,6 +37,9 @@ const (
 	emailStatusSent   = "sent"
 	emailStatusFailed = "failed"
 	emailStatusNone   = "none" // la venta no tiene email
+	// En la demo no sale ningun mail: la app muestra la entrada en pantalla
+	// donde diria "enviada" (C17 §C).
+	emailStatusPreview = "preview"
 )
 
 type saleResponse struct {
@@ -239,7 +242,9 @@ func (s *Server) sendTicketEmail(ctx context.Context, sale sqlcgen.Sale, functio
 
 	status := emailStatusSent
 	var sendErr *string
-	if err == nil {
+	if auth.IsDemo(ctx) {
+		status = emailStatusPreview
+	} else if err == nil {
 		sendCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
 		err = s.mailer.Send(sendCtx, msg)
@@ -284,6 +289,8 @@ func entrega(row sqlcgen.ListSalesPageRow) string {
 		return "sent"
 	case emailStatusFailed:
 		return "failed"
+	case emailStatusPreview:
+		return "preview"
 	default:
 		// Tiene email pero nunca se intento: pasa con ventas cargadas antes de
 		// que existiera el envio. Se muestra como no enviada.

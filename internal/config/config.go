@@ -33,6 +33,9 @@ type Config struct {
 	TZ           string
 	AutoMigrate  bool
 	Env          string // "development" | "production"
+	// DemoEnabled siembra la organizacion demo al arrancar y la reinicia
+	// cada noche (C17 §C). DEMO_ENABLED=false la apaga.
+	DemoEnabled bool
 }
 
 // minSecretLen es el minimo aceptable para SERVER_SECRET: firma los QR y las
@@ -56,6 +59,7 @@ func Load() (*Config, error) {
 		EmailFrom:    getenv("EMAIL_FROM", "Acapelius <entradas@example.com>"),
 		TZ:           getenv("TZ", "America/Argentina/Buenos_Aires"),
 		Env:          getenv("APP_ENV", "development"),
+		DemoEnabled:  getenv("DEMO_ENABLED", "true") != "false",
 	}
 
 	smtpPort, err := strconv.Atoi(getenv("SMTP_PORT", "587"))

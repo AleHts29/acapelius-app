@@ -122,6 +122,13 @@ func RequireRole(roles ...domain.Role) func(http.Handler) http.Handler {
 	}
 }
 
+// IsDemo indica si la sesion es de la organizacion demo (C17 §C): ahi no
+// sale ningun mail y no se cambian contraseñas.
+func IsDemo(ctx context.Context) bool {
+	user, ok := UserFrom(ctx)
+	return ok && user != nil && user.OrganizationIsDemo
+}
+
 // OrgFrom devuelve la organizacion de la sesion (C17 §A.2). Es lo que acota
 // cada consulta a la base. Sin sesion devuelve 0, que no coincide con ninguna
 // organizacion: si a un handler se le escapa una consulta sin usuario, falla

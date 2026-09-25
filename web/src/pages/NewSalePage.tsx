@@ -141,6 +141,11 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
                 El email no salió. Compartile el link, o reintentá desde "Mis ventas".
               </p>
             )}
+            {created.emailStatus === 'preview' && (
+              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+                En la demo no se mandan mails: la entrada que le llegaría a {created.sale.buyer_email} es este link.
+              </p>
+            )}
             {created.emailStatus === 'none' && (
               <p className="muted" style={{ margin: 0, fontSize: 13 }}>
                 Sin email: compartile el link, o en la puerta la buscan por nombre.

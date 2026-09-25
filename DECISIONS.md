@@ -924,3 +924,55 @@ existen: el pie no los promete.
 **Los mails de invitación apuntan a `/entrar`**, no a la raíz: con sesión la
 raíz redirige a la app, pero sin sesión mostraba la landing a alguien que
 sólo quería loguearse.
+
+## C17 · Pieza C — la demo es una organización más
+
+**Una organización con `is_demo`, no un sistema aparte.** `internal/demo`
+la siembra: dirección, 10 integrantes (dos que nunca entraron), una persona
+en la puerta, cuatro funciones (tres hechas, una en venta), 50 ventas con
+los cuatro estados de pago más una anulada, cortesías, cupos derivados de lo
+vendido (el cierre queda con 58 sin asignar a propósito), ingresos con
+asistencia dispareja —la gala se vendió bien y fue el 25%: es el hallazgo
+que Dirección tiene que mostrar— y rendiciones parciales. Nombres
+inventados; mails en `@demo.acapelius.local`, que no rutea.
+
+**`Reset` borra y vuelve a sembrar, en una transacción, sólo lo de esa
+organización.** Como casi ninguna FK tiene `ON DELETE CASCADE`, el borrado
+va en el orden que exigen las claves, siempre con un join a la organización
+demo: el resto de la base ni se mira. El id de la organización se conserva
+entre reinicios, así las sesiones abiertas siguen apuntando a ella. Lo
+corren tres cosas: el server al arrancar si la demo no existe
+(`EnsureSeeded`, para que un deploy nuevo la tenga sin pasos a mano), una
+goroutine del server todas las noches a las 4 (hora de `TZ`; hay una sola
+instancia, no hace falta un scheduler afuera), y `make demo-reset` /
+`go run ./cmd/demoreset`. `DEMO_ENABLED=false` apaga las dos primeras.
+
+**La sesión de invitado es una sesión común con vencimiento propio.**
+`POST /api/demo/session` abre sesión como la dirección de la demo y guarda
+`demo_until` (6 horas) en la sesión; `CurrentUser` la destruye pasada esa
+hora aunque la cookie viva 30 días. Con el rate limit del login. `/demo` la
+llama sola al cargar y manda a `/app`: en local, un segundo.
+
+**En la demo no sale ningún mail: `email_status: preview`.** Los tres
+puntos que mandan (entrada, invitación, recordatorio) preguntan
+`auth.IsDemo(ctx)` y devuelven `preview` sin tocar el driver; el registro
+(`email_sends`, `settlement_reminders`) queda con ese estado, que la
+migración 00013 agrega a los `CHECK`. La app lo muestra donde diría
+"enviada": "En la demo no se mandan mails" y el link de la entrada, que ya
+estaba en pantalla. Se eligió no cambiar el driver por request: un driver
+`preview` que devuelva éxito diría "enviada" y mentiría; uno que devuelva
+error diría "no salió" y también.
+
+**Lo bloqueado**: cambiar la contraseña (403: la cuenta es compartida y
+dejaría afuera al siguiente). No hay "eliminar organización" que bloquear.
+El resto está habilitado a propósito, incluso crear gente y anular ventas:
+el reinicio lo deshace.
+
+**La barra de la demo es la única concesión afiche adentro de `/app`**:
+fija arriba, negra con el botón en `--ticket`, tipografía mono; la shell se
+corre 34px y la navegación de escritorio también. Colores propios en el
+CSS, no tokens de la app.
+
+**`cmd/seeddemo` se borró.** Generaba SQL contra el esquema anterior a
+`season_members` (ya no corría) y sembraba dentro del coro real; la demo lo
+reemplaza con la misma idea en su propia organización.

@@ -309,10 +309,14 @@ func (s *Server) recordarA(ctx context.Context, sellerID, seasonID int64, actorN
 	})
 
 	estado := emailStatusSent
-	sendCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
-	if err := s.mailer.Send(sendCtx, msg); err != nil {
-		estado = emailStatusFailed
+	if auth.IsDemo(ctx) {
+		estado = emailStatusPreview
+	} else {
+		sendCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		if err := s.mailer.Send(sendCtx, msg); err != nil {
+			estado = emailStatusFailed
+		}
 	}
 
 	if _, err := s.queries.CreateReminder(ctx, sqlcgen.CreateReminderParams{

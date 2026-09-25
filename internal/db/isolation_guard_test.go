@@ -26,9 +26,10 @@ var sinOrganizacion = map[string]string{
 	"TouchUserLogin":                 "sella el login del usuario recien autenticado",
 	"CountUsers":                     "arranque: ¿hay alguien cargado?",
 	// Organizaciones en si.
-	"GetOrganization":    "la organizacion es el tenant",
-	"CreateOrganization": "alta de cuenta",
-	"SlugExists":         "alta de cuenta",
+	"GetOrganization":       "la organizacion es el tenant",
+	"GetOrganizationBySlug": "la demo se busca por slug antes de la sesion",
+	"CreateOrganization":    "alta de cuenta",
+	"SlugExists":            "alta de cuenta",
 	// Hijas de una venta ya resuelta con GetSale/SalesByIDs (acotados): las
 	// entradas y los cobros no tienen dueño propio.
 	"CreateTicket":                "sale_id recien creado en la misma transaccion",

@@ -50,7 +50,7 @@ cambiarlo en `.env` alcanza. Postgres queda en **5433** por el mismo motivo.
 | Comando | Que hace |
 |---|---|
 | `make dev` | Postgres, API y frontend juntos |
-| `make seed-demo` | Temporada de demo: ventas, ingresos y rendiciones para recorrer el panel |
+| `make demo-reset` | Borra y vuelve a sembrar la organizacion demo (la de /demo) |
 | `make dev-api` / `make dev-web` | Cada uno por separado |
 | `make test` | Tests unitarios de Go (no necesitan Postgres) |
 | `make test-integration` | Tests de handlers contra un Postgres real |
@@ -272,7 +272,7 @@ Estan documentadas en [`.env.example`](.env.example). Las que no pueden faltar:
       primero que sincroniza, service worker para la shell.
 - [x] **5 — Panel de Eli.** Reportes de ventas agrupables, rendiciones con
       saldo e historial, asistencia con polling; seed de demo realista
-      (`make seed-demo`).
+      (`make demo-reset` la reinicia).
 - [x] **6 — Pulido y deploy.** Docker + Fly listos, hardening, rate limits,
       PWA, wake lock, backups con restore verificado y runbook de operacion.
       El unico paso pendiente es correr `fly deploy` con una cuenta real.

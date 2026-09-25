@@ -117,6 +117,11 @@ func (s *Server) Handler() http.Handler {
 			pub.Post("/signup", s.handleSignup)
 		})
 
+		api.Group(func(pub chi.Router) {
+			pub.Use(httprate.LimitByIP(loginRateLimitRequests, rateLimitWindow))
+			pub.Post("/demo/session", s.handleDemoSession)
+		})
+
 		api.Group(func(priv chi.Router) {
 			priv.Use(s.auth.LoadUser)
 			priv.Use(s.auth.RequireAuth)

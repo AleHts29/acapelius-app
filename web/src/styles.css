@@ -7125,3 +7125,22 @@ div.alertcard {
     animation: none;
   }
 }
+
+/* --- Barra de la demo (C17 §C) ---------------------------------------------
+   La única concesión al lenguaje afiche adentro de la app: colores propios,
+   sin radios ni sombras. Empuja la shell hacia abajo sin tapar nada. */
+.app-shell--demo { --demobar-h: 34px; padding-top: var(--demobar-h); }
+.demobar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 70; height: var(--demobar-h, 34px);
+  display: flex; align-items: center; justify-content: center; gap: 14px; padding: 0 12px;
+  background: #141414; color: #F4F1EA;
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 11px;
+  letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden;
+}
+.demobar a { color: #F4F1EA; background: #C4401E; padding: 6px 10px; text-decoration: none; font-weight: 700; flex-shrink: 0; }
+@media (min-width: 1024px) {
+  .app-shell--demo .sidenav { top: var(--demobar-h); height: calc(100vh - var(--demobar-h)); }
+}
+@media (max-width: 640px) {
+  .demobar span { overflow: hidden; text-overflow: ellipsis; }
+}

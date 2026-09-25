@@ -126,6 +126,24 @@ func (q *Queries) GetOrganization(ctx context.Context, id int64) (Organization, 
 	return i, err
 }
 
+const getOrganizationBySlug = `-- name: GetOrganizationBySlug :one
+SELECT id, name, kind, slug, is_demo, created_at FROM organizations WHERE slug = $1::text
+`
+
+func (q *Queries) GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error) {
+	row := q.db.QueryRow(ctx, getOrganizationBySlug, slug)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Kind,
+		&i.Slug,
+		&i.IsDemo,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getSeason = `-- name: GetSeason :one
 SELECT id, name, is_active, created_at, organization_id FROM seasons
 WHERE id = $1::bigint AND organization_id = $2::bigint
@@ -144,6 +162,34 @@ func (q *Queries) GetSeason(ctx context.Context, arg GetSeasonParams) (Season, e
 		&i.Name,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.OrganizationID,
+	)
+	return i, err
+}
+
+const getUserByOrgEmail = `-- name: GetUserByOrgEmail :one
+SELECT id, name, email, password_hash, must_change_password, created_at, last_login_at, organization_id FROM users
+WHERE organization_id = $1::bigint AND lower(email) = lower($2::text)
+`
+
+type GetUserByOrgEmailParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	Email          string `json:"email"`
+}
+
+// La cuenta de una organizacion por email: la sesion de invitado de la demo
+// entra con la direccion de la organizacion demo.
+func (q *Queries) GetUserByOrgEmail(ctx context.Context, arg GetUserByOrgEmailParams) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByOrgEmail, arg.OrganizationID, arg.Email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.PasswordHash,
+		&i.MustChangePassword,
+		&i.CreatedAt,
+		&i.LastLoginAt,
 		&i.OrganizationID,
 	)
 	return i, err

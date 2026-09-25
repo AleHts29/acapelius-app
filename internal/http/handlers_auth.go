@@ -71,6 +71,12 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := auth.MustUserFrom(r.Context())
+	// En la demo la cuenta es compartida: cambiarle la contraseña dejaria
+	// afuera al proximo que entre (C17 §C).
+	if user.OrganizationIsDemo {
+		httpx.Error(w, http.StatusForbidden, httpx.CodeForbidden, "En la demo no se cambia la contraseña.")
+		return
+	}
 	err := s.auth.ChangePassword(r.Context(), user.OrganizationID, user.ID, req.CurrentPassword, req.NewPassword)
 	switch {
 	case err == nil:

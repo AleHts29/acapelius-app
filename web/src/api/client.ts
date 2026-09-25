@@ -72,7 +72,7 @@ export interface TeamResponse {
 export interface UserAccessResponse {
   user: User
   temp_password?: string
-  email_status: 'sent' | 'failed' | 'none'
+  email_status: 'sent' | 'failed' | 'none' | 'preview'
 }
 
 /** Codigos de error que el frontend discrimina. Ver internal/httpx/respond.go. */
@@ -192,7 +192,7 @@ export interface FunctionInput {
 export type PaymentStatus = 'pending' | 'paid'
 export type PaymentMethod = 'cash' | 'transfer'
 export type TicketStatus = 'issued' | 'checked_in' | 'void'
-export type EmailStatus = 'sent' | 'failed' | 'none'
+export type EmailStatus = 'sent' | 'failed' | 'none' | 'preview'
 
 export interface Sale {
   id: number
@@ -247,7 +247,8 @@ export interface SaleListItem {
   /** Estado de entrega: `sent` llegó al proveedor, `failed` no salió,
    *  `none` la venta no tiene email. "Abierta" no existe: sin webhook de
    *  Resend la app no puede saberlo (spec C15 §4.2). */
-  delivery: 'sent' | 'failed' | 'none'
+  /** preview: en la demo no se manda nada; la entrada se mira en pantalla. */
+  delivery: 'sent' | 'failed' | 'none' | 'preview'
   /** Cuántas de sus entradas ya ingresaron por la puerta. */
   entered: number
 }
@@ -618,7 +619,7 @@ export const api = {
       { sale_ids: saleIds, method },
     ),
   bulkResend: (saleIds: number[]) =>
-    request<{ sent: number; failed: number; no_email: number }>('POST', '/sales/bulk-resend', {
+    request<{ sent: number; failed: number; no_email: number; preview: number }>('POST', '/sales/bulk-resend', {
       sale_ids: saleIds,
     }),
   /** URL del CSV. Se abre en una pestaña: el navegador maneja la descarga. */

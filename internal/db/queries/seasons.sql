@@ -55,3 +55,12 @@ RETURNING *;
 
 -- name: SlugExists :one
 SELECT EXISTS (SELECT 1 FROM organizations WHERE slug = sqlc.arg(slug)::text);
+
+-- name: GetOrganizationBySlug :one
+SELECT * FROM organizations WHERE slug = sqlc.arg(slug)::text;
+
+-- name: GetUserByOrgEmail :one
+-- La cuenta de una organizacion por email: la sesion de invitado de la demo
+-- entra con la direccion de la organizacion demo.
+SELECT * FROM users
+WHERE organization_id = sqlc.arg(organization_id)::bigint AND lower(email) = lower(sqlc.arg(email)::text);

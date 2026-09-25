@@ -126,6 +126,7 @@ const ENTREGA: Record<SaleListItem['delivery'], { label: string; tone: string }>
   sent: { label: 'Enviada', tone: 'ok' },
   failed: { label: 'No llegó', tone: 'warn' },
   none: { label: 'Sin email', tone: 'warn' },
+  preview: { label: 'Demo · sin envío', tone: 'ok' },
 }
 
 // --- Fila --------------------------------------------------------------------
@@ -516,9 +517,11 @@ function BarraSeleccion({
     onSuccess: (res) => {
       onCambio()
       onAviso(
-        res.no_email > 0
-          ? `Reenviaste ${res.sent}. ${res.no_email} no tienen email.`
-          : `Reenviaste ${res.sent}.`,
+        res.preview > 0
+          ? `En la demo no se mandan mails: ${res.preview} quedarían reenviadas.`
+          : res.no_email > 0
+            ? `Reenviaste ${res.sent}. ${res.no_email} no tienen email.`
+            : `Reenviaste ${res.sent}.`,
       )
     },
   })

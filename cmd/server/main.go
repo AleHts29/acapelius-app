@@ -18,6 +18,7 @@ import (
 	"github.com/ale-hts/acapelius/internal/auth"
 	"github.com/ale-hts/acapelius/internal/config"
 	"github.com/ale-hts/acapelius/internal/db"
+	"github.com/ale-hts/acapelius/internal/demo"
 	httpapi "github.com/ale-hts/acapelius/internal/http"
 	"github.com/ale-hts/acapelius/internal/mail"
 	"github.com/ale-hts/acapelius/internal/qr"
@@ -66,6 +67,18 @@ func run() error {
 			return err
 		}
 		slog.Info("migraciones al dia")
+	}
+
+	// La demo (C17 §C): se siembra si no existe y se reinicia cada noche.
+	if cfg.DemoEnabled {
+		loc, err := time.LoadLocation(cfg.TZ)
+		if err != nil {
+			return fmt.Errorf("TZ: %w", err)
+		}
+		if err := demo.EnsureSeeded(ctx, pool, loc); err != nil {
+			return fmt.Errorf("sembrar la demo: %w", err)
+		}
+		go demo.Nightly(ctx, pool, loc, func(msg string, args ...any) { slog.Info(msg, args...) })
 	}
 
 	sessions := auth.NewSessionManager(pool, cfg)

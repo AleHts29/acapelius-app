@@ -395,7 +395,9 @@ export function SettlementDetailPage({
       setAviso(
         email_status === 'sent'
           ? 'Recordatorio enviado con el detalle.'
-          : 'El recordatorio no salió. Probá de nuevo.',
+          : email_status === 'preview'
+            ? 'En la demo no se mandan mails: el recordatorio quedó registrado.'
+            : 'El recordatorio no salió. Probá de nuevo.',
       )
       void queryClient.invalidateQueries({ queryKey: ['seller-detail'] })
     },

@@ -22,7 +22,14 @@ export function Layout() {
   const puerta = /^\/puerta\/\d/.test(location.pathname)
 
   return (
-    <div className={`app-shell${puerta ? ' app-shell--puerta' : ''}`}>
+    <div className={`app-shell${puerta ? ' app-shell--puerta' : ''}${user.organization_is_demo ? ' app-shell--demo' : ''}`}>
+      {/* La única concesión al lenguaje afiche dentro de la app (C17 §C). */}
+      {user.organization_is_demo && (
+        <div className="demobar" role="status">
+          <span>Estás en la demo · los datos se reinician cada noche</span>
+          <a href="/crear-cuenta">Crear mi cuenta</a>
+        </div>
+      )}
       <SideNav user={user} onLogout={() => void logout()} />
       <header className="app-header">
         <Link className="app-header__brand" to="/" aria-label="Inicio">

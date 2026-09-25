@@ -128,6 +128,10 @@ func (s *Service) CurrentUser(ctx context.Context) (*domain.User, error) {
 	if !ok || userID == 0 {
 		return nil, nil
 	}
+	if s.demoExpired(ctx) {
+		_ = s.sessions.Destroy(ctx)
+		return nil, nil
+	}
 	row, err := s.queries.GetUserWithMembership(ctx, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -413,4 +417,29 @@ func (s *Service) OpenSession(ctx context.Context, userID int64) (*domain.User, 
 	}
 	user := fromMembership(row)
 	return &user, nil
+}
+
+// sessionDemoUntilKey marca una sesion de invitado de la demo (C17 §C) con
+// su vencimiento en Unix. Las sesiones comunes no la tienen.
+const sessionDemoUntilKey = "demo_until"
+
+// DemoSessionLifetime: lo que dura una visita a la demo.
+const DemoSessionLifetime = 6 * time.Hour
+
+// OpenDemoSession abre una sesion temporal contra la cuenta de direccion de
+// la demo. Como OpenSession, pero con vencimiento propio: CurrentUser la
+// destruye pasadas las seis horas aunque la cookie siga viva.
+func (s *Service) OpenDemoSession(ctx context.Context, userID int64) (*domain.User, error) {
+	user, err := s.OpenSession(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	s.sessions.Put(ctx, sessionDemoUntilKey, time.Now().Add(DemoSessionLifetime).Unix())
+	return user, nil
+}
+
+// demoExpired: la sesion es de invitado y ya vencio.
+func (s *Service) demoExpired(ctx context.Context) bool {
+	until, ok := s.sessions.Get(ctx, sessionDemoUntilKey).(int64)
+	return ok && time.Now().Unix() > until
 }

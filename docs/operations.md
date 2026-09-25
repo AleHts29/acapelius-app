@@ -246,33 +246,22 @@ Notas:
 - Una funcion con ingresos registrados ya no se puede editar.
 - El saldo a rendir es por temporada: la temporada nueva arranca en cero.
 
-## Datos de prueba
+## Datos de prueba: la organizacion demo
 
-`cmd/seeddemo` imprime el SQL de una temporada completa para recorrer la app:
-10 coristas, una persona en la puerta, cuatro funciones (dos pasadas con
-ingresos, una hoy y una futura), cupos asignados, ventas repartidas en las
-ultimas dos semanas, cortesias y rendiciones parciales.
+La demo (C17 §C) es una organizacion mas, con `is_demo = true` y slug
+`demo`: 10 integrantes, una persona en la puerta, cuatro funciones (tres
+hechas, una en venta), ~50 ventas con los cuatro estados de pago, cortesias,
+ingresos con asistencia dispareja y rendiciones parciales. Nombres
+inventados.
 
-```bash
-# Local (borra y recarga la base de desarrollo):
-make seed-demo
-
-# Produccion, por el tunel de Railway:
-go run ./cmd/seeddemo | railway connect Postgres
-
-# O revisar el SQL antes de correrlo:
-go run ./cmd/seeddemo > /tmp/demo.sql
-```
-
-Que borra y que no: se lleva la temporada entera (funciones, ventas, entradas,
-ingresos, cupos, rendiciones) y **solo** los usuarios del dominio de prueba
-`@demo.acapelius.local`. La direccion y cualquier cuenta real quedan intactas,
-con su contrasena; a las coristas reales que sobreviven se les da un cupo en la
-ultima funcion para que puedan probar una venta.
-
-Las cuentas de prueba entran con `acapelius-demo`
-(`<nombre.apellido>@demo.acapelius.local`, `puerta@demo.acapelius.local`). Dos
-coristas quedan sin entrar nunca, para ver el chip de invitacion pendiente.
+- El server la siembra al arrancar si no existe (`DEMO_ENABLED=true`, el
+  default) y la reinicia todas las noches a las 4 (hora de `TZ`).
+- `make demo-reset` (o `go run ./cmd/demoreset`) la borra y la vuelve a
+  sembrar a mano; es idempotente.
+- `POST /api/demo/session` abre una sesion de invitado de 6 horas como
+  direccion de esa organizacion. En la demo no sale ningun mail
+  (`email_status: preview`) y no se cambia la contraseña.
+- Solo toca filas de la organizacion demo: el resto de la base ni se mira.
 
 ## Backups y restore
 
