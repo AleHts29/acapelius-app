@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ale-hts/acapelius/internal/db/sqlcgen"
 	"github.com/ale-hts/acapelius/internal/httpx"
 )
 
@@ -77,28 +78,28 @@ type direccionResponse struct {
 // handleDireccion: GET /api/reports/direccion?season_id= — la temporada
 // resumida en tres bloques: la plata, lo que hay que mirar, y las funciones.
 func (s *Server) handleDireccion(w http.ResponseWriter, r *http.Request) {
-	seasonID, ok := requireSeasonID(w, r)
+	seasonID, ok := s.requireSeasonID(w, r)
 	if !ok {
 		return
 	}
 	ctx := r.Context()
 
-	money, err := s.queries.SeasonMoney(ctx, seasonID)
+	money, err := s.queries.SeasonMoney(ctx, sqlcgen.SeasonMoneyParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	settled, err := s.queries.SeasonSettled(ctx, seasonID)
+	settled, err := s.queries.SeasonSettled(ctx, sqlcgen.SeasonSettledParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	deudoras, err := s.queries.AttentionSettlements(ctx, seasonID)
+	deudoras, err := s.queries.AttentionSettlements(ctx, sqlcgen.AttentionSettlementsParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	summary, err := s.queries.FunctionsSummary(ctx, seasonID)
+	summary, err := s.queries.FunctionsSummary(ctx, sqlcgen.FunctionsSummaryParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return

@@ -79,11 +79,22 @@ func run() error {
 		return err
 	}
 
+	// Primero la organizacion (C17 §A): todo lo demas cuelga de ella.
+	org, err := queries.CreateOrganization(ctx, sqlcgen.CreateOrganizationParams{
+		Name: getenv("SEED_ORG_NAME", "Coro Acapelius"),
+		Kind: getenv("SEED_ORG_KIND", "choir"),
+		Slug: getenv("SEED_ORG_SLUG", "acapelius"),
+	})
+	if err != nil {
+		return errors.Join(errors.New("crear la organizacion"), err)
+	}
+
 	user, err := queries.CreateUser(ctx, sqlcgen.CreateUserParams{
 		Name:               name,
 		Email:              domain.NormalizeEmail(email),
 		PasswordHash:       hash,
 		MustChangePassword: true,
+		OrganizationID:     org.ID,
 	})
 	if err != nil {
 		return errors.Join(errors.New("crear admin"), err)
@@ -92,14 +103,19 @@ func run() error {
 	// El arranque crea tambien la primera temporada: el rol vive en
 	// season_members, asi que sin temporada el admin no tendria rol y no
 	// podria ni crearla. Se le pone el año en curso como nombre.
-	season, err := queries.CreateSeason(ctx, fmt.Sprintf("Temporada %d", time.Now().Year()))
+	season, err := queries.CreateSeason(ctx, sqlcgen.CreateSeasonParams{
+		Name:           fmt.Sprintf("Temporada %d", time.Now().Year()),
+		OrganizationID: org.ID,
+		IsActive:       true,
+	})
 	if err != nil {
 		return errors.Join(errors.New("crear la primera temporada"), err)
 	}
 	if _, err := queries.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
-		SeasonID: season.ID,
-		UserID:   user.ID,
-		Role:     string(domain.RoleAdmin),
+		SeasonID:       season.ID,
+		UserID:         user.ID,
+		Role:           string(domain.RoleAdmin),
+		OrganizationID: org.ID,
 	}); err != nil {
 		return errors.Join(errors.New("sumar el admin a la temporada"), err)
 	}

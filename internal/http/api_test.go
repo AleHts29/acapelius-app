@@ -41,6 +41,10 @@ type testEnv struct {
 	pool     *pgxpool.Pool
 	emailLog *syncBuffer
 	signer   *qr.Signer
+	// orgID es la organizacion "del coro" de cada test: la crea el primer
+	// seedUser, como hace `make seed`. Los tests de aislamiento crean otras
+	// con seedOrg.
+	orgID int64
 }
 
 func newTestEnv(t *testing.T) *testEnv {
@@ -74,7 +78,7 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	// Cada test arranca con la base limpia; los tests no corren en paralelo
 	// entre si porque comparten esta base.
-	if _, err := pool.Exec(ctx, "TRUNCATE users, sessions, seasons, functions, sales, tickets, email_sends RESTART IDENTITY CASCADE"); err != nil {
+	if _, err := pool.Exec(ctx, "TRUNCATE organizations, users, sessions, seasons, functions, sales, tickets, email_sends RESTART IDENTITY CASCADE"); err != nil {
 		t.Fatalf("limpiar la base de test: %v", err)
 	}
 
@@ -115,8 +119,31 @@ func (b *syncBuffer) String() string {
 	return b.buf.String()
 }
 
-// seedUser inserta un usuario directamente en la base, como hace `make seed`.
+// seedOrg crea una organizacion (C17 §A). Cada una arranca sin temporada:
+// la crea el primer seedUserIn, como hace `make seed`.
+func (e *testEnv) seedOrg(t *testing.T, name, slug string) int64 {
+	t.Helper()
+	org, err := sqlcgen.New(e.pool).CreateOrganization(context.Background(), sqlcgen.CreateOrganizationParams{
+		Name: name, Kind: "choir", Slug: slug,
+	})
+	if err != nil {
+		t.Fatalf("crear organizacion de test: %v", err)
+	}
+	return org.ID
+}
+
+// seedUser inserta un usuario directamente en la base, como hace `make seed`,
+// en la organizacion del test (la crea la primera vez).
 func (e *testEnv) seedUser(t *testing.T, name, email, password string, role domain.Role) domain.User {
+	t.Helper()
+	if e.orgID == 0 {
+		e.orgID = e.seedOrg(t, "Coro de prueba", "prueba")
+	}
+	return e.seedUserIn(t, e.orgID, name, email, password, role)
+}
+
+// seedUserIn es seedUser en una organizacion dada.
+func (e *testEnv) seedUserIn(t *testing.T, orgID int64, name, email, password string, role domain.Role) domain.User {
 	t.Helper()
 
 	hash, err := auth.HashPassword(password)
@@ -130,6 +157,7 @@ func (e *testEnv) seedUser(t *testing.T, name, email, password string, role doma
 		Email:              domain.NormalizeEmail(email),
 		PasswordHash:       hash,
 		MustChangePassword: true,
+		OrganizationID:     orgID,
 	})
 	if err != nil {
 		t.Fatalf("crear usuario de test: %v", err)
@@ -138,15 +166,15 @@ func (e *testEnv) seedUser(t *testing.T, name, email, password string, role doma
 	// El rol vive en season_members: sin temporada nadie tiene rol. Es el
 	// mismo arranque que hace `make seed`, que crea la primera temporada
 	// junto con el admin.
-	season, err := q.GetActiveSeason(ctx)
+	season, err := q.GetActiveSeason(ctx, orgID)
 	if err != nil {
-		season, err = q.CreateSeason(ctx, "Temporada 2026")
+		season, err = q.CreateSeason(ctx, sqlcgen.CreateSeasonParams{Name: "Temporada 2026", OrganizationID: orgID, IsActive: true})
 		if err != nil {
 			t.Fatalf("crear temporada de test: %v", err)
 		}
 	}
 	if _, err := q.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
-		SeasonID: season.ID, UserID: row.ID, Role: string(role),
+		SeasonID: season.ID, UserID: row.ID, Role: string(role), OrganizationID: orgID,
 	}); err != nil {
 		t.Fatalf("sumar a la temporada de test: %v", err)
 	}
@@ -154,6 +182,7 @@ func (e *testEnv) seedUser(t *testing.T, name, email, password string, role doma
 	return domain.User{
 		ID:                 row.ID,
 		Name:               row.Name,
+		OrganizationID:     orgID,
 		Email:              row.Email,
 		Role:               role,
 		MustChangePassword: row.MustChangePassword,

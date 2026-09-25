@@ -13,12 +13,21 @@ import (
 const countActiveTickets = `-- name: CountActiveTickets :one
 SELECT count(*) FROM tickets t
 JOIN sales s ON t.sale_id = s.id
-WHERE s.function_id = $1 AND t.status <> 'void'
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE s.function_id = $1::bigint
+  AND se.organization_id = $2::bigint
+  AND t.status <> 'void'
 `
 
+type CountActiveTicketsParams struct {
+	FunctionID     int64 `json:"function_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
 // Entradas que ocupan cupo: todas las no anuladas de la funcion.
-func (q *Queries) CountActiveTickets(ctx context.Context, functionID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countActiveTickets, functionID)
+func (q *Queries) CountActiveTickets(ctx context.Context, arg CountActiveTicketsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveTickets, arg.FunctionID, arg.OrganizationID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -27,16 +36,20 @@ func (q *Queries) CountActiveTickets(ctx context.Context, functionID int64) (int
 const countSalesBySellerInSeason = `-- name: CountSalesBySellerInSeason :one
 SELECT count(*)::bigint FROM sales s
 JOIN functions f ON f.id = s.function_id
-WHERE s.seller_id = $1::bigint AND f.season_id = $2::bigint
+JOIN seasons se ON se.id = f.season_id
+WHERE s.seller_id = $1::bigint
+  AND f.season_id = $2::bigint
+  AND se.organization_id = $3::bigint
 `
 
 type CountSalesBySellerInSeasonParams struct {
-	SellerID int64 `json:"seller_id"`
-	SeasonID int64 `json:"season_id"`
+	SellerID       int64 `json:"seller_id"`
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
 func (q *Queries) CountSalesBySellerInSeason(ctx context.Context, arg CountSalesBySellerInSeasonParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countSalesBySellerInSeason, arg.SellerID, arg.SeasonID)
+	row := q.db.QueryRow(ctx, countSalesBySellerInSeason, arg.SellerID, arg.SeasonID, arg.OrganizationID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -51,6 +64,7 @@ type CountTicketsBySaleAndStatusParams struct {
 	Status string `json:"status"`
 }
 
+// El caller ya resolvio la venta con GetSale (acotado).
 func (q *Queries) CountTicketsBySaleAndStatus(ctx context.Context, arg CountTicketsBySaleAndStatusParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countTicketsBySaleAndStatus, arg.SaleID, arg.Status)
 	var count int64
@@ -60,37 +74,41 @@ func (q *Queries) CountTicketsBySaleAndStatus(ctx context.Context, arg CountTick
 
 const createSale = `-- name: CreateSale :one
 INSERT INTO sales (function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, is_comp, notes)
-VALUES (
+SELECT
+  f.id,
   $1::bigint,
-  $2::bigint,
+  $2::text,
   $3::text,
-  $4::text,
+  $4,
   $5,
-  $6,
-  $7::integer,
-  $8::bigint,
-  $9::boolean,
-  $10
-)
+  $6::integer,
+  $7::bigint,
+  $8::boolean,
+  $9
+FROM functions f
+JOIN seasons se ON se.id = f.season_id
+WHERE f.id = $10::bigint
+  AND se.organization_id = $11::bigint
 RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents
 `
 
 type CreateSaleParams struct {
-	FunctionID  int64   `json:"function_id"`
-	SellerID    int64   `json:"seller_id"`
-	Code        string  `json:"code"`
-	BuyerName   string  `json:"buyer_name"`
-	BuyerEmail  *string `json:"buyer_email"`
-	BuyerPhone  *string `json:"buyer_phone"`
-	Quantity    int32   `json:"quantity"`
-	AmountCents int64   `json:"amount_cents"`
-	IsComp      bool    `json:"is_comp"`
-	Notes       *string `json:"notes"`
+	SellerID       int64   `json:"seller_id"`
+	Code           string  `json:"code"`
+	BuyerName      string  `json:"buyer_name"`
+	BuyerEmail     *string `json:"buyer_email"`
+	BuyerPhone     *string `json:"buyer_phone"`
+	Quantity       int32   `json:"quantity"`
+	AmountCents    int64   `json:"amount_cents"`
+	IsComp         bool    `json:"is_comp"`
+	Notes          *string `json:"notes"`
+	FunctionID     int64   `json:"function_id"`
+	OrganizationID int64   `json:"organization_id"`
 }
 
+// Solo si la funcion es de la organizacion; si no, no inserta (ErrNoRows).
 func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (Sale, error) {
 	row := q.db.QueryRow(ctx, createSale,
-		arg.FunctionID,
 		arg.SellerID,
 		arg.Code,
 		arg.BuyerName,
@@ -100,6 +118,8 @@ func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (Sale, e
 		arg.AmountCents,
 		arg.IsComp,
 		arg.Notes,
+		arg.FunctionID,
+		arg.OrganizationID,
 	)
 	var i Sale
 	err := row.Scan(
@@ -141,6 +161,8 @@ type CreateSalePaymentParams struct {
 // ============================================================================
 // Cobros de una venta (parciales o totales)
 // ============================================================================
+// Todas reciben un sale_id que el handler ya resolvio con GetSale (acotado),
+// salvo las de a lote, que usan SalesByIDs (acotado).
 func (q *Queries) CreateSalePayment(ctx context.Context, arg CreateSalePaymentParams) (SalePayment, error) {
 	row := q.db.QueryRow(ctx, createSalePayment,
 		arg.SaleID,
@@ -171,6 +193,8 @@ type CreateTicketParams struct {
 	Code   string `json:"code"`
 }
 
+// Se llama justo despues de CreateSale, con un sale_id recien creado por la
+// misma transaccion: la venta ya fue verificada.
 func (q *Queries) CreateTicket(ctx context.Context, arg CreateTicketParams) (Ticket, error) {
 	row := q.db.QueryRow(ctx, createTicket, arg.SaleID, arg.Code)
 	var i Ticket
@@ -219,13 +243,27 @@ func (q *Queries) DeleteSalePayments(ctx context.Context, saleID int64) error {
 }
 
 const getFunctionForUpdate = `-- name: GetFunctionForUpdate :one
-SELECT id, season_id, name, venue, starts_at, capacity, price_cents, created_at FROM functions WHERE id = $1 FOR UPDATE
+
+SELECT f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at FROM functions f
+JOIN seasons se ON se.id = f.season_id
+WHERE f.id = $1::bigint
+  AND se.organization_id = $2::bigint
+FOR UPDATE OF f
 `
 
+type GetFunctionForUpdateParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// sales y tickets cuelgan de functions → seasons (C17 §A.1). Toda consulta
+// con sesion exige que la venta sea de la organizacion; una ajena no existe
+// (ErrNoRows → 404). Las dos publicas (GetSaleByCode, GetPublicTicket) no
+// llevan organizacion: el codigo secreto ya identifica la venta.
 // Lockea la fila de la funcion para serializar la validacion de cupo entre
 // ventas concurrentes (spec §4).
-func (q *Queries) GetFunctionForUpdate(ctx context.Context, id int64) (Function, error) {
-	row := q.db.QueryRow(ctx, getFunctionForUpdate, id)
+func (q *Queries) GetFunctionForUpdate(ctx context.Context, arg GetFunctionForUpdateParams) (Function, error) {
+	row := q.db.QueryRow(ctx, getFunctionForUpdate, arg.ID, arg.OrganizationID)
 	var i Function
 	err := row.Scan(
 		&i.ID,
@@ -240,13 +278,49 @@ func (q *Queries) GetFunctionForUpdate(ctx context.Context, id int64) (Function,
 	return i, err
 }
 
-const getSale = `-- name: GetSale :one
-SELECT id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents FROM sales WHERE id = $1
+const getPublicSale = `-- name: GetPublicSale :one
+
+SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents,
+  f.name AS function_name,
+  f.venue AS function_venue,
+  f.starts_at AS function_starts_at,
+  u.name AS seller_name
+FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN users u ON u.id = s.seller_id
+WHERE s.code = $1::text
 `
 
-func (q *Queries) GetSale(ctx context.Context, id int64) (Sale, error) {
-	row := q.db.QueryRow(ctx, getSale, id)
-	var i Sale
+type GetPublicSaleRow struct {
+	ID               int64      `json:"id"`
+	FunctionID       int64      `json:"function_id"`
+	SellerID         int64      `json:"seller_id"`
+	Code             string     `json:"code"`
+	BuyerName        string     `json:"buyer_name"`
+	BuyerEmail       *string    `json:"buyer_email"`
+	BuyerPhone       *string    `json:"buyer_phone"`
+	Quantity         int32      `json:"quantity"`
+	AmountCents      int64      `json:"amount_cents"`
+	PaymentStatus    string     `json:"payment_status"`
+	PaymentMethod    *string    `json:"payment_method"`
+	IsComp           bool       `json:"is_comp"`
+	Notes            *string    `json:"notes"`
+	VoidedAt         *time.Time `json:"voided_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	PaidCents        int64      `json:"paid_cents"`
+	FunctionName     *string    `json:"function_name"`
+	FunctionVenue    string     `json:"function_venue"`
+	FunctionStartsAt time.Time  `json:"function_starts_at"`
+	SellerName       string     `json:"seller_name"`
+}
+
+// ============================================================================
+// Paginas publicas (/e/{code}, /t/{code}.png): sin organizacion a proposito.
+// No hay sesion; el codigo secreto ya identifica la venta (C17 §A.2).
+// ============================================================================
+func (q *Queries) GetPublicSale(ctx context.Context, code string) (GetPublicSaleRow, error) {
+	row := q.db.QueryRow(ctx, getPublicSale, code)
+	var i GetPublicSaleRow
 	err := row.Scan(
 		&i.ID,
 		&i.FunctionID,
@@ -264,16 +338,46 @@ func (q *Queries) GetSale(ctx context.Context, id int64) (Sale, error) {
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.PaidCents,
+		&i.FunctionName,
+		&i.FunctionVenue,
+		&i.FunctionStartsAt,
+		&i.SellerName,
 	)
 	return i, err
 }
 
-const getSaleByCode = `-- name: GetSaleByCode :one
-SELECT id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents FROM sales WHERE code = $1::text
+const getPublicTicketByCode = `-- name: GetPublicTicketByCode :one
+SELECT id, sale_id, code, status, created_at FROM tickets WHERE code = $1::text
 `
 
-func (q *Queries) GetSaleByCode(ctx context.Context, code string) (Sale, error) {
-	row := q.db.QueryRow(ctx, getSaleByCode, code)
+func (q *Queries) GetPublicTicketByCode(ctx context.Context, code string) (Ticket, error) {
+	row := q.db.QueryRow(ctx, getPublicTicketByCode, code)
+	var i Ticket
+	err := row.Scan(
+		&i.ID,
+		&i.SaleID,
+		&i.Code,
+		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getSale = `-- name: GetSale :one
+SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE s.id = $1::bigint
+  AND se.organization_id = $2::bigint
+`
+
+type GetSaleParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) GetSale(ctx context.Context, arg GetSaleParams) (Sale, error) {
+	row := q.db.QueryRow(ctx, getSale, arg.ID, arg.OrganizationID)
 	var i Sale
 	err := row.Scan(
 		&i.ID,
@@ -297,11 +401,21 @@ func (q *Queries) GetSaleByCode(ctx context.Context, code string) (Sale, error) 
 }
 
 const getTicket = `-- name: GetTicket :one
-SELECT id, sale_id, code, status, created_at FROM tickets WHERE id = $1
+SELECT t.id, t.sale_id, t.code, t.status, t.created_at FROM tickets t
+JOIN sales s ON s.id = t.sale_id
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE t.id = $1::bigint
+  AND se.organization_id = $2::bigint
 `
 
-func (q *Queries) GetTicket(ctx context.Context, id int64) (Ticket, error) {
-	row := q.db.QueryRow(ctx, getTicket, id)
+type GetTicketParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) GetTicket(ctx context.Context, arg GetTicketParams) (Ticket, error) {
+	row := q.db.QueryRow(ctx, getTicket, arg.ID, arg.OrganizationID)
 	var i Ticket
 	err := row.Scan(
 		&i.ID,
@@ -314,11 +428,23 @@ func (q *Queries) GetTicket(ctx context.Context, id int64) (Ticket, error) {
 }
 
 const getTicketByCode = `-- name: GetTicketByCode :one
-SELECT id, sale_id, code, status, created_at FROM tickets WHERE code = $1::text
+SELECT t.id, t.sale_id, t.code, t.status, t.created_at FROM tickets t
+JOIN sales s ON s.id = t.sale_id
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE t.code = $1::text
+  AND se.organization_id = $2::bigint
 `
 
-func (q *Queries) GetTicketByCode(ctx context.Context, code string) (Ticket, error) {
-	row := q.db.QueryRow(ctx, getTicketByCode, code)
+type GetTicketByCodeParams struct {
+	Code           string `json:"code"`
+	OrganizationID int64  `json:"organization_id"`
+}
+
+// Es la de la puerta: un codigo de otra organizacion no existe, aunque sea
+// valido. (La pagina publica usa GetPublicTicket.)
+func (q *Queries) GetTicketByCode(ctx context.Context, arg GetTicketByCodeParams) (Ticket, error) {
+	row := q.db.QueryRow(ctx, getTicketByCode, arg.Code, arg.OrganizationID)
 	var i Ticket
 	err := row.Scan(
 		&i.ID,
@@ -334,6 +460,7 @@ const listEmailSendsBySale = `-- name: ListEmailSendsBySale :many
 SELECT id, sale_id, recipient, status, error, created_at FROM email_sends WHERE sale_id = $1 ORDER BY created_at DESC
 `
 
+// El caller ya resolvio la venta con GetSale (acotado).
 func (q *Queries) ListEmailSendsBySale(ctx context.Context, saleID int64) ([]EmailSend, error) {
 	rows, err := q.db.Query(ctx, listEmailSendsBySale, saleID)
 	if err != nil {
@@ -417,17 +544,20 @@ SELECT
   count(t.id) FILTER (WHERE t.status <> 'void') AS active_tickets
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
 LEFT JOIN tickets t ON t.sale_id = s.id
-WHERE ($1::bigint IS NULL OR s.seller_id = $1::bigint)
-  AND ($2::bigint IS NULL OR s.function_id = $2::bigint)
+WHERE se.organization_id = $1::bigint
+  AND ($2::bigint IS NULL OR s.seller_id = $2::bigint)
+  AND ($3::bigint IS NULL OR s.function_id = $3::bigint)
 GROUP BY s.id, f.id, u.id
 ORDER BY s.created_at DESC
 `
 
 type ListSalesDetailedParams struct {
-	SellerID   *int64 `json:"seller_id"`
-	FunctionID *int64 `json:"function_id"`
+	OrganizationID int64  `json:"organization_id"`
+	SellerID       *int64 `json:"seller_id"`
+	FunctionID     *int64 `json:"function_id"`
 }
 
 type ListSalesDetailedRow struct {
@@ -457,7 +587,7 @@ type ListSalesDetailedRow struct {
 // Listado para la UI: la venta con su funcion, vendedora y conteo de tickets
 // vivos. Filtros opcionales por vendedora y por funcion.
 func (q *Queries) ListSalesDetailed(ctx context.Context, arg ListSalesDetailedParams) ([]ListSalesDetailedRow, error) {
-	rows, err := q.db.Query(ctx, listSalesDetailed, arg.SellerID, arg.FunctionID)
+	rows, err := q.db.Query(ctx, listSalesDetailed, arg.OrganizationID, arg.SellerID, arg.FunctionID)
 	if err != nil {
 		return nil, err
 	}
@@ -502,6 +632,8 @@ const listTicketsBySale = `-- name: ListTicketsBySale :many
 SELECT id, sale_id, code, status, created_at FROM tickets WHERE sale_id = $1 ORDER BY id
 `
 
+// Sin organizacion: el caller ya resolvio la venta (GetSale acotado, o
+// GetSaleByCode en la pagina publica). Las entradas no tienen dueño propio.
 func (q *Queries) ListTicketsBySale(ctx context.Context, saleID int64) ([]Ticket, error) {
 	rows, err := q.db.Query(ctx, listTicketsBySale, saleID)
 	if err != nil {
@@ -591,6 +723,7 @@ type RecordEmailSendParams struct {
 	Error     *string `json:"error"`
 }
 
+// El caller ya resolvio la venta con GetSale (acotado).
 func (q *Queries) RecordEmailSend(ctx context.Context, arg RecordEmailSendParams) (EmailSend, error) {
 	row := q.db.QueryRow(ctx, recordEmailSend,
 		arg.SaleID,
@@ -611,21 +744,31 @@ func (q *Queries) RecordEmailSend(ctx context.Context, arg RecordEmailSendParams
 }
 
 const updateSalePayment = `-- name: UpdateSalePayment :one
-UPDATE sales
+UPDATE sales s
 SET payment_status = $1::text,
     payment_method = $2
-WHERE id = $3::bigint
-RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents
+FROM functions f
+JOIN seasons se ON se.id = f.season_id
+WHERE f.id = s.function_id
+  AND s.id = $3::bigint
+  AND se.organization_id = $4::bigint
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents
 `
 
 type UpdateSalePaymentParams struct {
-	PaymentStatus string  `json:"payment_status"`
-	PaymentMethod *string `json:"payment_method"`
-	ID            int64   `json:"id"`
+	PaymentStatus  string  `json:"payment_status"`
+	PaymentMethod  *string `json:"payment_method"`
+	ID             int64   `json:"id"`
+	OrganizationID int64   `json:"organization_id"`
 }
 
 func (q *Queries) UpdateSalePayment(ctx context.Context, arg UpdateSalePaymentParams) (Sale, error) {
-	row := q.db.QueryRow(ctx, updateSalePayment, arg.PaymentStatus, arg.PaymentMethod, arg.ID)
+	row := q.db.QueryRow(ctx, updateSalePayment,
+		arg.PaymentStatus,
+		arg.PaymentMethod,
+		arg.ID,
+		arg.OrganizationID,
+	)
 	var i Sale
 	err := row.Scan(
 		&i.ID,
@@ -649,11 +792,22 @@ func (q *Queries) UpdateSalePayment(ctx context.Context, arg UpdateSalePaymentPa
 }
 
 const voidSale = `-- name: VoidSale :one
-UPDATE sales SET voided_at = now() WHERE id = $1::bigint RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents
+UPDATE sales s SET voided_at = now()
+FROM functions f
+JOIN seasons se ON se.id = f.season_id
+WHERE f.id = s.function_id
+  AND s.id = $1::bigint
+  AND se.organization_id = $2::bigint
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents
 `
 
-func (q *Queries) VoidSale(ctx context.Context, id int64) (Sale, error) {
-	row := q.db.QueryRow(ctx, voidSale, id)
+type VoidSaleParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) VoidSale(ctx context.Context, arg VoidSaleParams) (Sale, error) {
+	row := q.db.QueryRow(ctx, voidSale, arg.ID, arg.OrganizationID)
 	var i Sale
 	err := row.Scan(
 		&i.ID,
@@ -677,11 +831,23 @@ func (q *Queries) VoidSale(ctx context.Context, id int64) (Sale, error) {
 }
 
 const voidTicket = `-- name: VoidTicket :one
-UPDATE tickets SET status = 'void' WHERE id = $1::bigint RETURNING id, sale_id, code, status, created_at
+UPDATE tickets t SET status = 'void'
+FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE s.id = t.sale_id
+  AND t.id = $1::bigint
+  AND se.organization_id = $2::bigint
+RETURNING t.id, t.sale_id, t.code, t.status, t.created_at
 `
 
-func (q *Queries) VoidTicket(ctx context.Context, id int64) (Ticket, error) {
-	row := q.db.QueryRow(ctx, voidTicket, id)
+type VoidTicketParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) VoidTicket(ctx context.Context, arg VoidTicketParams) (Ticket, error) {
+	row := q.db.QueryRow(ctx, voidTicket, arg.ID, arg.OrganizationID)
 	var i Ticket
 	err := row.Scan(
 		&i.ID,
@@ -697,6 +863,7 @@ const voidTicketsOfSale = `-- name: VoidTicketsOfSale :exec
 UPDATE tickets SET status = 'void' WHERE sale_id = $1::bigint AND status = 'issued'
 `
 
+// El caller ya resolvio la venta con GetSale (acotado).
 func (q *Queries) VoidTicketsOfSale(ctx context.Context, saleID int64) error {
 	_, err := q.db.Exec(ctx, voidTicketsOfSale, saleID)
 	return err

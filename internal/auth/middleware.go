@@ -94,7 +94,7 @@ func (s *Service) RequireHistory(next http.Handler) http.Handler {
 			httpx.Error(w, http.StatusForbidden, httpx.CodeForbidden, "No tenes permiso para hacer esto.")
 			return
 		}
-		tiene, err := s.HasHistory(r.Context(), user.ID)
+		tiene, err := s.HasHistory(r.Context(), user)
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
@@ -120,4 +120,16 @@ func RequireRole(roles ...domain.Role) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// OrgFrom devuelve la organizacion de la sesion (C17 §A.2). Es lo que acota
+// cada consulta a la base. Sin sesion devuelve 0, que no coincide con ninguna
+// organizacion: si a un handler se le escapa una consulta sin usuario, falla
+// cerrado —no ve nada— en vez de ver todo.
+func OrgFrom(ctx context.Context) int64 {
+	user, ok := UserFrom(ctx)
+	if !ok || user == nil {
+		return 0
+	}
+	return user.OrganizationID
 }

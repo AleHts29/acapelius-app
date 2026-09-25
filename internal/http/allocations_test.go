@@ -12,10 +12,10 @@ func TestCuposEstrictos(t *testing.T) {
 	env := newTestEnv(t)
 	admin := loginAdmin(t, env)
 	fnID := setupCatalog(t, admin, 80)
-	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")  // user 2
-	josefina := createSellerClient(t, env, admin, "Josefina", "jose@acapelius.test")  // user 3
-	createSellerClient(t, env, admin, "Virginia", "virg@acapelius.test")              // user 4
-	createSellerClient(t, env, admin, "Marta", "marta@acapelius.test")                // user 5
+	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test") // user 2
+	josefina := createSellerClient(t, env, admin, "Josefina", "jose@acapelius.test") // user 3
+	createSellerClient(t, env, admin, "Virginia", "virg@acapelius.test")             // user 4
+	createSellerClient(t, env, admin, "Marta", "marta@acapelius.test")               // user 5
 
 	// 1. Sin cupo asignado, la corista no puede vender (ni por API directa).
 	assertErrorCode(t, carolina.post("/api/sales", map[string]any{

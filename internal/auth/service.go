@@ -60,19 +60,32 @@ func (s *Service) Sessions() *scs.SessionManager { return s.sessions }
 
 // Login valida las credenciales y, si son correctas, abre sesion. Renueva el
 // token para no arrastrar el de la sesion anonima (fijacion de sesion).
+//
+// El email es unico por organizacion, no global (C17 §A.1): la misma persona
+// puede estar en dos grupos. Se prueba la contraseña contra cada cuenta con
+// ese email y entra la primera que coincide, empezando por la que uso mas
+// recientemente. Si tiene la misma contraseña en dos grupos, entra al que
+// uso ultimo (ver DECISIONS.md).
 func (s *Service) Login(ctx context.Context, email, password string) (*domain.User, error) {
-	row, err := s.queries.GetUserWithMembershipByEmail(ctx, domain.NormalizeEmail(email))
+	rows, err := s.queries.ListUsersWithMembershipByEmail(ctx, domain.NormalizeEmail(email))
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			// Se gasta el tiempo de un bcrypt igual para que un email
-			// inexistente no se distinga por lo rapido que responde.
-			_ = CheckPassword("$2a$11$s3zbTUiuZ2kdSNRSC7WjOOdC0LqCLcJ7ZK0KLGKm3wVYPjLUsYQKa", password)
-			return nil, ErrInvalidCredentials
-		}
 		return nil, fmt.Errorf("buscar usuario: %w", err)
 	}
+	if len(rows) == 0 {
+		// Se gasta el tiempo de un bcrypt igual para que un email
+		// inexistente no se distinga por lo rapido que responde.
+		_ = CheckPassword("$2a$11$s3zbTUiuZ2kdSNRSC7WjOOdC0LqCLcJ7ZK0KLGKm3wVYPjLUsYQKa", password)
+		return nil, ErrInvalidCredentials
+	}
 
-	if err := CheckPassword(row.PasswordHash, password); err != nil {
+	var row *sqlcgen.ListUsersWithMembershipByEmailRow
+	for i := range rows {
+		if CheckPassword(rows[i].PasswordHash, password) == nil {
+			row = &rows[i]
+			break
+		}
+	}
+	if row == nil {
 		return nil, ErrInvalidCredentials
 	}
 
@@ -96,7 +109,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (*domain.Us
 		row.LastLoginAt = &now
 	}
 
-	user := fromMembershipByEmail(row)
+	user := fromMembershipByEmail(*row)
 	return &user, nil
 }
 
@@ -136,7 +149,10 @@ func (s *Service) CurrentUser(ctx context.Context) (*domain.User, error) {
 // El rol y la participacion viven en season_members: cambiarlos toca este año
 // y no reescribe la historia. Norma sigue siendo corista en 2025 aunque este
 // año no este.
-func (s *Service) UpdateUser(ctx context.Context, actorID, userID int64, name, email string, role domain.Role, participa bool) (*domain.User, error) {
+//
+// `orgID` es la organizacion de la sesion: una persona de otro grupo no
+// existe (ErrUserNotFound → 404).
+func (s *Service) UpdateUser(ctx context.Context, orgID, actorID, userID int64, name, email string, role domain.Role, participa bool) (*domain.User, error) {
 	if err := domain.ValidateNewUser(name, email, role); err != nil {
 		return nil, err
 	}
@@ -144,7 +160,7 @@ func (s *Service) UpdateUser(ctx context.Context, actorID, userID int64, name, e
 		return nil, domain.ErrSelfLockout
 	}
 
-	season, err := s.queries.GetActiveSeason(ctx)
+	season, err := s.queries.GetActiveSeason(ctx, orgID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrSeasonNotFound
@@ -153,9 +169,10 @@ func (s *Service) UpdateUser(ctx context.Context, actorID, userID int64, name, e
 	}
 
 	if _, err := s.queries.UpdateUser(ctx, sqlcgen.UpdateUserParams{
-		Name:  name,
-		Email: domain.NormalizeEmail(email),
-		ID:    userID,
+		Name:           name,
+		Email:          domain.NormalizeEmail(email),
+		ID:             userID,
+		OrganizationID: orgID,
 	}); err != nil {
 		if isUniqueViolation(err) {
 			return nil, ErrEmailTaken
@@ -168,7 +185,7 @@ func (s *Service) UpdateUser(ctx context.Context, actorID, userID int64, name, e
 
 	if participa {
 		if _, err := s.queries.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
-			SeasonID: season.ID, UserID: userID, Role: string(role),
+			SeasonID: season.ID, UserID: userID, Role: string(role), OrganizationID: orgID,
 		}); err != nil {
 			return nil, fmt.Errorf("actualizar participacion: %w", err)
 		}
@@ -176,7 +193,7 @@ func (s *Service) UpdateUser(ctx context.Context, actorID, userID int64, name, e
 		// Sacarla de la temporada es una baja, no un borrado: sus ventas y su
 		// deuda de rendicion siguen contando.
 		if err := s.queries.LeaveMembership(ctx, sqlcgen.LeaveMembershipParams{
-			SeasonID: season.ID, UserID: userID,
+			SeasonID: season.ID, UserID: userID, OrganizationID: orgID,
 		}); err != nil {
 			return nil, fmt.Errorf("dar de baja de la temporada: %w", err)
 		}
@@ -186,7 +203,9 @@ func (s *Service) UpdateUser(ctx context.Context, actorID, userID int64, name, e
 	// quedan reservando lugares que ya no aparecen en el tablero y que nadie
 	// puede vender. Un fallo aca no invalida el cambio, pero queda registrado.
 	if role != domain.RoleSeller || !participa {
-		if err := s.queries.DeleteAllocationsForUser(ctx, userID); err != nil {
+		if err := s.queries.DeleteAllocationsForUser(ctx, sqlcgen.DeleteAllocationsForUserParams{
+			UserID: userID, OrganizationID: orgID,
+		}); err != nil {
 			slog.Error("no se pudieron soltar los cupos del usuario", "user_id", userID, "error", err)
 		}
 	}
@@ -195,14 +214,17 @@ func (s *Service) UpdateUser(ctx context.Context, actorID, userID int64, name, e
 	if err != nil {
 		return nil, fmt.Errorf("releer usuario: %w", err)
 	}
+	if fresh.OrganizationID != orgID {
+		return nil, domain.ErrUserNotFound
+	}
 	user := fromMembership(fresh)
 	return &user, nil
 }
 
 // ChangePassword cambia la password del usuario validando la actual, y baja el
 // flag must_change_password.
-func (s *Service) ChangePassword(ctx context.Context, userID int64, currentPassword, newPassword string) error {
-	row, err := s.queries.GetUserByID(ctx, userID)
+func (s *Service) ChangePassword(ctx context.Context, orgID, userID int64, currentPassword, newPassword string) error {
+	row, err := s.queries.GetUserByID(ctx, sqlcgen.GetUserByIDParams{ID: userID, OrganizationID: orgID})
 	if err != nil {
 		return fmt.Errorf("cargar usuario: %w", err)
 	}
@@ -224,6 +246,7 @@ func (s *Service) ChangePassword(ctx context.Context, userID int64, currentPassw
 		PasswordHash:       hash,
 		MustChangePassword: false,
 		ID:                 userID,
+		OrganizationID:     orgID,
 	}); err != nil {
 		return fmt.Errorf("guardar password: %w", err)
 	}
@@ -232,7 +255,10 @@ func (s *Service) ChangePassword(ctx context.Context, userID int64, currentPassw
 
 // CreateUser da de alta un usuario con una password provisoria que tendra que
 // cambiar en su primer ingreso.
-func (s *Service) CreateUser(ctx context.Context, name, email string, role domain.Role, password string) (*domain.User, error) {
+//
+// `orgID` es la organizacion de la sesion: la persona nace en ella y se suma
+// a SU temporada en curso.
+func (s *Service) CreateUser(ctx context.Context, orgID int64, name, email string, role domain.Role, password string) (*domain.User, error) {
 	if err := domain.ValidateNewUser(name, email, role); err != nil {
 		return nil, err
 	}
@@ -245,7 +271,7 @@ func (s *Service) CreateUser(ctx context.Context, name, email string, role domai
 		return nil, err
 	}
 
-	season, err := s.queries.GetActiveSeason(ctx)
+	season, err := s.queries.GetActiveSeason(ctx, orgID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrSeasonNotFound
@@ -258,6 +284,7 @@ func (s *Service) CreateUser(ctx context.Context, name, email string, role domai
 		Email:              domain.NormalizeEmail(email),
 		PasswordHash:       hash,
 		MustChangePassword: true,
+		OrganizationID:     orgID,
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -269,7 +296,7 @@ func (s *Service) CreateUser(ctx context.Context, name, email string, role domai
 	// Se la suma a la temporada en curso: dar de alta a alguien es sumarlo al
 	// equipo de ahora, no a la historia entera.
 	if _, err := s.queries.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
-		SeasonID: season.ID, UserID: row.ID, Role: string(role),
+		SeasonID: season.ID, UserID: row.ID, Role: string(role), OrganizationID: orgID,
 	}); err != nil {
 		return nil, fmt.Errorf("sumar a la temporada: %w", err)
 	}
@@ -277,6 +304,7 @@ func (s *Service) CreateUser(ctx context.Context, name, email string, role domai
 	user := domain.User{
 		ID:                 row.ID,
 		Name:               row.Name,
+		OrganizationID:     row.OrganizationID,
 		Email:              row.Email,
 		Role:               role,
 		MustChangePassword: row.MustChangePassword,
@@ -291,13 +319,18 @@ func (s *Service) CreateUser(ctx context.Context, name, email string, role domai
 // devuelve una sola vez (C7). Deja `must_change_password` en true: la persona
 // elige la suya al entrar. Sirve tanto para reenviar la invitacion de quien
 // nunca entro como para el "me olvide la contrasena" de quien ya usaba la app.
-func (s *Service) ResetPassword(ctx context.Context, userID int64) (*domain.User, string, error) {
+//
+// Una persona de otra organizacion no existe (ErrUserNotFound → 404).
+func (s *Service) ResetPassword(ctx context.Context, orgID, userID int64) (*domain.User, string, error) {
 	row, err := s.queries.GetUserWithMembership(ctx, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, "", domain.ErrUserNotFound
 		}
 		return nil, "", fmt.Errorf("cargar usuario: %w", err)
+	}
+	if row.OrganizationID != orgID {
+		return nil, "", domain.ErrUserNotFound
 	}
 
 	password, err := GenerateTempPassword()
@@ -312,6 +345,7 @@ func (s *Service) ResetPassword(ctx context.Context, userID int64) (*domain.User
 		PasswordHash:       hash,
 		MustChangePassword: true,
 		ID:                 userID,
+		OrganizationID:     orgID,
 	}); err != nil {
 		return nil, "", fmt.Errorf("guardar password provisoria: %w", err)
 	}
@@ -327,6 +361,10 @@ func fromMembership(row sqlcgen.GetUserWithMembershipRow) domain.User {
 	return domain.User{
 		ID:                 row.ID,
 		Name:               row.Name,
+		OrganizationID:     row.OrganizationID,
+		OrganizationKind:   row.OrganizationKind,
+		OrganizationName:   row.OrganizationName,
+		OrganizationIsDemo: row.OrganizationIsDemo,
 		Email:              row.Email,
 		Role:               domain.Role(row.SeasonRole),
 		MustChangePassword: row.MustChangePassword,
@@ -338,15 +376,17 @@ func fromMembership(row sqlcgen.GetUserWithMembershipRow) domain.User {
 }
 
 // fromMembershipByEmail: el mismo armado, para la fila del login.
-func fromMembershipByEmail(row sqlcgen.GetUserWithMembershipByEmailRow) domain.User {
+func fromMembershipByEmail(row sqlcgen.ListUsersWithMembershipByEmailRow) domain.User {
 	return fromMembership(sqlcgen.GetUserWithMembershipRow(row))
 }
 
 // HasHistory indica si la persona vendio alguna vez, en cualquier temporada.
 // Es lo que habilita a mirar su historial cuando este año no esta en el coro.
 // Quien solo estuvo en la puerta no tiene ventas propias que mirar.
-func (s *Service) HasHistory(ctx context.Context, userID int64) (bool, error) {
-	n, err := s.queries.CountSellerMembershipsOfUser(ctx, userID)
+func (s *Service) HasHistory(ctx context.Context, user *domain.User) (bool, error) {
+	n, err := s.queries.CountSellerMembershipsOfUser(ctx, sqlcgen.CountSellerMembershipsOfUserParams{
+		UserID: user.ID, OrganizationID: user.OrganizationID,
+	})
 	if err != nil {
 		return false, fmt.Errorf("contar membresias: %w", err)
 	}

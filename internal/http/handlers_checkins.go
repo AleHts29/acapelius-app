@@ -70,7 +70,7 @@ func (s *Server) processCheckin(r *http.Request, functionID, userID int64, metho
 		return checkinResponse{Result: checkinInvalid}, nil
 	}
 
-	ticket, err := s.queries.GetTicketByCode(ctx, code)
+	ticket, err := s.queries.GetTicketByCode(ctx, sqlcgen.GetTicketByCodeParams{Code: code, OrganizationID: s.org(ctx)})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return checkinResponse{Result: checkinInvalid, Code: code}, nil
@@ -78,11 +78,11 @@ func (s *Server) processCheckin(r *http.Request, functionID, userID int64, metho
 		return checkinResponse{}, err
 	}
 
-	sale, err := s.queries.GetSale(ctx, ticket.SaleID)
+	sale, err := s.queries.GetSale(ctx, sqlcgen.GetSaleParams{ID: ticket.SaleID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		return checkinResponse{}, err
 	}
-	seller, err := s.queries.GetUserByID(ctx, sale.SellerID)
+	seller, err := s.queries.GetUserByID(ctx, sqlcgen.GetUserByIDParams{ID: sale.SellerID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		return checkinResponse{}, err
 	}
@@ -102,16 +102,17 @@ func (s *Server) processCheckin(r *http.Request, functionID, userID int64, metho
 	// del mismo ticket (dos escaneos, o dos dispositivos sincronizando),
 	// exactamente uno inserta. Gana el primero que llega (spec §6.4).
 	checkin, err := s.queries.InsertCheckin(ctx, sqlcgen.InsertCheckinParams{
-		TicketID:  ticket.ID,
-		UserID:    userID,
-		Method:    method,
-		DeviceID:  deviceID,
-		CreatedAt: at,
+		OrganizationID: s.org(ctx),
+		TicketID:       ticket.ID,
+		UserID:         userID,
+		Method:         method,
+		DeviceID:       deviceID,
+		CreatedAt:      at,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Conflicto: ya habia entrado. Rojo con la hora y quien lo marco.
-			existing, err := s.queries.GetCheckinByTicket(ctx, ticket.ID)
+			existing, err := s.queries.GetCheckinByTicket(ctx, sqlcgen.GetCheckinByTicketParams{TicketID: ticket.ID, OrganizationID: s.org(ctx)})
 			if err != nil {
 				return checkinResponse{}, err
 			}
@@ -123,7 +124,7 @@ func (s *Server) processCheckin(r *http.Request, functionID, userID int64, metho
 		return checkinResponse{}, err
 	}
 
-	if err := s.queries.MarkTicketCheckedIn(ctx, ticket.ID); err != nil {
+	if err := s.queries.MarkTicketCheckedIn(ctx, sqlcgen.MarkTicketCheckedInParams{ID: ticket.ID, OrganizationID: s.org(ctx)}); err != nil {
 		return checkinResponse{}, err
 	}
 
@@ -144,6 +145,9 @@ func (s *Server) handleCreateCheckin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !s.funcionExiste(w, r, req.FunctionID) {
+		return
+	}
 	user := auth.MustUserFrom(r.Context())
 	resp, err := s.processCheckin(r, req.FunctionID, user.ID, req.Method, code, optionalText(req.DeviceID), time.Now())
 	if err != nil {
@@ -151,6 +155,22 @@ func (s *Server) handleCreateCheckin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, resp)
+}
+
+// funcionExiste verifica que la funcion exista para esta organizacion
+// (C17 §A.2): una ajena no existe y responde 404, no "invalid". Escribe el
+// error y devuelve false si no.
+func (s *Server) funcionExiste(w http.ResponseWriter, r *http.Request, functionID int64) bool {
+	ctx := r.Context()
+	if _, err := s.queries.GetFunction(ctx, sqlcgen.GetFunctionParams{ID: functionID, OrganizationID: s.org(ctx)}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrFunctionNotFound)
+			return false
+		}
+		httpx.Internal(w, r, err)
+		return false
+	}
+	return true
 }
 
 // maxSyncBatch acota el tamano de un sync. La cola offline de una funcion
@@ -188,6 +208,9 @@ func (s *Server) handleSyncCheckins(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !s.funcionExiste(w, r, req.FunctionID) {
+		return
+	}
 	user := auth.MustUserFrom(r.Context())
 	deviceID := optionalText(req.DeviceID)
 	now := time.Now()
@@ -240,7 +263,7 @@ func (s *Server) handleDoorSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	function, err := s.queries.GetFunction(r.Context(), id)
+	function, err := s.queries.GetFunction(r.Context(), sqlcgen.GetFunctionParams{ID: id, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrFunctionNotFound)
@@ -250,12 +273,12 @@ func (s *Server) handleDoorSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tickets, err := s.queries.DoorSnapshotTickets(r.Context(), id)
+	tickets, err := s.queries.DoorSnapshotTickets(r.Context(), sqlcgen.DoorSnapshotTicketsParams{FunctionID: id, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	checkins, err := s.queries.DoorSnapshotCheckins(r.Context(), id)
+	checkins, err := s.queries.DoorSnapshotCheckins(r.Context(), sqlcgen.DoorSnapshotCheckinsParams{FunctionID: id, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return

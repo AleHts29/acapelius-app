@@ -779,3 +779,85 @@ de la temporada: lo dice el selector, dos centímetros más arriba.
 El asistente de alta salió de `SeasonsPage` a `season/NuevaTemporada.tsx`, para
 que "Crear temporada…" se pueda abrir desde el selector sin pasar por el
 índice. `SeasonsPage` lo importa; no hay dos formularios.
+
+## C17 · Pieza A — una organización por grupo
+
+Acapelius deja de ser la app de un coro: cada grupo es una `organization` y
+todo lo que tiene dueño cuelga de ella. Backend puro; la app no cambia.
+
+**La columna va sólo en `users` y `seasons`.** Lo demás —funciones, ventas,
+entradas, ingresos, cupos, participación, rendiciones, cobros, recordatorios,
+envíos— cuelga por FK de una de esas dos y se filtra por join a `seasons`. Un
+join más por consulta es barato y no duplica la verdad; una columna repetida
+en diez tablas es diez lugares donde puede quedar mal.
+
+**El filtro es un parámetro de cada consulta, no Row-Level Security.** Se
+evaluó RLS y se descartó: el rol con el que la app se conecta a la base local
+es superusuario con `bypassrls`, así que las políticas se ignorarían en
+silencio y el aislamiento sería un decorado. Con el parámetro no hay
+ambigüedad: 99 consultas de sqlc reciben `organization_id`, y
+`internal/db/isolation_guard_test.go` recorre por reflexión todos los métodos
+de `Queries` y falla si alguno no lo lleva —salvo los que están en su lista
+con motivo (las públicas, el login, y las hijas de una venta ya resuelta).
+Agregar una consulta sin filtro no compila con los tests.
+
+**La organización sale de la sesión, y fallar es cerrado.** `s.org(ctx)` lee
+`OrganizationID` del usuario cargado en el contexto. Sin sesión vale 0, que no
+coincide con ninguna organización: si a un handler se le escapara una
+consulta, no vería nada en vez de ver todo. La cookie sigue guardando sólo
+`user_id`; la organización viene de la fila del usuario, que nadie puede
+falsificar desde afuera.
+
+**Un recurso ajeno no existe: 404, nunca 403.** Las consultas por id llevan
+el filtro en el `WHERE`, así que una venta, función, temporada o persona de
+otra organización devuelve `ErrNoRows` y cae en el mismo 404 que un id
+inventado. Un 403 confirmaría que el id existe en otro lado. Lo mismo para
+los filtros `?season_id=` y `?function_id=`: pedir un listado "de la
+temporada de otro" es pedir un recurso ajeno, y responde 404 en vez de una
+lista vacía. `?seller_id=` de otra organización sí devuelve vacío: es un
+filtro sobre lo propio, no un recurso.
+
+**Escribir sobre algo ajeno tampoco inserta.** Los `INSERT` que reciben un
+id (crear venta sobre una función, sumar a alguien a una temporada, asignar
+cupo, rendir) están escritos como `INSERT … SELECT … WHERE` la función o la
+temporada sea de la organización: con un id ajeno no insertan nada y el
+handler recibe `ErrNoRows`. Las acciones masivas (`bulk-payment`,
+`bulk-resend`) traen las ventas acotadas y comparan cuántas pidieron con
+cuántas volvieron: si falta una, 404 y no se toca ninguna.
+
+**El email es único por organización, no global.** La misma persona puede
+cantar en dos grupos. El login prueba la contraseña contra cada cuenta con
+ese email, empezando por la que entró más recientemente, y abre la primera
+que coincide. Si alguien tiene exactamente la misma contraseña en dos
+grupos entra al que usó último; puede cambiar una de las dos. Se anota como
+límite conocido; la alternativa (elegir organización en el login) es una
+pantalla más para un caso que todavía no existe.
+
+**Una sola temporada en curso por organización, garantizado por la base.**
+Índice parcial `seasons_one_active_per_org`. Obligó a partir "activar" en
+dos pasos —apagar todas, encender una— dentro de una transacción: un solo
+`UPDATE … SET is_active = (id = $1)` chocaba con el índice cuando Postgres
+procesaba la nueva antes de apagar la vieja. Por lo mismo `CreateSeason`
+recibe `is_active`: crear una inactiva y "restituir" la anterior ya no hace
+falta.
+
+**Migración.** `00012_organizations.sql` crea la tabla, agrega la columna a
+`users` y `seasons`, y si hay datos crea "Coro Acapelius" (`choir`, slug
+`acapelius`) y se los asigna: hoy hay un solo coro, el UPDATE no tiene
+ambigüedad. En una base vacía no crea nada; la organización la crea `make
+seed` (o, en la pieza B, el alta de cuenta). Verificado en la base local con
+los datos del coro: 12 personas, 1 temporada, 48 ventas, 4 funciones, todos
+en la organización 1, y cada endpoint devuelve exactamente lo mismo que
+antes.
+
+**Vocabulario (A.3).** `useTerms()` en `web/src/auth/terms.ts` lee el
+`kind` de la sesión y devuelve corista/integrante, el coro/el elenco,
+lugar/sala. Está listo para que ningún componente nuevo escriba "corista" a
+mano. Los 17 archivos que hoy lo tienen escrito **no se tocaron** en esta
+pieza: A es backend puro, y ese barrido es un cambio de UI que va con la
+primera organización `theatre` real (pieza B o después), no antes.
+
+**Pendiente que esto deja a la vista:** `cmd/seeddemo` genera SQL contra el
+esquema viejo (`users.role`, `users.is_active`) y no corre desde
+`season_members`; lo rehace la pieza C, que necesita sembrar la organización
+demo de todas formas.

@@ -40,26 +40,28 @@ SELECT
         ELSE  extract(epoch FROM f.starts_at) END)::double precision AS fn_rank
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE ($1::bigint IS NULL OR f.season_id = $1::bigint)
-  AND ($2::bigint IS NULL OR s.seller_id = $2::bigint)
-  AND ($3::bigint IS NULL OR s.function_id = $3::bigint)
-  AND (
-    $4::text IS NULL
-    OR ($4::text = 'pending' AND NOT s.is_comp AND s.payment_status = 'pending' AND s.voided_at IS NULL)
-    OR ($4::text = 'paid'    AND NOT s.is_comp AND s.payment_status = 'paid'    AND s.voided_at IS NULL)
-    OR ($4::text = 'comp'    AND s.is_comp AND s.voided_at IS NULL)
-    OR ($4::text = 'void'    AND s.voided_at IS NOT NULL)
-  )
+WHERE se.organization_id = $1::bigint
+  AND ($2::bigint IS NULL OR f.season_id = $2::bigint)
+  AND ($3::bigint IS NULL OR s.seller_id = $3::bigint)
+  AND ($4::bigint IS NULL OR s.function_id = $4::bigint)
   AND (
     $5::text IS NULL
-    OR translate(lower(s.buyer_name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
-       LIKE '%' || translate(lower($5::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
-    OR translate(lower(u.name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
-       LIKE '%' || translate(lower($5::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+    OR ($5::text = 'pending' AND NOT s.is_comp AND s.payment_status = 'pending' AND s.voided_at IS NULL)
+    OR ($5::text = 'paid'    AND NOT s.is_comp AND s.payment_status = 'paid'    AND s.voided_at IS NULL)
+    OR ($5::text = 'comp'    AND s.is_comp AND s.voided_at IS NULL)
+    OR ($5::text = 'void'    AND s.voided_at IS NOT NULL)
   )
   AND (
-    $6::integer IS NULL
+    $6::text IS NULL
+    OR translate(lower(s.buyer_name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
+       LIKE '%' || translate(lower($6::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+    OR translate(lower(u.name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
+       LIKE '%' || translate(lower($6::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+  )
+  AND (
+    $7::integer IS NULL
     OR (
       (f.starts_at < now() - interval '3 hours')::integer,
       (CASE WHEN f.starts_at < now() - interval '3 hours'
@@ -67,25 +69,26 @@ WHERE ($1::bigint IS NULL OR f.season_id = $1::bigint)
             ELSE  extract(epoch FROM f.starts_at) END)::double precision,
       s.id
     ) > (
-      $6::integer,
-      $7::double precision,
-      $8::bigint
+      $7::integer,
+      $8::double precision,
+      $9::bigint
     )
   )
 ORDER BY past_rank, fn_rank, s.id
-LIMIT $9::integer
+LIMIT $10::integer
 `
 
 type ListSalesPageParams struct {
-	SeasonID   *int64        `json:"season_id"`
-	SellerID   *int64        `json:"seller_id"`
-	FunctionID *int64        `json:"function_id"`
-	Status     *string       `json:"status"`
-	Q          *string       `json:"q"`
-	CursorPast *int32        `json:"cursor_past"`
-	CursorRank pgtype.Float8 `json:"cursor_rank"`
-	CursorID   *int64        `json:"cursor_id"`
-	PageSize   int32         `json:"page_size"`
+	OrganizationID int64         `json:"organization_id"`
+	SeasonID       *int64        `json:"season_id"`
+	SellerID       *int64        `json:"seller_id"`
+	FunctionID     *int64        `json:"function_id"`
+	Status         *string       `json:"status"`
+	Q              *string       `json:"q"`
+	CursorPast     *int32        `json:"cursor_past"`
+	CursorRank     pgtype.Float8 `json:"cursor_rank"`
+	CursorID       *int64        `json:"cursor_id"`
+	PageSize       int32         `json:"page_size"`
 }
 
 type ListSalesPageRow struct {
@@ -116,6 +119,9 @@ type ListSalesPageRow struct {
 
 // Listado escalable de ventas (CAMBIOS_V2 §C3, spec C15, C16 §Fase 2).
 //
+// Todo acotado a la organizacion de la sesion (C17 §A): el join a seasons
+// es lo que impide que un listado sin filtro de temporada cruce de grupo.
+//
 // Todo el listado esta acotado a una temporada: sin eso, cambiar de temporada
 // en el selector global dejaba Ventas mostrando las cinco temporadas juntas.
 //
@@ -130,6 +136,7 @@ type ListSalesPageRow struct {
 // pagina nueva insertaria bloques arriba de lo que estas leyendo.
 func (q *Queries) ListSalesPage(ctx context.Context, arg ListSalesPageParams) ([]ListSalesPageRow, error) {
 	rows, err := q.db.Query(ctx, listSalesPage,
+		arg.OrganizationID,
 		arg.SeasonID,
 		arg.SellerID,
 		arg.FunctionID,
@@ -185,9 +192,17 @@ func (q *Queries) ListSalesPage(ctx context.Context, arg ListSalesPageParams) ([
 const salesByIDs = `-- name: SalesByIDs :many
 SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, u.name AS seller_name
 FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
 WHERE s.id = ANY($1::bigint[])
+  AND se.organization_id = $2::bigint
 `
+
+type SalesByIDsParams struct {
+	Ids            []int64 `json:"ids"`
+	OrganizationID int64   `json:"organization_id"`
+}
 
 type SalesByIDsRow struct {
 	ID            int64      `json:"id"`
@@ -210,8 +225,10 @@ type SalesByIDsRow struct {
 }
 
 // Las ventas de una seleccion, con lo que hace falta para operarlas en lote.
-func (q *Queries) SalesByIDs(ctx context.Context, ids []int64) ([]SalesByIDsRow, error) {
-	rows, err := q.db.Query(ctx, salesByIDs, ids)
+// Los ids de otra organizacion no vuelven: el handler compara cuantas pidio
+// con cuantas recibio y responde 404 si falta alguna.
+func (q *Queries) SalesByIDs(ctx context.Context, arg SalesByIDsParams) ([]SalesByIDsRow, error) {
+	rows, err := q.db.Query(ctx, salesByIDs, arg.Ids, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -257,32 +274,35 @@ SELECT
   COUNT(*)::bigint AS total_count
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE ($1::bigint IS NULL OR f.season_id = $1::bigint)
-  AND ($2::bigint IS NULL OR s.seller_id = $2::bigint)
-  AND ($3::bigint IS NULL OR s.function_id = $3::bigint)
-  AND (
-    $4::text IS NULL
-    OR ($4::text = 'pending' AND NOT s.is_comp AND s.payment_status = 'pending' AND s.voided_at IS NULL)
-    OR ($4::text = 'paid'    AND NOT s.is_comp AND s.payment_status = 'paid'    AND s.voided_at IS NULL)
-    OR ($4::text = 'comp'    AND s.is_comp AND s.voided_at IS NULL)
-    OR ($4::text = 'void'    AND s.voided_at IS NOT NULL)
-  )
+WHERE se.organization_id = $1::bigint
+  AND ($2::bigint IS NULL OR f.season_id = $2::bigint)
+  AND ($3::bigint IS NULL OR s.seller_id = $3::bigint)
+  AND ($4::bigint IS NULL OR s.function_id = $4::bigint)
   AND (
     $5::text IS NULL
+    OR ($5::text = 'pending' AND NOT s.is_comp AND s.payment_status = 'pending' AND s.voided_at IS NULL)
+    OR ($5::text = 'paid'    AND NOT s.is_comp AND s.payment_status = 'paid'    AND s.voided_at IS NULL)
+    OR ($5::text = 'comp'    AND s.is_comp AND s.voided_at IS NULL)
+    OR ($5::text = 'void'    AND s.voided_at IS NOT NULL)
+  )
+  AND (
+    $6::text IS NULL
     OR translate(lower(s.buyer_name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
-       LIKE '%' || translate(lower($5::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+       LIKE '%' || translate(lower($6::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
     OR translate(lower(u.name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
-       LIKE '%' || translate(lower($5::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+       LIKE '%' || translate(lower($6::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
   )
 `
 
 type SalesFilteredSummaryParams struct {
-	SeasonID   *int64  `json:"season_id"`
-	SellerID   *int64  `json:"seller_id"`
-	FunctionID *int64  `json:"function_id"`
-	Status     *string `json:"status"`
-	Q          *string `json:"q"`
+	OrganizationID int64   `json:"organization_id"`
+	SeasonID       *int64  `json:"season_id"`
+	SellerID       *int64  `json:"seller_id"`
+	FunctionID     *int64  `json:"function_id"`
+	Status         *string `json:"status"`
+	Q              *string `json:"q"`
 }
 
 type SalesFilteredSummaryRow struct {
@@ -298,6 +318,7 @@ type SalesFilteredSummaryRow struct {
 // cliente sobre la pagina cargada daria un numero distinto en cada scroll.
 func (q *Queries) SalesFilteredSummary(ctx context.Context, arg SalesFilteredSummaryParams) (SalesFilteredSummaryRow, error) {
 	row := q.db.QueryRow(ctx, salesFilteredSummary,
+		arg.OrganizationID,
 		arg.SeasonID,
 		arg.SellerID,
 		arg.FunctionID,
@@ -324,33 +345,36 @@ SELECT
   COALESCE(SUM(s.amount_cents - s.paid_cents) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS pending_cents
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE ($1::bigint IS NULL OR f.season_id = $1::bigint)
-  AND ($2::bigint IS NULL OR s.seller_id = $2::bigint)
-  AND ($3::bigint IS NULL OR s.function_id = $3::bigint)
-  AND (
-    $4::text IS NULL
-    OR ($4::text = 'pending' AND NOT s.is_comp AND s.payment_status = 'pending' AND s.voided_at IS NULL)
-    OR ($4::text = 'paid'    AND NOT s.is_comp AND s.payment_status = 'paid'    AND s.voided_at IS NULL)
-    OR ($4::text = 'comp'    AND s.is_comp AND s.voided_at IS NULL)
-    OR ($4::text = 'void'    AND s.voided_at IS NOT NULL)
-  )
+WHERE se.organization_id = $1::bigint
+  AND ($2::bigint IS NULL OR f.season_id = $2::bigint)
+  AND ($3::bigint IS NULL OR s.seller_id = $3::bigint)
+  AND ($4::bigint IS NULL OR s.function_id = $4::bigint)
   AND (
     $5::text IS NULL
+    OR ($5::text = 'pending' AND NOT s.is_comp AND s.payment_status = 'pending' AND s.voided_at IS NULL)
+    OR ($5::text = 'paid'    AND NOT s.is_comp AND s.payment_status = 'paid'    AND s.voided_at IS NULL)
+    OR ($5::text = 'comp'    AND s.is_comp AND s.voided_at IS NULL)
+    OR ($5::text = 'void'    AND s.voided_at IS NOT NULL)
+  )
+  AND (
+    $6::text IS NULL
     OR translate(lower(s.buyer_name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
-       LIKE '%' || translate(lower($5::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+       LIKE '%' || translate(lower($6::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
     OR translate(lower(u.name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
-       LIKE '%' || translate(lower($5::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+       LIKE '%' || translate(lower($6::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
   )
 GROUP BY f.id
 `
 
 type SalesFunctionTotalsParams struct {
-	SeasonID   *int64  `json:"season_id"`
-	SellerID   *int64  `json:"seller_id"`
-	FunctionID *int64  `json:"function_id"`
-	Status     *string `json:"status"`
-	Q          *string `json:"q"`
+	OrganizationID int64   `json:"organization_id"`
+	SeasonID       *int64  `json:"season_id"`
+	SellerID       *int64  `json:"seller_id"`
+	FunctionID     *int64  `json:"function_id"`
+	Status         *string `json:"status"`
+	Q              *string `json:"q"`
 }
 
 type SalesFunctionTotalsRow struct {
@@ -366,6 +390,7 @@ type SalesFunctionTotalsRow struct {
 // que se alcanzaron a cargar.
 func (q *Queries) SalesFunctionTotals(ctx context.Context, arg SalesFunctionTotalsParams) ([]SalesFunctionTotalsRow, error) {
 	rows, err := q.db.Query(ctx, salesFunctionTotals,
+		arg.OrganizationID,
 		arg.SeasonID,
 		arg.SellerID,
 		arg.FunctionID,
@@ -410,24 +435,27 @@ SELECT
   COUNT(*) FILTER (WHERE s.is_comp AND s.voided_at IS NULL)::bigint AS comp_count
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE ($1::bigint IS NULL OR f.season_id = $1::bigint)
-  AND ($2::bigint IS NULL OR s.seller_id = $2::bigint)
-  AND ($3::bigint IS NULL OR s.function_id = $3::bigint)
+WHERE se.organization_id = $1::bigint
+  AND ($2::bigint IS NULL OR f.season_id = $2::bigint)
+  AND ($3::bigint IS NULL OR s.seller_id = $3::bigint)
+  AND ($4::bigint IS NULL OR s.function_id = $4::bigint)
   AND (
-    $4::text IS NULL
+    $5::text IS NULL
     OR translate(lower(s.buyer_name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
-       LIKE '%' || translate(lower($4::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+       LIKE '%' || translate(lower($5::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
     OR translate(lower(u.name), 'áéíóúäëïöüñç', 'aeiouaeiounc')
-       LIKE '%' || translate(lower($4::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
+       LIKE '%' || translate(lower($5::text), 'áéíóúäëïöüñç', 'aeiouaeiounc') || '%'
   )
 `
 
 type SalesSummaryParams struct {
-	SeasonID   *int64  `json:"season_id"`
-	SellerID   *int64  `json:"seller_id"`
-	FunctionID *int64  `json:"function_id"`
-	Q          *string `json:"q"`
+	OrganizationID int64   `json:"organization_id"`
+	SeasonID       *int64  `json:"season_id"`
+	SellerID       *int64  `json:"seller_id"`
+	FunctionID     *int64  `json:"function_id"`
+	Q              *string `json:"q"`
 }
 
 type SalesSummaryRow struct {
@@ -445,6 +473,7 @@ type SalesSummaryRow struct {
 // estado ni el cursor: alimenta la tira de arriba y los contadores de chips.
 func (q *Queries) SalesSummary(ctx context.Context, arg SalesSummaryParams) (SalesSummaryRow, error) {
 	row := q.db.QueryRow(ctx, salesSummary,
+		arg.OrganizationID,
 		arg.SeasonID,
 		arg.SellerID,
 		arg.FunctionID,
@@ -468,16 +497,19 @@ const sellersWithSales = `-- name: SellersWithSales :many
 SELECT u.id, u.name, COUNT(*)::bigint AS sales
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE ($1::bigint IS NULL OR f.season_id = $1::bigint)
-  AND ($2::bigint IS NULL OR s.function_id = $2::bigint)
+WHERE se.organization_id = $1::bigint
+  AND ($2::bigint IS NULL OR f.season_id = $2::bigint)
+  AND ($3::bigint IS NULL OR s.function_id = $3::bigint)
 GROUP BY u.id, u.name
 ORDER BY u.name
 `
 
 type SellersWithSalesParams struct {
-	SeasonID   *int64 `json:"season_id"`
-	FunctionID *int64 `json:"function_id"`
+	OrganizationID int64  `json:"organization_id"`
+	SeasonID       *int64 `json:"season_id"`
+	FunctionID     *int64 `json:"function_id"`
 }
 
 type SellersWithSalesRow struct {
@@ -489,7 +521,7 @@ type SellersWithSalesRow struct {
 // Las coristas que aparecen en el alcance actual, con cuantas ventas tienen:
 // alimenta el menu "Todas las vendedoras" con su conteo.
 func (q *Queries) SellersWithSales(ctx context.Context, arg SellersWithSalesParams) ([]SellersWithSalesRow, error) {
-	rows, err := q.db.Query(ctx, sellersWithSales, arg.SeasonID, arg.FunctionID)
+	rows, err := q.db.Query(ctx, sellersWithSales, arg.OrganizationID, arg.SeasonID, arg.FunctionID)
 	if err != nil {
 		return nil, err
 	}

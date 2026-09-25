@@ -42,7 +42,9 @@ type publicSaleResponse struct {
 func (s *Server) handlePublicSale(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 
-	sale, err := s.queries.GetSaleByCode(r.Context(), code)
+	// Sin organizacion a proposito: no hay sesion, y el codigo no adivinable
+	// ya identifica la venta (C17 §A.2).
+	sale, err := s.queries.GetPublicSale(r.Context(), code)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			httpx.Error(w, http.StatusNotFound, httpx.CodeNotFound, "Esta entrada no existe.")
@@ -52,16 +54,6 @@ func (s *Server) handlePublicSale(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	function, err := s.queries.GetFunction(r.Context(), sale.FunctionID)
-	if err != nil {
-		httpx.Internal(w, r, err)
-		return
-	}
-	seller, err := s.queries.GetUserByID(r.Context(), sale.SellerID)
-	if err != nil {
-		httpx.Internal(w, r, err)
-		return
-	}
 	tickets, err := s.queries.ListTicketsBySale(r.Context(), sale.ID)
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -70,14 +62,14 @@ func (s *Server) handlePublicSale(w http.ResponseWriter, r *http.Request) {
 
 	resp := publicSaleResponse{
 		BuyerName:  sale.BuyerName,
-		SellerName: seller.Name,
+		SellerName: sale.SellerName,
 		Quantity:   sale.Quantity,
 		IsComp:     sale.IsComp,
 		Voided:     sale.VoidedAt != nil,
 		Function: publicFunction{
-			Name:     function.Name,
-			Venue:    function.Venue,
-			StartsAt: function.StartsAt,
+			Name:     sale.FunctionName,
+			Venue:    sale.FunctionVenue,
+			StartsAt: sale.FunctionStartsAt,
 		},
 	}
 	for _, t := range tickets {
@@ -96,7 +88,8 @@ func (s *Server) handlePublicSale(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePublicTicketPNG(w http.ResponseWriter, r *http.Request) {
 	code := chi.URLParam(r, "code")
 
-	ticket, err := s.queries.GetTicketByCode(r.Context(), code)
+	// Publica, sin organizacion: ver handlePublicSale.
+	ticket, err := s.queries.GetPublicTicketByCode(r.Context(), code)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			httpx.Error(w, http.StatusNotFound, httpx.CodeNotFound, "Esta entrada no existe.")

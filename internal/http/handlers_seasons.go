@@ -76,55 +76,28 @@ func (s *Server) handleCreateSeason(w http.ResponseWriter, r *http.Request) {
 	q := s.queries.WithTx(tx)
 
 	activar := req.Activate == nil || *req.Activate
-	var anterior *sqlcgen.Season
-	if !activar {
-		// Hay que leerla antes de apagarlas a todas: despues ya no se sabe
-		// cual era.
-		actuales, err := q.ListSeasons(ctx)
-		if err != nil {
+	if activar {
+		if err := q.DeactivateAllSeasons(ctx, s.org(ctx)); err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
-		for i := range actuales {
-			if actuales[i].IsActive {
-				anterior = &actuales[i]
-				break
-			}
-		}
 	}
-
-	if err := q.DeactivateAllSeasons(ctx); err != nil {
-		httpx.Internal(w, r, err)
-		return
-	}
-	season, err := q.CreateSeason(ctx, req.Name)
+	// Sin activar: la nueva queda cargada e inactiva, y la de ahora sigue
+	// siendo la que mira el resto de la app.
+	season, err := q.CreateSeason(ctx, sqlcgen.CreateSeasonParams{
+		Name: req.Name, OrganizationID: s.org(ctx), IsActive: activar,
+	})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
-	}
-
-	// Sin activar: la nueva queda cargada y la de ahora sigue siendo la que
-	// mira el resto de la app. Se restituye la que estaba activa, que la
-	// desactivacion de recien apago.
-	if !activar && anterior != nil {
-		if err := q.SetActiveSeason(ctx, anterior.ID); err != nil {
-			httpx.Internal(w, r, err)
-			return
-		}
-		// CreateSeason la devolvio activa (es el default de la tabla): sin
-		// releerla, la respuesta diria lo contrario de lo que quedo grabado.
-		season, err = q.GetSeason(ctx, season.ID)
-		if err != nil {
-			httpx.Internal(w, r, err)
-			return
-		}
 	}
 
 	// Quien crea la temporada entra como direccion: una temporada sin
 	// direccion no la puede administrar nadie, y quedaria trabada.
 	actor := auth.MustUserFrom(ctx)
 	if _, err := q.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
-		SeasonID: season.ID, UserID: actor.ID, Role: string(domain.RoleAdmin),
+		OrganizationID: s.org(ctx),
+		SeasonID:       season.ID, UserID: actor.ID, Role: string(domain.RoleAdmin),
 	}); err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -140,7 +113,8 @@ func (s *Server) handleCreateSeason(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if _, err := q.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
-				SeasonID: season.ID, UserID: m.UserID, Role: string(role),
+				OrganizationID: s.org(ctx),
+				SeasonID:       season.ID, UserID: m.UserID, Role: string(role),
 			}); err != nil {
 				httpx.Internal(w, r, err)
 				return
@@ -148,8 +122,9 @@ func (s *Server) handleCreateSeason(w http.ResponseWriter, r *http.Request) {
 		}
 	} else if req.CopyFromSeasonID != nil && (req.CopyMembers == nil || *req.CopyMembers) {
 		if err := q.CopySeasonMembers(ctx, sqlcgen.CopySeasonMembersParams{
-			ToSeasonID:   season.ID,
-			FromSeasonID: *req.CopyFromSeasonID,
+			OrganizationID: s.org(ctx),
+			ToSeasonID:     season.ID,
+			FromSeasonID:   *req.CopyFromSeasonID,
 		}); err != nil {
 			httpx.Internal(w, r, err)
 			return
@@ -158,7 +133,7 @@ func (s *Server) handleCreateSeason(w http.ResponseWriter, r *http.Request) {
 
 	copiadas := 0
 	if req.CopyFromSeasonID != nil {
-		if _, err := q.GetSeason(ctx, *req.CopyFromSeasonID); err != nil {
+		if _, err := q.GetSeason(ctx, sqlcgen.GetSeasonParams{ID: *req.CopyFromSeasonID, OrganizationID: s.org(ctx)}); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				mapDomainError(w, domain.ErrSeasonNotFound)
 				return
@@ -167,8 +142,9 @@ func (s *Server) handleCreateSeason(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		nuevas, err := q.CopySeasonFunctions(ctx, sqlcgen.CopySeasonFunctionsParams{
-			ToSeasonID:   season.ID,
-			FromSeasonID: *req.CopyFromSeasonID,
+			OrganizationID: s.org(ctx),
+			ToSeasonID:     season.ID,
+			FromSeasonID:   *req.CopyFromSeasonID,
 		})
 		if err != nil {
 			httpx.Internal(w, r, err)
@@ -194,7 +170,7 @@ func (s *Server) handleActivateSeason(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	if _, err := s.queries.GetSeason(ctx, id); err != nil {
+	if _, err := s.queries.GetSeason(ctx, sqlcgen.GetSeasonParams{ID: id, OrganizationID: s.org(ctx)}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrSeasonNotFound)
 			return
@@ -205,7 +181,7 @@ func (s *Server) handleActivateSeason(w http.ResponseWriter, r *http.Request) {
 
 	// Cambiar a una temporada donde no hay direccion dejaria la app trabada:
 	// quien la activa entra como direccion de esa temporada.
-	admins, err := s.queries.CountAdminsInSeason(ctx, id)
+	admins, err := s.queries.CountAdminsInSeason(ctx, sqlcgen.CountAdminsInSeasonParams{SeasonID: id, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -213,18 +189,34 @@ func (s *Server) handleActivateSeason(w http.ResponseWriter, r *http.Request) {
 	if admins == 0 {
 		actor := auth.MustUserFrom(ctx)
 		if _, err := s.queries.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
-			SeasonID: id, UserID: actor.ID, Role: string(domain.RoleAdmin),
+			OrganizationID: s.org(ctx),
+			SeasonID:       id, UserID: actor.ID, Role: string(domain.RoleAdmin),
 		}); err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
 	}
 
-	if err := s.queries.SetActiveSeason(ctx, id); err != nil {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	season, err := s.queries.GetSeason(ctx, id)
+	defer tx.Rollback(ctx) //nolint:errcheck
+	q := s.queries.WithTx(tx)
+	if err := q.DeactivateAllSeasons(ctx, s.org(ctx)); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := q.SetActiveSeason(ctx, sqlcgen.SetActiveSeasonParams{ID: id, OrganizationID: s.org(ctx)}); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	season, err := s.queries.GetSeason(ctx, sqlcgen.GetSeasonParams{ID: id, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -233,7 +225,7 @@ func (s *Server) handleActivateSeason(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListSeasons(w http.ResponseWriter, r *http.Request) {
-	seasons, err := s.queries.ListSeasons(r.Context())
+	seasons, err := s.queries.ListSeasons(r.Context(), s.org(r.Context()))
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -290,7 +282,7 @@ func mapDomainError(w http.ResponseWriter, err error) bool {
 // con el resultado de cada una. Admin-only: lleva plata, a diferencia de
 // GET /seasons, que leen todos los roles para elegir funcion.
 func (s *Server) handleSeasonsOverview(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.queries.SeasonsOverview(r.Context())
+	rows, err := s.queries.SeasonsOverview(r.Context(), s.org(r.Context()))
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return

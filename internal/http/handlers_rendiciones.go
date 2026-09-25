@@ -91,12 +91,12 @@ func (s *Server) handleSellerDetail(w http.ResponseWriter, r *http.Request) {
 // separado, el mail y la pantalla podrian discrepar y esa discusion la pierde
 // siempre dirección.
 func (s *Server) sellerDetail(ctx context.Context, sellerID, seasonID int64) (*sellerDetailResponse, error) {
-	user, err := s.queries.GetUserByID(ctx, sellerID)
+	user, err := s.queries.GetUserByID(ctx, sqlcgen.GetUserByIDParams{ID: sellerID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := s.queries.SettlementsReport(ctx, seasonID)
+	rows, err := s.queries.SettlementsReport(ctx, sqlcgen.SettlementsReportParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		return nil, err
 	}
@@ -112,29 +112,33 @@ func (s *Server) sellerDetail(ctx context.Context, sellerID, seasonID int64) (*s
 	}
 
 	stats, err := s.queries.SellerSeasonStats(ctx, sqlcgen.SellerSeasonStatsParams{
-		SellerID: sellerID,
-		SeasonID: seasonID,
+		OrganizationID: s.org(ctx),
+		SellerID:       sellerID,
+		SeasonID:       seasonID,
 	})
 	if err != nil {
 		return nil, err
 	}
 	fuentes, err := s.queries.SellerDebtSources(ctx, sqlcgen.SellerDebtSourcesParams{
-		SellerID: sellerID,
-		SeasonID: seasonID,
+		OrganizationID: s.org(ctx),
+		SellerID:       sellerID,
+		SeasonID:       seasonID,
 	})
 	if err != nil {
 		return nil, err
 	}
 	entregas, err := s.queries.ListSettlements(ctx, sqlcgen.ListSettlementsParams{
-		SeasonID: seasonID,
-		SellerID: &sellerID,
+		OrganizationID: s.org(ctx),
+		SeasonID:       seasonID,
+		SellerID:       &sellerID,
 	})
 	if err != nil {
 		return nil, err
 	}
 	recordatorios, err := s.queries.ListReminders(ctx, sqlcgen.ListRemindersParams{
-		SellerID: sellerID,
-		SeasonID: seasonID,
+		OrganizationID: s.org(ctx),
+		SellerID:       sellerID,
+		SeasonID:       seasonID,
 	})
 	if err != nil {
 		return nil, err
@@ -238,14 +242,14 @@ func (s *Server) handleRemindSeller(w http.ResponseWriter, r *http.Request) {
 // handleRemindAll: POST /api/settlements/remind-all?season_id= — el mismo
 // recordatorio a todas las que deben, de una.
 func (s *Server) handleRemindAll(w http.ResponseWriter, r *http.Request) {
-	seasonID, ok := requireSeasonID(w, r)
+	seasonID, ok := s.requireSeasonID(w, r)
 	if !ok {
 		return
 	}
 	ctx := r.Context()
 	actor := auth.MustUserFrom(ctx)
 
-	deudoras, err := s.queries.AttentionSettlements(ctx, seasonID)
+	deudoras, err := s.queries.AttentionSettlements(ctx, sqlcgen.AttentionSettlementsParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -289,7 +293,7 @@ func (s *Server) recordarA(ctx context.Context, sellerID, seasonID int64, actorN
 		})
 	}
 
-	season, err := s.queries.GetSeason(ctx, seasonID)
+	season, err := s.queries.GetSeason(ctx, sqlcgen.GetSeasonParams{ID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		return "", err
 	}
@@ -312,11 +316,12 @@ func (s *Server) recordarA(ctx context.Context, sellerID, seasonID int64, actorN
 	}
 
 	if _, err := s.queries.CreateReminder(ctx, sqlcgen.CreateReminderParams{
-		SellerID:    sellerID,
-		SeasonID:    seasonID,
-		SentBy:      actorID,
-		AmountCents: detalle.BalanceCents,
-		Status:      estado,
+		OrganizationID: s.org(ctx),
+		SellerID:       sellerID,
+		SeasonID:       seasonID,
+		SentBy:         actorID,
+		AmountCents:    detalle.BalanceCents,
+		Status:         estado,
 	}); err != nil {
 		return estado, err
 	}
@@ -330,7 +335,7 @@ func (s *Server) sellerYTemporada(w http.ResponseWriter, r *http.Request) (int64
 		mapDomainError(w, domain.ErrUserNotFound)
 		return 0, 0, false
 	}
-	seasonID, ok := requireSeasonID(w, r)
+	seasonID, ok := s.requireSeasonID(w, r)
 	if !ok {
 		return 0, 0, false
 	}

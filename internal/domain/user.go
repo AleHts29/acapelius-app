@@ -55,8 +55,17 @@ func (r Role) CanAny(required ...Role) bool {
 
 // User es un usuario de la aplicacion tal como lo ve el dominio.
 type User struct {
-	ID                 int64     `json:"id"`
-	Name               string    `json:"name"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	// OrganizationID es el grupo al que pertenece (C17 §A). Sale de la fila
+	// del usuario, no de la cookie: es lo que acota cada consulta.
+	OrganizationID int64 `json:"organization_id"`
+	// OrganizationKind decide como la app nombra las cosas: 'choir',
+	// 'theatre' u 'other' (C17 §A.3).
+	OrganizationKind string `json:"organization_kind"`
+	OrganizationName string `json:"organization_name"`
+	// OrganizationIsDemo marca la organizacion de prueba (C17 §C).
+	OrganizationIsDemo bool      `json:"organization_is_demo"`
 	Email              string    `json:"email"`
 	Role               Role      `json:"role"`
 	MustChangePassword bool      `json:"must_change_password"`

@@ -47,7 +47,7 @@ func (s *Server) handleCreateFunction(w http.ResponseWriter, r *http.Request) {
 
 	// Se chequea que la temporada exista para responder un 404 claro en vez
 	// de dejar que reviente la foreign key.
-	if _, err := s.queries.GetSeason(r.Context(), req.SeasonID); err != nil {
+	if _, err := s.queries.GetSeason(r.Context(), sqlcgen.GetSeasonParams{ID: req.SeasonID, OrganizationID: s.org(r.Context())}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrSeasonNotFound)
 			return
@@ -57,12 +57,13 @@ func (s *Server) handleCreateFunction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	function, err := s.queries.CreateFunction(r.Context(), sqlcgen.CreateFunctionParams{
-		SeasonID:   req.SeasonID,
-		Name:       domain.NormalizeFunctionName(req.Name),
-		Venue:      req.Venue,
-		StartsAt:   req.StartsAt,
-		Capacity:   req.Capacity,
-		PriceCents: req.PriceCents,
+		OrganizationID: s.org(r.Context()),
+		SeasonID:       req.SeasonID,
+		Name:           domain.NormalizeFunctionName(req.Name),
+		Venue:          req.Venue,
+		StartsAt:       req.StartsAt,
+		Capacity:       req.Capacity,
+		PriceCents:     req.PriceCents,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -79,10 +80,13 @@ func (s *Server) handleListFunctions(w http.ResponseWriter, r *http.Request) {
 			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "season_id tiene que ser un numero.")
 			return
 		}
+		if !s.temporadaExiste(w, r, id) {
+			return
+		}
 		seasonID = &id
 	}
 
-	functions, err := s.queries.ListFunctions(r.Context(), seasonID)
+	functions, err := s.queries.ListFunctions(r.Context(), sqlcgen.ListFunctionsParams{SeasonID: seasonID, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -112,7 +116,7 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	current, err := s.queries.GetFunction(r.Context(), id)
+	current, err := s.queries.GetFunction(r.Context(), sqlcgen.GetFunctionParams{ID: id, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrFunctionNotFound)
@@ -124,7 +128,7 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 
 	// Una funcion con ingresos registrados no se edita mas (spec §5.1): a esa
 	// altura cambiar fecha, lugar o cupo solo puede generar lio en la puerta.
-	checkins, err := s.queries.CountCheckinsForFunction(r.Context(), id)
+	checkins, err := s.queries.CountCheckinsForFunction(r.Context(), sqlcgen.CountCheckinsForFunctionParams{FunctionID: id, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -164,7 +168,7 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 	// El cupo no puede quedar por debajo de lo ya vendido, ni de la suma de
 	// asignaciones vigentes (invariante 1 de C8): primero se bajan cupos.
 	if capacity < current.Capacity {
-		active, err := s.queries.CountActiveTickets(r.Context(), id)
+		active, err := s.queries.CountActiveTickets(r.Context(), sqlcgen.CountActiveTicketsParams{FunctionID: id, OrganizationID: s.org(r.Context())})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
@@ -174,7 +178,7 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 				fmt.Sprintf("Ya hay %d entradas emitidas: el cupo no puede ser menor.", active))
 			return
 		}
-		assigned, err := s.queries.SumAllocations(r.Context(), id)
+		assigned, err := s.queries.SumAllocations(r.Context(), sqlcgen.SumAllocationsParams{FunctionID: id, OrganizationID: s.org(r.Context())})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
@@ -187,12 +191,13 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	updated, err := s.queries.UpdateFunction(r.Context(), sqlcgen.UpdateFunctionParams{
-		Name:       name,
-		Venue:      venue,
-		StartsAt:   startsAt,
-		Capacity:   capacity,
-		PriceCents: priceCents,
-		ID:         id,
+		OrganizationID: s.org(r.Context()),
+		Name:           name,
+		Venue:          venue,
+		StartsAt:       startsAt,
+		Capacity:       capacity,
+		PriceCents:     priceCents,
+		ID:             id,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -214,7 +219,7 @@ func (s *Server) handleDeleteFunction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	if _, err := s.queries.GetFunction(ctx, id); err != nil {
+	if _, err := s.queries.GetFunction(ctx, sqlcgen.GetFunctionParams{ID: id, OrganizationID: s.org(ctx)}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrFunctionNotFound)
 			return
@@ -223,7 +228,7 @@ func (s *Server) handleDeleteFunction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ventas, err := s.queries.CountSalesForFunction(ctx, id)
+	ventas, err := s.queries.CountSalesForFunction(ctx, sqlcgen.CountSalesForFunctionParams{FunctionID: id, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -244,11 +249,11 @@ func (s *Server) handleDeleteFunction(w http.ResponseWriter, r *http.Request) {
 	q := s.queries.WithTx(tx)
 	// Las asignaciones no sobreviven a la funcion: sin funcion no hay cupo
 	// que repartir, y la FK las dejaria colgadas.
-	if err := q.DeleteAllocationsForFunction(ctx, id); err != nil {
+	if err := q.DeleteAllocationsForFunction(ctx, sqlcgen.DeleteAllocationsForFunctionParams{FunctionID: id, OrganizationID: s.org(ctx)}); err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	if err := q.DeleteFunction(ctx, id); err != nil {
+	if err := q.DeleteFunction(ctx, sqlcgen.DeleteFunctionParams{ID: id, OrganizationID: s.org(ctx)}); err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}

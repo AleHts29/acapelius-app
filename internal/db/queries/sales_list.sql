@@ -1,5 +1,8 @@
 -- Listado escalable de ventas (CAMBIOS_V2 §C3, spec C15, C16 §Fase 2).
 --
+-- Todo acotado a la organizacion de la sesion (C17 §A): el join a seasons
+-- es lo que impide que un listado sin filtro de temporada cruce de grupo.
+--
 -- Todo el listado esta acotado a una temporada: sin eso, cambiar de temporada
 -- en el selector global dejaba Ventas mostrando las cinco temporadas juntas.
 --
@@ -40,8 +43,10 @@ SELECT
         ELSE  extract(epoch FROM f.starts_at) END)::double precision AS fn_rank
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
+WHERE se.organization_id = sqlc.arg(organization_id)::bigint
+  AND (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
   AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
   AND (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
   AND (
@@ -91,8 +96,10 @@ SELECT
   COUNT(*) FILTER (WHERE s.is_comp AND s.voided_at IS NULL)::bigint AS comp_count
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
+WHERE se.organization_id = sqlc.arg(organization_id)::bigint
+  AND (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
   AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
   AND (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
   AND (
@@ -115,8 +122,10 @@ SELECT
   COUNT(*)::bigint AS total_count
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
+WHERE se.organization_id = sqlc.arg(organization_id)::bigint
+  AND (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
   AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
   AND (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
   AND (
@@ -146,8 +155,10 @@ SELECT
   COALESCE(SUM(s.amount_cents - s.paid_cents) FILTER (WHERE NOT s.is_comp AND s.voided_at IS NULL), 0)::bigint AS pending_cents
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
+WHERE se.organization_id = sqlc.arg(organization_id)::bigint
+  AND (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
   AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
   AND (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
   AND (
@@ -172,15 +183,22 @@ GROUP BY f.id;
 SELECT u.id, u.name, COUNT(*)::bigint AS sales
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
+WHERE se.organization_id = sqlc.arg(organization_id)::bigint
+  AND (sqlc.narg(season_id)::bigint IS NULL OR f.season_id = sqlc.narg(season_id)::bigint)
   AND (sqlc.narg(function_id)::bigint IS NULL OR s.function_id = sqlc.narg(function_id)::bigint)
 GROUP BY u.id, u.name
 ORDER BY u.name;
 
 -- name: SalesByIDs :many
 -- Las ventas de una seleccion, con lo que hace falta para operarlas en lote.
+-- Los ids de otra organizacion no vuelven: el handler compara cuantas pidio
+-- con cuantas recibio y responde 404 si falta alguna.
 SELECT s.*, u.name AS seller_name
 FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
-WHERE s.id = ANY(sqlc.arg(ids)::bigint[]);
+WHERE s.id = ANY(sqlc.arg(ids)::bigint[])
+  AND se.organization_id = sqlc.arg(organization_id)::bigint;

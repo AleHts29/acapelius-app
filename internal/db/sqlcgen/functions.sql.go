@@ -12,25 +12,31 @@ import (
 
 const copySeasonFunctions = `-- name: CopySeasonFunctions :many
 INSERT INTO functions (season_id, name, venue, starts_at, capacity, price_cents)
-SELECT $1::bigint, f.name, f.venue,
+SELECT a.id, f.name, f.venue,
        f.starts_at + interval '364 days', f.capacity, f.price_cents
 FROM functions f
+JOIN seasons de ON de.id = f.season_id
+JOIN seasons a  ON a.id = $1::bigint
 WHERE f.season_id = $2::bigint
+  AND de.organization_id = $3::bigint
+  AND a.organization_id  = $3::bigint
 ORDER BY f.starts_at
 RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at
 `
 
 type CopySeasonFunctionsParams struct {
-	ToSeasonID   int64 `json:"to_season_id"`
-	FromSeasonID int64 `json:"from_season_id"`
+	ToSeasonID     int64 `json:"to_season_id"`
+	FromSeasonID   int64 `json:"from_season_id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
 // Duplica la grilla de una temporada en otra: mismo lugar, cupo y precio, con
 // las fechas corridas 364 dias (52 semanas exactas) para que cada funcion caiga
 // el mismo dia de la semana del año siguiente. Las fechas se ajustan despues;
 // lo que se ahorra es cargar la estructura entera a mano.
+// Las dos temporadas tienen que ser de la organizacion.
 func (q *Queries) CopySeasonFunctions(ctx context.Context, arg CopySeasonFunctionsParams) ([]Function, error) {
-	rows, err := q.db.Query(ctx, copySeasonFunctions, arg.ToSeasonID, arg.FromSeasonID)
+	rows, err := q.db.Query(ctx, copySeasonFunctions, arg.ToSeasonID, arg.FromSeasonID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -59,48 +65,66 @@ func (q *Queries) CopySeasonFunctions(ctx context.Context, arg CopySeasonFunctio
 }
 
 const countSalesForFunction = `-- name: CountSalesForFunction :one
-SELECT count(*)::bigint FROM sales WHERE function_id = $1
+SELECT count(*)::bigint FROM sales sa
+JOIN functions f ON f.id = sa.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE sa.function_id = $1::bigint
+  AND se.organization_id = $2::bigint
 `
+
+type CountSalesForFunctionParams struct {
+	FunctionID     int64 `json:"function_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 // Cualquier venta, incluso anulada: si alguna vez se vendio algo, la funcion
 // ya no se puede borrar y hay que hablar de reembolsos, no de un boton.
-func (q *Queries) CountSalesForFunction(ctx context.Context, functionID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countSalesForFunction, functionID)
+func (q *Queries) CountSalesForFunction(ctx context.Context, arg CountSalesForFunctionParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSalesForFunction, arg.FunctionID, arg.OrganizationID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
 }
 
 const createFunction = `-- name: CreateFunction :one
+
 INSERT INTO functions (season_id, name, venue, starts_at, capacity, price_cents)
-VALUES (
-  $1::bigint,
-  $2,
-  $3::text,
-  $4::timestamptz,
-  $5::integer,
-  $6::bigint
-)
+SELECT s.id,
+  $1,
+  $2::text,
+  $3::timestamptz,
+  $4::integer,
+  $5::bigint
+FROM seasons s
+WHERE s.id = $6::bigint
+  AND s.organization_id = $7::bigint
 RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at
 `
 
 type CreateFunctionParams struct {
-	SeasonID   int64     `json:"season_id"`
-	Name       *string   `json:"name"`
-	Venue      string    `json:"venue"`
-	StartsAt   time.Time `json:"starts_at"`
-	Capacity   int32     `json:"capacity"`
-	PriceCents int64     `json:"price_cents"`
+	Name           *string   `json:"name"`
+	Venue          string    `json:"venue"`
+	StartsAt       time.Time `json:"starts_at"`
+	Capacity       int32     `json:"capacity"`
+	PriceCents     int64     `json:"price_cents"`
+	SeasonID       int64     `json:"season_id"`
+	OrganizationID int64     `json:"organization_id"`
 }
 
+// functions no tiene organization_id: cuelga de seasons (C17 §A.1). Toda
+// consulta llega a la organizacion por la temporada; una funcion de otra
+// organizacion no existe (ErrNoRows → 404).
+// Solo si la temporada es de la organizacion; si no, no inserta y devuelve
+// ErrNoRows.
 func (q *Queries) CreateFunction(ctx context.Context, arg CreateFunctionParams) (Function, error) {
 	row := q.db.QueryRow(ctx, createFunction,
-		arg.SeasonID,
 		arg.Name,
 		arg.Venue,
 		arg.StartsAt,
 		arg.Capacity,
 		arg.PriceCents,
+		arg.SeasonID,
+		arg.OrganizationID,
 	)
 	var i Function
 	err := row.Scan(
@@ -117,29 +141,55 @@ func (q *Queries) CreateFunction(ctx context.Context, arg CreateFunctionParams) 
 }
 
 const deleteAllocationsForFunction = `-- name: DeleteAllocationsForFunction :exec
-DELETE FROM allocations WHERE function_id = $1
+DELETE FROM allocations a
+USING functions f, seasons se
+WHERE f.id = a.function_id AND se.id = f.season_id
+  AND a.function_id = $1::bigint
+  AND se.organization_id = $2::bigint
 `
 
-func (q *Queries) DeleteAllocationsForFunction(ctx context.Context, functionID int64) error {
-	_, err := q.db.Exec(ctx, deleteAllocationsForFunction, functionID)
+type DeleteAllocationsForFunctionParams struct {
+	FunctionID     int64 `json:"function_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) DeleteAllocationsForFunction(ctx context.Context, arg DeleteAllocationsForFunctionParams) error {
+	_, err := q.db.Exec(ctx, deleteAllocationsForFunction, arg.FunctionID, arg.OrganizationID)
 	return err
 }
 
 const deleteFunction = `-- name: DeleteFunction :exec
-DELETE FROM functions WHERE id = $1
+DELETE FROM functions f
+USING seasons se
+WHERE se.id = f.season_id
+  AND f.id = $1::bigint
+  AND se.organization_id = $2::bigint
 `
 
-func (q *Queries) DeleteFunction(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteFunction, id)
+type DeleteFunctionParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) DeleteFunction(ctx context.Context, arg DeleteFunctionParams) error {
+	_, err := q.db.Exec(ctx, deleteFunction, arg.ID, arg.OrganizationID)
 	return err
 }
 
 const getFunction = `-- name: GetFunction :one
-SELECT id, season_id, name, venue, starts_at, capacity, price_cents, created_at FROM functions WHERE id = $1
+SELECT f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at FROM functions f
+JOIN seasons se ON se.id = f.season_id
+WHERE f.id = $1::bigint
+  AND se.organization_id = $2::bigint
 `
 
-func (q *Queries) GetFunction(ctx context.Context, id int64) (Function, error) {
-	row := q.db.QueryRow(ctx, getFunction, id)
+type GetFunctionParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) GetFunction(ctx context.Context, arg GetFunctionParams) (Function, error) {
+	row := q.db.QueryRow(ctx, getFunction, arg.ID, arg.OrganizationID)
 	var i Function
 	err := row.Scan(
 		&i.ID,
@@ -175,9 +225,16 @@ SELECT
   (SELECT count(DISTINCT s.seller_id) FROM sales s
    WHERE s.function_id = f.id AND s.voided_at IS NULL)::bigint AS sellers
 FROM functions f
-WHERE $1::bigint IS NULL OR f.season_id = $1::bigint
+JOIN seasons se ON se.id = f.season_id
+WHERE se.organization_id = $1::bigint
+  AND ($2::bigint IS NULL OR f.season_id = $2::bigint)
 ORDER BY f.starts_at
 `
+
+type ListFunctionsParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	SeasonID       *int64 `json:"season_id"`
+}
 
 type ListFunctionsRow struct {
 	ID          int64     `json:"id"`
@@ -199,8 +256,8 @@ type ListFunctionsRow struct {
 // de venta) y cuantos ingresos ya se registraron: con ingresos, la funcion
 // queda congelada (no se edita, spec §5.1) y la pantalla tiene que saberlo
 // antes de ofrecer el formulario. Solo cuenta, no expone plata.
-func (q *Queries) ListFunctions(ctx context.Context, seasonID *int64) ([]ListFunctionsRow, error) {
-	rows, err := q.db.Query(ctx, listFunctions, seasonID)
+func (q *Queries) ListFunctions(ctx context.Context, arg ListFunctionsParams) ([]ListFunctionsRow, error) {
+	rows, err := q.db.Query(ctx, listFunctions, arg.OrganizationID, arg.SeasonID)
 	if err != nil {
 		return nil, err
 	}
@@ -234,23 +291,27 @@ func (q *Queries) ListFunctions(ctx context.Context, seasonID *int64) ([]ListFun
 }
 
 const updateFunction = `-- name: UpdateFunction :one
-UPDATE functions
+UPDATE functions f
 SET name        = $1,
     venue       = $2::text,
     starts_at   = $3::timestamptz,
     capacity    = $4::integer,
     price_cents = $5::bigint
-WHERE id = $6::bigint
-RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at
+FROM seasons se
+WHERE se.id = f.season_id
+  AND f.id = $6::bigint
+  AND se.organization_id = $7::bigint
+RETURNING f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at
 `
 
 type UpdateFunctionParams struct {
-	Name       *string   `json:"name"`
-	Venue      string    `json:"venue"`
-	StartsAt   time.Time `json:"starts_at"`
-	Capacity   int32     `json:"capacity"`
-	PriceCents int64     `json:"price_cents"`
-	ID         int64     `json:"id"`
+	Name           *string   `json:"name"`
+	Venue          string    `json:"venue"`
+	StartsAt       time.Time `json:"starts_at"`
+	Capacity       int32     `json:"capacity"`
+	PriceCents     int64     `json:"price_cents"`
+	ID             int64     `json:"id"`
+	OrganizationID int64     `json:"organization_id"`
 }
 
 func (q *Queries) UpdateFunction(ctx context.Context, arg UpdateFunctionParams) (Function, error) {
@@ -261,6 +322,7 @@ func (q *Queries) UpdateFunction(ctx context.Context, arg UpdateFunctionParams) 
 		arg.Capacity,
 		arg.PriceCents,
 		arg.ID,
+		arg.OrganizationID,
 	)
 	var i Function
 	err := row.Scan(

@@ -9,73 +9,156 @@ import (
 	"context"
 )
 
-const createSeason = `-- name: CreateSeason :one
-INSERT INTO seasons (name)
-VALUES ($1::text)
-RETURNING id, name, is_active, created_at
+const createOrganization = `-- name: CreateOrganization :one
+INSERT INTO organizations (name, kind, slug, is_demo)
+VALUES ($1::text, $2::text, $3::text, $4::boolean)
+RETURNING id, name, kind, slug, is_demo, created_at
 `
 
-func (q *Queries) CreateSeason(ctx context.Context, name string) (Season, error) {
-	row := q.db.QueryRow(ctx, createSeason, name)
+type CreateOrganizationParams struct {
+	Name   string `json:"name"`
+	Kind   string `json:"kind"`
+	Slug   string `json:"slug"`
+	IsDemo bool   `json:"is_demo"`
+}
+
+func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error) {
+	row := q.db.QueryRow(ctx, createOrganization,
+		arg.Name,
+		arg.Kind,
+		arg.Slug,
+		arg.IsDemo,
+	)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Kind,
+		&i.Slug,
+		&i.IsDemo,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createSeason = `-- name: CreateSeason :one
+
+INSERT INTO seasons (name, organization_id, is_active)
+VALUES ($1::text, $2::bigint, $3::boolean)
+RETURNING id, name, is_active, created_at, organization_id
+`
+
+type CreateSeasonParams struct {
+	Name           string `json:"name"`
+	OrganizationID int64  `json:"organization_id"`
+	IsActive       bool   `json:"is_active"`
+}
+
+// Todas las consultas de temporadas llevan organization_id (C17 §A). Una
+// temporada pedida por id que no es de la organizacion no existe: ErrNoRows,
+// que el handler traduce a 404 y no a 403 —un 403 confirmaria que el id
+// existe en otro lado.
+// Nace activa o no segun se pida: crearla inactiva y "restituir" la anterior
+// chocaria con el indice seasons_one_active_per_org a mitad del UPDATE.
+func (q *Queries) CreateSeason(ctx context.Context, arg CreateSeasonParams) (Season, error) {
+	row := q.db.QueryRow(ctx, createSeason, arg.Name, arg.OrganizationID, arg.IsActive)
 	var i Season
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.OrganizationID,
 	)
 	return i, err
 }
 
 const deactivateAllSeasons = `-- name: DeactivateAllSeasons :exec
-UPDATE seasons SET is_active = FALSE WHERE is_active
+UPDATE seasons SET is_active = FALSE
+WHERE is_active AND organization_id = $1::bigint
 `
 
-func (q *Queries) DeactivateAllSeasons(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, deactivateAllSeasons)
+// Acotado a la organizacion: sin el WHERE, crear una temporada en un grupo
+// apagaria la temporada en curso de todos los demas.
+func (q *Queries) DeactivateAllSeasons(ctx context.Context, organizationID int64) error {
+	_, err := q.db.Exec(ctx, deactivateAllSeasons, organizationID)
 	return err
 }
 
 const getActiveSeason = `-- name: GetActiveSeason :one
-SELECT id, name, is_active, created_at FROM seasons WHERE is_active LIMIT 1
+SELECT id, name, is_active, created_at, organization_id FROM seasons
+WHERE is_active AND organization_id = $1::bigint
+LIMIT 1
 `
 
-func (q *Queries) GetActiveSeason(ctx context.Context) (Season, error) {
-	row := q.db.QueryRow(ctx, getActiveSeason)
+func (q *Queries) GetActiveSeason(ctx context.Context, organizationID int64) (Season, error) {
+	row := q.db.QueryRow(ctx, getActiveSeason, organizationID)
 	var i Season
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.OrganizationID,
+	)
+	return i, err
+}
+
+const getOrganization = `-- name: GetOrganization :one
+
+SELECT id, name, kind, slug, is_demo, created_at FROM organizations WHERE id = $1::bigint
+`
+
+// ============================================================================
+// Organizaciones
+// ============================================================================
+func (q *Queries) GetOrganization(ctx context.Context, id int64) (Organization, error) {
+	row := q.db.QueryRow(ctx, getOrganization, id)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Kind,
+		&i.Slug,
+		&i.IsDemo,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getSeason = `-- name: GetSeason :one
-SELECT id, name, is_active, created_at FROM seasons WHERE id = $1
+SELECT id, name, is_active, created_at, organization_id FROM seasons
+WHERE id = $1::bigint AND organization_id = $2::bigint
 `
 
-func (q *Queries) GetSeason(ctx context.Context, id int64) (Season, error) {
-	row := q.db.QueryRow(ctx, getSeason, id)
+type GetSeasonParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) GetSeason(ctx context.Context, arg GetSeasonParams) (Season, error) {
+	row := q.db.QueryRow(ctx, getSeason, arg.ID, arg.OrganizationID)
 	var i Season
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.OrganizationID,
 	)
 	return i, err
 }
 
 const listSeasons = `-- name: ListSeasons :many
-SELECT id, name, is_active, created_at FROM seasons ORDER BY is_active DESC, created_at DESC
+SELECT id, name, is_active, created_at, organization_id FROM seasons
+WHERE organization_id = $1::bigint
+ORDER BY is_active DESC, created_at DESC
 `
 
 // La activa primero: el frontend la toma de aca cuando una pantalla necesita
 // "la temporada en curso" sin preguntar.
-func (q *Queries) ListSeasons(ctx context.Context) ([]Season, error) {
-	rows, err := q.db.Query(ctx, listSeasons)
+func (q *Queries) ListSeasons(ctx context.Context, organizationID int64) ([]Season, error) {
+	rows, err := q.db.Query(ctx, listSeasons, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +171,7 @@ func (q *Queries) ListSeasons(ctx context.Context) ([]Season, error) {
 			&i.Name,
 			&i.IsActive,
 			&i.CreatedAt,
+			&i.OrganizationID,
 		); err != nil {
 			return nil, err
 		}
@@ -100,11 +184,32 @@ func (q *Queries) ListSeasons(ctx context.Context) ([]Season, error) {
 }
 
 const setActiveSeason = `-- name: SetActiveSeason :exec
-UPDATE seasons SET is_active = (id = $1::bigint)
+UPDATE seasons SET is_active = TRUE
+WHERE id = $1::bigint AND organization_id = $2::bigint
 `
 
-// Una sola temporada en curso: activa la elegida y apaga el resto de una.
-func (q *Queries) SetActiveSeason(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, setActiveSeason, id)
+type SetActiveSeasonParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// Enciende una. Va siempre despues de DeactivateAllSeasons, en la misma
+// transaccion: hacerlo en un solo UPDATE (is_active = (id = $1)) choca con
+// el indice parcial seasons_one_active_per_org cuando Postgres procesa la
+// nueva antes de apagar la vieja. El indice es el que garantiza que nunca
+// haya dos en curso por organizacion.
+func (q *Queries) SetActiveSeason(ctx context.Context, arg SetActiveSeasonParams) error {
+	_, err := q.db.Exec(ctx, setActiveSeason, arg.ID, arg.OrganizationID)
 	return err
+}
+
+const slugExists = `-- name: SlugExists :one
+SELECT EXISTS (SELECT 1 FROM organizations WHERE slug = $1::text)
+`
+
+func (q *Queries) SlugExists(ctx context.Context, slug string) (bool, error) {
+	row := q.db.QueryRow(ctx, slugExists, slug)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }

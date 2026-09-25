@@ -93,7 +93,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		generated = true
 	}
 
-	user, err := s.auth.CreateUser(r.Context(), req.Name, req.Email, role, password)
+	user, err := s.auth.CreateUser(r.Context(), s.org(r.Context()), req.Name, req.Email, role, password)
 	switch {
 	case err == nil:
 	case errors.Is(err, auth.ErrEmailTaken):
@@ -166,7 +166,7 @@ func (s *Server) resetUserPassword(w http.ResponseWriter, r *http.Request) (*dom
 		return nil, "", false
 	}
 
-	user, password, err := s.auth.ResetPassword(r.Context(), id)
+	user, password, err := s.auth.ResetPassword(r.Context(), s.org(r.Context()), id)
 	if err != nil {
 		if !mapDomainError(w, err) {
 			httpx.Internal(w, r, err)
@@ -234,9 +234,12 @@ func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "season_id tiene que ser un numero.")
 			return
 		}
+		if !s.temporadaExiste(w, r, id) {
+			return
+		}
 		seasonID = id
 	} else {
-		season, err := s.queries.GetActiveSeason(ctx)
+		season, err := s.queries.GetActiveSeason(ctx, s.org(ctx))
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				httpx.JSON(w, http.StatusOK, teamResponse{Members: []teamMember{}, Former: []formerMember{}})
@@ -248,17 +251,17 @@ func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 		seasonID = season.ID
 	}
 
-	rows, err := s.queries.TeamForSeason(ctx, seasonID)
+	rows, err := s.queries.TeamForSeason(ctx, sqlcgen.TeamForSeasonParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	formerRows, err := s.queries.FormerMembers(ctx, seasonID)
+	formerRows, err := s.queries.FormerMembers(ctx, sqlcgen.FormerMembersParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
-	summary, err := s.queries.SeasonTeamSummary(ctx, seasonID)
+	summary, err := s.queries.SeasonTeamSummary(ctx, sqlcgen.SeasonTeamSummaryParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -269,7 +272,7 @@ func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 		// Cuantas temporadas lleva: se cuenta aca y no en la query principal
 		// para no meter otro subselect por fila en la consulta que ya trae
 		// cinco agregados.
-		temporadas, err := s.queries.CountMembershipsOfUser(ctx, row.ID)
+		temporadas, err := s.queries.CountMembershipsOfUser(ctx, sqlcgen.CountMembershipsOfUserParams{UserID: row.ID, OrganizationID: s.org(ctx)})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
@@ -323,7 +326,7 @@ type membershipRequest struct {
 // persona a una temporada. Es lo que usa "Reincorporar" y el paso de equipo
 // del alta de temporada.
 func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
-	seasonID, ok := seasonFromPath(w, r)
+	seasonID, ok := s.seasonFromPath(w, r)
 	if !ok {
 		return
 	}
@@ -338,7 +341,7 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	if _, err := s.queries.GetUserByID(ctx, req.UserID); err != nil {
+	if _, err := s.queries.GetUserByID(ctx, sqlcgen.GetUserByIDParams{ID: req.UserID, OrganizationID: s.org(ctx)}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrUserNotFound)
 			return
@@ -347,9 +350,16 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	member, err := s.queries.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
-		SeasonID: seasonID, UserID: req.UserID, Role: string(role),
+		OrganizationID: s.org(ctx),
+		SeasonID:       seasonID, UserID: req.UserID, Role: string(role),
 	})
 	if err != nil {
+		// Sin fila: la temporada no es de esta organizacion (la persona ya
+		// se verifico arriba).
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrSeasonNotFound)
+			return
+		}
 		httpx.Internal(w, r, err)
 		return
 	}
@@ -360,7 +370,7 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 // la temporada. Si ya vendio algo queda como baja (left_at) y no se borra: sus
 // ventas y su deuda siguen contando. Si no hizo nada, se borra la fila.
 func (s *Server) handleRemoveMember(w http.ResponseWriter, r *http.Request) {
-	seasonID, ok := seasonFromPath(w, r)
+	seasonID, ok := s.seasonFromPath(w, r)
 	if !ok {
 		return
 	}
@@ -379,8 +389,17 @@ func (s *Server) handleRemoveMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := s.queries.GetUserByID(ctx, sqlcgen.GetUserByIDParams{ID: userID, OrganizationID: s.org(ctx)}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrUserNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
 	miembro, err := s.queries.GetMembership(ctx, sqlcgen.GetMembershipParams{
-		SeasonID: seasonID, UserID: userID,
+		OrganizationID: s.org(ctx),
+		SeasonID:       seasonID, UserID: userID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -393,7 +412,7 @@ func (s *Server) handleRemoveMember(w http.ResponseWriter, r *http.Request) {
 
 	// Nunca una temporada sin direccion.
 	if miembro.Role == string(domain.RoleAdmin) {
-		admins, err := s.queries.CountAdminsInSeason(ctx, seasonID)
+		admins, err := s.queries.CountAdminsInSeason(ctx, sqlcgen.CountAdminsInSeasonParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
@@ -406,7 +425,8 @@ func (s *Server) handleRemoveMember(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ventas, err := s.queries.CountSalesBySellerInSeason(ctx, sqlcgen.CountSalesBySellerInSeasonParams{
-		SellerID: userID, SeasonID: seasonID,
+		OrganizationID: s.org(ctx),
+		SellerID:       userID, SeasonID: seasonID,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -415,30 +435,47 @@ func (s *Server) handleRemoveMember(w http.ResponseWriter, r *http.Request) {
 
 	if ventas > 0 {
 		if err := s.queries.LeaveMembership(ctx, sqlcgen.LeaveMembershipParams{
-			SeasonID: seasonID, UserID: userID,
+			OrganizationID: s.org(ctx),
+			SeasonID:       seasonID, UserID: userID,
 		}); err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
 	} else if err := s.queries.DeleteMembership(ctx, sqlcgen.DeleteMembershipParams{
-		SeasonID: seasonID, UserID: userID,
+		OrganizationID: s.org(ctx),
+		SeasonID:       seasonID, UserID: userID,
 	}); err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}
 
 	// Sin cupo que reservar: se sueltan las asignaciones que tuviera.
-	if err := s.queries.DeleteAllocationsForUser(ctx, userID); err != nil {
+	if err := s.queries.DeleteAllocationsForUser(ctx, sqlcgen.DeleteAllocationsForUserParams{UserID: userID, OrganizationID: s.org(ctx)}); err != nil {
 		slog.ErrorContext(ctx, "no se pudieron soltar los cupos", "user_id", userID, "error", err)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func seasonFromPath(w http.ResponseWriter, r *http.Request) (int64, bool) {
+func (s *Server) seasonFromPath(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		mapDomainError(w, domain.ErrSeasonNotFound)
 		return 0, false
 	}
-	return id, true
+	return id, s.temporadaExiste(w, r, id)
+}
+
+// temporadaExiste: la temporada es de esta organizacion (C17 §A.2). Una
+// ajena no existe: 404. Escribe el error y devuelve false si no.
+func (s *Server) temporadaExiste(w http.ResponseWriter, r *http.Request, id int64) bool {
+	ctx := r.Context()
+	if _, err := s.queries.GetSeason(ctx, sqlcgen.GetSeasonParams{ID: id, OrganizationID: s.org(ctx)}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrSeasonNotFound)
+			return false
+		}
+		httpx.Internal(w, r, err)
+		return false
+	}
+	return true
 }

@@ -39,7 +39,7 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	actor := auth.MustUserFrom(r.Context())
-	updated, err := s.auth.UpdateUser(r.Context(), actor.ID, id,
+	updated, err := s.auth.UpdateUser(r.Context(), actor.OrganizationID, actor.ID, id,
 		strings.TrimSpace(req.Name), req.Email, domain.Role(strings.TrimSpace(req.Role)), req.IsActive)
 	switch {
 	case err == nil:
@@ -70,7 +70,7 @@ func (s *Server) handleFunctionAllocationBoard(w http.ResponseWriter, r *http.Re
 		mapDomainError(w, domain.ErrFunctionNotFound)
 		return
 	}
-	function, err := s.queries.GetFunction(r.Context(), functionID)
+	function, err := s.queries.GetFunction(r.Context(), sqlcgen.GetFunctionParams{ID: functionID, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrFunctionNotFound)
@@ -80,7 +80,7 @@ func (s *Server) handleFunctionAllocationBoard(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	rows, err := s.queries.FunctionAllocationBoard(r.Context(), functionID)
+	rows, err := s.queries.FunctionAllocationBoard(r.Context(), sqlcgen.FunctionAllocationBoardParams{FunctionID: functionID, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -140,7 +140,7 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 
 	q := s.queries.WithTx(tx)
 
-	function, err := q.GetFunctionForUpdate(ctx, functionID)
+	function, err := q.GetFunctionForUpdate(ctx, sqlcgen.GetFunctionForUpdateParams{ID: functionID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrFunctionNotFound)
@@ -152,7 +152,7 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 
 	// Invariante 2: ningun cupo por debajo de lo vendido por esa corista.
 	for _, entry := range req.Allocations {
-		seller, err := q.GetUserByID(ctx, entry.UserID)
+		seller, err := q.GetUserByID(ctx, sqlcgen.GetUserByIDParams{ID: entry.UserID, OrganizationID: s.org(ctx)})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				mapDomainError(w, domain.ErrUserNotFound)
@@ -165,8 +165,9 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 		// esas y solo esas se cuentan al validar. Un cupo para otra persona
 		// quedaria invisible en pantalla.
 		miembro, err := q.GetMembership(ctx, sqlcgen.GetMembershipParams{
-			SeasonID: function.SeasonID,
-			UserID:   entry.UserID,
+			OrganizationID: s.org(ctx),
+			SeasonID:       function.SeasonID,
+			UserID:         entry.UserID,
 		})
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			httpx.Internal(w, r, err)
@@ -178,8 +179,9 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		sold, err := q.SoldBySellerInFunction(ctx, sqlcgen.SoldBySellerInFunctionParams{
-			SellerID:   entry.UserID,
-			FunctionID: functionID,
+			OrganizationID: s.org(ctx),
+			SellerID:       entry.UserID,
+			FunctionID:     functionID,
 		})
 		if err != nil {
 			httpx.Internal(w, r, err)
@@ -196,8 +198,9 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 	for _, entry := range req.Allocations {
 		if entry.Quantity == 0 {
 			if err := q.DeleteAllocation(ctx, sqlcgen.DeleteAllocationParams{
-				UserID:     entry.UserID,
-				FunctionID: functionID,
+				OrganizationID: s.org(ctx),
+				UserID:         entry.UserID,
+				FunctionID:     functionID,
 			}); err != nil {
 				httpx.Internal(w, r, err)
 				return
@@ -205,16 +208,17 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if _, err := q.UpsertAllocation(ctx, sqlcgen.UpsertAllocationParams{
-			UserID:     entry.UserID,
-			FunctionID: functionID,
-			Quantity:   entry.Quantity,
+			OrganizationID: s.org(ctx),
+			UserID:         entry.UserID,
+			FunctionID:     functionID,
+			Quantity:       entry.Quantity,
 		}); err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
 	}
 
-	totalAssigned, err := q.SumAllocations(ctx, functionID)
+	totalAssigned, err := q.SumAllocations(ctx, sqlcgen.SumAllocationsParams{FunctionID: functionID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -242,7 +246,7 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMyAllocations(w http.ResponseWriter, r *http.Request) {
 	user := auth.MustUserFrom(r.Context())
 
-	rows, err := s.queries.MyAllocations(r.Context(), user.ID)
+	rows, err := s.queries.MyAllocations(r.Context(), sqlcgen.MyAllocationsParams{UserID: user.ID, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return

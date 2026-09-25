@@ -2,6 +2,7 @@
 package httpapi
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -202,3 +203,8 @@ func (s *Server) Handler() http.Handler {
 
 	return r
 }
+
+// org es la organizacion de la sesion (C17 §A.2): el parametro que acota cada
+// consulta a la base. Sin sesion vale 0 y no coincide con nada: fallar es
+// cerrado.
+func (s *Server) org(ctx context.Context) int64 { return auth.OrgFrom(ctx) }

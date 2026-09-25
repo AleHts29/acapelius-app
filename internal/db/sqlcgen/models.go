@@ -45,6 +45,15 @@ type Function struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+type Organization struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Kind      string    `json:"kind"`
+	Slug      string    `json:"slug"`
+	IsDemo    bool      `json:"is_demo"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Sale struct {
 	ID            int64      `json:"id"`
 	FunctionID    int64      `json:"function_id"`
@@ -74,10 +83,11 @@ type SalePayment struct {
 }
 
 type Season struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
+	ID             int64     `json:"id"`
+	Name           string    `json:"name"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	OrganizationID int64     `json:"organization_id"`
 }
 
 type SeasonMember struct {
@@ -131,4 +141,5 @@ type User struct {
 	MustChangePassword bool       `json:"must_change_password"`
 	CreatedAt          time.Time  `json:"created_at"`
 	LastLoginAt        *time.Time `json:"last_login_at"`
+	OrganizationID     int64      `json:"organization_id"`
 }

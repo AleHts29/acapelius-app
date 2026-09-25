@@ -3,11 +3,20 @@
 
 export type Role = 'admin' | 'seller' | 'door'
 
+/** Tipo de organización (C17 §A.3): decide cómo la app nombra las cosas. */
+export type OrganizationKind = 'choir' | 'theatre' | 'other'
+
 export interface User {
   id: number
   name: string
   email: string
   role: Role
+  /** El grupo al que pertenece (C17 §A). Viene en la sesión (`/api/me`,
+   *  login); las filas del equipo que se adaptan a `User` no lo traen. */
+  organization_id?: number
+  organization_kind?: OrganizationKind
+  organization_name?: string
+  organization_is_demo?: boolean
   must_change_password: boolean
   is_active: boolean
   created_at: string

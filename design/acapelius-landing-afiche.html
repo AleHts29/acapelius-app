@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Landing Afiche</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --paper:#F4F1EA; --ink:#141414; --ticket:#C4401E; --indigo:#3A3FC4;
+    --ok:#0E7A55; --warn:#9C6A0C; --line:#141414;
+  }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:#1A1C22; -webkit-font-smoothing:antialiased; }
+  .doc { max-width:1320px; margin:0 auto; padding:44px 20px 90px; }
+  .doc > h1 { font-family:'Anton',sans-serif; font-size:clamp(26px,4vw,36px); letter-spacing:0.01em; text-transform:uppercase; }
+  .doc > h1 em { font-style:normal; color:var(--ticket); }
+  .doc > p.lead { margin-top:10px; max-width:900px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .doc > p.lead b { color:#1A1C22; }
+  .cap { font-size:13px; font-weight:700; color:#55575E; margin:30px 0 10px; }
+  .cap b { color:#1A1C22; }
+
+  .frame { border:1px solid #C3C7CE; border-radius:12px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:340px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; }
+
+  /* ============================ LANDING ============================ */
+  .lp { background:var(--paper); color:var(--ink); }
+  .lp a, .lp span, .lp div { }
+  .mono { font-family:'JetBrains Mono',monospace; }
+
+  /* nav */
+  .nav { border-bottom:3px solid var(--ink); padding:14px 34px; display:flex; align-items:center; gap:24px; position:sticky; top:0; background:var(--paper); z-index:9; }
+  .nav .lg { font-family:'Anton',sans-serif; font-size:19px; letter-spacing:0.05em; }
+  .nav a { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; }
+  .nav .sp { flex:1; }
+  .nav .b { background:var(--ink); color:var(--paper); padding:9px 16px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; }
+
+  /* hero */
+  .hero { padding:44px 34px 0; }
+  .strip { font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.14em; display:flex; gap:22px; border-bottom:1px solid var(--ink); padding-bottom:10px; flex-wrap:wrap; }
+  .strip b { font-weight:700; }
+  .hero h1 { margin-top:26px; font-family:'Anton',sans-serif; font-size:clamp(42px,7.2vw,90px); line-height:.9; letter-spacing:-0.005em; text-transform:uppercase; }
+  .hero h1 .out { color:transparent; -webkit-text-stroke:2px var(--ink); }
+  .hero h1 .red { color:var(--ticket); }
+  .sub2 { margin-top:24px; display:grid; grid-template-columns:1.1fr 1fr; gap:34px; align-items:end; border-top:1px solid var(--ink); padding-top:18px; }
+  .sub2 p { font-size:15px; line-height:1.55; max-width:470px; }
+  .sub2 .acts { display:flex; gap:10px; justify-content:flex-end; align-items:center; }
+  .btn { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:14px 20px; border:2px solid var(--ink); display:inline-block; }
+  .btn.fill { background:var(--ticket); border-color:var(--ticket); color:var(--paper); }
+  .btn.ink { background:var(--ink); color:var(--paper); }
+  .btn.sm { padding:10px 15px; font-size:11px; }
+
+  /* ticket steps */
+  .ticket { margin:36px 34px 0; border:2px solid var(--ink); display:grid; grid-template-columns:repeat(3,1fr); }
+  .ticket > div { padding:20px 22px; border-right:1px dashed var(--ink); }
+  .ticket > div:last-child { border-right:0; }
+  .ticket .n { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.1em; }
+  .ticket h4 { margin-top:9px; font-family:'Anton',sans-serif; font-size:20px; text-transform:uppercase; }
+  .ticket p { margin-top:7px; font-size:13px; line-height:1.55; }
+
+  /* banda */
+  .band { margin-top:34px; background:var(--ink); color:var(--paper); padding:12px 0; overflow:hidden; white-space:nowrap; font-family:'Anton',sans-serif; font-size:17px; letter-spacing:0.06em; text-transform:uppercase; }
+  .band span { margin:0 18px; }
+  .band em { color:var(--ticket); font-style:normal; }
+
+  /* secciones */
+  .sec { padding:56px 34px; border-bottom:1px solid var(--ink); }
+  .sec.ink { background:var(--ink); color:var(--paper); border-bottom:0; }
+  .sechead { display:grid; grid-template-columns:auto 1fr; gap:26px; align-items:end; border-bottom:2px solid var(--ink); padding-bottom:14px; }
+  .sec.ink .sechead { border-color:var(--paper); }
+  .sechead .no { font-family:'Anton',sans-serif; font-size:clamp(34px,5vw,58px); line-height:.85; color:var(--ticket); }
+  .sechead h2 { font-family:'Anton',sans-serif; font-size:clamp(26px,3.6vw,42px); line-height:.95; text-transform:uppercase; }
+  .sechead .r { justify-self:end; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.1em; }
+
+  /* para quien */
+  .who { margin-top:0; display:grid; grid-template-columns:repeat(3,1fr); }
+  .who > div { padding:26px 24px 26px 0; border-right:1px solid var(--ink); }
+  .who > div + div { padding-left:24px; }
+  .who > div:last-child { border-right:0; }
+  .who .mk { font-family:'Anton',sans-serif; font-size:26px; color:var(--ticket); }
+  .who h4 { margin-top:10px; font-family:'Anton',sans-serif; font-size:21px; text-transform:uppercase; }
+  .who p { margin-top:9px; font-size:13.5px; line-height:1.6; }
+  .who .tg { display:inline-block; margin-top:14px; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; border:1px solid var(--ink); padding:5px 9px; }
+  .nofit { margin-top:26px; border:2px solid var(--ink); border-style:dashed; padding:16px 20px; font-size:13.5px; line-height:1.6; }
+  .nofit b { font-family:'Anton',sans-serif; font-size:15px; text-transform:uppercase; letter-spacing:0.02em; }
+
+  /* demo */
+  .demotabs { margin-top:26px; display:flex; border:2px solid var(--ink); width:fit-content; }
+  .demotabs span { font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; padding:11px 18px; border-right:2px solid var(--ink); }
+  .demotabs span:last-child { border-right:0; }
+  .demotabs span.on { background:var(--ink); color:var(--paper); }
+  .demo { margin-top:-2px; border:2px solid var(--ink); display:flex; min-height:330px; background:#F2F3F5; }
+  .demo .sd { width:168px; background:#fff; border-right:2px solid var(--ink); padding:14px 10px; }
+  .demo .sd .l { font-family:'Anton',sans-serif; font-size:11px; letter-spacing:0.14em; padding:2px 8px 12px; }
+  .demo .sd .i { display:flex; align-items:center; gap:8px; padding:7px 8px; font-size:11.5px; font-weight:700; color:#7C818C; }
+  .demo .sd .i.on { background:var(--ink); color:var(--paper); }
+  .demo .mn { flex:1; padding:16px 18px; min-width:0; }
+  .demo .hd { display:flex; align-items:baseline; justify-content:space-between; border-bottom:1px solid var(--ink); padding-bottom:9px; }
+  .demo .hd b { font-family:'Anton',sans-serif; font-size:17px; text-transform:uppercase; }
+  .demo .hd span { font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#55575E; }
+  .demo .rw { display:grid; grid-template-columns:1.5fr 1fr 44px 78px; gap:10px; padding:9px 0; border-bottom:1px solid #D8D4C9; font-size:12px; align-items:center; }
+  .demo .rw.h { font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.08em; color:#55575E; }
+  .demo .rw b { font-weight:700; }
+  .demo .rw .g { color:#55575E; }
+  .demo .pil { font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; text-transform:uppercase; padding:3px 8px; border:1px solid var(--ok); color:var(--ok); justify-self:end; }
+  .demo .pil.y { border-color:var(--warn); color:var(--warn); }
+  .demo .note { margin-top:14px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#55575E; }
+  /* demo puerta */
+  .doorwrap { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .doorwrap .cnt { border:2px solid var(--ink); padding:14px 16px; display:flex; align-items:baseline; justify-content:space-between; background:#fff; }
+  .doorwrap .cnt b { font-family:'Anton',sans-serif; font-size:32px; color:var(--ok); }
+  .doorwrap .cnt b small { font-size:16px; color:#7C818C; }
+  .doorwrap .cnt .l { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; }
+  .doorwrap .ok { margin-top:12px; background:var(--ok); color:#fff; border:2px solid var(--ink); padding:26px 18px; text-align:center; }
+  .doorwrap .ok .rg { width:44px; height:44px; margin:0 auto; border:2px solid rgba(255,255,255,.6); display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .doorwrap .ok .nm { margin-top:12px; font-family:'Anton',sans-serif; font-size:21px; text-transform:uppercase; }
+  .doorwrap .ok .dt { margin-top:4px; font-size:12px; opacity:.9; }
+  .doorwrap .side2 { border:2px solid var(--ink); padding:16px; background:#fff; }
+  .doorwrap .side2 .t { font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.1em; border-bottom:1px solid var(--ink); padding-bottom:8px; }
+  .doorwrap .side2 .r2 { display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid #D8D4C9; font-size:12px; }
+  .doorwrap .side2 .r2 b { font-weight:700; }
+  .doorwrap .off { margin-top:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--warn); text-transform:uppercase; letter-spacing:0.06em; }
+
+  /* ledger de features */
+  .ledger { margin-top:0; }
+  .lrow { display:grid; grid-template-columns:52px 1.1fr 1.4fr; gap:22px; padding:20px 0; border-bottom:1px solid var(--ink); align-items:start; }
+  .lrow:last-child { border-bottom:0; }
+  .lrow .n { font-family:'Anton',sans-serif; font-size:26px; color:var(--ticket); line-height:1; }
+  .lrow h4 { font-family:'Anton',sans-serif; font-size:21px; text-transform:uppercase; line-height:1.05; }
+  .lrow p { font-size:13.5px; line-height:1.65; }
+  .lrow p b { font-weight:700; }
+
+  /* puerta destacada */
+  .sec.ink h2 { color:var(--paper); }
+  .sec.ink .no { color:var(--ticket); }
+  .split { margin-top:28px; display:grid; grid-template-columns:1.05fr 1fr; gap:34px; align-items:center; }
+  .split ul { list-style:none; margin-top:18px; display:grid; gap:11px; }
+  .split li { font-size:14px; line-height:1.5; padding-left:26px; position:relative; }
+  .split li::before { content:"◆"; position:absolute; left:0; color:var(--ticket); }
+  .split li b { font-weight:700; }
+  .split p.big { font-family:'Anton',sans-serif; font-size:clamp(22px,2.6vw,30px); line-height:1.08; text-transform:uppercase; }
+
+  /* precios */
+  .prices { margin-top:28px; display:grid; grid-template-columns:1fr 1fr; gap:0; border:2px solid var(--ink); }
+  .prices > div { padding:26px; border-right:2px dashed var(--ink); }
+  .prices > div:last-child { border-right:0; background:var(--ticket); color:var(--paper); }
+  .prices .t { font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.12em; }
+  .prices .amt { margin-top:12px; font-family:'Anton',sans-serif; font-size:44px; line-height:.9; text-transform:uppercase; }
+  .prices .amt small { font-size:14px; font-family:'Inter'; font-weight:600; }
+  .prices ul { list-style:none; margin-top:18px; display:grid; gap:9px; }
+  .prices li { font-size:13.5px; padding-left:20px; position:relative; }
+  .prices li::before { content:"◆"; position:absolute; left:0; font-size:9px; top:4px; }
+  .prices .b2 { margin-top:22px; }
+  .prices > div:last-child .btn { border-color:var(--paper); color:var(--paper); }
+
+  /* faq */
+  .faq { margin-top:8px; }
+  .fq { display:grid; grid-template-columns:52px 1fr; gap:22px; padding:18px 0; border-bottom:1px solid var(--ink); }
+  .fq .n { font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; padding-top:3px; }
+  .fq b { font-family:'Anton',sans-serif; font-size:17px; text-transform:uppercase; display:block; }
+  .fq p { margin-top:7px; font-size:13.5px; line-height:1.6; max-width:760px; }
+
+  /* cierre */
+  .final { background:var(--ticket); color:var(--paper); padding:62px 34px; text-align:center; }
+  .final h2 { font-family:'Anton',sans-serif; font-size:clamp(30px,4.6vw,58px); line-height:.94; text-transform:uppercase; }
+  .final p { margin:16px auto 0; max-width:520px; font-size:15px; line-height:1.55; }
+  .final .acts { margin-top:26px; display:flex; gap:12px; justify-content:center; }
+  .final .btn { border-color:var(--paper); color:var(--paper); }
+  .final .btn.fill { background:var(--paper); color:var(--ticket); }
+  .foot { background:var(--ink); color:rgba(244,241,234,.6); padding:22px 34px; display:flex; align-items:center; gap:20px; font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; }
+  .foot .lg { font-family:'Anton',sans-serif; font-size:14px; color:var(--paper); letter-spacing:0.08em; }
+  .foot .sp { flex:1; }
+
+  /* ============================ ALTA ============================ */
+  .auth { background:var(--paper); color:var(--ink); display:flex; min-height:560px; }
+  .auth .l { flex:1.05; padding:40px 40px; border-right:2px solid var(--ink); }
+  .auth .lg { font-family:'Anton',sans-serif; font-size:18px; letter-spacing:0.05em; }
+  .auth h2 { margin-top:26px; font-family:'Anton',sans-serif; font-size:34px; line-height:.95; text-transform:uppercase; }
+  .auth .sb { margin-top:12px; font-size:13.5px; line-height:1.55; max-width:400px; }
+  .fld { margin-top:18px; }
+  .fld label { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; }
+  .inp { margin-top:6px; border:2px solid var(--ink); padding:12px 13px; font-size:14px; background:#fff; }
+  .inp.ph { color:#8A8578; }
+  .seg { margin-top:6px; display:flex; border:2px solid var(--ink); width:fit-content; }
+  .seg span { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; text-transform:uppercase; padding:10px 14px; border-right:2px solid var(--ink); }
+  .seg span:last-child { border-right:0; }
+  .seg span.on { background:var(--ink); color:var(--paper); }
+  .hint { margin-top:6px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#6B6659; text-transform:uppercase; letter-spacing:0.05em; }
+  .auth .go { margin-top:24px; display:block; text-align:center; }
+  .auth .alt { margin-top:16px; font-size:13px; }
+  .auth .alt u { text-decoration:none; border-bottom:1.5px solid var(--ink); font-weight:700; }
+  .auth .r { flex:1; background:var(--ink); color:var(--paper); padding:40px 34px; display:flex; flex-direction:column; justify-content:center; }
+  .auth .r .q { font-family:'Anton',sans-serif; font-size:24px; line-height:1.1; text-transform:uppercase; }
+  .auth .r ol { list-style:none; margin-top:24px; }
+  .auth .r li { display:grid; grid-template-columns:34px 1fr; gap:12px; padding:14px 0; border-top:1px solid rgba(244,241,234,.2); }
+  .auth .r li:first-child { border-top:0; }
+  .auth .r li .nn { font-family:'Anton',sans-serif; font-size:19px; color:var(--ticket); }
+  .auth .r li b { font-size:14px; font-weight:700; display:block; }
+  .auth .r li span { font-size:12.5px; color:rgba(244,241,234,.65); line-height:1.5; display:block; margin-top:3px; }
+  .auth .r .nt { margin-top:26px; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.07em; color:rgba(244,241,234,.5); line-height:1.7; }
+
+  .note { margin-top:30px; background:#fff; border:1px solid #D5D8DD; border-left:4px solid var(--ticket); border-radius:12px; padding:16px 18px; }
+  .note b.t { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ticket); }
+  .note p { margin-top:9px; font-size:13px; line-height:1.65; color:#4A4C55; }
+  .note p b { color:#1A1C22; }
+  .note code { font-family:'JetBrains Mono',monospace; font-size:.9em; background:#EEF0F3; padding:1px 5px; border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>Landing <em>Afiche</em> — completa</h1>
+  <p class="lead">La dirección elegida, desarrollada de punta a punta: nav, hero, los tres pasos como entrada troquelada, banda corrediza, para quién es, <b>la demo abierta</b> con tres pantallas reales, lo que resuelve como listado contable, la puerta en negro, precios en talón de entrada, preguntas y cierre. Debajo, el alta de cuenta en el mismo lenguaje.</p>
+
+  <div class="cap"><b>1 · La landing</b></div>
+  <div class="frame">
+    <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.app</div></div>
+    <div class="lp">
+
+      <div class="nav">
+        <span class="lg">ACAPELIUS</span>
+        <a>Cómo funciona</a><a>Demo</a><a>Para quién</a><a>Precios</a>
+        <span class="sp"></span>
+        <a>Entrar</a>
+        <span class="b">Crear cuenta</span>
+      </div>
+
+      <div class="hero">
+        <div class="strip">
+          <span><b>PARA</b> COROS Y ELENCOS</span>
+          <span><b>DESDE</b> ARGENTINA</span>
+          <span><b>PRIMERA TEMPORADA</b> GRATIS</span>
+          <span><b>DEMO</b> SIN REGISTRARTE</span>
+        </div>
+        <h1>Sacá las<br>entradas del<br><span class="red">cuaderno</span> <span class="out">y del grupo</span><br>de whatsapp</h1>
+        <div class="sub2">
+          <p>Tu elenco vende, el comprador recibe su QR y en la puerta escaneás. Vos ves cuánto se vendió, quién te debe plata y quién entró de verdad.</p>
+          <div class="acts">
+            <span class="btn">Probar la demo</span>
+            <span class="btn fill">Crear cuenta</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ticket">
+        <div>
+          <div class="n mono">01 / CARGÁS</div>
+          <h4>La temporada</h4>
+          <p>Funciones, sala, cupo y precio. Repartís las entradas entre el elenco: cada uno ve cuántas le quedan.</p>
+        </div>
+        <div>
+          <div class="n mono">02 / VENDEN</div>
+          <h4>Desde el celu</h4>
+          <p>Nombre y mail en treinta segundos. El QR sale solo; si no tiene mail, va el link por WhatsApp.</p>
+        </div>
+        <div>
+          <div class="n mono">03 / ESCANEÁS</div>
+          <h4>En la puerta</h4>
+          <p>Anda sin internet. Verde entra, rojo ya usó su entrada, y al que perdió el mail lo buscás por nombre.</p>
+        </div>
+      </div>
+
+      <div class="band">
+        <span>COROS</span><em>◆</em><span>TEATRO INDEPENDIENTE</span><em>◆</em><span>MURGAS</span><em>◆</em><span>ORQUESTAS JUVENILES</span><em>◆</em><span>ESCUELAS DE DANZA</span><em>◆</em><span>COROS</span><em>◆</em><span>TEATRO INDEPENDIENTE</span>
+      </div>
+
+      <!-- DEMO -->
+      <div class="sec">
+        <div class="sechead">
+          <span class="no">01</span>
+          <h2>Entrá y tocá todo</h2>
+          <span class="r">Demo abierta · datos de mentira</span>
+        </div>
+        <div class="demotabs">
+          <span class="on">Ventas</span><span>Puerta</span><span>Plata</span>
+        </div>
+        <div class="demo">
+          <div class="sd">
+            <div class="l">ACAPELIUS</div>
+            <div class="i">Inicio</div>
+            <div class="i on">Ventas</div>
+            <div class="i">Puerta</div>
+            <div class="i">Temporada</div>
+            <div class="i">Plata</div>
+          </div>
+          <div class="mn">
+            <div class="hd"><b>Función de gala · 26 ago</b><span class="mono">61 vendidas · debe $32.000</span></div>
+            <div class="rw h"><span>Comprador</span><span>Vendió</span><span>Entr.</span><span>Estado</span></div>
+            <div class="rw"><b>María Dutra</b><span class="g">Carolina Vega</span><span>3</span><span class="pil">Pagó</span></div>
+            <div class="rw"><b>Rosa Suárez</b><span class="g">Marta Ledesma</span><span>4</span><span class="pil y">Debe</span></div>
+            <div class="rw"><b>Hugo Díaz</b><span class="g">Beatriz Coria</span><span>4</span><span class="pil y">Debe</span></div>
+            <div class="rw"><b>Padre Benítez</b><span class="g">emitió Eli</span><span>2</span><span class="pil" style="border-color:#3A3FC4; color:#3A3FC4;">Cortesía</span></div>
+            <div class="rw"><b>Ana Pereira</b><span class="g">Silvia Rey</span><span>2</span><span class="pil">Pagó</span></div>
+            <div class="note">Probá marcar un pago, reenviar una entrada o filtrar por quién debe. No se rompe nada: la demo se reinicia sola cada noche.</div>
+          </div>
+        </div>
+        <div style="margin-top:20px; display:flex; gap:12px; align-items:center;">
+          <span class="btn ink">Abrir la demo</span>
+          <span class="mono" style="font-size:11.5px;">SIN REGISTRARTE · SIN TARJETA · ENTRÁS COMO DIRECCIÓN</span>
+        </div>
+      </div>
+
+      <!-- PARA QUIÉN -->
+      <div class="sec">
+        <div class="sechead">
+          <span class="no">02</span>
+          <h2>Para quién es</h2>
+          <span class="r">Grupos que venden a mano</span>
+        </div>
+        <div class="who">
+          <div>
+            <div class="mk">♪</div>
+            <h4>Coros</h4>
+            <p>Cuatro o cinco funciones en diciembre, las coristas venden entre familia y amigos, y la dirección persigue quién rindió la plata.</p>
+            <span class="tg">Temporada · funciones · coristas</span>
+          </div>
+          <div>
+            <div class="mk">◈</div>
+            <h4>Teatro independiente</h4>
+            <p>Temporada de fin de semana en una sala chica, el elenco vende su propia cuota de entradas y alguien atiende la puerta.</p>
+            <span class="tg">Temporada · funciones · elenco</span>
+          </div>
+          <div>
+            <div class="mk">✦</div>
+            <h4>Y parecidos</h4>
+            <p>Murgas, orquestas juveniles, escuelas de danza, ballets. Si hay cupo de sala, gente vendiendo entradas y una puerta, sirve.</p>
+            <span class="tg">Se adapta el vocabulario</span>
+          </div>
+        </div>
+        <div class="nofit">
+          <b>No es para vos si</b> vendés miles de entradas por internet con pago online: para eso hay plataformas que lo hacen mejor. Acapelius es para cuando la venta es de persona a persona y el lío está en el registro.
+        </div>
+      </div>
+
+      <!-- LO QUE RESUELVE -->
+      <div class="sec">
+        <div class="sechead">
+          <span class="no">03</span>
+          <h2>Lo que hoy vive<br>en un cuaderno</h2>
+          <span class="r">Seis cosas concretas</span>
+        </div>
+        <div class="ledger">
+          <div class="lrow">
+            <span class="n">i</span>
+            <h4>Quién te debe plata</h4>
+            <p>La app separa dos cosas que siempre se mezclan: lo que <b>el comprador le pagó a un integrante</b> y lo que <b>ese integrante te entregó a vos</b>. Ves el saldo de cada uno, registrás entregas parciales y queda el historial.</p>
+          </div>
+          <div class="lrow">
+            <span class="n">ii</span>
+            <h4>Cupos por integrante</h4>
+            <p>Repartís las entradas de cada función. Nadie vende más de lo que le tocó, y siempre sabés cuántas quedan sin asignar para moverlas a quien las está vendiendo.</p>
+          </div>
+          <div class="lrow">
+            <span class="n">iii</span>
+            <h4>Quién entró de verdad</h4>
+            <p>Al terminar la función sabés cuántos de los que compraron realmente fueron. Ese número, función a función, <b>dice más que la recaudación</b>.</p>
+          </div>
+          <div class="lrow">
+            <span class="n">iv</span>
+            <h4>El elenco cambia cada temporada</h4>
+            <p>Armás el equipo del año en un paso: quién sigue, quién se va, quién entra. El historial de cada persona queda intacto, incluso de las temporadas en que no participó.</p>
+          </div>
+          <div class="lrow">
+            <span class="n">v</span>
+            <h4>Entradas por mail, con acuse</h4>
+            <p>Cada venta manda la entrada con su QR. Sabés si llegó, si la abrieron y la reenviás con un toque. Si el comprador no tiene mail, se comparte el link.</p>
+          </div>
+          <div class="lrow">
+            <span class="n">vi</span>
+            <h4>Cortesías, sin planilla aparte</h4>
+            <p>Las invitaciones se emiten desde la app, no descuentan del cupo de nadie y en la puerta entran como cualquier entrada.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PUERTA -->
+      <div class="sec ink">
+        <div class="sechead">
+          <span class="no">04</span>
+          <h2>Aunque se caiga el<br>internet del teatro</h2>
+          <span class="r" style="color:var(--paper);">Modo puerta</span>
+        </div>
+        <div class="split">
+          <div>
+            <p class="big">Bajás las entradas al celular antes de empezar. Si no hay señal, seguís escaneando igual.</p>
+            <ul>
+              <li>Escaneo con la cámara del celular, <b>sin app que instalar</b></li>
+              <li>Búsqueda por nombre o por quién vendió, <b>para el que perdió el mail</b></li>
+              <li>Aviso si una entrada <b>ya fue usada</b>, con hora y quién la escaneó</li>
+              <li>Los ingresos se sincronizan solos <b>cuando vuelve la señal</b></li>
+            </ul>
+          </div>
+          <div class="doorwrap" style="grid-template-columns:1fr;">
+            <div>
+              <div class="cnt"><b>38<small> / 80</small></b><span class="l mono">INGRESARON</span></div>
+              <div class="ok">
+                <div class="rg">✓</div>
+                <div class="nm">María Dutra</div>
+                <div class="dt">2 entradas · le vendió Carolina</div>
+              </div>
+              <div class="off mono">◆ Sin conexión · 4 ingresos por sincronizar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRECIOS -->
+      <div class="sec">
+        <div class="sechead">
+          <span class="no">05</span>
+          <h2>Un precio<br>por temporada</h2>
+          <span class="r">Nada de mensualidad</span>
+        </div>
+        <p style="margin-top:20px; font-size:14.5px; max-width:640px; line-height:1.6;">Un elenco usa esto unas semanas por temporada y descansa el resto del año. Cobrar por mes, para algo que se usa así, no tiene sentido.</p>
+        <div class="prices">
+          <div>
+            <div class="t mono">TALÓN A · PRIMERA TEMPORADA</div>
+            <div class="amt">Gratis</div>
+            <ul>
+              <li>Hasta 3 funciones</li>
+              <li>Integrantes ilimitados</li>
+              <li>Entradas con QR por mail</li>
+              <li>Modo puerta con escaneo offline</li>
+            </ul>
+            <div class="b2"><span class="btn">Crear cuenta</span></div>
+          </div>
+          <div>
+            <div class="t mono">TALÓN B · TEMPORADA COMPLETA</div>
+            <div class="amt">$— <small>/ temporada</small></div>
+            <ul>
+              <li>Funciones ilimitadas</li>
+              <li>Cupos por integrante y rendiciones</li>
+              <li>Historial de temporadas anteriores</li>
+              <li>Soporte durante las funciones</li>
+            </ul>
+            <div class="b2"><span class="btn">Empezar gratis</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ -->
+      <div class="sec">
+        <div class="sechead">
+          <span class="no">06</span>
+          <h2>Lo que suelen<br>preguntar</h2>
+          <span class="r">Sin vueltas</span>
+        </div>
+        <div class="faq">
+          <div class="fq">
+            <span class="n mono">Q1</span>
+            <div><b>¿Hay que instalar algo?</b><p>No. Cada integrante entra desde el navegador del celular con el usuario que vos le creás. Puede agregar el acceso a la pantalla de inicio y queda como una app.</p></div>
+          </div>
+          <div class="fq">
+            <span class="n mono">Q2</span>
+            <div><b>¿Sirve para un grupo de teatro?</b><p>Sí: cambia el nombre de las cosas, no el problema. Funciones, cupo de sala, gente del elenco vendiendo y alguien en la puerta. Al crear la cuenta elegís si sos coro o grupo, y la app habla como vos.</p></div>
+          </div>
+          <div class="fq">
+            <span class="n mono">Q3</span>
+            <div><b>¿Y si un comprador no tiene mail?</b><p>Se registra igual. Le comparten el link de la entrada por WhatsApp, o en la puerta lo buscan por nombre como en la lista de papel, pero sin la lista.</p></div>
+          </div>
+          <div class="fq">
+            <span class="n mono">Q4</span>
+            <div><b>¿Se puede cobrar con tarjeta o MercadoPago?</b><p>Todavía no. Hoy el cobro es en efectivo o transferencia, como siempre: la app registra quién pagó y quién debe.</p></div>
+          </div>
+          <div class="fq">
+            <span class="n mono">Q5</span>
+            <div><b>¿Qué pasa con las temporadas viejas?</b><p>Quedan. Podés ver las ventas, la asistencia y las rendiciones de cualquier año anterior, con el elenco que tenías en ese momento.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="final">
+        <h2>Diciembre llega igual.<br>La diferencia es<br>cómo te encuentra.</h2>
+        <p>Creá la cuenta, cargá la primera función y sumá a tu elenco. En una tarde queda andando.</p>
+        <div class="acts">
+          <span class="btn fill">Crear cuenta gratis</span>
+          <span class="btn">Probar la demo</span>
+        </div>
+      </div>
+
+      <div class="foot">
+        <span class="lg">ACAPELIUS</span>
+        <span class="sp"></span>
+        <span>Términos</span><span>Privacidad</span><span>Contacto</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="cap"><b>2 · Crear cuenta</b> — mismo lenguaje: bordes duros, mono para las etiquetas, los pasos numerados en negro.</div>
+  <div class="frame">
+    <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.app/crear-cuenta</div></div>
+    <div class="auth">
+      <div class="l">
+        <div class="lg">ACAPELIUS</div>
+        <h2>Creá la cuenta<br>de tu elenco</h2>
+        <div class="sb">Vas a quedar como dirección: desde ahí sumás a tu gente, armás la temporada y repartís las entradas.</div>
+
+        <div class="fld"><label>Nombre del coro o grupo</label><div class="inp">Acapelius</div></div>
+        <div class="fld"><label>¿Qué son?</label><div class="seg"><span class="on">Coro</span><span>Grupo de teatro</span><span>Otro</span></div><div class="hint">Solo cambia cómo la app nombra las cosas. Se puede cambiar después.</div></div>
+        <div class="fld"><label>Tu nombre</label><div class="inp ph">Elías Gómez</div></div>
+        <div class="fld"><label>Email</label><div class="inp ph">eli@acapelius.com</div></div>
+        <div class="fld"><label>Contraseña</label><div class="inp ph">Mínimo 10 caracteres</div></div>
+
+        <span class="btn fill go" style="width:100%;">Crear cuenta y empezar</span>
+        <div class="alt">¿Ya tenés cuenta? <u>Entrar</u> · ¿Solo querés mirar? <u>Probar la demo</u></div>
+      </div>
+      <div class="r">
+        <div class="q">En una tarde<br>queda andando</div>
+        <ol>
+          <li><span class="nn">01</span><div><b>Sumás a tu gente</b><span>Nombre y mail: a cada uno le llega su acceso.</span></div></li>
+          <li><span class="nn">02</span><div><b>Cargás las funciones</b><span>Sala, cupo y precio de cada una.</span></div></li>
+          <li><span class="nn">03</span><div><b>Repartís las entradas</b><span>Cuántas vende cada integrante.</span></div></li>
+          <li><span class="nn">04</span><div><b>Y a vender</b><span>El QR le llega solo al comprador.</span></div></li>
+        </ol>
+        <div class="nt">Primera temporada gratis · hasta 3 funciones · sin tarjeta</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b class="t">Sobre la demo</b>
+    <p>Para que "probar sin registrarte" no sea una promesa vacía, lo más simple es una <b>organización de demo</b> con datos sembrados y sesión de invitado: al entrar se crea una sesión temporal contra esa organización, con rol dirección y <b>escritura permitida</b> —tocar botones es el punto— y un <b>job nocturno que la restaura</b> al estado original. Lo único que conviene bloquear ahí es el envío real de mails: el driver de correo en modo demo muestra la entrada en pantalla en vez de mandarla.</p>
+    <p>Con la multi-tenancy ya resuelta (<code>organizations</code> + <code>organization_id</code>), la demo es una organización más con un flag <code>is_demo</code>, no un sistema aparte. Esa es otra razón para hacer el cambio de multi-cliente antes que la landing.</p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -36,7 +36,7 @@ func (s *Server) cargarSeleccion(w http.ResponseWriter, r *http.Request, ids []i
 		return nil, false
 	}
 
-	ventas, err := s.queries.SalesByIDs(r.Context(), ids)
+	ventas, err := s.queries.SalesByIDs(r.Context(), sqlcgen.SalesByIDsParams{Ids: ids, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return nil, false
@@ -143,12 +143,12 @@ func (s *Server) handleBulkResend(w http.ResponseWriter, r *http.Request) {
 			sinEmail++
 			continue
 		}
-		sale, err := s.queries.GetSale(ctx, v.ID)
+		sale, err := s.queries.GetSale(ctx, sqlcgen.GetSaleParams{ID: v.ID, OrganizationID: s.org(ctx)})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
-		function, err := s.queries.GetFunction(ctx, sale.FunctionID)
+		function, err := s.queries.GetFunction(ctx, sqlcgen.GetFunctionParams{ID: sale.FunctionID, OrganizationID: s.org(ctx)})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
@@ -210,6 +210,9 @@ func (s *Server) handleExportSales(w http.ResponseWriter, r *http.Request) {
 			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "function_id tiene que ser un numero.")
 			return
 		}
+		if !s.funcionExiste(w, r, id) {
+			return
+		}
 		functionID = &id
 	}
 
@@ -242,15 +245,16 @@ func (s *Server) handleExportSales(w http.ResponseWriter, r *http.Request) {
 	var cursorID *int64
 	for range 200 { // 200 * 50 = 10.000 ventas, mas que una temporada entera
 		page, err := s.queries.ListSalesPage(r.Context(), sqlcgen.ListSalesPageParams{
-			SeasonID:   seasonID,
-			SellerID:   sellerID,
-			FunctionID: functionID,
-			Status:     status,
-			Q:          q,
-			CursorPast: cursorPast,
-			CursorRank: cursorRank,
-			CursorID:   cursorID,
-			PageSize:   salesPageSize,
+			OrganizationID: s.org(r.Context()),
+			SeasonID:       seasonID,
+			SellerID:       sellerID,
+			FunctionID:     functionID,
+			Status:         status,
+			Q:              q,
+			CursorPast:     cursorPast,
+			CursorRank:     cursorRank,
+			CursorID:       cursorID,
+			PageSize:       salesPageSize,
 		})
 		if err != nil {
 			httpx.Internal(w, r, err)
@@ -342,6 +346,9 @@ func (s *Server) handleSellersWithSales(w http.ResponseWriter, r *http.Request) 
 			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "function_id tiene que ser un numero.")
 			return
 		}
+		if !s.funcionExiste(w, r, id) {
+			return
+		}
 		functionID = &id
 	}
 	seasonID, ok := s.seasonDelListado(w, r)
@@ -349,8 +356,9 @@ func (s *Server) handleSellersWithSales(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	rows, err := s.queries.SellersWithSales(r.Context(), sqlcgen.SellersWithSalesParams{
-		SeasonID:   seasonID,
-		FunctionID: functionID,
+		OrganizationID: s.org(r.Context()),
+		SeasonID:       seasonID,
+		FunctionID:     functionID,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)

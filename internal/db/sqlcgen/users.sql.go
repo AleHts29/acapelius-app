@@ -16,57 +16,94 @@ const copySeasonMembers = `-- name: CopySeasonMembers :exec
 INSERT INTO season_members (season_id, user_id, role)
 SELECT $1::bigint, m.user_id, m.role
 FROM season_members m
+JOIN seasons de ON de.id = m.season_id
+JOIN seasons a  ON a.id = $1::bigint
 WHERE m.season_id = $2::bigint AND m.left_at IS NULL
+  AND de.organization_id = $3::bigint
+  AND a.organization_id  = $3::bigint
 ON CONFLICT (season_id, user_id) DO NOTHING
 `
 
 type CopySeasonMembersParams struct {
-	ToSeasonID   int64 `json:"to_season_id"`
-	FromSeasonID int64 `json:"from_season_id"`
+	ToSeasonID     int64 `json:"to_season_id"`
+	FromSeasonID   int64 `json:"from_season_id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
 // El equipo de una temporada pasa a la siguiente con su rol. Es el default
 // del asistente: vienen todas tildadas y se destilda a las que se fueron.
+// Las dos temporadas tienen que ser de la organizacion.
 func (q *Queries) CopySeasonMembers(ctx context.Context, arg CopySeasonMembersParams) error {
-	_, err := q.db.Exec(ctx, copySeasonMembers, arg.ToSeasonID, arg.FromSeasonID)
+	_, err := q.db.Exec(ctx, copySeasonMembers, arg.ToSeasonID, arg.FromSeasonID, arg.OrganizationID)
 	return err
 }
 
 const countAdminsInSeason = `-- name: CountAdminsInSeason :one
-SELECT count(*)::bigint FROM season_members
-WHERE season_id = $1::bigint AND role = 'admin' AND left_at IS NULL
+SELECT count(*)::bigint FROM season_members m
+JOIN seasons s ON s.id = m.season_id
+WHERE m.season_id = $1::bigint
+  AND s.organization_id = $2::bigint
+  AND m.role = 'admin' AND m.left_at IS NULL
 `
 
+type CountAdminsInSeasonParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
 // Nunca una temporada sin direccion.
-func (q *Queries) CountAdminsInSeason(ctx context.Context, seasonID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countAdminsInSeason, seasonID)
+func (q *Queries) CountAdminsInSeason(ctx context.Context, arg CountAdminsInSeasonParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminsInSeason, arg.SeasonID, arg.OrganizationID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
 }
 
 const countMembershipsOfUser = `-- name: CountMembershipsOfUser :one
-SELECT count(*)::bigint FROM season_members WHERE user_id = $1::bigint
+
+SELECT count(*)::bigint FROM season_members m
+JOIN seasons s ON s.id = m.season_id
+WHERE m.user_id = $1::bigint
+  AND s.organization_id = $2::bigint
 `
 
+type CountMembershipsOfUserParams struct {
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// ============================================================================
+// Participacion por temporada (season_members)
+// ============================================================================
+// season_members no tiene organization_id: cuelga de seasons. Cada consulta
+// exige que la temporada sea de la organizacion; una que no lo es no devuelve
+// filas (y un INSERT sobre ella no inserta nada).
 // Cuantas temporadas lleva.
-func (q *Queries) CountMembershipsOfUser(ctx context.Context, userID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countMembershipsOfUser, userID)
+func (q *Queries) CountMembershipsOfUser(ctx context.Context, arg CountMembershipsOfUserParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countMembershipsOfUser, arg.UserID, arg.OrganizationID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
 }
 
 const countSellerMembershipsOfUser = `-- name: CountSellerMembershipsOfUser :one
-SELECT count(*)::bigint FROM season_members
-WHERE user_id = $1::bigint AND role IN ('seller', 'admin')
+SELECT count(*)::bigint FROM season_members m
+JOIN seasons s ON s.id = m.season_id
+WHERE m.user_id = $1::bigint
+  AND s.organization_id = $2::bigint
+  AND m.role IN ('seller', 'admin')
 `
+
+type CountSellerMembershipsOfUserParams struct {
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 // Si alguna vez fue corista: es lo que habilita a mirar SUS ventas y SU
 // rendicion aunque este año no este en el coro. Quien solo estuvo en la
 // puerta no tiene ventas propias que mirar.
-func (q *Queries) CountSellerMembershipsOfUser(ctx context.Context, userID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countSellerMembershipsOfUser, userID)
+func (q *Queries) CountSellerMembershipsOfUser(ctx context.Context, arg CountSellerMembershipsOfUserParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSellerMembershipsOfUser, arg.UserID, arg.OrganizationID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -76,6 +113,8 @@ const countUsers = `-- name: CountUsers :one
 SELECT count(*) FROM users
 `
 
+// CROSS-TENANT a proposito: es el chequeo del arranque ("¿hay alguien
+// cargado?"), antes de que exista organizacion alguna.
 func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countUsers)
 	var count int64
@@ -84,14 +123,15 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (name, email, password_hash, must_change_password)
+INSERT INTO users (name, email, password_hash, must_change_password, organization_id)
 VALUES (
   $1::text,
   $2::text,
   $3::text,
-  $4::boolean
+  $4::boolean,
+  $5::bigint
 )
-RETURNING id, name, email, password_hash, must_change_password, created_at, last_login_at
+RETURNING id, name, email, password_hash, must_change_password, created_at, last_login_at, organization_id
 `
 
 type CreateUserParams struct {
@@ -99,6 +139,7 @@ type CreateUserParams struct {
 	Email              string `json:"email"`
 	PasswordHash       string `json:"password_hash"`
 	MustChangePassword bool   `json:"must_change_password"`
+	OrganizationID     int64  `json:"organization_id"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -107,6 +148,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Email,
 		arg.PasswordHash,
 		arg.MustChangePassword,
+		arg.OrganizationID,
 	)
 	var i User
 	err := row.Scan(
@@ -117,22 +159,28 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.MustChangePassword,
 		&i.CreatedAt,
 		&i.LastLoginAt,
+		&i.OrganizationID,
 	)
 	return i, err
 }
 
 const deleteMembership = `-- name: DeleteMembership :exec
-DELETE FROM season_members
-WHERE season_id = $1::bigint AND user_id = $2::bigint
+DELETE FROM season_members m
+USING seasons s
+WHERE s.id = m.season_id
+  AND m.season_id = $1::bigint
+  AND m.user_id = $2::bigint
+  AND s.organization_id = $3::bigint
 `
 
 type DeleteMembershipParams struct {
-	SeasonID int64 `json:"season_id"`
-	UserID   int64 `json:"user_id"`
+	SeasonID       int64 `json:"season_id"`
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
 func (q *Queries) DeleteMembership(ctx context.Context, arg DeleteMembershipParams) error {
-	_, err := q.db.Exec(ctx, deleteMembership, arg.SeasonID, arg.UserID)
+	_, err := q.db.Exec(ctx, deleteMembership, arg.SeasonID, arg.UserID, arg.OrganizationID)
 	return err
 }
 
@@ -158,12 +206,18 @@ JOIN LATERAL (
   ORDER BY m.joined_at DESC
   LIMIT 1
 ) ultima ON TRUE
-WHERE NOT EXISTS (
-  SELECT 1 FROM season_members m2
-  WHERE m2.user_id = u.id AND m2.season_id = $1::bigint
-)
+WHERE u.organization_id = $1::bigint
+  AND NOT EXISTS (
+    SELECT 1 FROM season_members m2
+    WHERE m2.user_id = u.id AND m2.season_id = $2::bigint
+  )
 ORDER BY u.name
 `
+
+type FormerMembersParams struct {
+	OrganizationID int64 `json:"organization_id"`
+	SeasonID       int64 `json:"season_id"`
+}
 
 type FormerMembersRow struct {
 	ID              int64      `json:"id"`
@@ -177,8 +231,8 @@ type FormerMembersRow struct {
 
 // Quienes participaron alguna vez pero no de esta temporada. No desaparecen:
 // quedan abajo, con su historia, y se las puede reincorporar.
-func (q *Queries) FormerMembers(ctx context.Context, seasonID int64) ([]FormerMembersRow, error) {
-	rows, err := q.db.Query(ctx, formerMembers, seasonID)
+func (q *Queries) FormerMembers(ctx context.Context, arg FormerMembersParams) ([]FormerMembersRow, error) {
+	rows, err := q.db.Query(ctx, formerMembers, arg.OrganizationID, arg.SeasonID)
 	if err != nil {
 		return nil, err
 	}
@@ -206,17 +260,21 @@ func (q *Queries) FormerMembers(ctx context.Context, seasonID int64) ([]FormerMe
 }
 
 const getMembership = `-- name: GetMembership :one
-SELECT id, season_id, user_id, role, joined_at, left_at FROM season_members
-WHERE season_id = $1::bigint AND user_id = $2::bigint
+SELECT m.id, m.season_id, m.user_id, m.role, m.joined_at, m.left_at FROM season_members m
+JOIN seasons s ON s.id = m.season_id
+WHERE m.season_id = $1::bigint
+  AND m.user_id = $2::bigint
+  AND s.organization_id = $3::bigint
 `
 
 type GetMembershipParams struct {
-	SeasonID int64 `json:"season_id"`
-	UserID   int64 `json:"user_id"`
+	SeasonID       int64 `json:"season_id"`
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
 func (q *Queries) GetMembership(ctx context.Context, arg GetMembershipParams) (SeasonMember, error) {
-	row := q.db.QueryRow(ctx, getMembership, arg.SeasonID, arg.UserID)
+	row := q.db.QueryRow(ctx, getMembership, arg.SeasonID, arg.UserID, arg.OrganizationID)
 	var i SeasonMember
 	err := row.Scan(
 		&i.ID,
@@ -229,31 +287,22 @@ func (q *Queries) GetMembership(ctx context.Context, arg GetMembershipParams) (S
 	return i, err
 }
 
-const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, password_hash, must_change_password, created_at, last_login_at FROM users WHERE lower(email) = lower($1::text)
+const getUserByID = `-- name: GetUserByID :one
+
+SELECT id, name, email, password_hash, must_change_password, created_at, last_login_at, organization_id FROM users
+WHERE id = $1::bigint AND organization_id = $2::bigint
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.PasswordHash,
-		&i.MustChangePassword,
-		&i.CreatedAt,
-		&i.LastLoginAt,
-	)
-	return i, err
+type GetUserByIDParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
-const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, email, password_hash, must_change_password, created_at, last_login_at FROM users WHERE id = $1
-`
-
-func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByID, id)
+// Todas las consultas de personas llevan organization_id (C17 §A), salvo las
+// dos que por definicion no pueden: la del login —todavia no hay sesion, y el
+// email es unico por organizacion, no global— y la del arranque.
+func (q *Queries) GetUserByID(ctx context.Context, arg GetUserByIDParams) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, arg.ID, arg.OrganizationID)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -263,6 +312,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.MustChangePassword,
 		&i.CreatedAt,
 		&i.LastLoginAt,
+		&i.OrganizationID,
 	)
 	return i, err
 }
@@ -270,19 +320,24 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 const getUserWithMembership = `-- name: GetUserWithMembership :one
 
 SELECT
-  u.id, u.name, u.email, u.password_hash, u.must_change_password, u.created_at, u.last_login_at,
+  u.id, u.name, u.email, u.password_hash, u.must_change_password, u.created_at, u.last_login_at, u.organization_id,
   -- Con left_at el rol se apaga: dejo el coro a mitad de temporada, no vende
   -- mas. Sus ventas y su deuda siguen contando, y su historial lo sigue
   -- viendo (RequireHistory).
   COALESCE(CASE WHEN m.left_at IS NULL THEN m.role END, fallback.role, '')::text AS season_role,
   (m.id IS NOT NULL AND m.left_at IS NULL) AS participates,
-  m.left_at
+  m.left_at,
+  o.kind AS organization_kind,
+  o.name AS organization_name,
+  o.is_demo AS organization_is_demo
 FROM users u
-LEFT JOIN seasons s ON s.is_active
+JOIN organizations o ON o.id = u.organization_id
+LEFT JOIN seasons s ON s.is_active AND s.organization_id = u.organization_id
 LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = s.id
 LEFT JOIN LATERAL (
   SELECT m2.role FROM season_members m2
-  WHERE m2.user_id = u.id AND NOT EXISTS (SELECT 1 FROM seasons WHERE is_active)
+  WHERE m2.user_id = u.id
+    AND NOT EXISTS (SELECT 1 FROM seasons WHERE is_active AND organization_id = u.organization_id)
   ORDER BY m2.joined_at DESC LIMIT 1
 ) fallback ON TRUE
 WHERE u.id = $1::bigint
@@ -296,20 +351,26 @@ type GetUserWithMembershipRow struct {
 	MustChangePassword bool        `json:"must_change_password"`
 	CreatedAt          time.Time   `json:"created_at"`
 	LastLoginAt        *time.Time  `json:"last_login_at"`
+	OrganizationID     int64       `json:"organization_id"`
 	SeasonRole         string      `json:"season_role"`
 	Participates       pgtype.Bool `json:"participates"`
 	LeftAt             *time.Time  `json:"left_at"`
+	OrganizationKind   string      `json:"organization_kind"`
+	OrganizationName   string      `json:"organization_name"`
+	OrganizationIsDemo bool        `json:"organization_is_demo"`
 }
 
 // ============================================================================
-// Participacion por temporada (season_members)
+// Sesion: el usuario mas su rol en la temporada en curso DE SU organizacion
 // ============================================================================
-// El usuario mas su rol en la temporada en curso. `role` viene vacio cuando
-// no participa de esta temporada: ahi solo puede mirar su historial.
+// No lleva organization_id como parametro: es la carga de la sesion, y la
+// organizacion sale de la propia fila del usuario. La temporada en curso es la
+// de ESA organizacion, no cualquiera que este activa.
 //
-// Sin ninguna temporada cargada se cae a la membresia mas reciente que tenga.
-// Es el arranque: quien instala la app entra antes de que exista la primera
-// temporada, y sin esto no podria crearla.
+// `role` viene vacio cuando no participa de esta temporada: ahi solo puede
+// mirar su historial. Sin ninguna temporada cargada se cae a la membresia mas
+// reciente que tenga: es el arranque, quien instala la app entra antes de que
+// exista la primera temporada, y sin esto no podria crearla.
 func (q *Queries) GetUserWithMembership(ctx context.Context, id int64) (GetUserWithMembershipRow, error) {
 	row := q.db.QueryRow(ctx, getUserWithMembership, id)
 	var i GetUserWithMembershipRow
@@ -321,34 +382,63 @@ func (q *Queries) GetUserWithMembership(ctx context.Context, id int64) (GetUserW
 		&i.MustChangePassword,
 		&i.CreatedAt,
 		&i.LastLoginAt,
+		&i.OrganizationID,
 		&i.SeasonRole,
 		&i.Participates,
 		&i.LeftAt,
+		&i.OrganizationKind,
+		&i.OrganizationName,
+		&i.OrganizationIsDemo,
 	)
 	return i, err
 }
 
-const getUserWithMembershipByEmail = `-- name: GetUserWithMembershipByEmail :one
+const leaveMembership = `-- name: LeaveMembership :exec
+UPDATE season_members m SET left_at = now()
+FROM seasons s
+WHERE s.id = m.season_id
+  AND m.season_id = $1::bigint
+  AND m.user_id = $2::bigint
+  AND s.organization_id = $3::bigint
+`
+
+type LeaveMembershipParams struct {
+	SeasonID       int64 `json:"season_id"`
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// Baja a mitad de temporada: deja de vender, pero sus ventas y su deuda
+// siguen contando.
+func (q *Queries) LeaveMembership(ctx context.Context, arg LeaveMembershipParams) error {
+	_, err := q.db.Exec(ctx, leaveMembership, arg.SeasonID, arg.UserID, arg.OrganizationID)
+	return err
+}
+
+const listUsersWithMembershipByEmail = `-- name: ListUsersWithMembershipByEmail :many
 SELECT
-  u.id, u.name, u.email, u.password_hash, u.must_change_password, u.created_at, u.last_login_at,
-  -- Con left_at el rol se apaga: dejo el coro a mitad de temporada, no vende
-  -- mas. Sus ventas y su deuda siguen contando, y su historial lo sigue
-  -- viendo (RequireHistory).
+  u.id, u.name, u.email, u.password_hash, u.must_change_password, u.created_at, u.last_login_at, u.organization_id,
   COALESCE(CASE WHEN m.left_at IS NULL THEN m.role END, fallback.role, '')::text AS season_role,
   (m.id IS NOT NULL AND m.left_at IS NULL) AS participates,
-  m.left_at
+  m.left_at,
+  o.kind AS organization_kind,
+  o.name AS organization_name,
+  o.is_demo AS organization_is_demo
 FROM users u
-LEFT JOIN seasons s ON s.is_active
+JOIN organizations o ON o.id = u.organization_id
+LEFT JOIN seasons s ON s.is_active AND s.organization_id = u.organization_id
 LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = s.id
 LEFT JOIN LATERAL (
   SELECT m2.role FROM season_members m2
-  WHERE m2.user_id = u.id AND NOT EXISTS (SELECT 1 FROM seasons WHERE is_active)
+  WHERE m2.user_id = u.id
+    AND NOT EXISTS (SELECT 1 FROM seasons WHERE is_active AND organization_id = u.organization_id)
   ORDER BY m2.joined_at DESC LIMIT 1
 ) fallback ON TRUE
 WHERE lower(u.email) = lower($1::text)
+ORDER BY u.last_login_at DESC NULLS LAST, u.id
 `
 
-type GetUserWithMembershipByEmailRow struct {
+type ListUsersWithMembershipByEmailRow struct {
 	ID                 int64       `json:"id"`
 	Name               string      `json:"name"`
 	Email              string      `json:"email"`
@@ -356,44 +446,52 @@ type GetUserWithMembershipByEmailRow struct {
 	MustChangePassword bool        `json:"must_change_password"`
 	CreatedAt          time.Time   `json:"created_at"`
 	LastLoginAt        *time.Time  `json:"last_login_at"`
+	OrganizationID     int64       `json:"organization_id"`
 	SeasonRole         string      `json:"season_role"`
 	Participates       pgtype.Bool `json:"participates"`
 	LeftAt             *time.Time  `json:"left_at"`
+	OrganizationKind   string      `json:"organization_kind"`
+	OrganizationName   string      `json:"organization_name"`
+	OrganizationIsDemo bool        `json:"organization_is_demo"`
 }
 
-func (q *Queries) GetUserWithMembershipByEmail(ctx context.Context, email string) (GetUserWithMembershipByEmailRow, error) {
-	row := q.db.QueryRow(ctx, getUserWithMembershipByEmail, email)
-	var i GetUserWithMembershipByEmailRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.PasswordHash,
-		&i.MustChangePassword,
-		&i.CreatedAt,
-		&i.LastLoginAt,
-		&i.SeasonRole,
-		&i.Participates,
-		&i.LeftAt,
-	)
-	return i, err
-}
-
-const leaveMembership = `-- name: LeaveMembership :exec
-UPDATE season_members SET left_at = now()
-WHERE season_id = $1::bigint AND user_id = $2::bigint
-`
-
-type LeaveMembershipParams struct {
-	SeasonID int64 `json:"season_id"`
-	UserID   int64 `json:"user_id"`
-}
-
-// Baja a mitad de temporada: deja de vender, pero sus ventas y su deuda
-// siguen contando.
-func (q *Queries) LeaveMembership(ctx context.Context, arg LeaveMembershipParams) error {
-	_, err := q.db.Exec(ctx, leaveMembership, arg.SeasonID, arg.UserID)
-	return err
+// CROSS-TENANT a proposito: es el login, y todavia no hay sesion de la que
+// sacar la organizacion. Como el email es unico por organizacion y no
+// global, puede haber mas de una fila: el login prueba la contraseña contra
+// cada una (ver auth.Login).
+func (q *Queries) ListUsersWithMembershipByEmail(ctx context.Context, email string) ([]ListUsersWithMembershipByEmailRow, error) {
+	rows, err := q.db.Query(ctx, listUsersWithMembershipByEmail, email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUsersWithMembershipByEmailRow{}
+	for rows.Next() {
+		var i ListUsersWithMembershipByEmailRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.PasswordHash,
+			&i.MustChangePassword,
+			&i.CreatedAt,
+			&i.LastLoginAt,
+			&i.OrganizationID,
+			&i.SeasonRole,
+			&i.Participates,
+			&i.LeftAt,
+			&i.OrganizationKind,
+			&i.OrganizationName,
+			&i.OrganizationIsDemo,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const seasonTeamSummary = `-- name: SeasonTeamSummary :one
@@ -403,9 +501,16 @@ SELECT
   count(*) FILTER (WHERE m.left_at IS NOT NULL)::bigint AS left_choir,
   count(*)::bigint AS total
 FROM season_members m
+JOIN seasons s ON s.id = m.season_id
 JOIN users u ON u.id = m.user_id
 WHERE m.season_id = $1::bigint
+  AND s.organization_id = $2::bigint
 `
+
+type SeasonTeamSummaryParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type SeasonTeamSummaryRow struct {
 	Active    int64 `json:"active"`
@@ -415,8 +520,8 @@ type SeasonTeamSummaryRow struct {
 }
 
 // La franja de arriba de Equipo.
-func (q *Queries) SeasonTeamSummary(ctx context.Context, seasonID int64) (SeasonTeamSummaryRow, error) {
-	row := q.db.QueryRow(ctx, seasonTeamSummary, seasonID)
+func (q *Queries) SeasonTeamSummary(ctx context.Context, arg SeasonTeamSummaryParams) (SeasonTeamSummaryRow, error) {
+	row := q.db.QueryRow(ctx, seasonTeamSummary, arg.SeasonID, arg.OrganizationID)
 	var i SeasonTeamSummaryRow
 	err := row.Scan(
 		&i.Active,
@@ -431,17 +536,23 @@ const setUserPassword = `-- name: SetUserPassword :exec
 UPDATE users
 SET password_hash = $1::text,
     must_change_password = $2::boolean
-WHERE id = $3::bigint
+WHERE id = $3::bigint AND organization_id = $4::bigint
 `
 
 type SetUserPasswordParams struct {
 	PasswordHash       string `json:"password_hash"`
 	MustChangePassword bool   `json:"must_change_password"`
 	ID                 int64  `json:"id"`
+	OrganizationID     int64  `json:"organization_id"`
 }
 
 func (q *Queries) SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error {
-	_, err := q.db.Exec(ctx, setUserPassword, arg.PasswordHash, arg.MustChangePassword, arg.ID)
+	_, err := q.db.Exec(ctx, setUserPassword,
+		arg.PasswordHash,
+		arg.MustChangePassword,
+		arg.ID,
+		arg.OrganizationID,
+	)
 	return err
 }
 
@@ -478,10 +589,17 @@ SELECT
      JOIN functions f ON f.id = sa.function_id
    WHERE c.user_id = u.id AND f.season_id = m.season_id)::bigint AS checkins
 FROM season_members m
+JOIN seasons s ON s.id = m.season_id
 JOIN users u ON u.id = m.user_id
 WHERE m.season_id = $1::bigint
+  AND s.organization_id = $2::bigint
 ORDER BY m.role, u.name
 `
+
+type TeamForSeasonParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type TeamForSeasonRow struct {
 	ID           int64      `json:"id"`
@@ -502,8 +620,8 @@ type TeamForSeasonRow struct {
 // vendio cada una, cuanto de su cupo uso, cuanto le falta rendir y cuando
 // entro por ultima vez. Todo acotado a la temporada, para que el año pasado
 // no contamine el de ahora.
-func (q *Queries) TeamForSeason(ctx context.Context, seasonID int64) ([]TeamForSeasonRow, error) {
-	rows, err := q.db.Query(ctx, teamForSeason, seasonID)
+func (q *Queries) TeamForSeason(ctx context.Context, arg TeamForSeasonParams) ([]TeamForSeasonRow, error) {
+	rows, err := q.db.Query(ctx, teamForSeason, arg.SeasonID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -549,19 +667,25 @@ const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET name  = $1::text,
     email = $2::text
-WHERE id = $3::bigint
-RETURNING id, name, email, password_hash, must_change_password, created_at, last_login_at
+WHERE id = $3::bigint AND organization_id = $4::bigint
+RETURNING id, name, email, password_hash, must_change_password, created_at, last_login_at, organization_id
 `
 
 type UpdateUserParams struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	ID    int64  `json:"id"`
+	Name           string `json:"name"`
+	Email          string `json:"email"`
+	ID             int64  `json:"id"`
+	OrganizationID int64  `json:"organization_id"`
 }
 
 // Identidad nada mas: el rol y la participacion viven en season_members.
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser, arg.Name, arg.Email, arg.ID)
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.Name,
+		arg.Email,
+		arg.ID,
+		arg.OrganizationID,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -571,26 +695,40 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.MustChangePassword,
 		&i.CreatedAt,
 		&i.LastLoginAt,
+		&i.OrganizationID,
 	)
 	return i, err
 }
 
 const upsertMembership = `-- name: UpsertMembership :one
 INSERT INTO season_members (season_id, user_id, role)
-VALUES ($1::bigint, $2::bigint, $3::text)
+SELECT s.id, u.id, $1::text
+FROM seasons s, users u
+WHERE s.id = $2::bigint
+  AND u.id = $3::bigint
+  AND s.organization_id = $4::bigint
+  AND u.organization_id = $4::bigint
 ON CONFLICT (season_id, user_id) DO UPDATE
   SET role = EXCLUDED.role, left_at = NULL
 RETURNING id, season_id, user_id, role, joined_at, left_at
 `
 
 type UpsertMembershipParams struct {
-	SeasonID int64  `json:"season_id"`
-	UserID   int64  `json:"user_id"`
-	Role     string `json:"role"`
+	Role           string `json:"role"`
+	SeasonID       int64  `json:"season_id"`
+	UserID         int64  `json:"user_id"`
+	OrganizationID int64  `json:"organization_id"`
 }
 
+// Solo si la temporada Y la persona son de la organizacion: si no, no inserta
+// nada y el caller recibe ErrNoRows.
 func (q *Queries) UpsertMembership(ctx context.Context, arg UpsertMembershipParams) (SeasonMember, error) {
-	row := q.db.QueryRow(ctx, upsertMembership, arg.SeasonID, arg.UserID, arg.Role)
+	row := q.db.QueryRow(ctx, upsertMembership,
+		arg.Role,
+		arg.SeasonID,
+		arg.UserID,
+		arg.OrganizationID,
+	)
 	var i SeasonMember
 	err := row.Scan(
 		&i.ID,

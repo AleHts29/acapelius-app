@@ -93,7 +93,7 @@ func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
 
 	// El lock sobre la funcion serializa las validaciones de cupo: dos ventas
 	// concurrentes no pueden pasar el chequeo a la vez (spec §4).
-	function, err := q.GetFunctionForUpdate(ctx, req.FunctionID)
+	function, err := q.GetFunctionForUpdate(ctx, sqlcgen.GetFunctionForUpdateParams{ID: req.FunctionID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrFunctionNotFound)
@@ -103,7 +103,7 @@ func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	active, err := q.CountActiveTickets(ctx, req.FunctionID)
+	active, err := q.CountActiveTickets(ctx, sqlcgen.CountActiveTicketsParams{FunctionID: req.FunctionID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -125,8 +125,9 @@ func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
 	// concurrentes de la misma corista no pueden superar su cupo.
 	if !req.IsComp && user.Role != domain.RoleAdmin {
 		allocation, err := q.GetAllocationQty(ctx, sqlcgen.GetAllocationQtyParams{
-			UserID:     user.ID,
-			FunctionID: req.FunctionID,
+			OrganizationID: s.org(ctx),
+			UserID:         user.ID,
+			FunctionID:     req.FunctionID,
 		})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -138,8 +139,9 @@ func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		sold, err := q.SoldBySellerInFunction(ctx, sqlcgen.SoldBySellerInFunctionParams{
-			SellerID:   user.ID,
-			FunctionID: req.FunctionID,
+			OrganizationID: s.org(ctx),
+			SellerID:       user.ID,
+			FunctionID:     req.FunctionID,
 		})
 		if err != nil {
 			httpx.Internal(w, r, err)
@@ -157,16 +159,17 @@ func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sale, err := q.CreateSale(ctx, sqlcgen.CreateSaleParams{
-		FunctionID:  req.FunctionID,
-		SellerID:    user.ID,
-		Code:        ulid.Make().String(),
-		BuyerName:   req.BuyerName,
-		BuyerEmail:  optionalText(req.BuyerEmail),
-		BuyerPhone:  optionalText(req.BuyerPhone),
-		Quantity:    req.Quantity,
-		AmountCents: domain.SaleAmount(function.PriceCents, req.Quantity, req.IsComp),
-		IsComp:      req.IsComp,
-		Notes:       optionalText(req.Notes),
+		OrganizationID: s.org(ctx),
+		FunctionID:     req.FunctionID,
+		SellerID:       user.ID,
+		Code:           ulid.Make().String(),
+		BuyerName:      req.BuyerName,
+		BuyerEmail:     optionalText(req.BuyerEmail),
+		BuyerPhone:     optionalText(req.BuyerPhone),
+		Quantity:       req.Quantity,
+		AmountCents:    domain.SaleAmount(function.PriceCents, req.Quantity, req.IsComp),
+		IsComp:         req.IsComp,
+		Notes:          optionalText(req.Notes),
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -366,6 +369,9 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "function_id tiene que ser un numero.")
 			return
 		}
+		if !s.funcionExiste(w, r, id) {
+			return
+		}
 		functionID = &id
 	}
 
@@ -400,15 +406,16 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	rows, err := s.queries.ListSalesPage(ctx, sqlcgen.ListSalesPageParams{
-		SeasonID:   seasonID,
-		SellerID:   sellerID,
-		FunctionID: functionID,
-		Status:     status,
-		Q:          q,
-		CursorPast: cursorPast,
-		CursorRank: cursorRank,
-		CursorID:   cursorID,
-		PageSize:   salesPageSize,
+		OrganizationID: s.org(ctx),
+		SeasonID:       seasonID,
+		SellerID:       sellerID,
+		FunctionID:     functionID,
+		Status:         status,
+		Q:              q,
+		CursorPast:     cursorPast,
+		CursorRank:     cursorRank,
+		CursorID:       cursorID,
+		PageSize:       salesPageSize,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -416,10 +423,11 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 	}
 
 	summary, err := s.queries.SalesSummary(ctx, sqlcgen.SalesSummaryParams{
-		SeasonID:   seasonID,
-		SellerID:   sellerID,
-		FunctionID: functionID,
-		Q:          q,
+		OrganizationID: s.org(ctx),
+		SeasonID:       seasonID,
+		SellerID:       sellerID,
+		FunctionID:     functionID,
+		Q:              q,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -427,11 +435,12 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filtered, err := s.queries.SalesFilteredSummary(ctx, sqlcgen.SalesFilteredSummaryParams{
-		SeasonID:   seasonID,
-		SellerID:   sellerID,
-		FunctionID: functionID,
-		Status:     status,
-		Q:          q,
+		OrganizationID: s.org(ctx),
+		SeasonID:       seasonID,
+		SellerID:       sellerID,
+		FunctionID:     functionID,
+		Status:         status,
+		Q:              q,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -439,11 +448,12 @@ func (s *Server) handleListSales(w http.ResponseWriter, r *http.Request) {
 	}
 
 	totales, err := s.queries.SalesFunctionTotals(ctx, sqlcgen.SalesFunctionTotalsParams{
-		SeasonID:   seasonID,
-		SellerID:   sellerID,
-		FunctionID: functionID,
-		Status:     status,
-		Q:          q,
+		OrganizationID: s.org(ctx),
+		SeasonID:       seasonID,
+		SellerID:       sellerID,
+		FunctionID:     functionID,
+		Status:         status,
+		Q:              q,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -494,7 +504,7 @@ func (s *Server) loadOwnedSale(w http.ResponseWriter, r *http.Request) (sqlcgen.
 		return sqlcgen.Sale{}, false
 	}
 
-	sale, err := s.queries.GetSale(r.Context(), id)
+	sale, err := s.queries.GetSale(r.Context(), sqlcgen.GetSaleParams{ID: id, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrSaleNotFound)
@@ -730,7 +740,7 @@ func (s *Server) handleResendEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	function, err := s.queries.GetFunction(r.Context(), sale.FunctionID)
+	function, err := s.queries.GetFunction(r.Context(), sqlcgen.GetFunctionParams{ID: sale.FunctionID, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -762,7 +772,7 @@ func (s *Server) handleVoidSale(w http.ResponseWriter, r *http.Request) {
 
 	q := s.queries.WithTx(tx)
 
-	sale, err := q.GetSale(ctx, id)
+	sale, err := q.GetSale(ctx, sqlcgen.GetSaleParams{ID: id, OrganizationID: s.org(ctx)})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrSaleNotFound)
@@ -791,7 +801,7 @@ func (s *Server) handleVoidSale(w http.ResponseWriter, r *http.Request) {
 			httpx.Internal(w, r, err)
 			return
 		}
-		if sale, err = q.VoidSale(ctx, sale.ID); err != nil {
+		if sale, err = q.VoidSale(ctx, sqlcgen.VoidSaleParams{ID: sale.ID, OrganizationID: s.org(ctx)}); err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
@@ -811,7 +821,7 @@ func (s *Server) handleVoidTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ticket, err := s.queries.GetTicket(r.Context(), id)
+	ticket, err := s.queries.GetTicket(r.Context(), sqlcgen.GetTicketParams{ID: id, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrTicketNotFound)
@@ -828,7 +838,7 @@ func (s *Server) handleVoidTicket(w http.ResponseWriter, r *http.Request) {
 	case domain.TicketVoid:
 		// Idempotente.
 	case domain.TicketIssued:
-		if ticket, err = s.queries.VoidTicket(r.Context(), ticket.ID); err != nil {
+		if ticket, err = s.queries.VoidTicket(r.Context(), sqlcgen.VoidTicketParams{ID: ticket.ID, OrganizationID: s.org(r.Context())}); err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
@@ -852,6 +862,9 @@ func (s *Server) seasonDelListado(w http.ResponseWriter, r *http.Request) (*int6
 		id, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil {
 			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "season_id tiene que ser un numero.")
+			return nil, false
+		}
+		if !s.temporadaExiste(w, r, id) {
 			return nil, false
 		}
 		return &id, true

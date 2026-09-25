@@ -56,6 +56,9 @@ func (s *Server) handleSettlementsReport(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	seasonID := *seasonIDPtr
+	if !s.temporadaExiste(w, r, seasonID) {
+		return
+	}
 
 	user := auth.MustUserFrom(r.Context())
 	var onlySeller *int64
@@ -63,7 +66,7 @@ func (s *Server) handleSettlementsReport(w http.ResponseWriter, r *http.Request)
 		onlySeller = &user.ID
 	}
 
-	rows, err := s.queries.SettlementsReport(r.Context(), seasonID)
+	rows, err := s.queries.SettlementsReport(r.Context(), sqlcgen.SettlementsReportParams{SeasonID: seasonID, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -81,8 +84,9 @@ func (s *Server) handleSettlementsReport(w http.ResponseWriter, r *http.Request)
 	}
 
 	settlements, err := s.queries.ListSettlements(r.Context(), sqlcgen.ListSettlementsParams{
-		SeasonID: seasonID,
-		SellerID: onlySeller,
+		OrganizationID: s.org(r.Context()),
+		SeasonID:       seasonID,
+		SellerID:       onlySeller,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -104,6 +108,9 @@ func (s *Server) handleListSettlements(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "Falta season_id.")
 		return
 	}
+	if !s.temporadaExiste(w, r, *seasonIDPtr) {
+		return
+	}
 
 	sellerID, ok := parseOptionalID(w, r, "seller_id")
 	if !ok {
@@ -115,8 +122,9 @@ func (s *Server) handleListSettlements(w http.ResponseWriter, r *http.Request) {
 	}
 
 	settlements, err := s.queries.ListSettlements(r.Context(), sqlcgen.ListSettlementsParams{
-		SeasonID: *seasonIDPtr,
-		SellerID: sellerID,
+		OrganizationID: s.org(r.Context()),
+		SeasonID:       *seasonIDPtr,
+		SellerID:       sellerID,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -145,7 +153,7 @@ func (s *Server) handleCreateSettlement(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Existencia de vendedora y temporada, para responder 404 claros.
-	if _, err := s.queries.GetUserByID(r.Context(), req.SellerID); err != nil {
+	if _, err := s.queries.GetUserByID(r.Context(), sqlcgen.GetUserByIDParams{ID: req.SellerID, OrganizationID: s.org(r.Context())}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrUserNotFound)
 			return
@@ -153,7 +161,7 @@ func (s *Server) handleCreateSettlement(w http.ResponseWriter, r *http.Request) 
 		httpx.Internal(w, r, err)
 		return
 	}
-	if _, err := s.queries.GetSeason(r.Context(), req.SeasonID); err != nil {
+	if _, err := s.queries.GetSeason(r.Context(), sqlcgen.GetSeasonParams{ID: req.SeasonID, OrganizationID: s.org(r.Context())}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrSeasonNotFound)
 			return
@@ -163,11 +171,12 @@ func (s *Server) handleCreateSettlement(w http.ResponseWriter, r *http.Request) 
 	}
 
 	settlement, err := s.queries.CreateSettlement(r.Context(), sqlcgen.CreateSettlementParams{
-		SellerID:    req.SellerID,
-		SeasonID:    req.SeasonID,
-		AmountCents: req.AmountCents,
-		Method:      req.Method,
-		Notes:       optionalText(req.Notes),
+		OrganizationID: s.org(r.Context()),
+		SellerID:       req.SellerID,
+		SeasonID:       req.SeasonID,
+		AmountCents:    req.AmountCents,
+		Method:         req.Method,
+		Notes:          optionalText(req.Notes),
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -231,7 +240,7 @@ func (s *Server) handleAttendanceReport(w http.ResponseWriter, r *http.Request) 
 	}
 	functionID := *functionIDPtr
 
-	function, err := s.queries.GetFunction(r.Context(), functionID)
+	function, err := s.queries.GetFunction(r.Context(), sqlcgen.GetFunctionParams{ID: functionID, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			mapDomainError(w, domain.ErrFunctionNotFound)
@@ -241,7 +250,7 @@ func (s *Server) handleAttendanceReport(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	rows, err := s.queries.AttendanceBySale(r.Context(), functionID)
+	rows, err := s.queries.AttendanceBySale(r.Context(), sqlcgen.AttendanceBySaleParams{FunctionID: functionID, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -317,8 +326,9 @@ func (s *Server) handleAttendanceReport(w http.ResponseWriter, r *http.Request) 
 // Panel de Direccion v2 (C9)
 // ============================================================================
 
-// requireSeasonID lee season_id obligatorio. ok=false: ya se respondio.
-func requireSeasonID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+// requireSeasonID lee season_id obligatorio y verifica que la temporada sea
+// de esta organizacion (una ajena: 404). ok=false: ya se respondio.
+func (s *Server) requireSeasonID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	seasonID, ok := parseOptionalID(w, r, "season_id")
 	if !ok {
 		return 0, false
@@ -327,16 +337,16 @@ func requireSeasonID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "Falta season_id.")
 		return 0, false
 	}
-	return *seasonID, true
+	return *seasonID, s.temporadaExiste(w, r, *seasonID)
 }
 
 // handleFunctionsSummary: la temporada funcion por funcion (C9).
 func (s *Server) handleFunctionsSummary(w http.ResponseWriter, r *http.Request) {
-	seasonID, ok := requireSeasonID(w, r)
+	seasonID, ok := s.requireSeasonID(w, r)
 	if !ok {
 		return
 	}
-	rows, err := s.queries.FunctionsSummary(r.Context(), seasonID)
+	rows, err := s.queries.FunctionsSummary(r.Context(), sqlcgen.FunctionsSummaryParams{SeasonID: seasonID, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -366,7 +376,7 @@ const (
 // handleSalesTimeline: entradas vendidas por dia, con los dias vacios en cero
 // para que el grafico de barras no mienta sobre el ritmo.
 func (s *Server) handleSalesTimeline(w http.ResponseWriter, r *http.Request) {
-	seasonID, ok := requireSeasonID(w, r)
+	seasonID, ok := s.requireSeasonID(w, r)
 	if !ok {
 		return
 	}
@@ -394,9 +404,10 @@ func (s *Server) handleSalesTimeline(w http.ResponseWriter, r *http.Request) {
 	since := today.AddDate(0, 0, -(days - 1))
 
 	rows, err := s.queries.SalesTimeline(r.Context(), sqlcgen.SalesTimelineParams{
-		SeasonID: seasonID,
-		Since:    since,
-		Tz:       s.cfg.TZ,
+		OrganizationID: s.org(r.Context()),
+		SeasonID:       seasonID,
+		Since:          since,
+		Tz:             s.cfg.TZ,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -466,7 +477,7 @@ type attentionResponse struct {
 // en orden de urgencia: primero la plata, despues los cupos sin repartir de
 // la funcion mas proxima, por ultimo las invitaciones sin usar.
 func (s *Server) handleAttention(w http.ResponseWriter, r *http.Request) {
-	seasonID, ok := requireSeasonID(w, r)
+	seasonID, ok := s.requireSeasonID(w, r)
 	if !ok {
 		return
 	}
@@ -483,15 +494,15 @@ func (s *Server) handleAttention(w http.ResponseWriter, r *http.Request) {
 // que ser exactamente las mismas: dos armados distintos es la forma segura de
 // que la home y Direccion terminen contando cosas diferentes.
 func (s *Server) attentionAlerts(ctx context.Context, seasonID int64) ([]attentionAlert, error) {
-	debts, err := s.queries.AttentionSettlements(ctx, seasonID)
+	debts, err := s.queries.AttentionSettlements(ctx, sqlcgen.AttentionSettlementsParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		return nil, err
 	}
-	unassigned, err := s.queries.AttentionUnassigned(ctx, seasonID)
+	unassigned, err := s.queries.AttentionUnassigned(ctx, sqlcgen.AttentionUnassignedParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		return nil, err
 	}
-	invites, err := s.queries.AttentionPendingInvites(ctx, seasonID)
+	invites, err := s.queries.AttentionPendingInvites(ctx, sqlcgen.AttentionPendingInvitesParams{SeasonID: seasonID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		return nil, err
 	}

@@ -134,7 +134,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 			httpx.Error(w, http.StatusBadRequest, httpx.CodeBadRequest, "season_id tiene que ser un numero.")
 			return
 		}
-		elegida, err := s.queries.GetSeason(ctx, id)
+		elegida, err := s.queries.GetSeason(ctx, sqlcgen.GetSeasonParams{ID: id, OrganizationID: s.org(ctx)})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				mapDomainError(w, domain.ErrSeasonNotFound)
@@ -158,7 +158,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 	resp.Season = season
 
-	summary, err := s.queries.FunctionsSummary(ctx, season.ID)
+	summary, err := s.queries.FunctionsSummary(ctx, sqlcgen.FunctionsSummaryParams{SeasonID: season.ID, OrganizationID: s.org(ctx)})
 	if err != nil {
 		httpx.Internal(w, r, err)
 		return
@@ -167,7 +167,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	esCorista := user.Role == domain.RoleSeller
 	var misCupos map[int64]sqlcgen.MyAllocationsRow
 	if esCorista {
-		filas, err := s.queries.MyAllocations(ctx, user.ID)
+		filas, err := s.queries.MyAllocations(ctx, sqlcgen.MyAllocationsParams{UserID: user.ID, OrganizationID: s.org(ctx)})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
@@ -209,8 +209,9 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		next := resp.Functions[idx]
 		if esCorista {
 			cobrado, err := s.queries.MyCollectedInFunction(ctx, sqlcgen.MyCollectedInFunctionParams{
-				SellerID:   user.ID,
-				FunctionID: next.ID,
+				OrganizationID: s.org(ctx),
+				SellerID:       user.ID,
+				FunctionID:     next.ID,
 			})
 			if err != nil {
 				httpx.Internal(w, r, err)
@@ -234,14 +235,14 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		}
 		resp.Alerts = alerts
 
-		pendientes, err := s.queries.CountPendingSales(ctx, nil)
+		pendientes, err := s.queries.CountPendingSales(ctx, sqlcgen.CountPendingSalesParams{SellerID: nil, OrganizationID: s.org(ctx)})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
 		resp.Badges.SalesPending = pendientes
 
-		settlements, err := s.queries.AttentionSettlements(ctx, season.ID)
+		settlements, err := s.queries.AttentionSettlements(ctx, sqlcgen.AttentionSettlementsParams{SeasonID: season.ID, OrganizationID: s.org(ctx)})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
@@ -251,8 +252,9 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 
 	if esCorista {
 		todo, err := s.queries.MyPendingSales(ctx, sqlcgen.MyPendingSalesParams{
-			SellerID: user.ID,
-			Max:      homeToDoMax,
+			OrganizationID: s.org(ctx),
+			SellerID:       user.ID,
+			Max:            homeToDoMax,
 		})
 		if err != nil {
 			httpx.Internal(w, r, err)
@@ -274,7 +276,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 
-		pendientes, err := s.queries.CountPendingSales(ctx, &user.ID)
+		pendientes, err := s.queries.CountPendingSales(ctx, sqlcgen.CountPendingSalesParams{SellerID: &user.ID, OrganizationID: s.org(ctx)})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
@@ -284,14 +286,15 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		// Lo que tiene que rendir sale de la MISMA consulta que Rendiciones:
 		// dos calculos distintos del mismo numero terminan discrepando, y esa
 		// discusion la pierde siempre la corista.
-		filas, err := s.queries.SettlementsReport(ctx, season.ID)
+		filas, err := s.queries.SettlementsReport(ctx, sqlcgen.SettlementsReportParams{SeasonID: season.ID, OrganizationID: s.org(ctx)})
 		if err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
 		stats, err := s.queries.SellerSeasonStats(ctx, sqlcgen.SellerSeasonStatsParams{
-			SellerID: user.ID,
-			SeasonID: season.ID,
+			OrganizationID: s.org(ctx),
+			SellerID:       user.ID,
+			SeasonID:       season.ID,
 		})
 		if err != nil {
 			httpx.Internal(w, r, err)
@@ -317,8 +320,9 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		sellerID = &user.ID
 	}
 	ventas, err := s.queries.RecentSales(ctx, sqlcgen.RecentSalesParams{
-		SellerID: sellerID,
-		Max:      homeSales,
+		OrganizationID: s.org(ctx),
+		SellerID:       sellerID,
+		Max:            homeSales,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -348,7 +352,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 // activeSeason devuelve la temporada en curso, o nil si todavia no hay
 // ninguna. ListSeasons ya las trae con la activa primera.
 func (s *Server) activeSeason(ctx context.Context) (*sqlcgen.Season, error) {
-	seasons, err := s.queries.ListSeasons(ctx)
+	seasons, err := s.queries.ListSeasons(ctx, s.org(ctx))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

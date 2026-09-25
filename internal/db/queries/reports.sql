@@ -1,23 +1,31 @@
+-- Reportes y home. Todo cuelga de seasons o users (C17 §A.1): cada consulta
+-- lleva organization_id y lo cruza con la temporada o la persona que recibe.
+-- Una temporada ajena no devuelve filas: los agregados vuelven en cero, y los
+-- handlers que ademas resuelven la temporada con GetSeason responden 404.
+
 -- name: SettlementsReport :many
 -- Por vendedora de una temporada: cobrado (plata que la corista tiene en la
 -- mano, cobros parciales incluidos; sin cortesias ni anuladas), pendiente de
 -- cobro, y rendido. El saldo a rendir es collected - settled (spec §4). Lista
 -- a toda vendedora, mas cualquier otro usuario con movimientos (p. ej. el
 -- admin si vendio).
-WITH collected AS (
+WITH temporada AS (
+  SELECT id FROM seasons
+  WHERE id = sqlc.arg(season_id)::bigint AND organization_id = sqlc.arg(organization_id)::bigint
+), collected AS (
   SELECT s.seller_id,
          COALESCE(SUM(s.paid_cents), 0)::bigint AS paid_cents,
          COALESCE(SUM(s.amount_cents - s.paid_cents), 0)::bigint AS pending_cents
   FROM sales s
   JOIN functions f ON s.function_id = f.id
-  WHERE f.season_id = sqlc.arg(season_id)::bigint
+  WHERE f.season_id = (SELECT id FROM temporada)
     AND NOT s.is_comp
     AND s.voided_at IS NULL
   GROUP BY s.seller_id
 ), settled AS (
   SELECT seller_id, COALESCE(SUM(amount_cents), 0)::bigint AS cents
   FROM settlements
-  WHERE season_id = sqlc.arg(season_id)::bigint
+  WHERE season_id = (SELECT id FROM temporada)
   GROUP BY seller_id
 )
 SELECT
@@ -29,28 +37,36 @@ SELECT
 FROM users u
 LEFT JOIN collected c ON c.seller_id = u.id
 LEFT JOIN settled st ON st.seller_id = u.id
-LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = sqlc.arg(season_id)::bigint
+LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = (SELECT id FROM temporada)
 -- Las coristas de la temporada, mas cualquiera que haya movido plata en ella
 -- aunque ya no este: su deuda no desaparece porque dejo el coro.
-WHERE m.role = 'seller' OR c.seller_id IS NOT NULL OR st.seller_id IS NOT NULL
+WHERE u.organization_id = sqlc.arg(organization_id)::bigint
+  AND (m.role = 'seller' OR c.seller_id IS NOT NULL OR st.seller_id IS NOT NULL)
 ORDER BY u.name;
 
 -- name: CreateSettlement :one
+-- Solo si la temporada y la corista son de la organizacion (ErrNoRows si no).
 INSERT INTO settlements (seller_id, season_id, amount_cents, method, notes)
-VALUES (
-  sqlc.arg(seller_id)::bigint,
-  sqlc.arg(season_id)::bigint,
+SELECT
+  u.id,
+  se.id,
   sqlc.arg(amount_cents)::bigint,
   sqlc.arg(method)::text,
   sqlc.narg(notes)
-)
+FROM seasons se, users u
+WHERE se.id = sqlc.arg(season_id)::bigint
+  AND u.id = sqlc.arg(seller_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
+  AND u.organization_id = sqlc.arg(organization_id)::bigint
 RETURNING *;
 
 -- name: ListSettlements :many
 SELECT st.*, u.name AS seller_name
 FROM settlements st
 JOIN users u ON st.seller_id = u.id
+JOIN seasons se ON se.id = st.season_id
 WHERE st.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND (sqlc.narg(seller_id)::bigint IS NULL OR st.seller_id = sqlc.narg(seller_id)::bigint)
 ORDER BY st.created_at DESC;
 
@@ -67,11 +83,14 @@ SELECT
   c.method AS checkin_method,
   checker.name AS checkin_by
 FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
 JOIN users seller ON s.seller_id = seller.id
 JOIN tickets t ON t.sale_id = s.id
 LEFT JOIN checkins c ON c.ticket_id = t.id
 LEFT JOIN users checker ON c.user_id = checker.id
 WHERE s.function_id = sqlc.arg(function_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND s.voided_at IS NULL
   AND t.status <> 'void'
 ORDER BY s.id, t.id;
@@ -101,7 +120,9 @@ SELECT
    JOIN sales s ON t.sale_id = s.id
    WHERE s.function_id = f.id)::bigint AS entered
 FROM functions f
+JOIN seasons se ON se.id = f.season_id
 WHERE f.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
 ORDER BY f.starts_at;
 
 -- name: SalesTimeline :many
@@ -114,7 +135,9 @@ SELECT
 FROM tickets t
 JOIN sales s ON t.sale_id = s.id
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 WHERE f.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND t.status <> 'void'
   AND s.voided_at IS NULL
   AND s.created_at >= sqlc.arg(since)::timestamptz
@@ -125,7 +148,10 @@ ORDER BY 1;
 -- Coristas con saldo a rendir (C9). `last_paid_at` es la fecha del cobro mas
 -- reciente, que desde que existen los cobros parciales se guarda de verdad.
 -- Centinela año 1 = todavia no cobro nada.
-WITH collected AS (
+WITH temporada AS (
+  SELECT id FROM seasons
+  WHERE id = sqlc.arg(season_id)::bigint AND organization_id = sqlc.arg(organization_id)::bigint
+), collected AS (
   SELECT s.seller_id,
          COALESCE(SUM(s.paid_cents), 0)::bigint AS paid_cents,
          COALESCE(
@@ -133,14 +159,14 @@ WITH collected AS (
            '0001-01-01'::timestamptz) AS last_paid_at
   FROM sales s
   JOIN functions f ON s.function_id = f.id
-  WHERE f.season_id = sqlc.arg(season_id)::bigint
+  WHERE f.season_id = (SELECT id FROM temporada)
     AND NOT s.is_comp
     AND s.voided_at IS NULL
   GROUP BY s.seller_id
 ), settled AS (
   SELECT seller_id, COALESCE(SUM(amount_cents), 0)::bigint AS cents
   FROM settlements
-  WHERE season_id = sqlc.arg(season_id)::bigint
+  WHERE season_id = (SELECT id FROM temporada)
   GROUP BY seller_id
 )
 SELECT
@@ -168,10 +194,12 @@ SELECT
   f.capacity,
   COALESCE(SUM(a.quantity) FILTER (WHERE m.id IS NOT NULL), 0)::bigint AS assigned
 FROM functions f
+JOIN seasons se ON se.id = f.season_id
 LEFT JOIN allocations a ON a.function_id = f.id
 LEFT JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
   AND m.role = 'seller' AND m.left_at IS NULL
 WHERE f.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND f.starts_at > now()
 GROUP BY f.id
 HAVING f.capacity > COALESCE(SUM(a.quantity) FILTER (WHERE m.id IS NOT NULL), 0)
@@ -182,7 +210,9 @@ ORDER BY f.starts_at;
 SELECT u.id AS user_id, u.name, m.role, u.created_at
 FROM users u
 JOIN season_members m ON m.user_id = u.id AND m.season_id = sqlc.arg(season_id)::bigint
+JOIN seasons se ON se.id = m.season_id
 WHERE m.left_at IS NULL AND u.last_login_at IS NULL
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
 ORDER BY u.created_at;
 
 -- ============================================================================
@@ -198,8 +228,10 @@ SELECT
   u.name AS seller_name
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
 WHERE s.voided_at IS NULL
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint)
 ORDER BY s.created_at DESC
 LIMIT sqlc.arg(max)::integer;
@@ -215,7 +247,9 @@ SELECT
   (s.buyer_email IS NOT NULL)::boolean AS has_email
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 WHERE s.seller_id = sqlc.arg(seller_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND s.voided_at IS NULL
   AND NOT s.is_comp
   AND (
@@ -229,8 +263,11 @@ LIMIT sqlc.arg(max)::integer;
 -- Lo que la corista ya tiene cobrado de esa funcion.
 SELECT COALESCE(SUM(s.paid_cents), 0)::bigint
 FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
 WHERE s.seller_id = sqlc.arg(seller_id)::bigint
   AND s.function_id = sqlc.arg(function_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND NOT s.is_comp
   AND s.voided_at IS NULL;
 
@@ -238,7 +275,10 @@ WHERE s.seller_id = sqlc.arg(seller_id)::bigint
 -- Badge de "Vender": ventas con saldo. Global para direccion, propias para la
 -- corista.
 SELECT count(*) FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
 WHERE s.voided_at IS NULL
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND NOT s.is_comp
   AND s.amount_cents > s.paid_cents
   AND (sqlc.narg(seller_id)::bigint IS NULL OR s.seller_id = sqlc.narg(seller_id)::bigint);
@@ -258,14 +298,18 @@ SELECT
   COUNT(*) FILTER (WHERE s.amount_cents > s.paid_cents)::bigint AS sales_uncollected
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 WHERE f.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND NOT s.is_comp
   AND s.voided_at IS NULL;
 
 -- name: SeasonSettled :one
-SELECT COALESCE(SUM(amount_cents), 0)::bigint
-FROM settlements
-WHERE season_id = sqlc.arg(season_id)::bigint;
+SELECT COALESCE(SUM(st.amount_cents), 0)::bigint
+FROM settlements st
+JOIN seasons se ON se.id = st.season_id
+WHERE st.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint;
 
 -- ============================================================================
 -- Detalle de rendicion de una corista
@@ -282,8 +326,10 @@ SELECT
   (SELECT MAX(p.created_at) FROM sale_payments p WHERE p.sale_id = s.id)::timestamptz AS paid_at
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 WHERE s.seller_id = sqlc.arg(seller_id)::bigint
   AND f.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND s.voided_at IS NULL
   AND NOT s.is_comp
   AND s.paid_cents > 0
@@ -302,28 +348,39 @@ SELECT
            '0001-01-01'::timestamptz)::timestamptz AS last_paid_at
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 WHERE s.seller_id = sqlc.arg(seller_id)::bigint
   AND f.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND s.voided_at IS NULL
   AND NOT s.is_comp;
 
 -- name: CreateReminder :one
+-- Solo si la temporada es de la organizacion (ErrNoRows si no).
 INSERT INTO settlement_reminders (seller_id, season_id, sent_by, amount_cents, status)
-VALUES (sqlc.arg(seller_id)::bigint, sqlc.arg(season_id)::bigint,
-        sqlc.arg(sent_by)::bigint, sqlc.arg(amount_cents)::bigint, sqlc.arg(status)::text)
+SELECT sqlc.arg(seller_id)::bigint, se.id,
+       sqlc.arg(sent_by)::bigint, sqlc.arg(amount_cents)::bigint, sqlc.arg(status)::text
+FROM seasons se
+WHERE se.id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
 RETURNING *;
 
 -- name: ListReminders :many
-SELECT * FROM settlement_reminders
-WHERE seller_id = sqlc.arg(seller_id)::bigint AND season_id = sqlc.arg(season_id)::bigint
-ORDER BY created_at DESC;
+SELECT r.* FROM settlement_reminders r
+JOIN seasons se ON se.id = r.season_id
+WHERE r.seller_id = sqlc.arg(seller_id)::bigint
+  AND r.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
+ORDER BY r.created_at DESC;
 
 -- name: LastReminders :many
 -- El ultimo recordatorio de cada corista de la temporada, para el ranking.
-SELECT DISTINCT ON (seller_id) seller_id, created_at, status
-FROM settlement_reminders
-WHERE season_id = sqlc.arg(season_id)::bigint
-ORDER BY seller_id, created_at DESC;
+SELECT DISTINCT ON (r.seller_id) r.seller_id, r.created_at, r.status
+FROM settlement_reminders r
+JOIN seasons se ON se.id = r.season_id
+WHERE r.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
+ORDER BY r.seller_id, r.created_at DESC;
 
 -- name: SeasonsOverview :many
 -- El indice de temporadas: cada una con su resultado. Es admin-only porque
@@ -362,4 +419,5 @@ SELECT
             WHERE f.season_id = s.id AND f.starts_at > now() - interval '3 hours'),
            '0001-01-01'::timestamptz)::timestamptz AS next_at
 FROM seasons s
+WHERE s.organization_id = sqlc.arg(organization_id)::bigint
 ORDER BY s.created_at DESC, s.id DESC;

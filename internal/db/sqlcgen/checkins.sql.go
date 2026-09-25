@@ -15,11 +15,19 @@ SELECT count(*)
 FROM checkins c
 JOIN tickets t ON c.ticket_id = t.id
 JOIN sales s ON t.sale_id = s.id
-WHERE s.function_id = $1
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE s.function_id = $1::bigint
+  AND se.organization_id = $2::bigint
 `
 
-func (q *Queries) CountCheckinsForFunction(ctx context.Context, functionID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countCheckinsForFunction, functionID)
+type CountCheckinsForFunctionParams struct {
+	FunctionID     int64 `json:"function_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) CountCheckinsForFunction(ctx context.Context, arg CountCheckinsForFunctionParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCheckinsForFunction, arg.FunctionID, arg.OrganizationID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -35,9 +43,17 @@ FROM checkins c
 JOIN tickets t ON c.ticket_id = t.id
 JOIN sales s ON t.sale_id = s.id
 JOIN users u ON c.user_id = u.id
-WHERE s.function_id = $1
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE s.function_id = $1::bigint
+  AND se.organization_id = $2::bigint
 ORDER BY c.created_at
 `
+
+type DoorSnapshotCheckinsParams struct {
+	FunctionID     int64 `json:"function_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type DoorSnapshotCheckinsRow struct {
 	TicketCode string    `json:"ticket_code"`
@@ -46,8 +62,8 @@ type DoorSnapshotCheckinsRow struct {
 	ByName     string    `json:"by_name"`
 }
 
-func (q *Queries) DoorSnapshotCheckins(ctx context.Context, functionID int64) ([]DoorSnapshotCheckinsRow, error) {
-	rows, err := q.db.Query(ctx, doorSnapshotCheckins, functionID)
+func (q *Queries) DoorSnapshotCheckins(ctx context.Context, arg DoorSnapshotCheckinsParams) ([]DoorSnapshotCheckinsRow, error) {
+	rows, err := q.db.Query(ctx, doorSnapshotCheckins, arg.FunctionID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,9 +100,17 @@ SELECT
 FROM tickets t
 JOIN sales s ON t.sale_id = s.id
 JOIN users u ON s.seller_id = u.id
-WHERE s.function_id = $1
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE s.function_id = $1::bigint
+  AND se.organization_id = $2::bigint
 ORDER BY s.buyer_name, t.id
 `
+
+type DoorSnapshotTicketsParams struct {
+	FunctionID     int64 `json:"function_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type DoorSnapshotTicketsRow struct {
 	Code       string `json:"code"`
@@ -99,8 +123,8 @@ type DoorSnapshotTicketsRow struct {
 
 // Todo lo que la puerta necesita de cada ticket. Sin montos ni contacto:
 // el rol door no ve plata (spec §3).
-func (q *Queries) DoorSnapshotTickets(ctx context.Context, functionID int64) ([]DoorSnapshotTicketsRow, error) {
-	rows, err := q.db.Query(ctx, doorSnapshotTickets, functionID)
+func (q *Queries) DoorSnapshotTickets(ctx context.Context, arg DoorSnapshotTicketsParams) ([]DoorSnapshotTicketsRow, error) {
+	rows, err := q.db.Query(ctx, doorSnapshotTickets, arg.FunctionID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +154,18 @@ const getCheckinByTicket = `-- name: GetCheckinByTicket :one
 SELECT c.id, c.ticket_id, c.user_id, c.method, c.device_id, c.created_at, u.name AS by_name
 FROM checkins c
 JOIN users u ON c.user_id = u.id
-WHERE c.ticket_id = $1
+JOIN tickets t ON t.id = c.ticket_id
+JOIN sales s ON s.id = t.sale_id
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE c.ticket_id = $1::bigint
+  AND se.organization_id = $2::bigint
 `
+
+type GetCheckinByTicketParams struct {
+	TicketID       int64 `json:"ticket_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type GetCheckinByTicketRow struct {
 	ID        int64     `json:"id"`
@@ -143,8 +177,8 @@ type GetCheckinByTicketRow struct {
 	ByName    string    `json:"by_name"`
 }
 
-func (q *Queries) GetCheckinByTicket(ctx context.Context, ticketID int64) (GetCheckinByTicketRow, error) {
-	row := q.db.QueryRow(ctx, getCheckinByTicket, ticketID)
+func (q *Queries) GetCheckinByTicket(ctx context.Context, arg GetCheckinByTicketParams) (GetCheckinByTicketRow, error) {
+	row := q.db.QueryRow(ctx, getCheckinByTicket, arg.TicketID, arg.OrganizationID)
 	var i GetCheckinByTicketRow
 	err := row.Scan(
 		&i.ID,
@@ -159,35 +193,48 @@ func (q *Queries) GetCheckinByTicket(ctx context.Context, ticketID int64) (GetCh
 }
 
 const insertCheckin = `-- name: InsertCheckin :one
+
 INSERT INTO checkins (ticket_id, user_id, method, device_id, created_at)
-VALUES (
+SELECT t.id,
   $1::bigint,
-  $2::bigint,
-  $3::text,
-  $4,
-  $5::timestamptz
-)
+  $2::text,
+  $3,
+  $4::timestamptz
+FROM tickets t
+JOIN sales s ON s.id = t.sale_id
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE t.id = $5::bigint
+  AND se.organization_id = $6::bigint
 ON CONFLICT (ticket_id) DO NOTHING
 RETURNING id, ticket_id, user_id, method, device_id, created_at
 `
 
 type InsertCheckinParams struct {
-	TicketID  int64     `json:"ticket_id"`
-	UserID    int64     `json:"user_id"`
-	Method    string    `json:"method"`
-	DeviceID  *string   `json:"device_id"`
-	CreatedAt time.Time `json:"created_at"`
+	UserID         int64     `json:"user_id"`
+	Method         string    `json:"method"`
+	DeviceID       *string   `json:"device_id"`
+	CreatedAt      time.Time `json:"created_at"`
+	TicketID       int64     `json:"ticket_id"`
+	OrganizationID int64     `json:"organization_id"`
 }
 
+// checkins cuelga de tickets → sales → functions → seasons (C17 §A.1). Las
+// consultas por funcion exigen que la funcion sea de la organizacion; las
+// que van por ticket confian en que el handler ya resolvio el ticket con
+// GetTicketByCode (que si esta acotado).
 // ON CONFLICT DO NOTHING + UNIQUE(ticket_id): si el ticket ya entro, no
 // devuelve fila (pgx.ErrNoRows) y el handler responde already_checked_in.
+// Solo inserta si el ticket es de la organizacion: un id ajeno tampoco
+// devuelve fila.
 func (q *Queries) InsertCheckin(ctx context.Context, arg InsertCheckinParams) (Checkin, error) {
 	row := q.db.QueryRow(ctx, insertCheckin,
-		arg.TicketID,
 		arg.UserID,
 		arg.Method,
 		arg.DeviceID,
 		arg.CreatedAt,
+		arg.TicketID,
+		arg.OrganizationID,
 	)
 	var i Checkin
 	err := row.Scan(
@@ -202,10 +249,21 @@ func (q *Queries) InsertCheckin(ctx context.Context, arg InsertCheckinParams) (C
 }
 
 const markTicketCheckedIn = `-- name: MarkTicketCheckedIn :exec
-UPDATE tickets SET status = 'checked_in' WHERE id = $1 AND status = 'issued'
+UPDATE tickets t SET status = 'checked_in'
+FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE s.id = t.sale_id
+  AND t.id = $1::bigint AND t.status = 'issued'
+  AND se.organization_id = $2::bigint
 `
 
-func (q *Queries) MarkTicketCheckedIn(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, markTicketCheckedIn, id)
+type MarkTicketCheckedInParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) MarkTicketCheckedIn(ctx context.Context, arg MarkTicketCheckedInParams) error {
+	_, err := q.db.Exec(ctx, markTicketCheckedIn, arg.ID, arg.OrganizationID)
 	return err
 }

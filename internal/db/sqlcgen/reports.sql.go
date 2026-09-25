@@ -21,15 +21,23 @@ SELECT
   c.method AS checkin_method,
   checker.name AS checkin_by
 FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
 JOIN users seller ON s.seller_id = seller.id
 JOIN tickets t ON t.sale_id = s.id
 LEFT JOIN checkins c ON c.ticket_id = t.id
 LEFT JOIN users checker ON c.user_id = checker.id
 WHERE s.function_id = $1::bigint
+  AND se.organization_id = $2::bigint
   AND s.voided_at IS NULL
   AND t.status <> 'void'
 ORDER BY s.id, t.id
 `
+
+type AttendanceBySaleParams struct {
+	FunctionID     int64 `json:"function_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type AttendanceBySaleRow struct {
 	SaleID        int64      `json:"sale_id"`
@@ -44,8 +52,8 @@ type AttendanceBySaleRow struct {
 
 // Asistencia por comprador (C6): una fila por entrada viva de la funcion con
 // su check-in (o NULL si todavia no entro). El handler agrupa por venta.
-func (q *Queries) AttendanceBySale(ctx context.Context, functionID int64) ([]AttendanceBySaleRow, error) {
-	rows, err := q.db.Query(ctx, attendanceBySale, functionID)
+func (q *Queries) AttendanceBySale(ctx context.Context, arg AttendanceBySaleParams) ([]AttendanceBySaleRow, error) {
+	rows, err := q.db.Query(ctx, attendanceBySale, arg.FunctionID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -77,9 +85,16 @@ const attentionPendingInvites = `-- name: AttentionPendingInvites :many
 SELECT u.id AS user_id, u.name, m.role, u.created_at
 FROM users u
 JOIN season_members m ON m.user_id = u.id AND m.season_id = $1::bigint
+JOIN seasons se ON se.id = m.season_id
 WHERE m.left_at IS NULL AND u.last_login_at IS NULL
+  AND se.organization_id = $2::bigint
 ORDER BY u.created_at
 `
+
+type AttentionPendingInvitesParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type AttentionPendingInvitesRow struct {
 	UserID    int64     `json:"user_id"`
@@ -89,8 +104,8 @@ type AttentionPendingInvitesRow struct {
 }
 
 // Gente de la temporada que nunca entro a la app (C7 + C9).
-func (q *Queries) AttentionPendingInvites(ctx context.Context, seasonID int64) ([]AttentionPendingInvitesRow, error) {
-	rows, err := q.db.Query(ctx, attentionPendingInvites, seasonID)
+func (q *Queries) AttentionPendingInvites(ctx context.Context, arg AttentionPendingInvitesParams) ([]AttentionPendingInvitesRow, error) {
+	rows, err := q.db.Query(ctx, attentionPendingInvites, arg.SeasonID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +130,10 @@ func (q *Queries) AttentionPendingInvites(ctx context.Context, seasonID int64) (
 }
 
 const attentionSettlements = `-- name: AttentionSettlements :many
-WITH collected AS (
+WITH temporada AS (
+  SELECT id FROM seasons
+  WHERE id = $1::bigint AND organization_id = $2::bigint
+), collected AS (
   SELECT s.seller_id,
          COALESCE(SUM(s.paid_cents), 0)::bigint AS paid_cents,
          COALESCE(
@@ -123,14 +141,14 @@ WITH collected AS (
            '0001-01-01'::timestamptz) AS last_paid_at
   FROM sales s
   JOIN functions f ON s.function_id = f.id
-  WHERE f.season_id = $1::bigint
+  WHERE f.season_id = (SELECT id FROM temporada)
     AND NOT s.is_comp
     AND s.voided_at IS NULL
   GROUP BY s.seller_id
 ), settled AS (
   SELECT seller_id, COALESCE(SUM(amount_cents), 0)::bigint AS cents
   FROM settlements
-  WHERE season_id = $1::bigint
+  WHERE season_id = (SELECT id FROM temporada)
   GROUP BY seller_id
 )
 SELECT
@@ -149,6 +167,11 @@ WHERE c.paid_cents - COALESCE(st.cents, 0) > 0
 ORDER BY (c.paid_cents - COALESCE(st.cents, 0)) DESC
 `
 
+type AttentionSettlementsParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
 type AttentionSettlementsRow struct {
 	SellerID       int64     `json:"seller_id"`
 	SellerName     string    `json:"seller_name"`
@@ -161,8 +184,8 @@ type AttentionSettlementsRow struct {
 // Coristas con saldo a rendir (C9). `last_paid_at` es la fecha del cobro mas
 // reciente, que desde que existen los cobros parciales se guarda de verdad.
 // Centinela año 1 = todavia no cobro nada.
-func (q *Queries) AttentionSettlements(ctx context.Context, seasonID int64) ([]AttentionSettlementsRow, error) {
-	rows, err := q.db.Query(ctx, attentionSettlements, seasonID)
+func (q *Queries) AttentionSettlements(ctx context.Context, arg AttentionSettlementsParams) ([]AttentionSettlementsRow, error) {
+	rows, err := q.db.Query(ctx, attentionSettlements, arg.SeasonID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -197,15 +220,22 @@ SELECT
   f.capacity,
   COALESCE(SUM(a.quantity) FILTER (WHERE m.id IS NOT NULL), 0)::bigint AS assigned
 FROM functions f
+JOIN seasons se ON se.id = f.season_id
 LEFT JOIN allocations a ON a.function_id = f.id
 LEFT JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
   AND m.role = 'seller' AND m.left_at IS NULL
 WHERE f.season_id = $1::bigint
+  AND se.organization_id = $2::bigint
   AND f.starts_at > now()
 GROUP BY f.id
 HAVING f.capacity > COALESCE(SUM(a.quantity) FILTER (WHERE m.id IS NOT NULL), 0)
 ORDER BY f.starts_at
 `
+
+type AttentionUnassignedParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type AttentionUnassignedRow struct {
 	FunctionID int64     `json:"function_id"`
@@ -217,8 +247,8 @@ type AttentionUnassignedRow struct {
 }
 
 // Funciones que todavia no pasaron con entradas sin repartir entre coristas.
-func (q *Queries) AttentionUnassigned(ctx context.Context, seasonID int64) ([]AttentionUnassignedRow, error) {
-	rows, err := q.db.Query(ctx, attentionUnassigned, seasonID)
+func (q *Queries) AttentionUnassigned(ctx context.Context, arg AttentionUnassignedParams) ([]AttentionUnassignedRow, error) {
+	rows, err := q.db.Query(ctx, attentionUnassigned, arg.SeasonID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -246,16 +276,24 @@ func (q *Queries) AttentionUnassigned(ctx context.Context, seasonID int64) ([]At
 
 const countPendingSales = `-- name: CountPendingSales :one
 SELECT count(*) FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
 WHERE s.voided_at IS NULL
+  AND se.organization_id = $1::bigint
   AND NOT s.is_comp
   AND s.amount_cents > s.paid_cents
-  AND ($1::bigint IS NULL OR s.seller_id = $1::bigint)
+  AND ($2::bigint IS NULL OR s.seller_id = $2::bigint)
 `
+
+type CountPendingSalesParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	SellerID       *int64 `json:"seller_id"`
+}
 
 // Badge de "Vender": ventas con saldo. Global para direccion, propias para la
 // corista.
-func (q *Queries) CountPendingSales(ctx context.Context, sellerID *int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countPendingSales, sellerID)
+func (q *Queries) CountPendingSales(ctx context.Context, arg CountPendingSalesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPendingSales, arg.OrganizationID, arg.SellerID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -263,26 +301,32 @@ func (q *Queries) CountPendingSales(ctx context.Context, sellerID *int64) (int64
 
 const createReminder = `-- name: CreateReminder :one
 INSERT INTO settlement_reminders (seller_id, season_id, sent_by, amount_cents, status)
-VALUES ($1::bigint, $2::bigint,
-        $3::bigint, $4::bigint, $5::text)
+SELECT $1::bigint, se.id,
+       $2::bigint, $3::bigint, $4::text
+FROM seasons se
+WHERE se.id = $5::bigint
+  AND se.organization_id = $6::bigint
 RETURNING id, seller_id, season_id, sent_by, amount_cents, status, created_at
 `
 
 type CreateReminderParams struct {
-	SellerID    int64  `json:"seller_id"`
-	SeasonID    int64  `json:"season_id"`
-	SentBy      int64  `json:"sent_by"`
-	AmountCents int64  `json:"amount_cents"`
-	Status      string `json:"status"`
+	SellerID       int64  `json:"seller_id"`
+	SentBy         int64  `json:"sent_by"`
+	AmountCents    int64  `json:"amount_cents"`
+	Status         string `json:"status"`
+	SeasonID       int64  `json:"season_id"`
+	OrganizationID int64  `json:"organization_id"`
 }
 
+// Solo si la temporada es de la organizacion (ErrNoRows si no).
 func (q *Queries) CreateReminder(ctx context.Context, arg CreateReminderParams) (SettlementReminder, error) {
 	row := q.db.QueryRow(ctx, createReminder,
 		arg.SellerID,
-		arg.SeasonID,
 		arg.SentBy,
 		arg.AmountCents,
 		arg.Status,
+		arg.SeasonID,
+		arg.OrganizationID,
 	)
 	var i SettlementReminder
 	err := row.Scan(
@@ -299,31 +343,38 @@ func (q *Queries) CreateReminder(ctx context.Context, arg CreateReminderParams) 
 
 const createSettlement = `-- name: CreateSettlement :one
 INSERT INTO settlements (seller_id, season_id, amount_cents, method, notes)
-VALUES (
+SELECT
+  u.id,
+  se.id,
   $1::bigint,
-  $2::bigint,
-  $3::bigint,
-  $4::text,
-  $5
-)
+  $2::text,
+  $3
+FROM seasons se, users u
+WHERE se.id = $4::bigint
+  AND u.id = $5::bigint
+  AND se.organization_id = $6::bigint
+  AND u.organization_id = $6::bigint
 RETURNING id, seller_id, season_id, amount_cents, method, notes, created_at
 `
 
 type CreateSettlementParams struct {
-	SellerID    int64   `json:"seller_id"`
-	SeasonID    int64   `json:"season_id"`
-	AmountCents int64   `json:"amount_cents"`
-	Method      string  `json:"method"`
-	Notes       *string `json:"notes"`
+	AmountCents    int64   `json:"amount_cents"`
+	Method         string  `json:"method"`
+	Notes          *string `json:"notes"`
+	SeasonID       int64   `json:"season_id"`
+	SellerID       int64   `json:"seller_id"`
+	OrganizationID int64   `json:"organization_id"`
 }
 
+// Solo si la temporada y la corista son de la organizacion (ErrNoRows si no).
 func (q *Queries) CreateSettlement(ctx context.Context, arg CreateSettlementParams) (Settlement, error) {
 	row := q.db.QueryRow(ctx, createSettlement,
-		arg.SellerID,
-		arg.SeasonID,
 		arg.AmountCents,
 		arg.Method,
 		arg.Notes,
+		arg.SeasonID,
+		arg.SellerID,
+		arg.OrganizationID,
 	)
 	var i Settlement
 	err := row.Scan(
@@ -361,9 +412,16 @@ SELECT
    JOIN sales s ON t.sale_id = s.id
    WHERE s.function_id = f.id)::bigint AS entered
 FROM functions f
+JOIN seasons se ON se.id = f.season_id
 WHERE f.season_id = $1::bigint
+  AND se.organization_id = $2::bigint
 ORDER BY f.starts_at
 `
+
+type FunctionsSummaryParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type FunctionsSummaryRow struct {
 	ID             int64     `json:"id"`
@@ -381,8 +439,8 @@ type FunctionsSummaryRow struct {
 
 // El pulso de la temporada funcion por funcion (C9): vendidas sobre cupo,
 // recaudado, asignado y cuantos ingresaron. Todo derivado, sin contadores.
-func (q *Queries) FunctionsSummary(ctx context.Context, seasonID int64) ([]FunctionsSummaryRow, error) {
-	rows, err := q.db.Query(ctx, functionsSummary, seasonID)
+func (q *Queries) FunctionsSummary(ctx context.Context, arg FunctionsSummaryParams) ([]FunctionsSummaryRow, error) {
+	rows, err := q.db.Query(ctx, functionsSummary, arg.SeasonID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -414,11 +472,18 @@ func (q *Queries) FunctionsSummary(ctx context.Context, seasonID int64) ([]Funct
 }
 
 const lastReminders = `-- name: LastReminders :many
-SELECT DISTINCT ON (seller_id) seller_id, created_at, status
-FROM settlement_reminders
-WHERE season_id = $1::bigint
-ORDER BY seller_id, created_at DESC
+SELECT DISTINCT ON (r.seller_id) r.seller_id, r.created_at, r.status
+FROM settlement_reminders r
+JOIN seasons se ON se.id = r.season_id
+WHERE r.season_id = $1::bigint
+  AND se.organization_id = $2::bigint
+ORDER BY r.seller_id, r.created_at DESC
 `
+
+type LastRemindersParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type LastRemindersRow struct {
 	SellerID  int64     `json:"seller_id"`
@@ -427,8 +492,8 @@ type LastRemindersRow struct {
 }
 
 // El ultimo recordatorio de cada corista de la temporada, para el ranking.
-func (q *Queries) LastReminders(ctx context.Context, seasonID int64) ([]LastRemindersRow, error) {
-	rows, err := q.db.Query(ctx, lastReminders, seasonID)
+func (q *Queries) LastReminders(ctx context.Context, arg LastRemindersParams) ([]LastRemindersRow, error) {
+	rows, err := q.db.Query(ctx, lastReminders, arg.SeasonID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -448,18 +513,22 @@ func (q *Queries) LastReminders(ctx context.Context, seasonID int64) ([]LastRemi
 }
 
 const listReminders = `-- name: ListReminders :many
-SELECT id, seller_id, season_id, sent_by, amount_cents, status, created_at FROM settlement_reminders
-WHERE seller_id = $1::bigint AND season_id = $2::bigint
-ORDER BY created_at DESC
+SELECT r.id, r.seller_id, r.season_id, r.sent_by, r.amount_cents, r.status, r.created_at FROM settlement_reminders r
+JOIN seasons se ON se.id = r.season_id
+WHERE r.seller_id = $1::bigint
+  AND r.season_id = $2::bigint
+  AND se.organization_id = $3::bigint
+ORDER BY r.created_at DESC
 `
 
 type ListRemindersParams struct {
-	SellerID int64 `json:"seller_id"`
-	SeasonID int64 `json:"season_id"`
+	SellerID       int64 `json:"seller_id"`
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
 func (q *Queries) ListReminders(ctx context.Context, arg ListRemindersParams) ([]SettlementReminder, error) {
-	rows, err := q.db.Query(ctx, listReminders, arg.SellerID, arg.SeasonID)
+	rows, err := q.db.Query(ctx, listReminders, arg.SellerID, arg.SeasonID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -490,14 +559,17 @@ const listSettlements = `-- name: ListSettlements :many
 SELECT st.id, st.seller_id, st.season_id, st.amount_cents, st.method, st.notes, st.created_at, u.name AS seller_name
 FROM settlements st
 JOIN users u ON st.seller_id = u.id
+JOIN seasons se ON se.id = st.season_id
 WHERE st.season_id = $1::bigint
-  AND ($2::bigint IS NULL OR st.seller_id = $2::bigint)
+  AND se.organization_id = $2::bigint
+  AND ($3::bigint IS NULL OR st.seller_id = $3::bigint)
 ORDER BY st.created_at DESC
 `
 
 type ListSettlementsParams struct {
-	SeasonID int64  `json:"season_id"`
-	SellerID *int64 `json:"seller_id"`
+	SeasonID       int64  `json:"season_id"`
+	OrganizationID int64  `json:"organization_id"`
+	SellerID       *int64 `json:"seller_id"`
 }
 
 type ListSettlementsRow struct {
@@ -512,7 +584,7 @@ type ListSettlementsRow struct {
 }
 
 func (q *Queries) ListSettlements(ctx context.Context, arg ListSettlementsParams) ([]ListSettlementsRow, error) {
-	rows, err := q.db.Query(ctx, listSettlements, arg.SeasonID, arg.SellerID)
+	rows, err := q.db.Query(ctx, listSettlements, arg.SeasonID, arg.OrganizationID, arg.SellerID)
 	if err != nil {
 		return nil, err
 	}
@@ -543,20 +615,24 @@ func (q *Queries) ListSettlements(ctx context.Context, arg ListSettlementsParams
 const myCollectedInFunction = `-- name: MyCollectedInFunction :one
 SELECT COALESCE(SUM(s.paid_cents), 0)::bigint
 FROM sales s
+JOIN functions f ON f.id = s.function_id
+JOIN seasons se ON se.id = f.season_id
 WHERE s.seller_id = $1::bigint
   AND s.function_id = $2::bigint
+  AND se.organization_id = $3::bigint
   AND NOT s.is_comp
   AND s.voided_at IS NULL
 `
 
 type MyCollectedInFunctionParams struct {
-	SellerID   int64 `json:"seller_id"`
-	FunctionID int64 `json:"function_id"`
+	SellerID       int64 `json:"seller_id"`
+	FunctionID     int64 `json:"function_id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
 // Lo que la corista ya tiene cobrado de esa funcion.
 func (q *Queries) MyCollectedInFunction(ctx context.Context, arg MyCollectedInFunctionParams) (int64, error) {
-	row := q.db.QueryRow(ctx, myCollectedInFunction, arg.SellerID, arg.FunctionID)
+	row := q.db.QueryRow(ctx, myCollectedInFunction, arg.SellerID, arg.FunctionID, arg.OrganizationID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -569,7 +645,9 @@ SELECT
   (s.buyer_email IS NOT NULL)::boolean AS has_email
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 WHERE s.seller_id = $1::bigint
+  AND se.organization_id = $2::bigint
   AND s.voided_at IS NULL
   AND NOT s.is_comp
   AND (
@@ -577,12 +655,13 @@ WHERE s.seller_id = $1::bigint
     OR (s.buyer_email IS NULL AND f.starts_at > now())
   )
 ORDER BY (s.amount_cents > s.paid_cents) DESC, s.created_at
-LIMIT $2::integer
+LIMIT $3::integer
 `
 
 type MyPendingSalesParams struct {
-	SellerID int64 `json:"seller_id"`
-	Max      int32 `json:"max"`
+	SellerID       int64 `json:"seller_id"`
+	OrganizationID int64 `json:"organization_id"`
+	Max            int32 `json:"max"`
 }
 
 type MyPendingSalesRow struct {
@@ -600,7 +679,7 @@ type MyPendingSalesRow struct {
 // paso: una entrada de una funcion que ya fue no hay que compartirla. Primero
 // lo que tiene plata de por medio, y dentro de cada grupo lo mas viejo.
 func (q *Queries) MyPendingSales(ctx context.Context, arg MyPendingSalesParams) ([]MyPendingSalesRow, error) {
-	rows, err := q.db.Query(ctx, myPendingSales, arg.SellerID, arg.Max)
+	rows, err := q.db.Query(ctx, myPendingSales, arg.SellerID, arg.OrganizationID, arg.Max)
 	if err != nil {
 		return nil, err
 	}
@@ -636,16 +715,19 @@ SELECT
   u.name AS seller_name
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 JOIN users u ON s.seller_id = u.id
 WHERE s.voided_at IS NULL
-  AND ($1::bigint IS NULL OR s.seller_id = $1::bigint)
+  AND se.organization_id = $1::bigint
+  AND ($2::bigint IS NULL OR s.seller_id = $2::bigint)
 ORDER BY s.created_at DESC
-LIMIT $2::integer
+LIMIT $3::integer
 `
 
 type RecentSalesParams struct {
-	SellerID *int64 `json:"seller_id"`
-	Max      int32  `json:"max"`
+	OrganizationID int64  `json:"organization_id"`
+	SellerID       *int64 `json:"seller_id"`
+	Max            int32  `json:"max"`
 }
 
 type RecentSalesRow struct {
@@ -669,7 +751,7 @@ type RecentSalesRow struct {
 // ============================================================================
 // Las ultimas ventas para la home. Sin cursor ni filtros: son tres filas.
 func (q *Queries) RecentSales(ctx context.Context, arg RecentSalesParams) ([]RecentSalesRow, error) {
-	rows, err := q.db.Query(ctx, recentSales, arg.SellerID, arg.Max)
+	rows, err := q.db.Query(ctx, recentSales, arg.OrganizationID, arg.SellerID, arg.Max)
 	if err != nil {
 		return nil, err
 	}
@@ -709,18 +791,21 @@ SELECT
 FROM tickets t
 JOIN sales s ON t.sale_id = s.id
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 WHERE f.season_id = $2::bigint
+  AND se.organization_id = $3::bigint
   AND t.status <> 'void'
   AND s.voided_at IS NULL
-  AND s.created_at >= $3::timestamptz
+  AND s.created_at >= $4::timestamptz
 GROUP BY 1
 ORDER BY 1
 `
 
 type SalesTimelineParams struct {
-	Tz       string    `json:"tz"`
-	SeasonID int64     `json:"season_id"`
-	Since    time.Time `json:"since"`
+	Tz             string    `json:"tz"`
+	SeasonID       int64     `json:"season_id"`
+	OrganizationID int64     `json:"organization_id"`
+	Since          time.Time `json:"since"`
 }
 
 type SalesTimelineRow struct {
@@ -732,7 +817,12 @@ type SalesTimelineRow struct {
 // app (la misma que usa el handler para la ventana), no en UTC: si no, las
 // ventas de la noche caerian en el dia siguiente.
 func (q *Queries) SalesTimeline(ctx context.Context, arg SalesTimelineParams) ([]SalesTimelineRow, error) {
-	rows, err := q.db.Query(ctx, salesTimeline, arg.Tz, arg.SeasonID, arg.Since)
+	rows, err := q.db.Query(ctx, salesTimeline,
+		arg.Tz,
+		arg.SeasonID,
+		arg.OrganizationID,
+		arg.Since,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -760,10 +850,17 @@ SELECT
   COUNT(*) FILTER (WHERE s.amount_cents > s.paid_cents)::bigint AS sales_uncollected
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 WHERE f.season_id = $1::bigint
+  AND se.organization_id = $2::bigint
   AND NOT s.is_comp
   AND s.voided_at IS NULL
 `
+
+type SeasonMoneyParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
 
 type SeasonMoneyRow struct {
 	SoldCents        int64 `json:"sold_cents"`
@@ -778,8 +875,8 @@ type SeasonMoneyRow struct {
 // Los tres pedazos en que se parte lo vendido: lo que la corista ya entrego,
 // lo que tiene en la mano sin rendir, y lo que el comprador todavia no pago.
 // Las cortesias no suman plata y las anuladas no existen.
-func (q *Queries) SeasonMoney(ctx context.Context, seasonID int64) (SeasonMoneyRow, error) {
-	row := q.db.QueryRow(ctx, seasonMoney, seasonID)
+func (q *Queries) SeasonMoney(ctx context.Context, arg SeasonMoneyParams) (SeasonMoneyRow, error) {
+	row := q.db.QueryRow(ctx, seasonMoney, arg.SeasonID, arg.OrganizationID)
 	var i SeasonMoneyRow
 	err := row.Scan(
 		&i.SoldCents,
@@ -791,13 +888,20 @@ func (q *Queries) SeasonMoney(ctx context.Context, seasonID int64) (SeasonMoneyR
 }
 
 const seasonSettled = `-- name: SeasonSettled :one
-SELECT COALESCE(SUM(amount_cents), 0)::bigint
-FROM settlements
-WHERE season_id = $1::bigint
+SELECT COALESCE(SUM(st.amount_cents), 0)::bigint
+FROM settlements st
+JOIN seasons se ON se.id = st.season_id
+WHERE st.season_id = $1::bigint
+  AND se.organization_id = $2::bigint
 `
 
-func (q *Queries) SeasonSettled(ctx context.Context, seasonID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, seasonSettled, seasonID)
+type SeasonSettledParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) SeasonSettled(ctx context.Context, arg SeasonSettledParams) (int64, error) {
+	row := q.db.QueryRow(ctx, seasonSettled, arg.SeasonID, arg.OrganizationID)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -836,6 +940,7 @@ SELECT
             WHERE f.season_id = s.id AND f.starts_at > now() - interval '3 hours'),
            '0001-01-01'::timestamptz)::timestamptz AS next_at
 FROM seasons s
+WHERE s.organization_id = $1::bigint
 ORDER BY s.created_at DESC, s.id DESC
 `
 
@@ -859,8 +964,8 @@ type SeasonsOverviewRow struct {
 // lleva plata; ListSeasons (que leen todos los roles) sigue sin exponerla.
 // Las fechas vacias vuelven con el centinela 0001-01-01, como en
 // SellerSeasonStats: sqlc no sabe que un MIN() sin filas es NULL.
-func (q *Queries) SeasonsOverview(ctx context.Context) ([]SeasonsOverviewRow, error) {
-	rows, err := q.db.Query(ctx, seasonsOverview)
+func (q *Queries) SeasonsOverview(ctx context.Context, organizationID int64) ([]SeasonsOverviewRow, error) {
+	rows, err := q.db.Query(ctx, seasonsOverview, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -902,8 +1007,10 @@ SELECT
   (SELECT MAX(p.created_at) FROM sale_payments p WHERE p.sale_id = s.id)::timestamptz AS paid_at
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 WHERE s.seller_id = $1::bigint
   AND f.season_id = $2::bigint
+  AND se.organization_id = $3::bigint
   AND s.voided_at IS NULL
   AND NOT s.is_comp
   AND s.paid_cents > 0
@@ -911,8 +1018,9 @@ ORDER BY paid_at DESC NULLS LAST, s.id DESC
 `
 
 type SellerDebtSourcesParams struct {
-	SellerID int64 `json:"seller_id"`
-	SeasonID int64 `json:"season_id"`
+	SellerID       int64 `json:"seller_id"`
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
 type SellerDebtSourcesRow struct {
@@ -932,7 +1040,7 @@ type SellerDebtSourcesRow struct {
 // cobro de cada una y cuando fue el ultimo cobro. Ordenadas por fecha de
 // cobro descendente: lo mas fresco arriba, que es de lo que se acuerda.
 func (q *Queries) SellerDebtSources(ctx context.Context, arg SellerDebtSourcesParams) ([]SellerDebtSourcesRow, error) {
-	rows, err := q.db.Query(ctx, sellerDebtSources, arg.SellerID, arg.SeasonID)
+	rows, err := q.db.Query(ctx, sellerDebtSources, arg.SellerID, arg.SeasonID, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -970,15 +1078,18 @@ SELECT
            '0001-01-01'::timestamptz)::timestamptz AS last_paid_at
 FROM sales s
 JOIN functions f ON s.function_id = f.id
+JOIN seasons se ON se.id = f.season_id
 WHERE s.seller_id = $1::bigint
   AND f.season_id = $2::bigint
+  AND se.organization_id = $3::bigint
   AND s.voided_at IS NULL
   AND NOT s.is_comp
 `
 
 type SellerSeasonStatsParams struct {
-	SellerID int64 `json:"seller_id"`
-	SeasonID int64 `json:"season_id"`
+	SellerID       int64 `json:"seller_id"`
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
 }
 
 type SellerSeasonStatsRow struct {
@@ -992,7 +1103,7 @@ type SellerSeasonStatsRow struct {
 // Los numeros del encabezado: cuantas ventas cobro, desde cuando, y cuanto le
 // deben los compradores (que no es exigible todavia).
 func (q *Queries) SellerSeasonStats(ctx context.Context, arg SellerSeasonStatsParams) (SellerSeasonStatsRow, error) {
-	row := q.db.QueryRow(ctx, sellerSeasonStats, arg.SellerID, arg.SeasonID)
+	row := q.db.QueryRow(ctx, sellerSeasonStats, arg.SellerID, arg.SeasonID, arg.OrganizationID)
 	var i SellerSeasonStatsRow
 	err := row.Scan(
 		&i.PaidSales,
@@ -1005,20 +1116,24 @@ func (q *Queries) SellerSeasonStats(ctx context.Context, arg SellerSeasonStatsPa
 }
 
 const settlementsReport = `-- name: SettlementsReport :many
-WITH collected AS (
+
+WITH temporada AS (
+  SELECT id FROM seasons
+  WHERE id = $2::bigint AND organization_id = $1::bigint
+), collected AS (
   SELECT s.seller_id,
          COALESCE(SUM(s.paid_cents), 0)::bigint AS paid_cents,
          COALESCE(SUM(s.amount_cents - s.paid_cents), 0)::bigint AS pending_cents
   FROM sales s
   JOIN functions f ON s.function_id = f.id
-  WHERE f.season_id = $1::bigint
+  WHERE f.season_id = (SELECT id FROM temporada)
     AND NOT s.is_comp
     AND s.voided_at IS NULL
   GROUP BY s.seller_id
 ), settled AS (
   SELECT seller_id, COALESCE(SUM(amount_cents), 0)::bigint AS cents
   FROM settlements
-  WHERE season_id = $1::bigint
+  WHERE season_id = (SELECT id FROM temporada)
   GROUP BY seller_id
 )
 SELECT
@@ -1030,10 +1145,16 @@ SELECT
 FROM users u
 LEFT JOIN collected c ON c.seller_id = u.id
 LEFT JOIN settled st ON st.seller_id = u.id
-LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = $1::bigint
-WHERE m.role = 'seller' OR c.seller_id IS NOT NULL OR st.seller_id IS NOT NULL
+LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = (SELECT id FROM temporada)
+WHERE u.organization_id = $1::bigint
+  AND (m.role = 'seller' OR c.seller_id IS NOT NULL OR st.seller_id IS NOT NULL)
 ORDER BY u.name
 `
+
+type SettlementsReportParams struct {
+	OrganizationID int64 `json:"organization_id"`
+	SeasonID       int64 `json:"season_id"`
+}
 
 type SettlementsReportRow struct {
 	SellerID       int64  `json:"seller_id"`
@@ -1043,6 +1164,10 @@ type SettlementsReportRow struct {
 	SettledCents   int64  `json:"settled_cents"`
 }
 
+// Reportes y home. Todo cuelga de seasons o users (C17 §A.1): cada consulta
+// lleva organization_id y lo cruza con la temporada o la persona que recibe.
+// Una temporada ajena no devuelve filas: los agregados vuelven en cero, y los
+// handlers que ademas resuelven la temporada con GetSeason responden 404.
 // Por vendedora de una temporada: cobrado (plata que la corista tiene en la
 // mano, cobros parciales incluidos; sin cortesias ni anuladas), pendiente de
 // cobro, y rendido. El saldo a rendir es collected - settled (spec §4). Lista
@@ -1050,8 +1175,8 @@ type SettlementsReportRow struct {
 // admin si vendio).
 // Las coristas de la temporada, mas cualquiera que haya movido plata en ella
 // aunque ya no este: su deuda no desaparece porque dejo el coro.
-func (q *Queries) SettlementsReport(ctx context.Context, seasonID int64) ([]SettlementsReportRow, error) {
-	rows, err := q.db.Query(ctx, settlementsReport, seasonID)
+func (q *Queries) SettlementsReport(ctx context.Context, arg SettlementsReportParams) ([]SettlementsReportRow, error) {
+	rows, err := q.db.Query(ctx, settlementsReport, arg.OrganizationID, arg.SeasonID)
 	if err != nil {
 		return nil, err
 	}

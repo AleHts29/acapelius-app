@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Cuatro direcciones para la landing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:#1A1C22; -webkit-font-smoothing:antialiased; }
+  .page { max-width:1320px; margin:0 auto; padding:44px 20px 100px; }
+  .page > h1 { font-family:'Archivo',sans-serif; font-weight:800; font-size:clamp(25px,4vw,34px); }
+  .page > h1 span { color:#3A3FC4; }
+  .page > p.lead { margin-top:10px; max-width:940px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .page > p.lead b { color:#1A1C22; }
+
+  .why { margin-top:18px; background:#fff; border:1px solid #D5D8DD; border-left:4px solid #B3403F; border-radius:13px; padding:16px 18px; }
+  .why b.t { font-family:'Archivo',sans-serif; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#B3403F; }
+  .why ul { margin-top:10px; list-style:none; display:grid; gap:7px; }
+  @media(min-width:860px){ .why ul { grid-template-columns:1fr 1fr; gap:8px 24px; } }
+  .why li { font-size:13px; line-height:1.55; color:#4A4C55; padding-left:20px; position:relative; }
+  .why li::before { content:"✕"; position:absolute; left:0; color:#B3403F; font-weight:800; font-size:11px; }
+  .why li b { color:#1A1C22; }
+
+  .opt { margin-top:44px; }
+  .ohead { display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+  .ohead .tg { font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.14em; padding:6px 12px; border-radius:99px; color:#fff; white-space:nowrap; }
+  .ohead h2 { font-family:'Archivo',sans-serif; font-size:22px; font-weight:800; }
+  .ohead p { margin-top:7px; max-width:800px; font-size:13.5px; line-height:1.65; color:#4A4C55; }
+  .ohead p b { color:#1A1C22; }
+  .meta { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+  .meta span { font-size:11px; font-weight:700; color:#55575E; background:#fff; border:1px solid #D5D8DD; border-radius:99px; padding:5px 11px; }
+
+  .frame { margin-top:16px; border:1px solid #C3C7CE; border-radius:14px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:320px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; font-family:'Inter'; }
+
+  /* ============ A · AFICHE ============ */
+  .A { background:#F4F1EA; color:#141414; }
+  .A .nav { border-bottom:3px solid #141414; padding:14px 34px; display:flex; align-items:center; gap:24px; }
+  .A .nav .lg { font-family:'Anton',sans-serif; font-size:19px; letter-spacing:0.04em; }
+  .A .nav a { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.08em; }
+  .A .nav .sp { flex:1; }
+  .A .nav .b { background:#141414; color:#F4F1EA; padding:9px 16px; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; }
+  .A .hero { padding:44px 34px 0; }
+  .A .strip { font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.14em; display:flex; gap:20px; border-bottom:1px solid #141414; padding-bottom:10px; }
+  .A .strip b { font-weight:700; }
+  .A h1 { margin-top:26px; font-family:'Anton',sans-serif; font-size:clamp(44px,7.4vw,92px); line-height:.9; letter-spacing:-0.01em; text-transform:uppercase; }
+  .A h1 .out { color:transparent; -webkit-text-stroke:2px #141414; }
+  .A h1 .red { color:#C4401E; }
+  .A .sub2 { margin-top:22px; display:grid; grid-template-columns:1.1fr 1fr; gap:34px; align-items:end; border-top:1px solid #141414; padding-top:18px; }
+  .A .sub2 p { font-size:15px; line-height:1.55; max-width:460px; }
+  .A .sub2 .acts { display:flex; gap:10px; justify-content:flex-end; }
+  .A .btn { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:14px 20px; border:2px solid #141414; }
+  .A .btn.fill { background:#C4401E; border-color:#C4401E; color:#F4F1EA; }
+  .A .ticket { margin:36px 34px 0; border:2px solid #141414; display:grid; grid-template-columns:1fr 1fr 1fr; }
+  .A .ticket div { padding:20px 22px; border-right:1px dashed #141414; }
+  .A .ticket div:last-child { border-right:0; }
+  .A .ticket .n { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.1em; }
+  .A .ticket h4 { margin-top:9px; font-family:'Anton',sans-serif; font-size:20px; text-transform:uppercase; letter-spacing:0.01em; }
+  .A .ticket p { margin-top:7px; font-size:13px; line-height:1.55; }
+  .A .band { margin-top:34px; background:#141414; color:#F4F1EA; padding:12px 0; overflow:hidden; white-space:nowrap; font-family:'Anton',sans-serif; font-size:17px; letter-spacing:0.06em; text-transform:uppercase; }
+  .A .band span { margin:0 18px; }
+  .A .band em { color:#C4401E; font-style:normal; }
+
+  /* ============ B · PROGRAMA DE MANO ============ */
+  .B { background:#F8ECDE; color:#231F17; }
+  .B .nav { padding:20px 40px 16px; display:flex; align-items:baseline; gap:26px; border-bottom:1px solid #C9B79B; }
+  .B .nav .lg { font-family:'Instrument Serif',serif; font-size:23px; letter-spacing:0.02em; }
+  .B .nav a { font-size:12.5px; color:#6B6250; }
+  .B .nav .sp { flex:1; }
+  .B .nav .b { font-size:12.5px; border-bottom:1.5px solid #231F17; font-weight:600; }
+  .B .hero { padding:52px 40px 0; display:grid; grid-template-columns:1.25fr .85fr; gap:46px; }
+  .B .kick { font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:#8A7A5F; }
+  .B h1 { margin-top:16px; font-family:'Instrument Serif',serif; font-size:clamp(38px,5.4vw,62px); line-height:1.02; letter-spacing:-0.01em; }
+  .B h1 em { font-style:italic; color:#415DA7; }
+  .B .hero p { margin-top:20px; font-size:15.5px; line-height:1.65; color:#4A4438; max-width:440px; }
+  .B .hero .acts { margin-top:26px; display:flex; gap:12px; align-items:center; }
+  .B .btn { background:#231F17; color:#F8ECDE; padding:13px 22px; font-size:13.5px; font-weight:700; border-radius:2px; }
+  .B .btn.gh { background:transparent; color:#231F17; border-bottom:1.5px solid #231F17; padding:13px 0; border-radius:0; }
+  .B .card { border:1px solid #C9B79B; padding:22px; background:#FDF7EF; }
+  .B .card .t { font-size:10.5px; letter-spacing:0.2em; text-transform:uppercase; color:#8A7A5F; }
+  .B .card ol { margin-top:16px; list-style:none; }
+  .B .card li { padding:13px 0; border-top:1px solid #E3D6C0; display:flex; gap:14px; }
+  .B .card li:first-child { border-top:0; padding-top:0; }
+  .B .card li .rn { font-family:'Instrument Serif',serif; font-size:19px; color:#415DA7; line-height:1; width:28px; }
+  .B .card li b { font-size:14px; display:block; }
+  .B .card li span { font-size:12.5px; color:#6B6250; line-height:1.5; display:block; margin-top:3px; }
+  .B .rule { margin:44px 40px 0; border-top:1px solid #C9B79B; }
+  .B .cols { padding:28px 40px 40px; display:grid; grid-template-columns:repeat(3,1fr); gap:34px; }
+  .B .cols h4 { font-family:'Instrument Serif',serif; font-size:19px; }
+  .B .cols p { margin-top:8px; font-size:13.5px; line-height:1.6; color:#4A4438; }
+  .B .cols .no { font-family:'Instrument Serif',serif; font-size:13px; color:#8A7A5F; }
+
+  /* ============ C · PRODUCTO PRIMERO ============ */
+  .C { background:#0E0F12; color:#E9EAEC; }
+  .C .nav { border-bottom:1px solid #212329; padding:13px 30px; display:flex; align-items:center; gap:22px; }
+  .C .nav .lg { font-family:'Archivo',sans-serif; font-weight:800; font-size:13px; letter-spacing:0.2em; }
+  .C .nav a { font-family:'JetBrains Mono',monospace; font-size:11px; color:#8A8F99; }
+  .C .nav .sp { flex:1; }
+  .C .nav .b { font-family:'JetBrains Mono',monospace; font-size:11px; background:#E9EAEC; color:#0E0F12; padding:7px 13px; border-radius:5px; font-weight:700; }
+  .C .hero { padding:56px 30px 0; max-width:1080px; margin:0 auto; }
+  .C .mono { font-family:'JetBrains Mono',monospace; font-size:11px; color:#6E7480; letter-spacing:0.04em; }
+  .C h1 { margin-top:16px; font-family:'Archivo',sans-serif; font-size:clamp(30px,4.2vw,46px); font-weight:800; line-height:1.08; letter-spacing:-0.025em; max-width:720px; }
+  .C h1 span { color:#7C82FF; }
+  .C .hero p { margin-top:16px; font-size:15px; line-height:1.6; color:#9AA0AA; max-width:560px; }
+  .C .acts { margin-top:24px; display:flex; gap:10px; align-items:center; }
+  .C .btn { font-size:13px; font-weight:700; padding:11px 18px; border-radius:7px; background:#4F55E8; color:#fff; }
+  .C .btn.gh { background:transparent; border:1px solid #2C2F38; color:#E9EAEC; }
+  .C .win { margin:38px 30px 0; border:1px solid #23252C; border-radius:10px 10px 0 0; overflow:hidden; background:#15171B; }
+  .C .win .tb { background:#191B20; border-bottom:1px solid #23252C; padding:8px 12px; display:flex; align-items:center; gap:8px; }
+  .C .win .tb .t { font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#6E7480; }
+  .C .win .bd { display:flex; height:250px; }
+  .C .win .sd { width:150px; border-right:1px solid #23252C; padding:11px 8px; }
+  .C .win .sd .i { padding:6px 9px; border-radius:6px; font-size:10.5px; color:#8A8F99; font-weight:600; }
+  .C .win .sd .i.on { background:#23252C; color:#E9EAEC; }
+  .C .win .mn { flex:1; padding:13px 15px; }
+  .C .win .rw { display:grid; grid-template-columns:1.6fr 1fr 60px 80px; gap:10px; padding:8px 0; border-bottom:1px solid #1E2026; font-size:11px; color:#B7BCC4; align-items:center; }
+  .C .win .rw.h { color:#6E7480; font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.08em; border-bottom:1px solid #2C2F38; }
+  .C .win .rw b { color:#E9EAEC; font-weight:600; }
+  .C .win .pil { font-size:9px; font-weight:800; padding:3px 7px; border-radius:99px; background:rgba(75,191,138,.16); color:#4BBF8A; justify-self:end; }
+  .C .win .pil.y { background:rgba(224,168,74,.16); color:#E0A84A; }
+  .C .ann { margin:0 30px; display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid #23252C; }
+  .C .ann div { padding:18px 20px; border-right:1px solid #23252C; }
+  .C .ann div:last-child { border-right:0; }
+  .C .ann .n { font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#7C82FF; }
+  .C .ann h4 { margin-top:8px; font-size:14px; font-weight:700; }
+  .C .ann p { margin-top:5px; font-size:12.5px; line-height:1.55; color:#8A8F99; }
+
+  /* ============ D · MARQUESINA ============ */
+  .D { background:#FFFFFF; color:#101014; }
+  .D .nav { padding:16px 34px; display:flex; align-items:center; gap:24px; border-bottom:1px solid #E7E7EA; }
+  .D .nav .lg { font-family:'Archivo',sans-serif; font-weight:900; font-size:15px; letter-spacing:-0.01em; }
+  .D .nav a { font-size:13px; font-weight:600; color:#6E6E78; }
+  .D .nav .sp { flex:1; }
+  .D .nav .b { background:#101014; color:#fff; font-size:12.5px; font-weight:700; padding:9px 15px; border-radius:99px; }
+  .D .hero { display:grid; grid-template-columns:1.15fr .85fr; }
+  .D .hl { padding:54px 34px 46px; }
+  .D .hl .k { display:inline-block; font-size:11px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; background:#FFE55C; padding:5px 10px; }
+  .D .hl h1 { margin-top:20px; font-family:'Archivo',sans-serif; font-weight:900; font-size:clamp(34px,4.6vw,56px); line-height:1.02; letter-spacing:-0.035em; }
+  .D .hl h1 u { text-decoration:none; background:linear-gradient(transparent 62%, #FFE55C 62%); }
+  .D .hl p { margin-top:18px; font-size:15.5px; line-height:1.6; color:#4B4B55; max-width:440px; }
+  .D .hl .acts { margin-top:24px; display:flex; gap:11px; }
+  .D .btn { font-size:13.5px; font-weight:800; padding:13px 20px; border-radius:99px; background:#101014; color:#fff; }
+  .D .btn.gh { background:#fff; color:#101014; border:1.5px solid #101014; }
+  .D .hl .prf { margin-top:28px; display:flex; align-items:center; gap:11px; font-size:12.5px; color:#6E6E78; }
+  .D .hl .prf .av { display:flex; }
+  .D .hl .prf .av i { width:26px; height:26px; border-radius:50%; border:2px solid #fff; margin-left:-8px; display:block; }
+  .D .hr2 { background:#101014; color:#fff; padding:44px 34px; display:flex; flex-direction:column; justify-content:center; gap:16px; }
+  .D .hr2 .q { font-family:'Archivo',sans-serif; font-size:20px; font-weight:700; line-height:1.35; letter-spacing:-0.01em; }
+  .D .hr2 .who { font-size:12.5px; color:#9A9AA6; }
+  .D .hr2 .st { margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:14px; border-top:1px solid #2A2A32; padding-top:18px; }
+  .D .hr2 .st b { font-family:'Archivo',sans-serif; font-size:24px; font-weight:900; display:block; letter-spacing:-0.02em; }
+  .D .hr2 .st span { font-size:11px; color:#9A9AA6; }
+  .D .marq { background:#FFE55C; border-top:2px solid #101014; border-bottom:2px solid #101014; padding:10px 0; font-family:'Archivo',sans-serif; font-weight:900; font-size:15px; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; }
+  .D .marq span { margin:0 16px; }
+  .D .grid3 { padding:44px 34px; display:grid; grid-template-columns:repeat(3,1fr); gap:0; }
+  .D .grid3 div { padding:0 26px; border-left:1px solid #E7E7EA; }
+  .D .grid3 div:first-child { padding-left:0; border-left:0; }
+  .D .grid3 h4 { font-family:'Archivo',sans-serif; font-size:16px; font-weight:800; letter-spacing:-0.01em; }
+  .D .grid3 p { margin-top:8px; font-size:13.5px; line-height:1.6; color:#4B4B55; }
+  .D .grid3 .nm { font-family:'Archivo',sans-serif; font-size:30px; font-weight:900; color:#E7E7EA; letter-spacing:-0.03em; }
+
+  .verdict { margin-top:44px; background:#fff; border:1px solid #D5D8DD; border-radius:14px; padding:20px 22px; }
+  .verdict h3 { font-family:'Archivo',sans-serif; font-size:16px; font-weight:800; }
+  .verdict p { margin-top:10px; font-size:13.5px; line-height:1.65; color:#4A4C55; }
+  .verdict p b { color:#1A1C22; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>La landing, <span>cuatro direcciones con carácter</span></h1>
+  <p class="lead">La versión anterior seguía el molde de plantilla SaaS que hoy es el sello de lo genérico. Estas cuatro toman caminos distintos, todas con la paleta de marca y dirigidas al mismo nicho: <b>coros y elencos de teatro independiente</b>. Cada una muestra el arranque de la página (nav, hero y la primera sección) para poder compararlas.</p>
+
+  <div class="why">
+    <b class="t">Qué la hacía sentir "de IA"</b>
+    <ul>
+      <li><b>Hero centrado con glow</b> radial y pill de kicker arriba: el arranque por defecto de cualquier generador.</li>
+      <li><b>Tres columnas de cards</b> con ícono redondeado, título y párrafo, repetidas dos veces.</li>
+      <li><b>Todo con radio 14 y sombra suave</b>: cero contraste entre elementos, nada que llame la atención.</li>
+      <li><b>Screenshot flotando</b> sobre el hero con perspectiva y sombra dramática.</li>
+      <li><b>Secuencia predecible:</b> hero → cómo funciona → features → precios → FAQ → CTA oscura.</li>
+      <li><b>Tipografía de una sola familia</b> en un solo peso ancho: nada de tensión ni jerarquía real.</li>
+    </ul>
+  </div>
+
+  <!-- A -->
+  <div class="opt">
+    <div class="ohead">
+      <span class="tg" style="background:#C4401E;">OPCIÓN A</span>
+      <div>
+        <h2>Afiche</h2>
+        <p>Tipografía condensada a escala de cartel, bordes duros, cero sombras, y la estructura expuesta: reglas visibles, bloques que se tocan, mono para las etiquetas. Es el lenguaje del <b>afiche de teatro independiente</b> pegado en la pared de un bar, que es literalmente el mundo del cliente. La sección de pasos usa una <b>entrada troquelada</b> como grilla.</p>
+        <div class="meta"><span>Anton + JetBrains Mono</span><span>Papel crudo · negro · naranja ticket</span><span>Riesgo: puede leerse "ruidosa"</span></div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.app</div></div>
+      <div class="A">
+        <div class="nav">
+          <span class="lg">ACAPELIUS</span>
+          <a>Cómo funciona</a><a>Para quién</a><a>Precios</a>
+          <span class="sp"></span>
+          <a>Entrar</a>
+          <span class="b">Crear cuenta</span>
+        </div>
+        <div class="hero">
+          <div class="strip"><span><b>PARA</b> COROS Y ELENCOS</span><span><b>DESDE</b> ARGENTINA</span><span><b>PRIMERA TEMPORADA</b> GRATIS</span></div>
+          <h1>Sacá las<br>entradas del<br><span class="red">cuaderno</span> <span class="out">y del grupo</span><br>de whatsapp</h1>
+          <div class="sub2">
+            <p>Tu elenco vende, el comprador recibe su QR y en la puerta escaneás. Vos ves cuánto se vendió, quién te debe plata y quién entró de verdad.</p>
+            <div class="acts">
+              <span class="btn">Ver cómo funciona</span>
+              <span class="btn fill">Crear cuenta</span>
+            </div>
+          </div>
+        </div>
+        <div class="ticket">
+          <div>
+            <div class="n">01 / CARGÁS</div>
+            <h4>La temporada</h4>
+            <p>Funciones, sala, cupo y precio. Repartís las entradas entre el elenco.</p>
+          </div>
+          <div>
+            <div class="n">02 / VENDEN</div>
+            <h4>Desde el celu</h4>
+            <p>Nombre y mail en treinta segundos. El QR sale solo.</p>
+          </div>
+          <div>
+            <div class="n">03 / ESCANEÁS</div>
+            <h4>En la puerta</h4>
+            <p>Anda sin internet. Verde entra, rojo ya usó su entrada.</p>
+          </div>
+        </div>
+        <div class="band"><span>COROS</span><em>◆</em><span>TEATRO INDEPENDIENTE</span><em>◆</em><span>MURGAS</span><em>◆</em><span>ORQUESTAS JUVENILES</span><em>◆</em><span>ESCUELAS DE DANZA</span><em>◆</em><span>COROS</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="opt">
+    <div class="ohead">
+      <span class="tg" style="background:#415DA7;">OPCIÓN B</span>
+      <div>
+        <h2>Programa de mano</h2>
+        <p>La landing como el <b>programa que te dan al entrar a la sala</b>: crema de marca, serif editorial, columnas asimétricas, filetes finos y los pasos numerados como actos. Es la más cálida y la que más respeta la identidad existente de Acapelius; también la más silenciosa, que en un producto para gente de teatro se lee como respeto y no como frialdad.</p>
+        <div class="meta"><span>Instrument Serif + Inter</span><span>Crema de marca · azul #415DA7</span><span>Riesgo: puede parecer poco "software"</span></div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.app</div></div>
+      <div class="B">
+        <div class="nav">
+          <span class="lg">Acapelius</span>
+          <a>Cómo funciona</a><a>Para quién es</a><a>Precios</a>
+          <span class="sp"></span>
+          <a>Entrar</a>
+          <span class="b">Crear cuenta</span>
+        </div>
+        <div class="hero">
+          <div>
+            <div class="kick">Coros y elencos independientes</div>
+            <h1>Que la única lista sea <em>la del reparto</em>.</h1>
+            <p>Las entradas de tu temporada, desde que alguien del elenco la vende hasta que esa persona entra por la puerta. Sin planillas, sin listas impresas, sin perseguir a nadie por WhatsApp para saber quién pagó.</p>
+            <div class="acts">
+              <span class="btn">Crear cuenta gratis</span>
+              <span class="btn gh">Ver cómo funciona</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="t">En tres actos</div>
+            <ol>
+              <li><span class="rn">I</span><div><b>Armás la temporada</b><span>Funciones, cupo, precio y quién vende cuántas.</span></div></li>
+              <li><span class="rn">II</span><div><b>El elenco vende</b><span>Cada venta manda su entrada con QR al comprador.</span></div></li>
+              <li><span class="rn">III</span><div><b>Se abre la puerta</b><span>Escaneás, aunque no haya señal en la sala.</span></div></li>
+            </ol>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <div class="cols">
+          <div><span class="no">i.</span><h4>La plata, clara</h4><p>Distingue lo que el comprador le pagó a cada integrante de lo que esa persona te entregó a vos. Con entregas parciales y su historial.</p></div>
+          <div><span class="no">ii.</span><h4>Cupos por persona</h4><p>Repartís las entradas de cada función. Nadie vende de más y siempre sabés cuántas quedan libres.</p></div>
+          <div><span class="no">iii.</span><h4>Quién entró</h4><p>Al terminar sabés cuántos de los que compraron fueron. Función a función, ese número dice más que la recaudación.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C -->
+  <div class="opt">
+    <div class="ohead">
+      <span class="tg" style="background:#4F55E8;">OPCIÓN C</span>
+      <div>
+        <h2>Producto primero</h2>
+        <p>Sin retórica de marketing: <b>la app es el hero</b>. Fondo oscuro, etiquetas en monoespaciada, una sola pantalla real ocupando el ancho y tres anotaciones debajo explicando qué se está viendo. Es el lenguaje de las herramientas para gente técnica —el que aplicaron Vercel y Linear— y el que mejor transmite "esto existe y funciona", no "esto es una promesa".</p>
+        <div class="meta"><span>Archivo + JetBrains Mono</span><span>Oscuro frío · índigo</span><span>Riesgo: frío para un público artístico</span></div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.app</div></div>
+      <div class="C">
+        <div class="nav">
+          <span class="lg">ACAPELIUS</span>
+          <a>producto</a><a>precios</a><a>docs</a>
+          <span class="sp"></span>
+          <a>entrar</a>
+          <span class="b">crear cuenta</span>
+        </div>
+        <div class="hero">
+          <div class="mono">// para coros y elencos independientes</div>
+          <h1>El control de entradas que tu elenco ya está haciendo, <span>pero sin el cuaderno</span></h1>
+          <p>Cupos por integrante, entradas con QR por mail, escaneo en la puerta sin internet y el detalle de quién te tiene que rendir la plata.</p>
+          <div class="acts">
+            <span class="btn">Crear cuenta</span>
+            <span class="btn gh">Ver una demo</span>
+          </div>
+        </div>
+        <div class="win">
+          <div class="tb"><i style="width:8px;height:8px;border-radius:50%;background:#3A3C44;display:block;"></i><span class="t">acapelius.app/app/ventas</span></div>
+          <div class="bd">
+            <div class="sd">
+              <div class="i">Inicio</div><div class="i on">Ventas</div><div class="i">Puerta</div><div class="i">Temporada</div><div class="i">Plata</div>
+            </div>
+            <div class="mn">
+              <div class="rw h"><span>comprador</span><span>vendió</span><span>entr.</span><span>estado</span></div>
+              <div class="rw"><b>María Dutra</b><span>Carolina Vega</span><span>3</span><span class="pil">Pagó</span></div>
+              <div class="rw"><b>Pedro Gómez</b><span>Carolina Vega</span><span>2</span><span class="pil">Pagó</span></div>
+              <div class="rw"><b>Rosa Suárez</b><span>Marta Ledesma</span><span>4</span><span class="pil y">Debe</span></div>
+              <div class="rw"><b>Hugo Díaz</b><span>Beatriz Coria</span><span>4</span><span class="pil y">Debe</span></div>
+              <div class="rw"><b>Ana Pereira</b><span>Silvia Rey</span><span>2</span><span class="pil">Pagó</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="ann">
+          <div><div class="n">01</div><h4>Una fila por venta</h4><p>Quién compró, quién le vendió y si ya pagó. Filtrás por función, por persona o por lo que falta cobrar.</p></div>
+          <div><div class="n">02</div><h4>Acciones sin salir</h4><p>Marcar un pago, reenviar la entrada o copiar el link, desde la misma fila.</p></div>
+          <div><div class="n">03</div><h4>Los números arriba</h4><p>Vendidas, cobrado y por cobrar, recalculados con cada filtro que aplicás.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D -->
+  <div class="opt">
+    <div class="ohead">
+      <span class="tg" style="background:#101014;">OPCIÓN D</span>
+      <div>
+        <h2>Marquesina</h2>
+        <p>Grotesca pesada muy ajustada, resaltador amarillo sobre las palabras clave, una <b>marquesina que corre</b> como el cartel luminoso de la entrada del teatro, y el hero partido en dos: la promesa a la izquierda y un testimonio real con números a la derecha. Es la más comercial y directa de las cuatro; la que mejor funciona si vas a mandar tráfico frío.</p>
+        <div class="meta"><span>Archivo Black + Inter</span><span>Blanco · negro · amarillo marquesina</span><span>Riesgo: necesita un testimonio real</span></div>
+      </div>
+    </div>
+    <div class="frame">
+      <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.app</div></div>
+      <div class="D">
+        <div class="nav">
+          <span class="lg">Acapelius</span>
+          <a>Cómo funciona</a><a>Para quién</a><a>Precios</a>
+          <span class="sp"></span>
+          <a>Entrar</a>
+          <span class="b">Crear cuenta</span>
+        </div>
+        <div class="hero">
+          <div class="hl">
+            <span class="k">Coros y elencos independientes</span>
+            <h1>Dejá de perseguir <u>quién vendió</u> y <u>quién pagó</u>.</h1>
+            <p>Tu elenco vende desde el celular, el comprador recibe su QR y vos ves la plata en tiempo real. En la puerta escaneás, con o sin internet.</p>
+            <div class="acts">
+              <span class="btn">Crear cuenta gratis</span>
+              <span class="btn gh">Ver cómo funciona</span>
+            </div>
+            <div class="prf">
+              <span class="av"><i style="background:#C9B79B"></i><i style="background:#415DA7"></i><i style="background:#0E7A55"></i><i style="background:#9C6A0C"></i></span>
+              Ya lo usan coros y grupos de teatro en Buenos Aires
+            </div>
+          </div>
+          <div class="hr2">
+            <div class="q">“Antes cerraba la temporada dos semanas después, cruzando planillas. Ahora la cierro el domingo a la noche.”</div>
+            <div class="who">Elías · dirección, Coro Acapelius</div>
+            <div class="st">
+              <div><b>255</b><span>entradas en una temporada</span></div>
+              <div><b>0</b><span>listas impresas</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="marq"><span>◆ PRIMERA TEMPORADA GRATIS</span><span>◆ SIN TARJETA</span><span>◆ SIN INSTALAR NADA</span><span>◆ ANDA SIN INTERNET EN LA PUERTA</span><span>◆ PRIMERA TEMPORADA GRATIS</span></div>
+        <div class="grid3">
+          <div><div class="nm">01</div><h4>Cargás la temporada</h4><p>Funciones, cupo y precio. Repartís las entradas entre el elenco y nadie vende de más.</p></div>
+          <div><div class="nm">02</div><h4>Ellos venden</h4><p>Treinta segundos por venta desde el celular. La entrada con QR sale sola por mail.</p></div>
+          <div><div class="nm">03</div><h4>Escaneás y listo</h4><p>Verde entra, rojo ya usó su entrada. Y el que perdió el mail lo buscás por nombre.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <h3>Cuál elegiría</h3>
+    <p><b>B (Programa de mano)</b> si el objetivo es que el producto se sienta hecho para este mundo y no importado del software: es la que mejor conversa con la identidad que ya tenés y la que menos envejece. <b>A (Afiche)</b> si querés que la gente la recuerde y la comparta — es la más jugada y la más difícil de sostener bien, porque <b>el buen brutalismo es intencional</b>: hay que cuidar cada bloque para que parezca descuidado. <b>D (Marquesina)</b> si vas a invertir en tráfico frío y necesitás que convierta rápido, con la salvedad de que el testimonio y los números tienen que ser reales. <b>C (Producto primero)</b> es la más honesta —muestra la app tal cual es— pero el público artístico no es el público de Vercel.</p>
+    <p>Las cuatro son combinables: la estructura de A con la calidez de B, o el hero de D con la sección de producto de C. Decime cuál te tira y la desarrollo completa.</p>
+  </div>
+
+</div>
+</body>
+</html>

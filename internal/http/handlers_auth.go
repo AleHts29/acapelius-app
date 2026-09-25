@@ -71,7 +71,7 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := auth.MustUserFrom(r.Context())
-	err := s.auth.ChangePassword(r.Context(), user.ID, req.CurrentPassword, req.NewPassword)
+	err := s.auth.ChangePassword(r.Context(), user.OrganizationID, user.ID, req.CurrentPassword, req.NewPassword)
 	switch {
 	case err == nil:
 	case errors.Is(err, auth.ErrInvalidCredentials):
