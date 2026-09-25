@@ -4,6 +4,12 @@
 :root {
   --paper: #F4F1EA; --ink: #141414; --ticket: #C4401E; --indigo: #3A3FC4;
   --ok: #0E7A55; --warn: #7F5609; --mute: #5E5A4F;
+  /* Ancho de lectura y margen lateral. El contenido nunca pasa de --measure;
+     los fondos y las líneas sí van de borde a borde. El margen crece con la
+     pantalla y, cuando sobra ancho, es lo que hace falta para centrar. */
+  --measure: 1280px;
+  --gutter: clamp(16px, 4vw, 48px);
+  --side: max(var(--gutter), calc((100% - var(--measure)) / 2));
 }
 @font-face { font-family: 'Anton'; font-style: normal; font-weight: 400; font-display: swap; src: url(/site/fonts/anton.woff2) format('woff2'); }
 @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(/site/fonts/jetbrains-mono.woff2) format('woff2'); }
@@ -18,7 +24,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 img { display: block; max-width: 100%; }
 .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .anton { font-family: 'Anton', Impact, sans-serif; }
-.wrap { padding-left: 34px; padding-right: 34px; }
+.wrap { padding-left: var(--side); padding-right: var(--side); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* botones */
@@ -30,7 +36,7 @@ img { display: block; max-width: 100%; }
 .btn[disabled], .btn[aria-disabled="true"] { opacity: .55; cursor: default; }
 
 /* nav */
-.nav { border-bottom: 3px solid var(--ink); padding: 10px 34px; display: flex; align-items: center; gap: 18px; position: sticky; top: 0; background: var(--paper); z-index: 9; }
+.nav { border-bottom: 3px solid var(--ink); padding: 10px var(--side); display: flex; align-items: center; gap: 18px; position: sticky; top: 0; background: var(--paper); z-index: 9; }
 .nav__logo { font-family: 'Anton', Impact, sans-serif; font-size: 19px; letter-spacing: .05em; padding: 8px 0; }
 .nav__links { display: flex; gap: 6px; list-style: none; }
 .nav__links a { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; padding: 10px 8px; display: inline-block; }
@@ -39,7 +45,7 @@ img { display: block; max-width: 100%; }
 .nav__cta { background: var(--ink); color: var(--paper); padding: 11px 16px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 
 /* hero */
-.hero { padding: 44px 34px 0; }
+.hero { padding: 52px var(--side) 0; }
 .strip { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; text-transform: uppercase; letter-spacing: .14em; display: flex; gap: 22px; border-bottom: 1px solid var(--ink); padding-bottom: 10px; flex-wrap: wrap; list-style: none; }
 .hero h1 { margin-top: 26px; font-family: 'Anton', Impact, sans-serif; font-weight: 400; font-size: clamp(42px, 7.2vw, 90px); line-height: .9; letter-spacing: -.005em; text-transform: uppercase; }
 .hero h1 .out { color: transparent; -webkit-text-stroke: 2px var(--ink); }
@@ -49,7 +55,7 @@ img { display: block; max-width: 100%; }
 .sub2 .acts { display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
 
 /* los tres pasos: entrada troquelada */
-.ticket { margin: 36px 34px 0; border: 2px solid var(--ink); display: grid; grid-template-columns: repeat(3, 1fr); list-style: none; }
+.ticket { margin: 36px var(--side) 0; border: 2px solid var(--ink); display: grid; grid-template-columns: repeat(3, 1fr); list-style: none; }
 .ticket > li { padding: 20px 22px; border-right: 1px dashed var(--ink); }
 .ticket > li:last-child { border-right: 0; }
 .ticket .n { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: .1em; }
@@ -65,7 +71,7 @@ img { display: block; max-width: 100%; }
 @media (prefers-reduced-motion: reduce) { .band__track { animation: none; } }
 
 /* secciones */
-.sec { padding: 56px 34px; border-bottom: 1px solid var(--ink); }
+.sec { padding: 56px var(--side); border-bottom: 1px solid var(--ink); }
 .sec--ink { background: var(--ink); color: var(--paper); border-bottom: 0; }
 .sechead { display: grid; grid-template-columns: auto 1fr auto; gap: 26px; align-items: end; border-bottom: 2px solid var(--ink); padding-bottom: 14px; }
 .sec--ink .sechead { border-color: var(--paper); }
@@ -162,20 +168,23 @@ img { display: block; max-width: 100%; }
 .fq p { margin-top: 7px; font-size: 13.5px; line-height: 1.6; max-width: 760px; }
 
 /* cierre y pie */
-.final { background: var(--ticket); color: var(--paper); padding: 62px 34px; text-align: center; }
+.final { background: var(--ticket); color: var(--paper); padding: 62px var(--side); text-align: center; }
 .final h2 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; font-size: clamp(30px, 4.6vw, 58px); line-height: .94; text-transform: uppercase; }
 .final p { margin: 16px auto 0; max-width: 520px; font-size: 15px; line-height: 1.55; }
 .final .acts { margin-top: 26px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 .final .btn { background: transparent; border-color: var(--paper); color: var(--paper); }
 .final .btn--fill { background: var(--paper); color: var(--ticket); }
-.foot { background: var(--ink); color: #B4B1A9; padding: 22px 34px; display: flex; align-items: center; gap: 20px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; flex-wrap: wrap; }
+.foot { background: var(--ink); color: #B4B1A9; padding: 22px var(--side); display: flex; align-items: center; gap: 20px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; flex-wrap: wrap; }
 .foot .lg { font-family: 'Anton', Impact, sans-serif; font-size: 14px; color: var(--paper); letter-spacing: .08em; }
 .foot .sp { flex: 1; }
 .foot a { padding: 6px 0; }
 
 /* ============================ ALTA / ENTRAR ============================ */
 .auth { min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: 1.05fr 1fr; }
-.auth__l { padding: 40px; border-right: 2px solid var(--ink); max-width: 640px; width: 100%; justify-self: end; }
+/* En pantallas anchas el formulario no se estira: queda de 560px, pegado al
+   borde central, y el panel negro acompaña desde el otro lado. */
+.auth__l { padding: 40px 40px 40px max(40px, calc(100% - 600px)); border-right: 2px solid var(--ink); }
+.auth__r { padding-left: max(34px, calc((100% - 560px) / 2)); }
 .auth__lg { font-family: 'Anton', Impact, sans-serif; font-size: 18px; letter-spacing: .05em; display: inline-block; padding: 4px 0; }
 .auth h1 { margin-top: 26px; font-family: 'Anton', Impact, sans-serif; font-weight: 400; font-size: 34px; line-height: .95; text-transform: uppercase; }
 .auth .sb { margin-top: 12px; font-size: 13.5px; line-height: 1.55; max-width: 400px; }
@@ -224,11 +233,10 @@ fieldset { border: 0; min-width: 0; }
   .auth__l { border-right: 0; border-bottom: 2px solid var(--ink); max-width: none; justify-self: stretch; }
 }
 @media (max-width: 640px) {
-  .wrap, .nav, .hero, .sec, .final, .foot { padding-left: 16px; padding-right: 16px; }
   .nav { gap: 8px; }
   .nav__links { display: none; }
   .hero h1 { font-size: clamp(40px, 13vw, 60px); }
-  .ticket { margin: 28px 16px 0; grid-template-columns: 1fr; }
+  .ticket { margin: 28px var(--side) 0; grid-template-columns: 1fr; }
   /* apilados, la línea de troquel pasa a horizontal */
   .ticket > li { border-right: 0; border-bottom: 1px dashed var(--ink); }
   .ticket > li:last-child { border-bottom: 0; }
