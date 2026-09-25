@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { DoorCheckin, DoorSnapshot } from '../api/client'
 import type { QueuedCheckin } from './db'
 import {
+  nocturnoPorDefecto,
   codeFromPayload,
   doorCounter,
   effectiveCheckins,
@@ -118,5 +119,13 @@ describe('effectiveCheckins (mesa de entrada)', () => {
     ])
     expect(salida.map((c) => c.ticket_code)).toEqual(['T9'])
     expect(salida[0].by_name).toBe('este dispositivo')
+  })
+})
+
+describe('nocturnoPorDefecto', () => {
+  it('una funcion de las 21 arranca en nocturno; una de las 17, no', () => {
+    expect(nocturnoPorDefecto('2026-12-10T21:00:00-03:00')).toBe(true)
+    expect(nocturnoPorDefecto('2026-12-10T17:00:00-03:00')).toBe(false)
+    expect(nocturnoPorDefecto(undefined)).toBe(false)
   })
 })

@@ -110,3 +110,13 @@ export function effectiveCheckins(snapshot: DoorSnapshot, pending: QueuedCheckin
     }))
   return [...snapshot.checkins, ...local]
 }
+
+/**
+ * Modo nocturno por defecto (AFICHE_APP_SPEC §6): sin preferencia guardada,
+ * una funcion que empieza a las 19 o mas tarde arranca en nocturno. El papel
+ * de dia encandila en una sala a oscuras.
+ */
+export function nocturnoPorDefecto(startsAt: string | undefined): boolean {
+  if (!startsAt) return false
+  return new Date(startsAt).getHours() >= 19
+}

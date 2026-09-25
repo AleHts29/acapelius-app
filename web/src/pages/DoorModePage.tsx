@@ -7,7 +7,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 import type { CheckinResponse, DoorCheckin, DoorTicket } from '../api/client'
 import type { CheckinAttempt } from '../door/useDoorStore'
 import { useDoorStore } from '../door/useDoorStore'
-import { doorCounter, effectiveCheckins, effectiveTickets } from '../door/logic'
+import { doorCounter, effectiveCheckins, effectiveTickets, nocturnoPorDefecto } from '../door/logic'
 import { filterTickets, groupByBuyer, initials } from '../lib/search'
 import { useIsDesktop } from '../lib/viewport'
 import { Hl } from '../ui/controls'
@@ -505,7 +505,14 @@ export function DoorModePage() {
   const functionId = Number(raw)
   const navigate = useNavigate()
 
-  const [night, setNight] = useState(() => localStorage.getItem(NIGHT_KEY) === '1')
+  // Nocturno (AFICHE_APP_SPEC §6): de noche el papel encandila, asi que para
+  // una funcion que empieza despues de las 19 arranca en nocturno. Si la
+  // persona lo cambio alguna vez, manda su preferencia (guardada por
+  // dispositivo); hasta entonces se decide por la hora de la funcion.
+  const [nightPref, setNightPref] = useState<boolean | null>(() => {
+    const saved = localStorage.getItem(NIGHT_KEY)
+    return saved === null ? null : saved === '1'
+  })
   const [sheetOpen, setSheetOpen] = useState(false)
   const [result, setResult] = useState<DisplayResult | null>(null)
   const timerRef = useRef<number | null>(null)
@@ -524,7 +531,7 @@ export function DoorModePage() {
 
   function toggleNight() {
     const next = !night
-    setNight(next)
+    setNightPref(next)
     localStorage.setItem(NIGHT_KEY, next ? '1' : '0')
   }
 
@@ -598,6 +605,7 @@ export function DoorModePage() {
   }
 
   const snapshot = store.snapshot
+  const night = nightPref ?? nocturnoPorDefecto(snapshot?.function.starts_at)
   const { entered, issued } = snapshot ? doorCounter(snapshot, store.pending) : { entered: 0, issued: 0 }
   const tickets = snapshot ? effectiveTickets(snapshot, store.pending) : []
 

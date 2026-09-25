@@ -1081,3 +1081,34 @@ renglón de datos es mono.
 **La barra de selección** dejó el carbón redondeado: tinta con borde de
 2px, título en Anton y acciones en mono con contorno papel. El aviso de
 lote es papel2 con borde verde.
+
+## C18 · Paso 3 — Inicio y Puerta
+
+**El nocturno de la puerta pasa a obligatorio de noche (spec §6).** El papel
+es más luminoso que el gris anterior y en una sala a oscuras encandila.
+`nocturnoPorDefecto(starts_at)` en `door/logic.ts`: sin preferencia guardada,
+una función que empieza a las 19 o más tarde arranca en nocturno. El toggle
+sigue existiendo y guarda la preferencia por dispositivo
+(`acapelius-door-night`); si la persona lo cambió alguna vez, manda su
+elección. La preferencia se guarda como antes (`'1'`/`'0'`), así que a
+quien ya la tenía no le cambia nada.
+
+**El modo puerta declara sus variables una vez.** `--door-line`,
+`--door-hair`, `--door-panel` y `--door-muted` se definen en `.door` y se
+redefinen en `.door.night`; las reglas de adentro las usan y no hay más
+pares `.door.night .x` para cada elemento. Primario: tinta de día, papel
+con texto tinta de noche. Los paneles verde y rojo del resultado no cambian
+con el modo: son semánticos. El "en línea" verde sobre tinta usa un verde
+más claro (`#6dc79a`, 8.4:1) porque `--ok` sobre `--night-bg` da 3.1.
+
+**Inicio**: hero con troqueles verticales y CTA de contorno papel; las
+alertas con ícono de contorno y acción en mono subrayada; la tabla corta de
+últimas ventas con el mismo thead papel3 de Ventas; "Tenés que rendir" con
+borde ámbar de 2px sobre papel2 y la cifra en Anton 28px. El anillo de
+marca del hero se apagó (`display: none` en vez de borrarlo del DOM: A no
+toca marcado).
+
+**Puerta (elegir función)**: el bloque de hoy en tinta con eyebrow
+`--ticket-on-ink` y troqueles; próximas y anteriores en paneles de 2px; los
+avisos con acento lateral de 6px. Los títulos de bloque (`.sectrule`) pasan
+a Anton 12px con regla de 2px, igual que `.ghead` en Inicio.
