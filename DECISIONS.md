@@ -1186,3 +1186,48 @@ los velos claros invisibles. Tienen tokens propios (`--hero-bg`, `--hero-fg`,
 **Lo que no cambia con el modo:** la landing y el alta (papel siempre: son
 un afiche), la entrada pública, la barra de la demo y los paneles verde y
 rojo de la puerta.
+
+## C18.1 · Jerarquía de bordes
+
+C18 puso 2px en todo y la app se leía como cajas dentro de cajas; en
+oscuro, peor, porque un borde claro brilla. `docs/BORDES_C18-1.md`
+reemplaza la sección 3 (Forma) de `AFICHE_APP_SPEC.md` con seis niveles.
+
+**Los componentes no eligen grosor ni color: leen tokens de línea.** En
+`:root` hay `--line-head` (nivel 1, la regla bajo el encabezado de página),
+`--line-hero`, `--line-edge` (estructura: sidebar, tab bar, cabeceras de
+panel), `--line-box` (paneles, bloques, modales, filas-tarjeta),
+`--line-ui` (botones, inputs, filtros, segmentados) y `--line-mark`
+(avatares). En claro valen `2px --ink` / `1px --edge` / `1.5px --ink`; en
+oscuro `--line-box` es `1px transparent` (el panel se distingue por
+superficie y no cambia de tamaño), `--line-ui` y `--line-mark` bajan a `1px
+--edge`, y la regla del encabezado a `1px --edge`. Ninguna regla dice
+"si es oscuro"; solo cambian los tokens.
+
+**Tokens nuevos**: `--edge` (estructura y contenedores) y `--hair` más
+claro para divisiones; `--ink2` pasa a `#6B6559` (5.1:1 sobre papel, 4.8
+sobre papel3). Los nombres del spec (`--bg`, `--sur`, `--sur2`) existen
+como alias de `--paper/2/3`, que siguen siendo los canónicos en el CSS.
+El oscuro cambia entero a los valores del spec: fondo `#1A1815`,
+superficies `#211E1A`/`#272420`, líneas en `rgba(244,241,234,.18/.10)`,
+naranja `#E05A2B` con el texto del primario en `#17150F` (4.9:1; el papel
+claro sobre ese naranja daba 3.3), semánticos `#4BBF8A/#E0A84A/#E5706E`,
+índigo `#8A8DEA`.
+
+**Los acentos laterales dejaron de ser borde.** Ítem activo de la
+navegación, banda de bloque de función, temporada en curso, tarjetas de
+alerta y avisos: `box-shadow: inset 3px 0 0 <color>`. Misma lectura, una
+caja menos, y el padding no se mueve. Es una de las dos sombras que
+permite el spec; la otra es la del modal en claro (`--modal-shadow`, que en
+oscuro es `none`). El grep de `box-shadow` ya no da cero a propósito.
+
+**Íconos de fila y badges: fondo tenue, sin contorno.** `color-mix(in
+srgb, currentColor 14%, transparent)`: el mismo tono semántico del ícono,
+al 14%, en los dos modos sin un token por color. Los chips de estado
+siguen en contorno de 1.5px (§4 de C18).
+
+**Auditoría**: `grep -rn "2px solid" web/src --exclude-dir=public` devuelve
+los dos tokens de nivel 1 (`--line-head`, `--line-hero`), los `outline` de
+foco (accesibilidad, no borde) y `pages/entrada.css`, que es la entrada
+pública en lenguaje afiche, no una pantalla de la app. Nada más cambió:
+mismas pantallas, tipografía, radios y densidad; 56 tests verdes.

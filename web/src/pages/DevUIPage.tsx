@@ -229,7 +229,7 @@ export function DevUIPage() {
       <p className="alert" role="alert">Un error, en rojo, con borde de 2px.</p>
 
       <Bloque title="Tab bar (mobile) y Sidebar (desktop)">
-        <div style={{ border: '2px solid var(--ink)', maxWidth: 360 }}>
+        <div style={{ border: 'var(--line-box)', maxWidth: 360 }}>
           <div className="tabbar" style={{ position: 'static' }}>
             <div className="tabbar__inner">
               <a className="on-ink" href="#tab"><Home size={19} aria-hidden />Inicio</a>

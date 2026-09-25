@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — Bordes en modo claro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:#1A1C22; -webkit-font-smoothing:antialiased; }
+  .doc { max-width:1340px; margin:0 auto; padding:44px 20px 90px; }
+  .doc > h1 { font-family:'Anton',sans-serif; font-size:clamp(25px,4vw,34px); text-transform:uppercase; }
+  .doc > h1 em { font-style:normal; color:#C4401E; }
+  .doc > p.lead { margin-top:10px; max-width:930px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .doc > p.lead b { color:#1A1C22; }
+  .cap { font-size:13px; font-weight:700; color:#55575E; margin:28px 0 10px; }
+  .cap b { color:#1A1C22; }
+
+  .scale { margin-top:18px; background:#fff; border:1px solid #D5D8DD; border-radius:12px; overflow:hidden; }
+  .sh, .sr { display:grid; grid-template-columns:140px 1fr 1fr 1fr; }
+  .sh { background:#F6F7F8; border-bottom:1px solid #E3E5E9; }
+  .sh div { padding:9px 14px; font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:#7C818C; }
+  .sr { border-bottom:1px solid #E3E5E9; font-size:12.5px; }
+  .sr:last-child { border-bottom:0; }
+  .sr > div { padding:11px 14px; color:#4A4C55; line-height:1.5; border-left:1px solid #E3E5E9; }
+  .sr > div:first-child { border-left:0; font-weight:700; color:#1A1C22; }
+  .sr code { font-family:'JetBrains Mono',monospace; font-size:11px; background:#EEF0F3; padding:1px 5px; }
+  .sr b.keep { color:#0E7A55; }
+
+  .frame { border:1px solid #C3C7CE; border-radius:12px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:320px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; }
+
+  /* base clara */
+  .lt { --bg:#F4F1EA; --sur:#FFFFFF; --sur2:#EDE9E0; --ink:#141414; --mut:#6B6559;
+        --ok:#1E6B4A; --warn:#8A5A08; --bad:#A32D2D; --indigo:#3A3FC4; --ticket:#C4401E; }
+  .app { display:flex; min-height:600px; background:var(--bg); color:var(--ink); position:relative; }
+  .side { width:196px; flex-shrink:0; }
+  .side .lg { font-family:'Anton',sans-serif; font-size:15px; letter-spacing:0.07em; padding:15px 14px; }
+  .side .sea { margin:0 12px 12px; padding:9px 11px; display:flex; align-items:center; justify-content:space-between; }
+  .side .sea b { font-family:'Anton',sans-serif; font-size:12px; letter-spacing:0.03em; }
+  .side .sea i { width:6px; height:6px; background:var(--ok); display:block; }
+  .side a { display:flex; align-items:center; gap:9px; padding:9px 14px; font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.07em; color:var(--mut); }
+  .side a .bg { margin-left:auto; font-size:9px; font-weight:700; padding:1px 5px; }
+  .main { flex:1; padding:18px 22px; min-width:0; }
+  .ph { display:flex; align-items:flex-end; justify-content:space-between; padding-bottom:11px; }
+  .ph h2 { font-family:'Anton',sans-serif; font-size:25px; text-transform:uppercase; line-height:.95; }
+  .ph .sb { font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.09em; color:var(--mut); margin-top:5px; }
+  .btn { font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; padding:10px 15px; display:inline-block; background:var(--sur); }
+  .hero { margin-top:13px; display:flex; background:var(--ink); color:var(--bg); }
+  .hero .l { flex:1; padding:15px 17px; }
+  .hero .e { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.13em; color:var(--ticket); }
+  .hero .fn { margin-top:5px; font-family:'Anton',sans-serif; font-size:23px; text-transform:uppercase; line-height:.95; }
+  .hero .m { margin-top:4px; font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; color:rgba(244,241,234,.6); }
+  .hero .bar { margin-top:11px; height:5px; background:rgba(244,241,234,.16); max-width:290px; }
+  .hero .st { width:125px; padding:15px; }
+  .hero .st b { font-family:'Anton',sans-serif; font-size:21px; display:block; line-height:1; }
+  .hero .st span { font-family:'JetBrains Mono',monospace; font-size:8.5px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(244,241,234,.55); display:block; margin-top:5px; }
+  .hero .cta { width:136px; display:flex; align-items:center; justify-content:center; padding:15px; }
+  .hero .cta .btn { background:transparent; color:var(--bg); }
+  .sect { margin-top:17px; display:flex; align-items:center; gap:10px; }
+  .sect b { font-family:'Anton',sans-serif; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; }
+  .sect .lk { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.08em; color:var(--mut); }
+  .row { display:flex; align-items:center; gap:11px; padding:10px 13px; }
+  .row .ic { width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .row .md { flex:1; min-width:0; }
+  .row .md b { font-size:12.5px; font-weight:700; display:block; }
+  .row .md span { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; color:var(--mut); }
+  .row .amt { font-family:'Anton',sans-serif; font-size:15px; color:var(--warn); }
+  .chip { font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:3px 8px; min-width:66px; text-align:center; display:inline-block; }
+  .modal { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:392px; background:var(--sur); }
+  .mh { padding:13px 15px; display:flex; align-items:flex-start; gap:10px; }
+  .mh .av { width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-family:'Anton',sans-serif; font-size:11px; }
+  .mh b { font-size:14px; font-weight:700; display:block; }
+  .mh span { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; color:var(--mut); }
+  .mb { padding:0 15px 13px; }
+  .lb { font-family:'JetBrains Mono',monospace; font-size:8.5px; text-transform:uppercase; letter-spacing:0.12em; color:var(--mut); margin-top:12px; }
+  .inp { margin-top:6px; padding:11px 13px; font-family:'Anton',sans-serif; font-size:19px; background:var(--bg); }
+  .seg { margin-top:6px; display:flex; }
+  .seg span { flex:1; padding:10px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; text-transform:uppercase; }
+  .qk { margin-top:7px; display:flex; gap:7px; }
+  .qk span { font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; text-transform:uppercase; padding:6px 10px; }
+  .note2 { margin-top:6px; padding:10px 12px; font-size:11.5px; color:var(--mut); background:var(--bg); }
+  .mf { padding:11px 15px; display:flex; gap:9px; justify-content:flex-end; align-items:center; }
+  .mf .txt { margin-right:auto; font-size:10.5px; color:var(--mut); }
+  .scrim { position:absolute; inset:0; background:rgba(20,20,20,.42); }
+
+  /* A · SATURADO (como está) */
+  .bad .side { background:var(--sur); border-right:2px solid var(--ink); }
+  .bad .side .sea { border:2px solid var(--ink); }
+  .bad .side a.on { background:var(--ink); color:var(--bg); border-left:4px solid var(--ticket); }
+  .bad .ph { border-bottom:2px solid var(--ink); }
+  .bad .btn { border:2px solid var(--ink); }
+  .bad .btn.fill { background:var(--ticket); border-color:var(--ticket); color:var(--bg); }
+  .bad .hero { border:2px solid var(--ink); }
+  .bad .hero .l, .bad .hero .st { border-right:2px dashed rgba(244,241,234,.4); }
+  .bad .hero .cta .btn { border-color:var(--bg); }
+  .bad .panel { border:2px solid var(--ink); background:var(--sur); }
+  .bad .row { border-bottom:2px solid rgba(20,20,20,.28); }
+  .bad .row:last-child { border-bottom:0; }
+  .bad .row .ic { border:2px solid var(--warn); color:var(--warn); }
+  .bad .chip { border:1.5px solid currentColor; }
+  .bad .sect::after { content:""; flex:1; height:2px; background:var(--ink); }
+  .bad .modal { border:2px solid var(--ink); }
+  .bad .mh { border-bottom:2px solid var(--ink); }
+  .bad .mh .av { border:2px solid var(--ink); }
+  .bad .inp { border:2px solid var(--ticket); }
+  .bad .seg span { border:2px solid var(--ink); }
+  .bad .seg span.on { background:var(--ink); color:var(--bg); }
+  .bad .qk span { border:2px solid var(--ink); }
+  .bad .qk span.on { background:var(--ink); color:var(--bg); }
+  .bad .note2 { border:2px solid rgba(20,20,20,.3); }
+  .bad .mf { border-top:2px solid var(--ink); }
+
+  /* B · AJUSTADO */
+  .fix { --hair:#E4DFD2; --edge:#CFC8B8; }
+  .fix .side { background:var(--sur); border-right:1px solid var(--edge); }
+  .fix .side .sea { background:var(--sur2); }
+  .fix .side a.on { background:var(--ink); color:var(--bg); box-shadow:inset 3px 0 0 var(--ticket); }
+  .fix .ph { border-bottom:2px solid var(--ink); }
+  .fix .btn { border:1.5px solid var(--ink); }
+  .fix .btn.fill { background:var(--ticket); border-color:var(--ticket); color:var(--bg); }
+  .fix .hero .l, .fix .hero .st { border-right:1px dashed rgba(244,241,234,.28); }
+  .fix .hero .cta .btn { border-color:rgba(244,241,234,.55); }
+  .fix .panel { background:var(--sur); border:1px solid var(--edge); }
+  .fix .row { border-bottom:1px solid var(--hair); }
+  .fix .row:last-child { border-bottom:0; }
+  .fix .row .ic { background:#F5EEDF; color:var(--warn); }
+  .fix .chip { border:1.5px solid currentColor; }
+  .fix .sect::after { content:""; flex:1; height:1px; background:var(--edge); }
+  .fix .modal { border:1px solid var(--edge); box-shadow:0 18px 50px rgba(20,20,20,.22); }
+  .fix .mh { border-bottom:1px solid var(--hair); }
+  .fix .mh .av { background:var(--sur2); }
+  .fix .inp { border:1.5px solid var(--ink); outline:2px solid var(--ticket); outline-offset:-1px; }
+  .fix .seg { border:1.5px solid var(--ink); }
+  .fix .seg span.on { background:var(--ink); color:var(--bg); }
+  .fix .qk span { border:1.5px solid var(--ink); }
+  .fix .qk span.on { background:var(--ink); color:var(--bg); }
+  .fix .mf { border-top:1px solid var(--hair); }
+
+  .note { margin-top:26px; background:#fff; border:1px solid #D5D8DD; border-left:4px solid #C4401E; padding:16px 18px; }
+  .note b.t { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#C4401E; }
+  .note p { margin-top:9px; font-size:13px; line-height:1.65; color:#4A4C55; }
+  .note p b { color:#1A1C22; }
+  .note code { font-family:'JetBrains Mono',monospace; font-size:.9em; background:#EEF0F3; padding:1px 5px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>Los bordes en <em>modo claro</em></h1>
+  <p class="lead">Mismo problema, misma causa: <b>un solo grosor para cinco niveles de información</b>. En claro se disimula porque la tinta sobre papel se lee como impresión, pero las cajas anidadas están igual: barra lateral, panel, fila, ícono, chip. La corrección deja el 2px para <b>dos lugares con intención</b> y baja todo lo demás.</p>
+
+  <div class="scale">
+    <div class="sh"><div>Nivel</div><div>Qué separa</div><div>Claro</div><div>Oscuro</div></div>
+    <div class="sr">
+      <div>1 · Firma</div>
+      <div>Regla bajo el encabezado de página y bloque del hero</div>
+      <div><b class="keep">2px ink</b> — los únicos</div>
+      <div>Hero por superficie; regla <code>1px .18</code></div>
+    </div>
+    <div class="sr">
+      <div>2 · Estructura</div>
+      <div>Borde de la barra lateral</div>
+      <div><code>1px #CFC8B8</code></div>
+      <div><code>1px rgba(paper,.18)</code></div>
+    </div>
+    <div class="sr">
+      <div>3 · Contenedor</div>
+      <div>Paneles, bloques de función, modales</div>
+      <div><code>1px #CFC8B8</code> + blanco sobre papel</div>
+      <div><b>Sin borde:</b> superficie <code>#211E1A</code></div>
+    </div>
+    <div class="sr">
+      <div>4 · División</div>
+      <div>Filas, separadores internos</div>
+      <div><code>1px #E4DFD2</code></div>
+      <div><code>1px rgba(paper,.10)</code></div>
+    </div>
+    <div class="sr">
+      <div>5 · Interactivo</div>
+      <div>Botones, inputs, segmentados, filtros</div>
+      <div><code>1.5px ink</code></div>
+      <div><code>1px rgba(paper,.18)</code></div>
+    </div>
+    <div class="sr">
+      <div>6 · Marca</div>
+      <div>Chips de estado, acento lateral</div>
+      <div><code>1.5px</code> contorno · acento interno <code>3px</code></div>
+      <div>Igual, acento en <code>#E05A2B</code></div>
+    </div>
+  </div>
+
+  <div class="cap"><b>Antes</b> — 2px en todo: la barra lateral, el panel, cada fila, el ícono, el modal y sus controles.</div>
+  <div class="frame">
+    <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.fluxara.com.ar/app</div></div>
+    <div class="app lt bad">
+      <div class="side">
+        <div class="lg">ACAPELIUS</div>
+        <div class="sea"><b>Temporada 2026</b><i></i></div>
+        <a class="on">Inicio</a>
+        <a>Ventas <span class="bg" style="border:2px solid var(--warn); color:var(--warn);">10</span></a>
+        <a>Puerta</a><a>Temporada</a>
+        <a>Plata <span class="bg" style="border:2px solid var(--warn); color:var(--warn);">6</span></a>
+      </div>
+      <div class="main">
+        <div class="ph"><div><h2>Hola, Eli</h2><div class="sb">Viernes, 25 de septiembre</div></div><span class="btn fill">＋ Nueva venta</span></div>
+        <div class="hero">
+          <div class="l">
+            <div class="e">Última función</div>
+            <div class="fn">Cierre de temporada</div>
+            <div class="m">Dom 13 sept, 21:00</div>
+            <div class="bar"><i style="display:block;height:100%;width:18%;background:#C4401E;"></i></div>
+          </div>
+          <div class="st"><b>$36.000</b><span>Recaudó</span></div>
+          <div class="st"><b style="color:#E0A84A">36</b><span>Sin asignar</span></div>
+          <div class="cta"><span class="btn">Ver función</span></div>
+        </div>
+        <div class="sect"><b>Necesita tu atención · 7</b><span class="lk">Ver todo</span></div>
+        <div class="panel" style="margin-top:9px;">
+          <div class="row"><span class="ic">◈</span><div class="md"><b>Beatriz Coria</b><span>Cobró hace 30 días</span></div><span class="amt">$112.000</span></div>
+          <div class="row"><span class="ic">◈</span><div class="md"><b>Marta Ledesma</b><span>Cobró hace 34 días</span></div><span class="amt">$106.000</span></div>
+          <div class="row"><span class="ic">◈</span><div class="md"><b>Silvia Rey</b><span>Cobró hace 32 días</span></div><span class="amt">$62.000</span></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="modal">
+        <div class="mh"><span class="av">BC</span><div><b>Beatriz Coria</b><span>Debe $112.000 · cobró $112.000</span></div></div>
+        <div class="mb">
+          <div class="lb">Cuánto rinde</div>
+          <div class="inp">112000</div>
+          <div class="qk"><span class="on">Todo ($112.000)</span><span>Otra cifra</span></div>
+          <div class="lb">Método</div>
+          <div class="seg"><span class="on">Transferencia</span><span>Efectivo</span></div>
+          <div class="lb">Nota (opcional)</div>
+          <div class="note2">En el ensayo del jueves</div>
+        </div>
+        <div class="mf"><span class="txt">Después de esto <b style="color:var(--ok)">queda al día</b></span><span class="btn">Cancelar</span><span class="btn fill">Confirmar</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap"><b>Después</b> — el 2px queda solo en la regla del encabezado; el resto baja de peso y el blanco sobre papel hace el trabajo.</div>
+  <div class="frame">
+    <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.fluxara.com.ar/app</div></div>
+    <div class="app lt fix">
+      <div class="side">
+        <div class="lg">ACAPELIUS</div>
+        <div class="sea"><b>Temporada 2026</b><i></i></div>
+        <a class="on">Inicio</a>
+        <a>Ventas <span class="bg" style="background:#F5EEDF; color:var(--warn);">10</span></a>
+        <a>Puerta</a><a>Temporada</a>
+        <a>Plata <span class="bg" style="background:#F5EEDF; color:var(--warn);">6</span></a>
+      </div>
+      <div class="main">
+        <div class="ph"><div><h2>Hola, Eli</h2><div class="sb">Viernes, 25 de septiembre</div></div><span class="btn fill">＋ Nueva venta</span></div>
+        <div class="hero">
+          <div class="l">
+            <div class="e">Última función</div>
+            <div class="fn">Cierre de temporada</div>
+            <div class="m">Dom 13 sept, 21:00</div>
+            <div class="bar"><i style="display:block;height:100%;width:18%;background:#E05A2B;"></i></div>
+          </div>
+          <div class="st"><b>$36.000</b><span>Recaudó</span></div>
+          <div class="st"><b style="color:#E0A84A">36</b><span>Sin asignar</span></div>
+          <div class="cta"><span class="btn">Ver función</span></div>
+        </div>
+        <div class="sect"><b>Necesita tu atención · 7</b><span class="lk">Ver todo</span></div>
+        <div class="panel" style="margin-top:9px;">
+          <div class="row"><span class="ic">◈</span><div class="md"><b>Beatriz Coria</b><span>Cobró hace 30 días</span></div><span class="amt">$112.000</span></div>
+          <div class="row"><span class="ic">◈</span><div class="md"><b>Marta Ledesma</b><span>Cobró hace 34 días</span></div><span class="amt">$106.000</span></div>
+          <div class="row"><span class="ic">◈</span><div class="md"><b>Silvia Rey</b><span>Cobró hace 32 días</span></div><span class="amt">$62.000</span></div>
+        </div>
+      </div>
+      <div class="scrim"></div>
+      <div class="modal">
+        <div class="mh"><span class="av">BC</span><div><b>Beatriz Coria</b><span>Debe $112.000 · cobró $112.000</span></div></div>
+        <div class="mb">
+          <div class="lb">Cuánto rinde</div>
+          <div class="inp">112000</div>
+          <div class="qk"><span class="on">Todo ($112.000)</span><span>Otra cifra</span></div>
+          <div class="lb">Método</div>
+          <div class="seg"><span class="on">Transferencia</span><span>Efectivo</span></div>
+          <div class="lb">Nota (opcional)</div>
+          <div class="note2">En el ensayo del jueves</div>
+        </div>
+        <div class="mf"><span class="txt">Después de esto <b style="color:var(--ok)">queda al día</b></span><span class="btn">Cancelar</span><span class="btn fill">Confirmar</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b class="t">Qué cambia y qué se conserva</b>
+    <p><b>El 2px sobrevive en un solo lugar:</b> la regla bajo el encabezado de página. Es lo que le da el golpe de afiche a cada pantalla sin repetirlo veinte veces. El hero sigue siendo un bloque de tinta —su contraste ya es máximo, no necesita borde— y el botón primario sigue relleno en naranja.</p>
+    <p><b>Los paneles pasan a 1px</b> en un tono de papel más oscuro (<code>#CFC8B8</code>), apoyados en que el blanco ya se despega del papel. Las filas bajan a <code>1px #E4DFD2</code>, que es la diferencia entre una tabla y una grilla de casilleros.</p>
+    <p><b>Lo interactivo queda en 1.5px de tinta:</b> botones, inputs, segmentados y filtros. Es lo único que conserva peso, y con razón — ahora el borde grueso <b>significa "esto se toca"</b> en vez de ser decoración.</p>
+    <p><b>El carácter no está en los bordes.</b> Viene de Anton en las cifras, el mono en mayúsculas, el cero radio, el naranja ticket, los troqueles punteados del hero y el bloque de tinta. Todo eso queda intacto; lo que se va es el ruido.</p>
+    <p style="margin-top:14px;"><b>Para pasarle a Claude Code:</b> esto es una enmienda a C18 — la sección 3 (Forma) se reemplaza por la escala de seis niveles de arriba, con sus dos columnas. Si querés te armo el archivo.</p>
+  </div>
+
+</div>
+</body>
+</html>
