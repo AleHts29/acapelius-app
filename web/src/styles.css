@@ -507,9 +507,9 @@ button {
 }
 
 .cat__head b {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -878,8 +878,9 @@ input[type='datetime-local'].field__input {
   border: 1.5px solid var(--line);
   color: var(--ink);
   font-size: 16px;
-  font-family: var(--font-display);
-  font-weight: 800;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .alloc-progress {
@@ -1381,9 +1382,9 @@ input[type='datetime-local'].field__input {
 
 .verdict__seal {
   margin-top: 10px;
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   opacity: 0.75;
   text-transform: uppercase;
@@ -1560,13 +1561,17 @@ input[type='datetime-local'].field__input {
   border-bottom: 2px solid var(--ink);
 }
 
+/* El nombre en Inter (es un nombre); solo el renglon de datos en mono. */
 .sheet-head b {
+  font-family: var(--font-body);
   font-size: 15px;
   font-weight: 800;
+  text-transform: none;
+  letter-spacing: 0;
   display: block;
 }
 
-.sheet-head span {
+.sheet-head span span {
   font-family: var(--font-mono);
   font-size: 10px;
   text-transform: uppercase;
@@ -2009,9 +2014,9 @@ div.alertcard {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 9.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ok);
@@ -2429,9 +2434,9 @@ div.alertcard {
 }
 
 .dg {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 9.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -2944,9 +2949,12 @@ div.alertcard {
 .pay-hist__del {
   background: none;
   border: none;
-  color: var(--danger);
+  color: var(--bad);
+  font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   min-height: 44px;
   padding: 0 4px;
   cursor: pointer;
@@ -2989,10 +2997,12 @@ div.alertcard {
 /* --- C14 · Contenido de los pop-ups ------------------------------------- */
 
 /* El monto es el dato del diálogo: se escribe grande y ya viene cargado. */
+/* Un input se lee mientras se escribe: Inter, no Anton. */
 .field__input--amount {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .quickamt {
@@ -3181,9 +3191,9 @@ div.alertcard {
 }
 
 .rd__sh b {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 9.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -3429,9 +3439,9 @@ div.alertcard {
 
 .sect {
   margin: 0 0 12px;
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 9.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -3441,9 +3451,9 @@ div.alertcard {
 
 .money__lbl {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 9.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -3615,9 +3625,9 @@ div.alertcard {
 }
 
 .acard__h b {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -3770,9 +3780,9 @@ div.alertcard {
   padding: 10px 18px;
   background: var(--surface-alt);
   border-bottom: 1px solid var(--line);
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 8.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -3893,9 +3903,9 @@ div.alertcard {
 
 .cmp__hr {
   padding: 9px 0;
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 8.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -3951,9 +3961,12 @@ div.alertcard {
    ========================================================================== */
 
 .page-head__sub {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--text-muted);
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink2);
 }
 
 /* Las acciones primarias: en celular abajo del hero, en escritorio en el
@@ -4082,9 +4095,9 @@ div.alertcard {
 .thead2 {
   background: var(--surface-alt);
   border-bottom: 1px solid var(--line);
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 8.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -4314,9 +4327,9 @@ div.alertcard {
   align-items: center;
   gap: 8px;
   margin-top: 12px;
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 9.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -4833,8 +4846,7 @@ div.alertcard {
 
 .srow__sub {
   display: block;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 11.5px;
   color: var(--ink2);
 }
 
@@ -4991,9 +5003,9 @@ div.alertcard {
 
 .door-hoy__e {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--indigo-light);
@@ -5106,9 +5118,9 @@ div.alertcard {
 
 .door-soon__e {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -5458,19 +5470,20 @@ div.alertcard {
    ========================================================================== */
 
 /* Franja resumen de la temporada. */
+/* Tira de resumen: contenedor de 2px con celdas separadas por troquel. */
 .tstrip {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   margin-bottom: 18px;
   overflow: hidden;
 }
 
 .tstrip > div {
   padding: 11px 14px;
-  border-top: 1px solid var(--line);
-  border-left: 1px solid var(--line);
+  border-top: 1px dashed var(--ink);
+  border-left: 1px dashed var(--ink);
 }
 
 .tstrip > div:nth-child(-n + 2) {
@@ -5484,16 +5497,17 @@ div.alertcard {
 .tstrip b {
   display: block;
   font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 800;
+  font-size: 19px;
+  line-height: 1;
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .tstrip b small {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink2);
 }
 
 .tstrip b.g {
@@ -5506,9 +5520,10 @@ div.alertcard {
 
 .tstrip span {
   display: block;
-  margin-top: 3px;
-  font-size: 9.5px;
-  font-weight: 800;
+  margin-top: 5px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -5530,9 +5545,9 @@ div.alertcard {
 }
 
 .sectrule b {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-size: 9.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -6519,17 +6534,27 @@ div.alertcard {
     white-space: nowrap;
   }
 
-  .srow__seller,
-  .srow__when {
-    color: var(--text-muted);
-    font-size: 11.5px;
+  /* Vendedora en Inter (es un nombre); la fecha en mono (es un dato). */
+  .srow__seller {
+    color: var(--ink2);
+    font-size: 12.5px;
   }
 
+  .srow__when {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ink2);
+  }
+
+  /* Cifras en Anton: son para mirar, no para leer de corrido. */
   .srow__qty,
   .srow__total {
     text-align: right;
     font-family: var(--font-display);
-    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
   }
 
@@ -6537,8 +6562,11 @@ div.alertcard {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 11px;
-    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink2);
   }
 
   .dot {
@@ -6582,12 +6610,15 @@ div.alertcard {
 
   .srow__do {
     display: none;
-    padding: 5px 9px;
-    border: 1.5px solid var(--line);
-    background: var(--surface);
-    font-family: var(--font-body);
-    font-size: 11px;
-    font-weight: 800;
+    min-height: 28px;
+    padding: 4px 9px;
+    border: 1.5px solid var(--ink);
+    background: var(--paper2);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: var(--ink);
     white-space: nowrap;
     cursor: pointer;
@@ -6599,8 +6630,7 @@ div.alertcard {
   }
 
   .srow__do--ok {
-    border-color: #c9e6d9;
-    background: var(--ok-soft);
+    border-color: var(--ok);
     color: var(--ok);
   }
 
@@ -6872,7 +6902,7 @@ div.alertcard {
 
   .tstrip > div {
     border-top: 0;
-    border-left: 1px solid var(--line);
+    border-left: 1px dashed var(--ink);
   }
 
   .tstrip > div:first-child {

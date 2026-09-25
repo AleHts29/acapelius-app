@@ -1052,3 +1052,32 @@ comportamiento; los 53 tests de front pasan sin tocar.
 
 **`/app` con barra.** Vite en desarrollo sirve `/app/` pero no `/app`; el
 login y la demo mandan ahora a `/app/`, que en producción Go resuelve igual.
+
+## C18 · Paso 2 — Ventas
+
+La pantalla más densa, y la prueba de que el sistema aguanta: casi todo
+vino de los primitivos del paso 1. Lo que hubo que decidir a mano:
+
+**Qué va en cada tipografía dentro de la fila.** Comprador y vendedora en
+Inter (son nombres, se leen); cantidad y total en Anton 14px (son cifras,
+se miran); fecha de venta y estado de entrega en mono 10px en mayúsculas
+(son datos). El mockup pone a la vendedora en mono; el spec manda Inter
+para nombres de personas, y el spec gana. En celular el renglón "3 entradas
+· vendió Carolina Vega" vuelve a Inter por lo mismo: lleva un nombre.
+
+**Las etiquetas chicas que heredaban Anton pasaron a mono de una vez, en
+todo el CSS.** Toda regla con `--font-display`, mayúsculas y cuerpo ≤ 11.5px
+era una etiqueta de Archivo; un script las cambió a `--font-mono` (15
+reglas). Lo que queda en Anton (60 reglas) son títulos, cifras y
+contadores. Se sacaron de Anton los dos únicos inputs que lo usaban (monto
+de cobro y cupo por corista): un campo se lee mientras se escribe.
+
+**La tira de resumen y el sheet.** `.tstrip` (la de Ventas y Temporadas) es
+ahora el contenedor de 2px con troqueles punteados, igual que `.sumstrip`.
+En la cabecera del sheet, la regla `.sheet-head span` alcanzaba también al
+contenedor del nombre y lo pasaba a mono en mayúsculas; ahora solo el
+renglón de datos es mono.
+
+**La barra de selección** dejó el carbón redondeado: tinta con borde de
+2px, título en Anton y acciones en mono con contorno papel. El aviso de
+lote es papel2 con borde verde.
