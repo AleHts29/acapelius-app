@@ -151,7 +151,7 @@ dev: $(ENV_FILE) db-up ## Levanta todo: Postgres, API y frontend
 	@$(LOAD_ENV); \
 		echo ""; \
 		echo "  API      http://localhost:$$PORT/api/health"; \
-		echo "  Frontend http://localhost:5173"; \
+		echo "  Frontend http://localhost:5173/app/"; \
 		echo ""; \
 		trap 'kill 0' EXIT INT TERM; \
 		$(GO) run ./cmd/server & \

@@ -392,3 +392,25 @@ func (s *Service) HasHistory(ctx context.Context, user *domain.User) (bool, erro
 	}
 	return n > 0, nil
 }
+
+// OpenSession abre sesion para una persona recien creada por el alta de
+// cuenta (C17 §B.3): no hay contraseña que verificar, la acaba de elegir.
+// Renueva el token como Login y sella el ingreso.
+func (s *Service) OpenSession(ctx context.Context, userID int64) (*domain.User, error) {
+	row, err := s.queries.GetUserWithMembership(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("cargar usuario: %w", err)
+	}
+	if err := s.sessions.RenewToken(ctx); err != nil {
+		return nil, fmt.Errorf("renovar sesion: %w", err)
+	}
+	s.sessions.Put(ctx, sessionUserKey, row.ID)
+	if err := s.queries.TouchUserLogin(ctx, row.ID); err != nil {
+		slog.ErrorContext(ctx, "no se pudo registrar el ultimo ingreso", "user_id", row.ID, "error", err)
+	} else {
+		now := time.Now()
+		row.LastLoginAt = &now
+	}
+	user := fromMembership(row)
+	return &user, nil
+}

@@ -29,11 +29,18 @@ type Server struct {
 	queries *sqlcgen.Queries
 	signer  *qr.Signer
 	mailer  mail.Driver
+	web     *web.Handlers
 }
 
 // New construye el server HTTP con todas sus rutas montadas.
 func New(cfg *config.Config, pool *pgxpool.Pool, authService *auth.Service, signer *qr.Signer, mailer mail.Driver) *Server {
+	site, err := web.New()
+	if err != nil {
+		// Solo puede fallar si el go:embed del paquete web cambio y quedo mal.
+		panic("web: no se pudo abrir lo embebido: " + err.Error())
+	}
 	return &Server{
+		web:     site,
 		cfg:     cfg,
 		pool:    pool,
 		auth:    authService,
@@ -49,6 +56,10 @@ const (
 	loginRateLimitRequests  = 10 // intentos de login por minuto
 	publicRateLimitRequests = 60 // pagina publica y PNGs por minuto
 	rateLimitWindow         = time.Minute
+	// El alta crea organizaciones: es el blanco obvio de abuso (C17 §B.3).
+	// Cinco por hora por IP alcanza para una persona y frena a un script.
+	signupRateLimitRequests = 5
+	signupRateLimitWindow   = time.Hour
 )
 
 // securityHeaders endurece las respuestas. Sin CSP a proposito en el MVP:
@@ -99,6 +110,11 @@ func (s *Server) Handler() http.Handler {
 		api.Group(func(pub chi.Router) {
 			pub.Use(httprate.LimitByIP(loginRateLimitRequests, rateLimitWindow))
 			pub.Post("/auth/login", s.handleLogin)
+		})
+
+		api.Group(func(pub chi.Router) {
+			pub.Use(httprate.LimitByIP(signupRateLimitRequests, signupRateLimitWindow))
+			pub.Post("/signup", s.handleSignup)
 		})
 
 		api.Group(func(priv chi.Router) {
@@ -197,9 +213,8 @@ func (s *Server) Handler() http.Handler {
 		})
 	})
 
-	// El frontend (SPA) se sirve embebido en el binario. Las rutas del cliente
-	// caen al index.html.
-	r.NotFound(web.SPAHandler().ServeHTTP)
+	// El sitio publico y la app, embebidos en el binario.
+	s.mountSite(r)
 
 	return r
 }

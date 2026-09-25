@@ -90,7 +90,7 @@ function TicketPageShell({
   return (
     <div className="ticket-page">
       <header className="ticket-page__head">
-        <img src="/logo-full-blue.png" alt="Acapelius" style={{ width: 'min(60%, 240px)', marginBottom: '1rem' }} />
+        <img src="/app/logo-full-blue.png" alt="Acapelius" style={{ width: 'min(60%, 240px)', marginBottom: '1rem' }} />
         <h1 className="ticket-page__title">{title}</h1>
         <p className="ticket-page__meta">
           {formatDateTime(startsAt)}
@@ -120,7 +120,7 @@ function ErrorScreen({ error }: { error: unknown }) {
   return (
     <div className="centered-screen">
       <div className="card">
-        <img className="login-logo" src="/logo-full-blue.png" alt="Acapelius" />
+        <img className="login-logo" src="/app/logo-full-blue.png" alt="Acapelius" />
         <p className="alert">{message}</p>
       </div>
     </div>

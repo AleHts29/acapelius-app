@@ -30,7 +30,7 @@ make dev     # Postgres + API + Vite, todo junto
 
 `make dev` deja:
 
-- Frontend en <http://localhost:5173> — es la URL que hay que abrir.
+- Frontend en <http://localhost:5173/app/> — es la URL que hay que abrir (la app vive bajo `/app`; la landing la sirve la API en <http://localhost:8081/>).
 - API en <http://localhost:8081/api/health>.
 
 La primera vez, `make dev` crea el admin y te imprime sus credenciales

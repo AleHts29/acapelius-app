@@ -179,7 +179,7 @@ func ComposeInviteEmail(data InviteEmailData) Message {
 	// --- Version texto plano -------------------------------------------------
 	var textB strings.Builder
 	fmt.Fprintf(&textB, "Hola %s:\n\n%s\n\n", data.Name, leadText)
-	fmt.Fprintf(&textB, "  Direccion: %s\n  Email:     %s\n  Clave:     %s\n",
+	fmt.Fprintf(&textB, "  Direccion: %s/entrar\n  Email:     %s\n  Clave:     %s\n",
 		data.BaseURL, data.Email, data.TempPassword)
 	fmt.Fprintf(&textB, "\nApenas entres te va a pedir elegir tu propia contrasena.\n")
 	fmt.Fprintf(&textB, "Esta clave es provisoria: no se la pases a nadie.\n")
@@ -207,7 +207,7 @@ func ComposeInviteEmail(data InviteEmailData) Message {
 	fmt.Fprintf(&b, `</div>`)
 
 	fmt.Fprintf(&b, `<div style="text-align:center;margin:22px 0 8px">`)
-	fmt.Fprintf(&b, `<a href="%s" style="display:inline-block;background:%s;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:12px">Entrar a Acapelius</a>`, data.BaseURL, brandBlue)
+	fmt.Fprintf(&b, `<a href="%s/entrar" style="display:inline-block;background:%s;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:12px">Entrar a Acapelius</a>`, data.BaseURL, brandBlue)
 	fmt.Fprintf(&b, `</div>`)
 	fmt.Fprintf(&b, `<p style="margin:0;text-align:center;color:#888;font-size:12px">Apenas entres te va a pedir elegir tu propia contrasena.<br>Esta clave es provisoria: no se la pases a nadie.</p>`)
 

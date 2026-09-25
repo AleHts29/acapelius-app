@@ -24,6 +24,8 @@ const API_TARGET = process.env.VITE_API_TARGET ?? 'http://localhost:8081'
 
 export default defineConfig({
   plugins: [react(), keepDistTracked()],
+  // La app vive bajo /app (C17 §B.1): la raiz es la landing, que sirve Go.
+  base: '/app/',
   server: {
     port: 5173,
     // El escaneo de QR necesita getUserMedia, que exige HTTPS salvo en
@@ -31,8 +33,14 @@ export default defineConfig({
     host: true,
     // /e/{code} NO se proxea: es una ruta del SPA (la pagina publica de la
     // entrada); solo la API va al backend.
+    // El sitio publico (landing, alta, login) es HTML estatico que sirve Go:
+    // se proxea para que /entrar y /crear-cuenta funcionen tambien en dev.
     proxy: {
       '/api': { target: API_TARGET, changeOrigin: true },
+      '/site': { target: API_TARGET, changeOrigin: true },
+      '/entrar': { target: API_TARGET, changeOrigin: true },
+      '/crear-cuenta': { target: API_TARGET, changeOrigin: true },
+      '/demo': { target: API_TARGET, changeOrigin: true },
     },
   },
   build: {

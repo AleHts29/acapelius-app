@@ -58,7 +58,7 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
   return (
     <nav className="sidenav" aria-label="Navegación principal">
       <Link className="sidenav__brand" to="/" aria-label="Inicio">
-        <img className="sidenav__logo" src="/logo-mark-indigo.png" alt="" />
+        <img className="sidenav__logo" src="/app/logo-mark-indigo.png" alt="" />
         <span>ACAPELIUS</span>
       </Link>
 

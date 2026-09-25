@@ -22,9 +22,14 @@ const queryClient = new QueryClient({
 // build de produccion: en dev el service worker pelearia con Vite.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js')
+    void navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' })
   })
 }
+
+// La app vive bajo /app (C17 §B.1). Las paginas publicas de entradas (/e/,
+// /t/) quedan en la raiz —hay links en emails ya enviados— y son las unicas
+// rutas del SPA sin el prefijo.
+const basename = /^\/(e|t)\//.test(window.location.pathname) ? '/' : '/app'
 
 const container = document.getElementById('root')
 if (!container) {
@@ -35,7 +40,7 @@ createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
-        <BrowserRouter>
+        <BrowserRouter basename={basename}>
           <App />
         </BrowserRouter>
       </SessionProvider>

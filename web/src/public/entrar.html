@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/app/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
+<link rel="preload" href="/site/fonts/anton.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site/afiche.css">
+<title>Entrar — Acapelius</title>
+<meta name="description" content="Entrá a Acapelius con tu usuario.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#F4F1EA">
+</head>
+<body>
+<div class="auth">
+  <div class="auth__l">
+    <a class="auth__lg" href="/">ACAPELIUS</a>
+    <h1>Entrar</h1>
+    <p class="sb">Con el email y la contraseña que te dio la dirección de tu grupo. Si es la primera vez, la app te pide elegir una propia.</p>
+
+    <form id="entrar" novalidate>
+      <div class="fld">
+        <label for="email">Email</label>
+        <input class="inp" id="email" name="email" type="email" required autocomplete="username" inputmode="email" autofocus>
+      </div>
+      <div class="fld">
+        <label for="password">Contraseña</label>
+        <input class="inp" id="password" name="password" type="password" required autocomplete="current-password">
+      </div>
+      <p class="err" role="alert" aria-live="polite"></p>
+      <button class="btn btn--ink btn--block go" type="submit">Entrar</button>
+    </form>
+    <p class="alt">¿Tu grupo todavía no tiene cuenta? <a href="/crear-cuenta">Crear cuenta</a> · ¿Solo querés mirar? <a href="/demo">Probar la demo</a></p>
+    <p class="hint">¿Olvidaste la contraseña? Pedile a la dirección de tu grupo que te genere una nueva.</p>
+  </div>
+  <aside class="auth__r" aria-label="Acapelius">
+    <p class="big">Diciembre<br>llega igual.<br><em>La diferencia</em><br>es cómo te<br>encuentra.</p>
+    <p class="nt">Entradas con QR · cupos por integrante · puerta sin internet · la plata clara</p>
+  </aside>
+</div>
+<script src="/site/site.js" defer></script>
+</body>
+</html>

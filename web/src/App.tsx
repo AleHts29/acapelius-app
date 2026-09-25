@@ -11,7 +11,6 @@ import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 import { DireccionPage } from "./pages/DireccionPage";
 import { DoorPage } from "./pages/DoorPage";
 import { HomePage } from "./pages/HomePage";
-import { LoginPage } from "./pages/LoginPage";
 import { NewSalePage } from "./pages/NewSalePage";
 import { SalesPage } from "./pages/SalesPage";
 import { SeasonPage } from "./pages/SeasonPage";
@@ -54,6 +53,22 @@ function RequireSeller({ children }: { children: ReactNode }) {
   return children;
 }
 
+/**
+ * Sin sesion se va a /entrar, que es una pagina del sitio publico y no de la
+ * app (C17 §B.1). Se conserva a donde queria ir para volver despues del login.
+ */
+function IrAEntrar() {
+  const destino = window.location.pathname + window.location.search;
+  window.location.replace(
+    `/entrar?next=${encodeURIComponent(destino)}`,
+  );
+  return (
+    <div className="centered-screen">
+      <p className="muted">Redirigiendo…</p>
+    </div>
+  );
+}
+
 /** Las pantallas que piden sesion. */
 function AuthenticatedApp() {
   const { user, loading, mustChangePassword } = useSession();
@@ -66,7 +81,7 @@ function AuthenticatedApp() {
     );
   }
 
-  if (!user) return <LoginPage />;
+  if (!user) return <IrAEntrar />;
   if (mustChangePassword) return <ChangePasswordPage />;
 
   return (

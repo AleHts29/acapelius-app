@@ -861,3 +861,66 @@ primera organización `theatre` real (pieza B o después), no antes.
 esquema viejo (`users.role`, `users.is_active`) y no corre desde
 `season_members`; lo rehace la pieza C, que necesita sembrar la organización
 demo de todas formas.
+
+## C17 · Pieza B — la landing, el alta y la app en /app
+
+**La app se mudó a `/app`; la raíz es de la landing.** `base: '/app/'` en
+Vite y `basename` en el router. Las páginas públicas de entradas (`/e/`,
+`/t/`) se quedan en la raíz —hay links en emails ya enviados— y son las
+únicas rutas del SPA sin el prefijo: `main.tsx` elige el `basename` mirando
+la URL. Las rutas viejas de la app (`/ventas`, `/puerta/3`, `/panel/…`)
+responden 301 a `/app/…` conservando la query: es la regla del 404 de Go
+para cualquier ruta sin extensión.
+
+**El login salió de la app.** Sin sesión, `/app/*` manda a
+`/entrar?next=…` (una página del sitio, no un componente); al entrar vuelve
+a `next` sólo si empieza con `/app`. `LoginPage.tsx` se borró: un solo login,
+en el lenguaje afiche. En desarrollo Vite proxea `/entrar`, `/crear-cuenta`,
+`/demo` y `/site` al server Go, así que el flujo es el mismo que en
+producción; el frontend se abre en `http://localhost:5173/app/`.
+
+**El sitio público es HTML estático embebido en el binario, sin bundle.**
+Vive en `web/src/public/` (landing, alta, login, demo, `afiche.css`,
+`site.js`, fuentes y la imagen de Open Graph) y Go lo sirve con
+`//go:embed`. Tokens propios (`--paper`, `--ink`, `--ticket`, `--indigo`);
+nada de los tokens de la app, ni al revés. Las fuentes (Anton, JetBrains
+Mono, Inter) se sirven desde `/site/fonts/` con `font-display: swap` y sólo
+Anton se precarga: es la que dibuja el titular. Lighthouse local de la
+landing: 99 rendimiento, 100 accesibilidad, 100 buenas prácticas, 100 SEO
+(99/100 en mobile); la landing no descarga `/app/assets/*`.
+
+**La imagen de Open Graph es una captura.** `og.png` se generó con Chrome a
+partir de un HTML en el mismo lenguaje; no hay pipeline: si cambia el
+titular, se vuelve a capturar. Las URLs absolutas de `og:image` y
+`canonical` van escritas en el HTML (el dominio es uno solo).
+
+**`POST /api/signup` hace todo en una transacción**: organización, su
+dirección (sin contraseña provisoria: la acaba de elegir), la primera
+temporada activa (`Temporada <año>`) y la membresía admin; después abre la
+sesión (`auth.OpenSession`) y la página manda a `/app`. Contraseña ≥ 10
+(`domain.MinSignupPasswordLength`, más alta que la de las coristas: es la
+cuenta que administra todo). El slug sale del nombre (`domain.Slugify`) con
+sufijo `-2`, `-3`… si choca. Límite de 5 requests por hora por IP —cuenta
+también las que fallan la validación— y un campo `website` invisible: si
+viene lleno, responde "listo" vacío y no crea nada.
+
+**Sin verificación de email.** Deuda conocida (spec §B.3): hoy cualquiera
+crea una cuenta con cualquier email. Va junto con "olvidé mi contraseña",
+que tampoco existe: la página de login dice que se la pida a la dirección.
+
+**Las PWAs instaladas antes de `/app` tenían un service worker con alcance
+`/`.** Ese SW habría respondido la landing con la shell vieja cacheada.
+`/sw.js` ahora sirve un worker de baja: borra los caches, se desregistra y
+recarga las pestañas, que registran el nuevo en `/app/sw.js` con alcance
+`/app/`. El manifest viejo (`/manifest.webmanifest`) sigue existiendo con
+`start_url: /app/`, y los íconos y `email-logo.png` (que usan los mails ya
+enviados) se siguen sirviendo en la raíz.
+
+**`/demo` todavía no es la demo.** Hasta la pieza C es una página que lo
+dice y ofrece crear la cuenta; los botones "Probar la demo" ya apuntan ahí
+para no tocar la landing después. Términos, privacidad y contacto no
+existen: el pie no los promete.
+
+**Los mails de invitación apuntan a `/entrar`**, no a la raíz: con sesión la
+raíz redirige a la app, pero sin sesión mostraba la landing a alguien que
+sólo quería loguearse.
