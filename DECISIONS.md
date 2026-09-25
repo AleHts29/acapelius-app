@@ -1112,3 +1112,43 @@ toca marcado).
 `--ticket-on-ink` y troqueles; próximas y anteriores en paneles de 2px; los
 avisos con acento lateral de 6px. Los títulos de bloque (`.sectrule`) pasan
 a Anton 12px con regla de 2px, igual que `.ghead` en Inicio.
+
+## C18 · Pasos 4 y 5 — el resto de pantallas y la auditoría
+
+**El puente se fue.** Los nombres de Papel pautado (`--bg`, `--surface`,
+`--line`, `--indigo-soft`, `--danger`…) se reemplazaron en todo el CSS por
+su equivalente afiche (256 usos) y el bloque "PUENTE" de `:root` se borró.
+Como cada alias ya apuntaba al valor nuevo, ese reemplazo no cambió nada en
+pantalla; lo que cambió vino después, regla por regla.
+
+**Índigo sólo donde significa cortesía.** De 51 usos quedaron 13: chips,
+íconos y puntos de cortesía, la barra "asignadas" y los avatares
+`--blue`. Todo lo demás que era índigo por ser "acción" o "activo" pasó a
+tinta (links, encabezados, selección de fila, checks) o a ticket (barras de
+progreso, foco de fila en la mesa de entrada, tag "próxima", ítem de
+acción del menú). El botón de marcar ingreso en la mesa de entrada pasó a
+verde, como el de la puerta: es el mismo acto.
+
+**Contenedores a 2px, filas-tarjeta a 1.5px.** Diecisiete paneles que
+tenían borde de 1px `--line` (KPIs, tarjetas de rendición, mesa de
+asistencia, tabla de funciones de Dirección, lista de temporadas…) pasaron
+a `2px --ink`; trece filas que son tarjetas sueltas (persona, rendición,
+ingreso, fila de la mesa de entrada) a `1.5px --ink`, para que una lista de
+diez no sea diez marcos pesados. Las etiquetas de estado de función
+(`.fntag`, `.fnpill`, `.season-pill`, "en curso", "hecha", "cerrada") pasan
+de relleno a contorno mono, como los chips. La temporada en curso se marca
+con el acento lateral ticket en vez de un fondo entero.
+
+**Auditoría final (aceptación §8):** `grep -r "border-radius\|box-shadow"
+web/src --exclude-dir=public` → 0. Hexas en `styles.css`: los 14 del spec
+más los tres "sobre tinta" (`--ticket-on-ink #EC6E4C`, `--ok-on-ink
+#6DC79A`, `--warn-on-ink #E8A33D`), todos como tokens en `:root`; ningún
+hexa ni token viejo en los `.tsx`. Anton no aparece en ninguna regla de
+párrafo, subtítulo, nota, input ni celda de texto (sí en cifras de tabla,
+que es lo que pide el spec). Tests de front sin tocar: 54 verdes. La
+landing (`web/src/public/`) no importa nada de la app ni al revés.
+
+**Lo que no se hizo a propósito:** el marcado no cambió en ninguna
+pantalla (ni siquiera para reproducir el listado en números romanos del
+mockup de Inicio); es un reemplazo de estilo, como manda el spec. Y
+`useTerms()` sigue sin barrer los "corista" escritos: es otra tarea.

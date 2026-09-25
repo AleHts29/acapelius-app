@@ -68,29 +68,11 @@
 
   --tab-h: 62px;
 
-  /* --- PUENTE (se borra en el paso 5 de C18) -------------------------------
-     Los nombres de Papel pautado apuntan a la paleta nueva mientras las
-     pantallas se van reescribiendo. Ningun estilo nuevo los usa. */
-  --bg: var(--paper);
-  --surface: var(--paper2);
-  --surface-alt: var(--paper3);
-  --line: var(--hair);
-  --ink-soft: var(--ink2);
-  --text-muted: var(--ink2);
-  --indigo-soft: var(--paper3);
-  --indigo-light: var(--ticket);
-  --carbon: var(--ink);
-  --brand-white: var(--paper);
-  --brand-cream: var(--paper);
-  --mark: var(--paper3);
-  --ok-soft: var(--paper3);
-  --warn-soft: var(--paper3);
-  --danger: var(--bad);
-  --danger-soft: var(--paper3);
-  --night-card: #141414;
-  --night-line: var(--night-hair);
-  --night-muted: #b4b1a9;
-  --night-warn: #e8a33d;
+  /* Texto de color sobre fondo tinta (hero, nocturno): los semanticos del
+     spec no llegan a AA ahi; estas variantes si. Ver DECISIONS (C18). */
+  --ok-on-ink: #6dc79a;
+  --warn-on-ink: #e8a33d;
+  --night-muted: rgba(244, 241, 234, 0.6);
 
   color-scheme: light;
 }
@@ -317,7 +299,7 @@ button {
 }
 
 .muted {
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .stack > * + * {
@@ -402,7 +384,7 @@ button {
 }
 
 .card__subtitle {
-  color: var(--text-muted);
+  color: var(--ink2);
   font-size: 13px;
   margin: 0 0 18px;
 }
@@ -470,8 +452,8 @@ button {
 
 /* Card de categoria con borde lateral */
 .cat {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   overflow: hidden;
   display: flex;
 }
@@ -482,7 +464,7 @@ button {
 }
 
 .cat--sales .cat__edge {
-  background: var(--indigo);
+  background: var(--ticket);
 }
 
 .cat--door .cat__edge {
@@ -515,7 +497,7 @@ button {
 }
 
 .cat--sales .cat__head b {
-  color: var(--indigo);
+  color: var(--ink);
 }
 
 .cat--door .cat__head b {
@@ -544,12 +526,12 @@ button {
 
 .cat__item .s {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink2);
   margin-top: 1px;
 }
 
 .cat__item .chev {
-  color: var(--text-muted);
+  color: var(--ink2);
   font-size: 15px;
   flex-shrink: 0;
 }
@@ -646,7 +628,7 @@ input[type='datetime-local'].field__input {
   display: block;
   margin-top: 5px;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .form-grid {
@@ -736,7 +718,7 @@ input[type='datetime-local'].field__input {
 
 .qty__total {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--ink2);
   line-height: 1.35;
 }
 
@@ -831,7 +813,7 @@ input[type='datetime-local'].field__input {
 }
 
 .list > li + li {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hair);
 }
 
 .list__item {
@@ -855,7 +837,7 @@ input[type='datetime-local'].field__input {
 
 .team-edit {
   padding: 10px 2px 12px;
-  border-top: 1px dashed var(--line);
+  border-top: 1px dashed var(--hair);
 }
 
 .alloc-row {
@@ -867,15 +849,15 @@ input[type='datetime-local'].field__input {
 }
 
 .alloc-row + .alloc-row {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hair);
 }
 
 .alloc-row__input {
   width: 72px;
   min-height: 42px;
   text-align: center;
-  background: var(--surface-alt);
-  border: 1.5px solid var(--line);
+  background: var(--paper3);
+  border: 1.5px solid var(--ink);
   color: var(--ink);
   font-size: 16px;
   font-family: var(--font-body);
@@ -896,8 +878,8 @@ input[type='datetime-local'].field__input {
 }
 
 .kpi {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   padding: 12px 14px;
 }
 
@@ -911,7 +893,7 @@ input[type='datetime-local'].field__input {
 
 .kpi span {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
@@ -929,8 +911,8 @@ input[type='datetime-local'].field__input {
 
 /* Fila de listado (rendiciones, reportes) */
 .lrow {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 1.5px solid var(--ink);
   padding: 12px 14px;
 }
 
@@ -948,7 +930,7 @@ input[type='datetime-local'].field__input {
 
 .lrow__sub {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink2);
   margin-top: 1px;
 }
 
@@ -971,7 +953,7 @@ input[type='datetime-local'].field__input {
 
 .report-stat__item {
   white-space: nowrap;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .report-stat__item strong {
@@ -1057,13 +1039,13 @@ input[type='datetime-local'].field__input {
 }
 
 .credentials__line + .credentials__line {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hair);
 }
 
 .settlement-form {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hair);
 }
 
 .attendance-time {
@@ -1174,11 +1156,11 @@ input[type='datetime-local'].field__input {
 }
 
 .door.night .net {
-  color: #6dc79a;
+  color: var(--ok-on-ink);
 }
 
 .door.night .net--off {
-  color: var(--night-warn);
+  color: var(--warn-on-ink);
 }
 
 .door__counter {
@@ -1825,8 +1807,8 @@ input[type='datetime-local'].field__input {
 /* Fila minima de listado (C3/C6) */
 .mrow {
   width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 1.5px solid var(--ink);
   padding: 10px 12px;
   margin-bottom: 8px;
   display: flex;
@@ -1855,11 +1837,11 @@ input[type='datetime-local'].field__input {
 
 .mrow__mid span {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .mrow__dots {
-  color: var(--text-muted);
+  color: var(--ink2);
   flex-shrink: 0;
 }
 
@@ -1963,7 +1945,7 @@ div.alertcard {
 }
 
 .pbar--blue i {
-  background: var(--indigo);
+  background: var(--ticket);
 }
 
 .pbar--ok i {
@@ -1975,13 +1957,13 @@ div.alertcard {
 }
 
 .pbar--cream i {
-  background: var(--indigo-light);
+  background: var(--ticket);
 }
 
 .sbar {
   display: flex;
   height: 8px;
-  background: var(--line);
+  background: var(--hair);
   overflow: hidden;
 }
 
@@ -1998,7 +1980,7 @@ div.alertcard {
 }
 
 .sbar__seg--line {
-  background: var(--line);
+  background: var(--hair);
 }
 
 /* LiveDot */
@@ -2077,7 +2059,7 @@ div.alertcard {
 .empty p {
   margin: 4px 0 0;
   font-size: 11.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 /* Season pill (C9) */
@@ -2088,8 +2070,8 @@ div.alertcard {
   font-size: 11px;
   font-weight: 800;
   font-family: var(--font-body);
-  border: 1.5px solid var(--line);
-  background: var(--surface);
+  border: 1.5px solid currentColor;
+  background: var(--paper2);
   padding: 6px 10px;
   white-space: nowrap;
   color: var(--ink);
@@ -2144,9 +2126,10 @@ div.alertcard {
 /* Banner de cupo asignado (C8) */
 .quota-banner {
   margin-top: 12px;
-  background: var(--indigo-soft);
-  border: 1.5px solid var(--indigo);
-  color: var(--indigo);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
+  border-left-width: 6px;
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 600;
   padding: 10px 13px;
@@ -2162,20 +2145,23 @@ div.alertcard {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11.5px;
-  font-weight: 800;
-  font-family: var(--font-body);
-  color: var(--indigo);
-  border: 1.5px solid var(--line);
-  background: var(--surface);
-  padding: 7px 12px;
+  min-height: 36px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  background: var(--paper2);
+  padding: 6px 12px;
   cursor: pointer;
   text-decoration: none;
 }
 
 .settle-sum {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   padding: 12px 14px;
 }
 
@@ -2201,14 +2187,14 @@ div.alertcard {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.1em;
-  color: var(--text-muted);
+  color: var(--ink2);
   text-transform: uppercase;
 }
 
 .settle-sum .pbar {
   margin-top: 9px;
   height: 7px;
-  background: var(--warn-soft);
+  background: var(--paper3);
 }
 
 .settle-sum__leg {
@@ -2216,13 +2202,13 @@ div.alertcard {
   display: flex;
   justify-content: space-between;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
 .debt-card {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   border-left: 4px solid var(--warn);
   padding: 12px 14px;
   margin-bottom: 9px;
@@ -2243,7 +2229,7 @@ div.alertcard {
 .debt-card__det {
   margin-top: 5px;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .debt-card__det b {
@@ -2259,8 +2245,8 @@ div.alertcard {
 
 .okrow {
   width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 1.5px solid var(--ink);
   padding: 10px 14px;
   margin-bottom: 7px;
   display: flex;
@@ -2282,7 +2268,7 @@ div.alertcard {
 
 .okrow__l span {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .okrow__r {
@@ -2294,8 +2280,8 @@ div.alertcard {
 
 /* Detalle por corista */
 .profile {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   padding: 14px;
 }
 
@@ -2320,7 +2306,7 @@ div.alertcard {
 
 .profile__role {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .profile__chip {
@@ -2335,8 +2321,8 @@ div.alertcard {
 }
 
 .kpis3 .k {
-  background: var(--surface-alt);
-  border: 1px solid var(--line);
+  background: var(--paper3);
+  border: 2px solid var(--ink);
   padding: 8px 9px;
 }
 
@@ -2350,7 +2336,7 @@ div.alertcard {
 
 .kpis3 .k span {
   font-size: 8.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -2371,14 +2357,14 @@ div.alertcard {
 .profile__note {
   margin: 7px 0 0;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   text-align: center;
 }
 
 /* Filas del historial */
 .hrow {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 1.5px solid var(--ink);
   padding: 10px 13px;
   margin-bottom: 7px;
   display: flex;
@@ -2389,7 +2375,7 @@ div.alertcard {
 .hrow__ic {
   width: 30px;
   height: 30px;
-  background: var(--ok-soft);
+  background: var(--paper3);
   color: var(--ok);
   display: flex;
   align-items: center;
@@ -2411,7 +2397,7 @@ div.alertcard {
 
 .hrow__note {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   margin-top: 2px;
   font-style: italic;
   font-weight: 400;
@@ -2419,7 +2405,7 @@ div.alertcard {
 
 .hrow__when {
   font-size: 9.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 700;
   text-align: right;
   flex-shrink: 0;
@@ -2433,7 +2419,7 @@ div.alertcard {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
   margin: 12px 0 6px;
 }
 
@@ -2451,8 +2437,8 @@ div.alertcard {
   position: relative;
   display: inline-flex;
   align-items: center;
-  border: 1.5px solid var(--line);
-  background: var(--surface);
+  border: 2px solid var(--ink);
+  background: var(--paper2);
   padding: 0 10px;
   color: var(--ink);
   flex-shrink: 0;
@@ -2478,14 +2464,14 @@ div.alertcard {
 .att-fnsel svg {
   position: absolute;
   right: 9px;
-  color: var(--text-muted);
+  color: var(--ink2);
   pointer-events: none;
 }
 
 /* Card viva: N/M grande, punto EN VIVO y barra de ocupación. */
 .att-live {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   padding: 12px 14px;
   margin-bottom: 4px;
 }
@@ -2507,7 +2493,7 @@ div.alertcard {
 
 .att-live__n span {
   font-size: 14px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
@@ -2516,7 +2502,7 @@ div.alertcard {
   display: flex;
   justify-content: space-between;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
@@ -2526,11 +2512,12 @@ div.alertcard {
 
 /* Avatar de iniciales: verde completo, ámbar con entradas pendientes. */
 .att-ini {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid currentColor;
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 13px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2538,18 +2525,16 @@ div.alertcard {
 }
 
 .att-ini--ok {
-  background: var(--ok-soft);
   color: var(--ok);
 }
 
 .att-ini--warn {
-  background: var(--warn-soft);
   color: var(--warn);
 }
 
 .att-when {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 700;
   flex-shrink: 0;
   text-align: right;
@@ -2557,14 +2542,14 @@ div.alertcard {
 }
 
 .att-m {
-  color: var(--text-muted);
+  color: var(--ink2);
   flex-shrink: 0;
 }
 
 /* Fila expandida: borde azul y detalle por entrada. */
 .att-x {
-  background: var(--surface);
-  border: 1.5px solid var(--indigo);
+  background: var(--paper2);
+  border: 1.5px solid var(--ink);
   padding: 10px 12px;
   margin-bottom: 8px;
 }
@@ -2586,7 +2571,7 @@ div.alertcard {
 
 .att-x__tks {
   margin-top: 9px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hair);
   padding-top: 4px;
 }
 
@@ -2616,20 +2601,20 @@ div.alertcard {
 }
 
 .att-tk__st.in {
-  background: var(--ok-soft);
+  background: var(--paper3);
   color: var(--ok);
 }
 
 .att-tk__st.no {
-  background: var(--line);
-  color: var(--text-muted);
+  background: var(--hair);
+  color: var(--ink2);
 }
 
 .att-tk__meta {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-size: 10px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -2663,8 +2648,8 @@ div.alertcard {
 /* Fila de persona: como .mrow pero con chevron y estado inactivo. */
 .urow {
   width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 1.5px solid var(--ink);
   padding: 11px 12px;
   margin-bottom: 7px;
   display: flex;
@@ -2690,7 +2675,7 @@ div.alertcard {
 
 /* Tarjeta del acceso recien generado. */
 .accesscard {
-  background: var(--surface);
+  background: var(--paper2);
   border: 1px solid var(--ok);
   border-left-width: 4px;
   padding: 12px 14px;
@@ -2728,13 +2713,13 @@ div.alertcard {
 
 .kpi__sub {
   font-size: 9px;
-  color: var(--text-muted);
+  color: var(--ink2);
   margin-top: 2px;
 }
 
 .kpi__of {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
@@ -2757,8 +2742,8 @@ div.alertcard {
 
 .fncard {
   display: block;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   padding: 11px 13px;
   margin-bottom: 8px;
   text-decoration: none;
@@ -2784,27 +2769,27 @@ div.alertcard {
 
 .fncard__date {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 700;
 }
 
 .fnpill {
-  font-size: 9.5px;
-  font-weight: 800;
-  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border: 1.5px solid currentColor;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
 }
 
 .fnpill--hoy {
-  background: var(--ok);
-  color: var(--brand-white);
+  color: var(--ok);
 }
 
 .fnpill--hecha {
-  background: var(--line);
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .fncard__leg {
@@ -2813,7 +2798,7 @@ div.alertcard {
   justify-content: space-between;
   gap: 8px;
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
@@ -2828,8 +2813,8 @@ div.alertcard {
 
 /* Ritmo de ventas: barras por dia, sin libreria de charts. */
 .rhythm {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   padding: 12px 13px;
   margin-bottom: 8px;
 }
@@ -2870,11 +2855,11 @@ div.alertcard {
 
 .rhythm__bars i {
   flex: 1;
-  background: var(--indigo-soft);
+  background: var(--hair);
 }
 
 .rhythm__bars i.hot {
-  background: var(--indigo);
+  background: var(--ticket);
 }
 
 /* Accesos de administracion en dos columnas. */
@@ -2886,8 +2871,8 @@ div.alertcard {
 }
 
 .acc {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   padding: 11px 12px;
   text-decoration: none;
   color: var(--ink);
@@ -2895,7 +2880,7 @@ div.alertcard {
 }
 
 .acc__ic {
-  color: var(--indigo);
+  color: var(--ink);
   display: block;
 }
 
@@ -2908,18 +2893,18 @@ div.alertcard {
 
 .acc span {
   font-size: 9.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 /* Tarjeta traida por una alerta (?fn=): se distingue de las demas. */
 .panel--focused {
-  border-color: var(--indigo);
+  border-color: var(--ticket);
 }
 
 /* Cobros parciales: formulario dentro de la hoja de la venta e historial. */
 .pay-part {
   padding: 10px 2px 4px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
 }
 
 .pay-hist {
@@ -2932,7 +2917,7 @@ div.alertcard {
   justify-content: space-between;
   gap: 10px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
   font-size: 13px;
 }
 
@@ -2969,13 +2954,13 @@ div.alertcard {
   z-index: 1;
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--ink2);
   cursor: pointer;
   padding: 6px;
 }
 
 .sheet__x:hover {
-  background: var(--bg);
+  background: var(--paper);
   color: var(--ink);
 }
 
@@ -3017,7 +3002,7 @@ div.alertcard {
 .panel-foot__note {
   margin-right: auto;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   flex: 1 1 100%;
 }
 
@@ -3042,7 +3027,8 @@ div.alertcard {
   border: none;
   padding: 8px 0;
   min-height: 44px;
-  color: var(--indigo);
+  color: var(--ink);
+  border-bottom: 1.5px solid var(--ink);
   font-family: var(--font-body);
   font-size: 12.5px;
   font-weight: 700;
@@ -3063,7 +3049,7 @@ div.alertcard {
   align-items: center;
   gap: 13px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
   flex-wrap: wrap;
 }
 
@@ -3075,7 +3061,7 @@ div.alertcard {
 }
 
 .ini--warn {
-  background: var(--warn-soft);
+  background: var(--paper3);
   color: var(--warn);
 }
 
@@ -3093,7 +3079,7 @@ div.alertcard {
 
 .rd__who > span {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .rd__acts {
@@ -3122,12 +3108,12 @@ div.alertcard {
 .kbar {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
 }
 
 .kbar__k {
   padding: 13px 0;
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--hair);
   padding-left: 14px;
 }
 
@@ -3150,7 +3136,7 @@ div.alertcard {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .kbar__k i {
@@ -3158,7 +3144,7 @@ div.alertcard {
   margin-top: 4px;
   font-size: 10px;
   font-style: normal;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .rd__body {
@@ -3168,7 +3154,7 @@ div.alertcard {
 
 .rd__sect {
   min-width: 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
 }
 
 .rd__sect:last-child {
@@ -3181,7 +3167,7 @@ div.alertcard {
   justify-content: space-between;
   gap: 10px;
   padding: 11px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
 }
 
 .rd__sh b {
@@ -3194,7 +3180,7 @@ div.alertcard {
 
 .rd__sh span {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 700;
 }
 
@@ -3203,7 +3189,7 @@ div.alertcard {
   align-items: center;
   gap: 11px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
 }
 
 .rd__mid {
@@ -3219,7 +3205,7 @@ div.alertcard {
 
 .rd__mid span {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .rd__amt {
@@ -3233,7 +3219,7 @@ div.alertcard {
   width: 82px;
   text-align: right;
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -3244,7 +3230,7 @@ div.alertcard {
   justify-content: space-between;
   padding: 11px 14px;
   margin: 0 -14px;
-  background: var(--warn-soft);
+  background: var(--paper3);
   color: var(--warn);
 }
 
@@ -3263,7 +3249,7 @@ div.alertcard {
   padding: 18px 0;
   text-align: center;
   font-size: 11.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 /* Línea de tiempo de la corista. */
@@ -3278,7 +3264,7 @@ div.alertcard {
   height: 9px;
   margin-top: 5px;
   flex-shrink: 0;
-  background: var(--line);
+  background: var(--hair);
 }
 
 .tl__dot--settlement {
@@ -3297,13 +3283,13 @@ div.alertcard {
 
 .tl__mid > span {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .tl__note {
   display: block;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-style: italic;
   margin-top: 2px;
 }
@@ -3312,7 +3298,7 @@ div.alertcard {
 
 .rank__h {
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
 }
 
 .rank__n {
@@ -3326,7 +3312,7 @@ div.alertcard {
 .rank__l {
   margin: 3px 0 0;
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
@@ -3349,13 +3335,13 @@ div.alertcard {
   align-items: center;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
   text-decoration: none;
   color: var(--ink);
 }
 
 .rank__r:hover {
-  background: var(--surface-alt);
+  background: var(--paper3);
 }
 
 .rank__pos {
@@ -3363,7 +3349,7 @@ div.alertcard {
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 800;
-  color: var(--text-muted);
+  color: var(--ink2);
   flex-shrink: 0;
 }
 
@@ -3380,14 +3366,14 @@ div.alertcard {
 
 .rank__mid span {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 /* La barra hace comparable una deuda con la de al lado: el número solo no. */
 .rank__track {
   width: 90px;
   height: 6px;
-  background: var(--line);
+  background: var(--hair);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -3412,7 +3398,7 @@ div.alertcard {
   padding: 14px 0 0;
   text-align: center;
   font-size: 11.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 /* ==========================================================================
@@ -3427,7 +3413,7 @@ div.alertcard {
 .divider {
   height: 1px;
   border: 0;
-  background: var(--line);
+  background: var(--hair);
   margin: 26px 0;
 }
 
@@ -3438,7 +3424,7 @@ div.alertcard {
   font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 /* --- 1 · La plata ------------------------------------------------------- */
@@ -3450,7 +3436,7 @@ div.alertcard {
   font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .money__big {
@@ -3483,13 +3469,13 @@ div.alertcard {
   background: var(--warn);
 }
 .is-line {
-  background: var(--line);
+  background: var(--hair);
 }
 .is-indigo {
   background: var(--indigo);
 }
 .is-indigo-soft {
-  background: var(--indigo-soft);
+  background: var(--paper3);
 }
 
 .money__legend {
@@ -3501,7 +3487,7 @@ div.alertcard {
 
 .money__lg {
   font-size: 11.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
@@ -3529,10 +3515,14 @@ div.alertcard {
 .money__lg a {
   display: block;
   margin-top: 3px;
-  font-size: 10.5px;
-  font-weight: 800;
-  color: var(--indigo);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink);
   text-decoration: none;
+  width: fit-content;
+  border-bottom: 1.5px solid var(--ink);
 }
 
 /* --- 2 · Lo que hay que mirar ------------------------------------------- */
@@ -3544,8 +3534,8 @@ div.alertcard {
 }
 
 .find {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   padding: 16px 17px;
 }
 
@@ -3559,12 +3549,12 @@ div.alertcard {
 
 .find__n span {
   font-size: 17px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
 .find__n--danger {
-  color: var(--danger);
+  color: var(--bad);
 }
 .find__n--warn {
   color: var(--warn);
@@ -3577,7 +3567,7 @@ div.alertcard {
   margin: 7px 0 0;
   font-size: 12.5px;
   line-height: 1.5;
-  color: var(--ink-soft);
+  color: var(--ink2);
 }
 
 .find__go {
@@ -3585,11 +3575,15 @@ div.alertcard {
   padding: 0;
   background: none;
   border: none;
-  font-family: var(--font-body);
-  font-size: 11.5px;
-  font-weight: 800;
-  color: var(--indigo);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink);
   cursor: pointer;
+  width: fit-content;
+  border-bottom: 1.5px solid var(--ink);
 }
 
 /* --- 3 · Asignaciones y funciones --------------------------------------- */
@@ -3603,15 +3597,15 @@ div.alertcard {
 
 .acard,
 .mtbl {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   overflow: hidden;
 }
 
 .acard__h {
   padding: 13px 18px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface-alt);
+  border-bottom: 1px solid var(--hair);
+  background: var(--paper3);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3628,7 +3622,7 @@ div.alertcard {
 
 .acard__h span {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -3653,13 +3647,13 @@ div.alertcard {
 
 .acard__n span {
   font-size: 14px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
 .acard__t {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -3681,7 +3675,7 @@ div.alertcard {
   align-items: center;
   gap: 6px;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
   font-weight: 600;
 }
 
@@ -3699,7 +3693,7 @@ div.alertcard {
 
 .acard__who {
   margin-top: 15px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hair);
   padding-top: 4px;
 }
 
@@ -3730,7 +3724,7 @@ div.alertcard {
 .wl__track {
   width: 88px;
   height: 5px;
-  background: var(--line);
+  background: var(--hair);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -3756,7 +3750,7 @@ div.alertcard {
 
 .acard__foot {
   padding: 13px 18px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hair);
 }
 
 /* Tabla mínima de funciones. */
@@ -3772,20 +3766,20 @@ div.alertcard {
 
 .mtbl__h {
   padding: 10px 18px;
-  background: var(--surface-alt);
-  border-bottom: 1px solid var(--line);
+  background: var(--paper3);
+  border-bottom: 1px solid var(--hair);
   font-family: var(--font-mono);
   font-size: 8.5px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .mtbl__r {
   padding: 13px 18px;
   border: 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
   background: none;
   font-family: var(--font-body);
   font-size: 13px;
@@ -3794,15 +3788,15 @@ div.alertcard {
 }
 
 .mtbl__r:hover {
-  background: var(--surface-alt);
+  background: var(--paper3);
 }
 
 .mtbl__r--live {
-  background: var(--indigo-soft);
+  background: var(--paper3);
 }
 
 .mtbl__r--live:hover {
-  background: var(--indigo-soft);
+  background: var(--paper3);
 }
 
 .mtbl__h span:not(:first-child),
@@ -3819,7 +3813,7 @@ div.alertcard {
   display: block;
   margin-top: 1px;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .mtbl__num {
@@ -3832,30 +3826,32 @@ div.alertcard {
   color: var(--ok);
 }
 .mtbl__num.is-b {
-  color: var(--danger);
+  color: var(--bad);
 }
 .mtbl__num.is-i {
   color: var(--indigo);
 }
 
 .mtbl__none {
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .mtbl__chev {
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .mtbl__foot {
   width: 100%;
   padding: 11px 18px;
-  background: var(--surface-alt);
+  background: var(--paper3);
   border: 0;
-  border-top: 1px solid var(--line);
-  font-family: var(--font-body);
-  font-size: 11.5px;
-  font-weight: 800;
-  color: var(--indigo);
+  border-top: 1px solid var(--hair);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink);
   cursor: pointer;
 }
 
@@ -3863,7 +3859,7 @@ div.alertcard {
 
 .cmp__h {
   padding: 4px 0 14px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
   margin-bottom: 4px;
 }
 
@@ -3876,7 +3872,7 @@ div.alertcard {
 
 .cmp__h span {
   font-size: 11.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .cmp {
@@ -3891,7 +3887,7 @@ div.alertcard {
   align-items: center;
   min-width: 560px;
   padding: 11px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
   font-size: 12.5px;
 }
 
@@ -3902,7 +3898,7 @@ div.alertcard {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .cmp__hr span:not(:first-child),
@@ -3917,7 +3913,7 @@ div.alertcard {
 
 .cmp__nm span {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .cmp__num {
@@ -3929,11 +3925,11 @@ div.alertcard {
   color: var(--ok);
 }
 .cmp__num.is-b {
-  color: var(--danger);
+  color: var(--bad);
 }
 
 .cmp__r--tot {
-  background: var(--surface-alt);
+  background: var(--paper3);
   border-bottom: 0;
 }
 
@@ -4140,7 +4136,7 @@ div.alertcard {
 }
 
 .trow2__dim {
-  color: var(--text-muted);
+  color: var(--ink2);
   font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4157,7 +4153,7 @@ div.alertcard {
   align-items: center;
   gap: 10px;
   padding: 9px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
 }
 
 .fnrow:last-child {
@@ -4209,7 +4205,7 @@ div.alertcard {
 
 /* Hero: el bloque de stats y el CTA sólo entran al lado en escritorio. */
 .hero__eyebrow {
-  color: var(--indigo-light);
+  color: var(--ticket-on-ink);
 }
 
 .hero__stats,
@@ -4243,7 +4239,7 @@ div.alertcard {
 .seasonsel__tag {
   flex-shrink: 0;
   padding: 3px 7px;
-  background: var(--warn-soft);
+  background: var(--paper3);
   color: var(--warn);
   font-size: 8.5px;
   font-weight: 800;
@@ -4339,7 +4335,7 @@ div.alertcard {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .pasos span {
@@ -4347,12 +4343,12 @@ div.alertcard {
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  background: var(--surface-alt);
+  background: var(--paper3);
 }
 
 .pasos span.on {
-  background: var(--indigo-soft);
-  color: var(--indigo);
+  background: var(--ink);
+  color: var(--paper);
 }
 
 .pasos span.done {
@@ -4368,7 +4364,7 @@ div.alertcard {
   align-items: center;
   gap: 10px;
   padding: 9px 2px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
 }
 
 /* Destildada: se ve que está y que no sigue, sin desaparecer de la lista. */
@@ -4402,7 +4398,7 @@ div.alertcard {
 .quienes__who > span {
   display: block;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .quienes__who b.y {
@@ -4418,7 +4414,7 @@ div.alertcard {
 .quienes__pie {
   margin: 12px 0 0;
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .quienes__pie b {
@@ -4434,7 +4430,7 @@ div.alertcard {
 /* El acento lateral dice el rol: es lo que hace que el chip "Corista" no
    tenga que repetirse once veces debajo del encabezado "Coristas". */
 .sblock--admin::before {
-  background: var(--carbon);
+  background: var(--ink);
 }
 
 .sblock--door::before {
@@ -4442,7 +4438,7 @@ div.alertcard {
 }
 
 .sblock--former::before {
-  background: var(--line);
+  background: var(--hair);
 }
 
 /* En celular la fila de una persona es la de siempre: avatar, nombre, y el
@@ -4452,7 +4448,7 @@ div.alertcard {
   align-items: center;
   gap: 10px;
   padding: 9px 14px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
   cursor: pointer;
 }
 
@@ -4461,7 +4457,7 @@ div.alertcard {
 }
 
 .prow--sel {
-  background: var(--indigo-soft);
+  background: var(--paper3);
 }
 
 .prow--out {
@@ -4483,8 +4479,8 @@ div.alertcard {
 /* --- Índice de temporadas: una fila por temporada ------------------------ */
 
 .slist {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   overflow: hidden;
 }
 
@@ -4492,7 +4488,7 @@ div.alertcard {
   margin: 14px 0 0;
   text-align: center;
   font-size: 11.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .seasonrow {
@@ -4505,15 +4501,16 @@ div.alertcard {
     "acts  acts";
   gap: 8px 12px;
   padding: 14px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
 }
 
 .seasonrow:last-child {
   border-bottom: 0;
 }
 
+/* La temporada en curso: acento lateral ticket, no un fondo entero. */
 .seasonrow--live {
-  background: var(--indigo-soft);
+  border-left: 6px solid var(--ticket);
 }
 
 .seasonrow__nm {
@@ -4539,7 +4536,7 @@ div.alertcard {
 .seasonrow__v {
   margin-top: 2px;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .seasonrow__dt {
@@ -4555,7 +4552,7 @@ div.alertcard {
 
 .seasonrow__dt span {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .seasonrow__prog {
@@ -4570,7 +4567,7 @@ div.alertcard {
   margin-top: 6px;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .seasonrow__lg b {
@@ -4598,7 +4595,7 @@ div.alertcard {
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .seasonrow__acts {
@@ -4613,8 +4610,7 @@ div.alertcard {
 }
 
 .fntag--live {
-  background: var(--ok);
-  color: var(--brand-white);
+  color: var(--ok);
 }
 
 /* Los estados de temporada se escriben en minúscula en el código y el CSS los
@@ -4639,8 +4635,8 @@ div.alertcard {
   width: 100%;
   margin-top: 12px;
   padding: 12px 13px;
-  border: 1px solid var(--line);
-  background: var(--surface-alt);
+  border: 1.5px solid var(--ink);
+  background: var(--paper3);
   text-align: left;
   font-family: var(--font-body);
   color: var(--ink);
@@ -4648,7 +4644,7 @@ div.alertcard {
 }
 
 .check[aria-pressed='true'] {
-  border-color: var(--indigo);
+  border-color: var(--ink);
 }
 
 .check__bx {
@@ -4659,14 +4655,14 @@ div.alertcard {
   height: 17px;
   flex-shrink: 0;
   margin-top: 1px;
-  border: 1.5px solid var(--line);
-  background: var(--surface);
-  color: var(--brand-white);
+  border: 1.5px solid var(--ink);
+  background: var(--paper2);
+  color: var(--paper);
 }
 
 .check__bx--on {
-  background: var(--indigo);
-  border-color: var(--indigo);
+  background: var(--ink);
+  border-color: var(--ink);
 }
 
 .check__tx b {
@@ -4680,7 +4676,7 @@ div.alertcard {
   margin-top: 2px;
   font-size: 11px;
   line-height: 1.5;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 /* Confirmación de una acción destructiva: el botón que la ejecuta se ve como
@@ -4691,9 +4687,9 @@ div.alertcard {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  background: var(--danger);
-  border-color: var(--danger);
-  color: var(--brand-white);
+  background: var(--bad);
+  border-color: var(--bad);
+  color: var(--paper);
 }
 
 /* ==========================================================================
@@ -5103,15 +5099,15 @@ div.alertcard {
   width: 7px;
   height: 7px;
   flex-shrink: 0;
-  background: #6dc79a;
+  background: var(--ok-on-ink);
 }
 
 .door-ready--off {
-  color: var(--night-warn);
+  color: var(--warn-on-ink);
 }
 
 .door-ready--off i {
-  background: var(--night-warn);
+  background: var(--warn-on-ink);
 }
 
 .door-ready--wait {
@@ -5132,7 +5128,7 @@ div.alertcard {
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .door-soon__fn {
@@ -5315,7 +5311,7 @@ div.alertcard {
 
 .menu-btn__chev {
   flex-shrink: 0;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .menu-btn--pill {
@@ -5412,7 +5408,7 @@ div.alertcard {
 
 .menu__i:hover:not(:disabled),
 .menu__i:focus-visible {
-  background: var(--surface-alt);
+  background: var(--paper3);
   outline: none;
 }
 
@@ -5435,15 +5431,15 @@ div.alertcard {
 }
 
 .menu__i--action .menu__ic {
-  color: var(--indigo);
+  color: var(--ticket);
 }
 
 .menu__i--danger {
-  color: var(--danger);
+  color: var(--bad);
 }
 
 .menu__i--danger .menu__ic {
-  color: var(--danger);
+  color: var(--bad);
 }
 
 .menu__ck {
@@ -5452,7 +5448,7 @@ div.alertcard {
   justify-content: center;
   width: 14px;
   flex-shrink: 0;
-  color: var(--indigo);
+  color: var(--ticket);
 }
 
 .menu__ic {
@@ -5461,7 +5457,7 @@ div.alertcard {
   justify-content: center;
   width: 16px;
   flex-shrink: 0;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .menu__tx {
@@ -5479,13 +5475,13 @@ div.alertcard {
   margin-top: 1px;
   font-size: 10.5px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .menu__sep {
   height: 1px;
   margin: 6px 4px;
-  background: var(--line);
+  background: var(--hair);
 }
 
 /* ==========================================================================
@@ -5553,7 +5549,7 @@ div.alertcard {
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 /* El 55% de .att-fnsel es para la barra de Asistencia, donde el selector
@@ -5588,8 +5584,8 @@ div.alertcard {
 }
 
 .fnlines {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--paper2);
+  border: 2px solid var(--ink);
   overflow: hidden;
   margin-bottom: 20px;
 }
@@ -5604,7 +5600,7 @@ div.alertcard {
     "acts  acts";
   gap: 8px 12px;
   padding: 13px 14px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hair);
 }
 
 .fnline:last-child {
@@ -5613,7 +5609,7 @@ div.alertcard {
 
 /* La más cercana: es la que se está vendiendo ahora. */
 .fnline--next {
-  background: var(--indigo-soft);
+  background: var(--paper3);
 }
 
 .fnline__nm {
@@ -5639,7 +5635,7 @@ div.alertcard {
 .fnline__v {
   margin-top: 2px;
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .fnline__dt {
@@ -5655,7 +5651,7 @@ div.alertcard {
 
 .fnline__dt span {
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .fnline__prog {
@@ -5670,7 +5666,7 @@ div.alertcard {
   margin-top: 6px;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .fnline__lg b {
@@ -5698,7 +5694,7 @@ div.alertcard {
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ink2);
 }
 
 .fnline__acts {
@@ -5714,29 +5710,29 @@ div.alertcard {
   margin-left: auto;
 }
 
+/* Etiquetas de estado de funcion: contorno mono, como los chips. */
 .fntag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  padding: 3px 8px;
-  background: var(--line);
-  color: var(--text-muted);
-  font-size: 8.5px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border: 1.5px solid currentColor;
+  color: var(--ink2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .fntag--next {
-  background: var(--indigo);
-  color: var(--brand-white);
+  color: var(--ticket);
 }
 
 .fntag--lock {
-  background: var(--surface-alt);
-  border: 1px solid var(--line);
+  color: var(--ink);
 }
 
 /* Las funciones hechas ya no se venden: la barra deja de ser "avance" y pasa
@@ -5753,8 +5749,8 @@ div.alertcard {
   flex-wrap: wrap;
   margin-bottom: 14px;
   padding: 11px 13px;
-  border: 1px solid var(--warn-soft);
-  background: var(--warn-soft);
+  border: 2px solid var(--warn);
+  background: var(--paper2);
   color: var(--warn);
   font-size: 12px;
   font-weight: 600;
@@ -5778,8 +5774,8 @@ div.alertcard {
   gap: 9px;
   margin-top: 12px;
   padding: 11px 13px;
-  border: 1px solid var(--warn-soft);
-  background: var(--warn-soft);
+  border: 1px solid var(--paper3);
+  background: var(--paper3);
   color: var(--warn);
   font-size: 11.5px;
   font-weight: 600;
@@ -5823,7 +5819,7 @@ div.alertcard {
 }
 
 .button--warn {
-  background: var(--warn-soft);
+  background: var(--paper3);
   border-color: var(--warn);
   color: var(--warn);
 }
@@ -5837,12 +5833,12 @@ div.alertcard {
   height: 34px;
   border: 0;
   background: none;
-  color: var(--text-muted);
+  color: var(--ink2);
   cursor: pointer;
 }
 
 .iconbtn:hover {
-  background: var(--surface-alt);
+  background: var(--paper3);
   color: var(--ink);
 }
 
@@ -6175,8 +6171,8 @@ div.alertcard {
   .dirrow2__accs .grid2 {
     grid-template-columns: 1fr 1fr;
     gap: 2px 10px;
-    background: var(--surface);
-    border: 1px solid var(--line);
+    background: var(--paper2);
+    border: 2px solid var(--ink);
     padding: 8px 12px;
   }
 
@@ -6191,7 +6187,7 @@ div.alertcard {
   }
 
   .dirrow2__accs .acc:hover {
-    background: var(--bg);
+    background: var(--paper);
   }
 
   .dirrow2__accs .acc__ic {
@@ -6200,7 +6196,7 @@ div.alertcard {
     justify-content: center;
     width: 28px;
     height: 28px;
-    background: var(--bg);
+    background: var(--paper);
     flex-shrink: 0;
   }
 
@@ -6327,7 +6323,7 @@ div.alertcard {
   }
 
   .kbar__k {
-    border-left: 1px solid var(--line);
+    border-left: 1px solid var(--hair);
     padding-left: 16px;
   }
 
@@ -6337,7 +6333,7 @@ div.alertcard {
   }
 
   .kbar__k:nth-child(odd) {
-    border-left: 1px solid var(--line);
+    border-left: 1px solid var(--hair);
     padding-left: 16px;
   }
 
@@ -6353,7 +6349,7 @@ div.alertcard {
 
   .rd__sect {
     border-bottom: 0;
-    border-right: 1px solid var(--line);
+    border-right: 1px solid var(--hair);
     padding-right: 20px;
   }
 
@@ -6498,7 +6494,7 @@ div.alertcard {
   .srow {
     height: 44px;
     padding: 0 14px;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--hair);
     font-size: 12.5px;
     cursor: pointer;
   }
@@ -6555,7 +6551,7 @@ div.alertcard {
   .srow__mail {
     display: block;
     font-size: 10px;
-    color: var(--text-muted);
+    color: var(--ink2);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -6711,7 +6707,7 @@ div.alertcard {
   }
 
   .mrow--sel {
-    border-color: var(--indigo);
+    border-color: var(--ticket);
   }
 
   .att-detail__h {
@@ -6720,7 +6716,7 @@ div.alertcard {
     gap: 10px;
     padding-bottom: 12px;
     margin-bottom: 6px;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--hair);
   }
 
   .att-detail__h b {
@@ -6757,8 +6753,8 @@ div.alertcard {
     min-height: calc(100vh - 190px);
     max-height: calc(100vh - 32px);
     overflow-y: auto;
-    background: var(--surface);
-    border: 1px solid var(--line);
+    background: var(--paper2);
+    border: 2px solid var(--ink);
     padding: 18px 20px;
   }
 
@@ -6780,7 +6776,7 @@ div.alertcard {
 
   .debt-card--sel,
   .okrow--sel {
-    border-color: var(--indigo);
+    border-color: var(--ticket);
   }
 
   /* --- Modo puerta en escritorio: la mesa de entrada (frame 5) ---------- */
@@ -6800,9 +6796,9 @@ div.alertcard {
     gap: 10px;
     margin-top: 14px;
     padding: 12px 16px;
-    background: var(--surface);
-    border: 2px solid var(--indigo);
-    color: var(--indigo);
+    background: var(--paper2);
+    border: 2px solid var(--ink);
+    color: var(--ink);
   }
 
   .desk__search input,
@@ -6823,12 +6819,12 @@ div.alertcard {
     gap: 11px;
     margin-top: 9px;
     padding: 10px 14px;
-    background: var(--surface);
-    border: 1px solid var(--line);
+    background: var(--paper2);
+    border: 1.5px solid var(--ink);
   }
 
   .desk__row--on {
-    border-color: var(--indigo);
+    border-color: var(--ticket);
   }
 
   .desk__mid {
@@ -6844,13 +6840,13 @@ div.alertcard {
 
   .desk__mid > span {
     font-size: 11px;
-    color: var(--text-muted);
+    color: var(--ink2);
   }
 
   .desk__row .mark-btn {
     flex-shrink: 0;
-    background: var(--indigo);
-    color: var(--brand-white);
+    background: var(--ok);
+    color: var(--paper);
     border: none;
     min-height: 40px;
     padding: 0 14px;
@@ -6869,17 +6865,17 @@ div.alertcard {
   .desk__row .mark-btn--one {
     background: none;
     color: var(--ink);
-    border: 1.5px solid var(--line);
+    border: 1.5px solid var(--hair);
   }
 
   .desk__row .mark-btn--one:hover {
-    border-color: var(--indigo);
-    color: var(--indigo);
+    border-color: var(--ink);
+    color: var(--ink);
   }
 
   .desk__row .mark-btn:disabled {
-    background: var(--line);
-    color: var(--text-muted);
+    background: var(--hair);
+    color: var(--ink2);
     cursor: default;
   }
 
@@ -6887,12 +6883,12 @@ div.alertcard {
     margin: 10px 0 0;
     text-align: center;
     font-size: 10.5px;
-    color: var(--text-muted);
+    color: var(--ink2);
   }
 
   .desk__kbd kbd {
-    background: var(--surface);
-    border: 1px solid var(--line);
+    background: var(--paper2);
+    border: 1.5px solid var(--ink);
     padding: 1px 5px;
     font-family: var(--font-body);
     font-size: 10px;
@@ -6905,7 +6901,7 @@ div.alertcard {
     justify-content: space-between;
     gap: 10px;
     padding: 7px 4px;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--hair);
     font-size: 12.5px;
   }
 
@@ -6917,7 +6913,7 @@ div.alertcard {
     margin-top: 14px;
     text-align: center;
     font-size: 11px;
-    color: var(--text-muted);
+    color: var(--ink2);
   }
 
   .door-grid {
@@ -7012,7 +7008,7 @@ div.alertcard {
   .prow__uso small {
     font-size: 10.5px;
     font-weight: 700;
-    color: var(--text-muted);
+    color: var(--ink2);
     font-variant-numeric: tabular-nums;
   }
 
@@ -7021,7 +7017,7 @@ div.alertcard {
   }
 
   .prow__when {
-    color: var(--text-muted);
+    color: var(--ink2);
     font-size: 11.5px;
   }
 
