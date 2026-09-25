@@ -994,3 +994,61 @@ las dos muescas; un QR por entrada con su etiqueta ("Entrada 2 de 3 · ya
 ingresó") y el botón de reenviar cuando la compra tiene más de una. Una
 venta anulada muestra el aviso en el lugar de los QR, en rojo. Pie con quién
 la vendió. Se borró el bloque de estilos viejo de `styles.css`.
+
+## C18 · Paso 1 — tokens y primitivos en lenguaje afiche
+
+La app deja Papel pautado y pasa al sistema de la landing, con otra
+intensidad: papel, bordes de 2px, cero radios, cero sombras, mono en
+mayúsculas para etiquetas, Anton para cifras y títulos. Este paso reescribe
+los tokens y los primitivos de `src/ui/` y deja `/app/dev/ui` como
+inventario; las pantallas se van después, una por una.
+
+**Los tokens viejos siguen existiendo como puente, apuntando a la paleta
+nueva.** `styles.css` tiene 7.000 líneas que nombran `--bg`, `--surface`,
+`--line`, `--indigo-soft`… en cientos de reglas que todavía no se
+reescribieron. Borrarlos hoy dejaba media app sin color. Están en un bloque
+marcado "PUENTE" al final de `:root`, apuntando cada uno a su equivalente
+afiche (`--surface` → `--paper2`, `--indigo-soft` → `--paper3`, etc.), así
+la app entera cambia de temperatura ya y ningún estilo nuevo los usa. El
+bloque se borra en el paso 5, cuando el grep de tokens viejos dé cero.
+
+**Radios y sombras se borraron de una, no rule por rule.** Las 140 líneas
+`border-radius` y las 17 `box-shadow` del CSS eran declaraciones sueltas;
+se eliminaron en bloque, más los dos estilos inline (menú de la cuenta,
+formulario de venta). `grep -r "border-radius\|box-shadow" web/src
+--exclude-dir=public` da cero. El foco pasa a `outline: 2px solid --ticket`
+(la sombra era el anillo de foco). Las muescas del troquel de la entrada
+pública, que eran círculos, ahora son cuadrados girados.
+
+**Anton tiene un solo peso.** Las reglas viejas piden `font-weight: 800`
+sobre `--font-display`; sin `font-synthesis: none` el browser fabrica una
+negrita falsa. Con eso, cualquier `800` que quede sobre Anton rinde el peso
+real. Hasta que cada pantalla se reescriba, algunas etiquetas chicas que
+eran Archivo 10px uppercase salen en Anton en vez de mono: se ven como
+etiqueta condensada, no rompen nada, y se corrigen pantalla por pantalla.
+
+**Contraste (aceptación §8.4), calculado:** tinta/papel 16.3 · `--ink2`
+sobre papel 6.5, sobre papel3 5.9, sobre papel2 7.3 · chips de contorno
+sobre papel2: ok 6.5, warn 5.9, bad 7.1, índigo 7.8 · papel sobre
+`--ticket` (botón primario) 4.54 · papel sobre `--warn` (filtro "Deben"
+activo) 5.3. **Uno no llegaba**: el eyebrow del hero, `--ticket` sobre tinta,
+da 3.6. Se agregó `--ticket-on-ink: #EC6E4C` (5.1:1) para texto naranja
+sobre fondo tinta; `--ticket` sigue igual como fondo y acento. Es el único
+hexa fuera de la lista del spec, y está documentado acá.
+
+**Lo que cambió de forma sin cambiar de API:** Button (primary ticket,
+ghost papel2 + borde tinta, ink, danger contorno; 44px, `--xs` 36px),
+StatusChip (contorno 1.5px, mono 9.5px, `min-width: 74px`, anulada
+tachada), Panel (2px tinta, `.panel__head` con borde inferior 2px y título
+Anton), tabla de Ventas (thead papel3 mono 9px, filas 44px con 1px `--hair`,
+hover papel3), tira de resumen (celdas con troquel punteado), hero de
+función (tinta, eyebrow naranja), FilterChips (1.5px, activo tinta, "Deben"
+activo ámbar), Input/Select/Search (2px tinta, foco naranja), Sheet/Modal
+(2px tinta, scrim `rgba(20,20,20,.55)`), Avatar (cuadrado, 1.5px, Anton,
+sin fondo), TabBar (borde superior 2px, activa en tinta, separadores 1px),
+Sidebar (borde derecho 2px, temporada arriba separada por 1px, ítem activo
+tinta con borde izquierdo ticket). Ningún componente cambió props ni
+comportamiento; los 53 tests de front pasan sin tocar.
+
+**`/app` con barra.** Vite en desarrollo sirve `/app/` pero no `/app`; el
+login y la demo mandan ahora a `/app/`, que en producción Go resuelve igual.

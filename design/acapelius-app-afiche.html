@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acapelius — La app en lenguaje afiche</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --paper:#F4F1EA; --paper2:#FFFFFF; --paper3:#EBE7DD;
+    --ink:#141414; --ink2:#5A564C; --line:#141414; --hair:#D6D1C4;
+    --ticket:#C4401E; --ok:#1E6B4A; --warn:#8A5A08; --bad:#A32D2D; --indigo:#3A3FC4;
+  }
+  body { font-family:'Inter',sans-serif; background:#DFE1E5; color:#1A1C22; -webkit-font-smoothing:antialiased; }
+  .doc { max-width:1340px; margin:0 auto; padding:44px 20px 90px; }
+  .doc > h1 { font-family:'Anton',sans-serif; font-size:clamp(26px,4vw,36px); text-transform:uppercase; letter-spacing:0.01em; }
+  .doc > h1 em { font-style:normal; color:var(--ticket); }
+  .doc > p.lead { margin-top:10px; max-width:920px; font-size:14.5px; line-height:1.65; color:#4A4C55; }
+  .doc > p.lead b { color:#1A1C22; }
+  .cap { font-size:13px; font-weight:700; color:#55575E; margin:30px 0 10px; }
+  .cap b { color:#1A1C22; }
+
+  .rules { margin-top:18px; display:grid; gap:10px; }
+  @media(min-width:900px){ .rules { grid-template-columns:1fr 1fr; gap:10px 22px; } }
+  .rl { background:#fff; border:1px solid #D5D8DD; border-left:4px solid var(--ticket); padding:13px 15px; font-size:12.5px; line-height:1.6; color:#4A4C55; }
+  .rl b { color:#1A1C22; display:block; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:5px; }
+  .rl.keep { border-left-color:var(--ok); }
+
+  .frame { border:1px solid #C3C7CE; border-radius:12px; overflow:hidden; box-shadow:0 16px 36px rgba(26,28,34,.16); }
+  .chrome { background:#15161A; padding:9px 14px; display:flex; align-items:center; gap:10px; }
+  .chrome i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; }
+  .chrome .url { flex:1; max-width:340px; background:#26282E; color:#9EA3AC; border-radius:7px; padding:5px 12px; font-size:11px; }
+
+  /* ============ APP AFICHE ============ */
+  .app { display:flex; min-height:640px; background:var(--paper); color:var(--ink); }
+  .mono { font-family:'JetBrains Mono',monospace; }
+
+  .side { width:206px; background:var(--paper2); border-right:2px solid var(--ink); display:flex; flex-direction:column; }
+  .side .lg { font-family:'Anton',sans-serif; font-size:17px; letter-spacing:0.06em; padding:16px 14px 12px; border-bottom:2px solid var(--ink); }
+  .side .season { padding:11px 14px; border-bottom:1px solid var(--hair); display:flex; align-items:center; justify-content:space-between; }
+  .side .season b { font-family:'Anton',sans-serif; font-size:13px; letter-spacing:0.03em; display:block; }
+  .side .season span { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ok); }
+  .side nav { padding:8px 0; }
+  .side a { display:flex; align-items:center; gap:9px; padding:10px 14px; font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:500; text-transform:uppercase; letter-spacing:0.07em; color:var(--ink2); border-left:4px solid transparent; }
+  .side a.on { background:var(--ink); color:var(--paper); border-left-color:var(--ticket); font-weight:700; }
+  .side a .bg { margin-left:auto; font-size:9.5px; font-weight:700; border:1px solid var(--warn); color:var(--warn); padding:1px 5px; }
+  .side a.on .bg { border-color:var(--paper); color:var(--paper); }
+  .side .grow { flex:1; }
+  .side .me { border-top:2px solid var(--ink); padding:11px 14px; }
+  .side .me b { font-size:12px; font-weight:700; display:block; }
+  .side .me span { font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink2); }
+
+  .main { flex:1; padding:22px 26px 26px; min-width:0; }
+  .ph { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; border-bottom:2px solid var(--ink); padding-bottom:12px; }
+  .ph h2 { font-family:'Anton',sans-serif; font-size:30px; line-height:.95; text-transform:uppercase; }
+  .ph .sb { font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.09em; color:var(--ink2); margin-top:6px; }
+  .btn { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; padding:11px 16px; border:2px solid var(--ink); background:var(--paper2); display:inline-block; }
+  .btn.fill { background:var(--ticket); border-color:var(--ticket); color:var(--paper); }
+  .btn.ink { background:var(--ink); color:var(--paper); }
+  .btn.xs { padding:6px 10px; font-size:10px; border-width:1.5px; }
+
+  /* hero de función */
+  .hero { margin-top:18px; border:2px solid var(--ink); background:var(--ink); color:var(--paper); display:flex; }
+  .hero .l { flex:1; padding:18px 20px; border-right:1px dashed rgba(244,241,234,.35); }
+  .hero .e { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.14em; color:var(--ticket); }
+  .hero .fn { margin-top:6px; font-family:'Anton',sans-serif; font-size:27px; text-transform:uppercase; line-height:.95; }
+  .hero .m { margin-top:5px; font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:0.05em; color:rgba(244,241,234,.65); text-transform:uppercase; }
+  .hero .bar { margin-top:14px; height:6px; background:rgba(244,241,234,.2); max-width:330px; }
+  .hero .bar i { display:block; height:100%; width:18%; background:var(--ticket); }
+  .hero .bl { margin-top:6px; font-family:'JetBrains Mono',monospace; font-size:10px; color:rgba(244,241,234,.7); text-transform:uppercase; letter-spacing:0.06em; }
+  .hero .st { width:150px; padding:18px 18px; border-right:1px dashed rgba(244,241,234,.35); }
+  .hero .st b { font-family:'Anton',sans-serif; font-size:26px; display:block; line-height:1; }
+  .hero .st b.w { color:#E8A33D; }
+  .hero .st span { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(244,241,234,.6); display:block; margin-top:5px; }
+  .hero .cta { width:170px; display:flex; align-items:center; justify-content:center; padding:18px; }
+  .hero .cta .btn { border-color:var(--paper); color:var(--paper); background:transparent; }
+
+  .grid { margin-top:18px; display:grid; grid-template-columns:1.75fr 1fr; gap:18px; align-items:start; }
+  .panel { border:2px solid var(--ink); background:var(--paper2); }
+  .phd { border-bottom:2px solid var(--ink); padding:10px 14px; display:flex; align-items:center; justify-content:space-between; }
+  .phd b { font-family:'Anton',sans-serif; font-size:13px; text-transform:uppercase; letter-spacing:0.04em; }
+  .phd .c { font-family:'JetBrains Mono',monospace; font-size:10px; border:1.5px solid var(--warn); color:var(--warn); padding:2px 7px; font-weight:700; }
+  .phd .lk { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; border-bottom:1.5px solid var(--ink); }
+  .grp { padding:6px 14px; background:var(--paper3); border-bottom:1px solid var(--hair); font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink2); }
+  .row { display:flex; align-items:center; gap:12px; padding:11px 14px; border-bottom:1px solid var(--hair); }
+  .row:last-child { border-bottom:0; }
+  .row .n { font-family:'Anton',sans-serif; font-size:17px; color:var(--ticket); width:22px; }
+  .row .md { flex:1; min-width:0; }
+  .row .md b { font-size:13px; font-weight:700; display:block; }
+  .row .md span { font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink2); }
+  .row .amt { font-family:'Anton',sans-serif; font-size:16px; color:var(--warn); }
+  .row .go { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.07em; border-bottom:1.5px solid var(--ink); white-space:nowrap; }
+  .row .when { font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--ink2); text-transform:uppercase; }
+  .pfoot { padding:9px 14px; background:var(--paper3); border-top:1px solid var(--hair); text-align:center; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.08em; }
+
+  /* chips talón */
+  .chip { font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; padding:4px 9px; border:1.5px solid; display:inline-block; min-width:74px; text-align:center; }
+  .chip.ok { border-color:var(--ok); color:var(--ok); }
+  .chip.debt { border-color:var(--warn); color:var(--warn); }
+  .chip.comp { border-color:var(--indigo); color:var(--indigo); }
+  .chip.void { border-color:var(--bad); color:var(--bad); text-decoration:line-through; }
+
+  /* ventas */
+  .strip { margin-top:18px; border:2px solid var(--ink); display:grid; grid-template-columns:repeat(4,1fr); background:var(--paper2); }
+  .strip > div { padding:12px 16px; border-right:1px dashed var(--ink); }
+  .strip > div:last-child { border-right:0; }
+  .strip b { font-family:'Anton',sans-serif; font-size:21px; display:block; line-height:1; }
+  .strip b.g { color:var(--ok); } .strip b.y { color:var(--warn); }
+  .strip span { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink2); display:block; margin-top:6px; }
+
+  .tools { margin-top:16px; display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
+  .search { flex:1; min-width:210px; max-width:300px; border:2px solid var(--ink); background:var(--paper2); padding:9px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink2); }
+  .f { font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:9px 13px; border:1.5px solid var(--ink); background:var(--paper2); }
+  .f.on { background:var(--ink); color:var(--paper); }
+  .f.onw { background:var(--warn); border-color:var(--warn); color:var(--paper); }
+
+  .blocks { margin-top:18px; display:flex; flex-direction:column; gap:18px; }
+  .blk { border:2px solid var(--ink); background:var(--paper2); }
+  .bband { display:flex; align-items:center; gap:12px; padding:11px 14px; border-bottom:2px solid var(--ink); border-left:6px solid var(--ticket); }
+  .bband.done { border-left-color:var(--ok); }
+  .bband .t { font-family:'Anton',sans-serif; font-size:15px; text-transform:uppercase; letter-spacing:0.03em; }
+  .bband .d { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.07em; color:var(--ink2); }
+  .bband .sp { flex:1; }
+  .bband .sub { font-family:'JetBrains Mono',monospace; font-size:10px; display:flex; gap:16px; color:var(--ink2); text-transform:uppercase; }
+  .bband .sub b { color:var(--ink); font-family:'Anton',sans-serif; font-size:12px; letter-spacing:0.02em; }
+  .bband .sub b.y { color:var(--warn); }
+  .th, .tr { display:grid; grid-template-columns:24px 1.7fr 1.1fr 46px 88px 84px 100px 88px 90px; gap:10px; align-items:center; padding:0 14px; }
+  .th { height:30px; background:var(--paper3); border-bottom:1px solid var(--hair); font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.09em; color:var(--ink2); }
+  .th .r, .tr .r { text-align:right; }
+  .tr { height:44px; border-bottom:1px solid var(--hair); font-size:12.5px; }
+  .tr:last-child { border-bottom:0; }
+  .tr.hov { background:var(--paper3); }
+  .cbx { width:14px; height:14px; border:1.5px solid var(--ink); display:block; }
+  .who { display:flex; align-items:center; gap:9px; min-width:0; }
+  .who .ini { width:26px; height:26px; border:1.5px solid var(--ink); font-family:'Anton',sans-serif; font-size:10px; display:flex; align-items:center; justify-content:center; }
+  .who b { font-weight:700; display:block; }
+  .who span { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--ink2); display:block; }
+  .num { font-family:'Anton',sans-serif; font-size:14px; letter-spacing:0.02em; }
+  .g2 { font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ink2); text-transform:uppercase; }
+  .del { font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--ink2); text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; gap:6px; }
+  .del i { width:7px; height:7px; display:block; }
+  .kb { text-align:center; font-weight:700; color:var(--ink2); }
+
+  /* puerta */
+  .door { padding:24px 26px; }
+  .dhead { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:12px; }
+  .dhead .fn { font-family:'Anton',sans-serif; font-size:24px; text-transform:uppercase; }
+  .dhead .net { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ok); }
+  .dcount { margin-top:16px; border:2px solid var(--ink); background:var(--paper2); padding:16px 20px; display:flex; align-items:baseline; justify-content:space-between; }
+  .dcount b { font-family:'Anton',sans-serif; font-size:42px; line-height:1; color:var(--ok); }
+  .dcount b small { font-size:20px; color:var(--ink2); }
+  .dcount .l { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; }
+  .dok { margin-top:16px; border:2px solid var(--ink); background:var(--ok); color:var(--paper); padding:40px 20px; text-align:center; }
+  .dok .rg { width:54px; height:54px; margin:0 auto; border:2px solid rgba(255,255,255,.55); display:flex; align-items:center; justify-content:center; font-size:26px; }
+  .dok .nm { margin-top:16px; font-family:'Anton',sans-serif; font-size:30px; text-transform:uppercase; line-height:1; }
+  .dok .dt { margin-top:8px; font-family:'JetBrains Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.07em; opacity:.85; }
+  .dbtns { margin-top:16px; display:grid; grid-template-columns:1fr 1.4fr; gap:12px; }
+  .dbtns .btn { text-align:center; padding:16px; font-size:12px; }
+
+  /* mobile */
+  .phones { margin-top:16px; display:flex; gap:26px; flex-wrap:wrap; align-items:flex-start; }
+  .mini { width:300px; height:600px; border:6px solid #15161A; overflow:hidden; display:flex; flex-direction:column; background:var(--paper); }
+  .mt { padding:13px 15px; border-bottom:2px solid var(--ink); display:flex; align-items:center; justify-content:space-between; }
+  .mt .lg { font-family:'Anton',sans-serif; font-size:15px; letter-spacing:0.06em; }
+  .mt .av { width:26px; height:26px; border:1.5px solid var(--ink); font-family:'Anton',sans-serif; font-size:11px; display:flex; align-items:center; justify-content:center; }
+  .mb { flex:1; padding:14px 15px; overflow:hidden; }
+  .mb h3 { font-family:'Anton',sans-serif; font-size:24px; text-transform:uppercase; line-height:.95; }
+  .mb .ms { font-family:'JetBrains Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink2); margin:5px 0 12px; }
+  .mhero { background:var(--ink); color:var(--paper); border:2px solid var(--ink); padding:13px 14px; }
+  .mhero .e { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.13em; color:var(--ticket); }
+  .mhero .fn { margin-top:5px; font-family:'Anton',sans-serif; font-size:19px; text-transform:uppercase; line-height:1; }
+  .mhero .bar { margin-top:10px; height:5px; background:rgba(244,241,234,.2); }
+  .mhero .bar i { display:block; height:100%; width:85%; background:var(--ticket); }
+  .mhero .bl { margin-top:6px; font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.05em; display:flex; justify-content:space-between; color:rgba(244,241,234,.7); }
+  .mcta { margin-top:12px; background:var(--ticket); color:var(--paper); border:2px solid var(--ticket); padding:13px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; }
+  .msec { margin:14px 0 8px; font-family:'Anton',sans-serif; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid var(--ink); padding-bottom:5px; }
+  .mpanel { border:2px solid var(--ink); background:var(--paper2); }
+  .mrow { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--hair); }
+  .mrow:last-child { border-bottom:0; }
+  .mrow .md { flex:1; min-width:0; }
+  .mrow .md b { font-size:12px; font-weight:700; display:block; }
+  .mrow .md span { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; color:var(--ink2); }
+  .mrow .amt { font-family:'Anton',sans-serif; font-size:14px; color:var(--warn); }
+  .owe { border:2px solid var(--warn); background:#F7EFDF; padding:13px 14px; }
+  .owe b { font-family:'Anton',sans-serif; font-size:24px; color:var(--warn); display:block; line-height:1; }
+  .owe span { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:0.05em; color:var(--warn); display:block; margin-top:6px; }
+  .mtabs { border-top:2px solid var(--ink); display:grid; background:var(--paper2); }
+  .mtab { text-align:center; padding:10px 2px 13px; font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink2); border-right:1px solid var(--hair); }
+  .mtab:last-child { border-right:0; }
+  .mtab.on { background:var(--ink); color:var(--paper); }
+  .mtab .i { font-size:13px; display:block; margin-bottom:3px; }
+  .pcap { margin-top:10px; text-align:center; font-size:12px; font-weight:600; color:#5A5D66; }
+
+  .note { margin-top:30px; background:#fff; border:1px solid #D5D8DD; border-left:4px solid var(--ticket); padding:16px 18px; }
+  .note b.t { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ticket); }
+  .note p { margin-top:9px; font-size:13px; line-height:1.65; color:#4A4C55; }
+  .note p b { color:#1A1C22; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>La app en lenguaje <em>afiche</em></h1>
+  <p class="lead">El mismo sistema de la landing, traducido a algo que se pueda usar ocho horas seguidas. No es la landing metida adentro del producto: es <b>su vocabulario visual</b> —papel, bordes duros, mono en mayúsculas, Anton para los números, naranja de ticket— sobre la arquitectura de información que ya cerramos. Las tres pantallas más distintas entre sí, para ver si el sistema aguanta.</p>
+
+  <div class="rules">
+    <div class="rl"><b>Se traduce · fondo</b>Gris frío #F2F3F5 → <b style="display:inline">papel #F4F1EA</b>, cards en blanco puro. Mismo contraste, otra temperatura.</div>
+    <div class="rl"><b>Se traduce · bordes</b>Radios de 12-13px y sombras suaves → <b style="display:inline">2px sólidos, cero radios, cero sombras</b>. Las cards se vuelven paneles.</div>
+    <div class="rl"><b>Se traduce · etiquetas</b>Archivo uppercase → <b style="display:inline">JetBrains Mono en mayúsculas</b> para encabezados de columna, metadatos y botones.</div>
+    <div class="rl"><b>Se traduce · números</b>Archivo 800 → <b style="display:inline">Anton</b> en cifras, contadores y títulos de sección. Es lo que le da el carácter.</div>
+    <div class="rl"><b>Se traduce · acento</b>Índigo → <b style="display:inline">naranja ticket #C4401E</b> para la acción primaria, el acento lateral y la barra de progreso.</div>
+    <div class="rl"><b>Se traduce · chips</b>Rellenos suaves → <b style="display:inline">contorno de 1.5px</b>, como un sello. Además resuelve el choque entre el naranja de acción y el ámbar de deuda.</div>
+    <div class="rl keep"><b>No se toca · legibilidad</b>Cuerpo de tabla sigue en <b style="display:inline">Inter 12.5px</b>. Anton es para mirar, no para leer datos.</div>
+    <div class="rl keep"><b>No se toca · semántica</b>Verde pagó, ámbar debe, rojo anulada, índigo cortesía. Cambia la forma del chip, no el significado.</div>
+    <div class="rl keep"><b>No se toca · ergonomía</b>Filas de 44px, targets de 44px, foco visible, contraste AA. El afiche no puede costar usabilidad.</div>
+    <div class="rl keep"><b>No sobrevive</b>Marquesina corriendo, texto a 90px, contorno hueco, banda de tipos de grupo. Eso se queda en la landing.</div>
+  </div>
+
+  <!-- INICIO -->
+  <div class="cap"><b>1 · Inicio</b> — el hero se vuelve un talón negro con troqueles verticales; las alertas, un listado numerado.</div>
+  <div class="frame">
+    <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.app/app</div></div>
+    <div class="app">
+      <div class="side">
+        <div class="lg">ACAPELIUS</div>
+        <div class="season"><div><b>Temporada 2026</b><span>● En curso</span></div><span class="mono" style="font-size:10px;">▾</span></div>
+        <nav>
+          <a class="on">Inicio</a>
+          <a>Ventas <span class="bg">10</span></a>
+          <a>Puerta</a>
+          <a>Temporada</a>
+          <a>Plata <span class="bg">6</span></a>
+        </nav>
+        <div class="grow"></div>
+        <div class="me"><b>Eli</b><span>Dirección</span></div>
+      </div>
+      <div class="main">
+        <div class="ph">
+          <div><h2>Hola, Eli</h2><div class="sb">Martes 9 de septiembre</div></div>
+          <span class="btn fill">＋ Nueva venta</span>
+        </div>
+
+        <div class="hero">
+          <div class="l">
+            <div class="e">Próxima función · en 4 días</div>
+            <div class="fn">Cierre de temporada</div>
+            <div class="m">Dom 13 sept, 21:00 · Teatro Municipal</div>
+            <div class="bar"><i></i></div>
+            <div class="bl">14 de 80 vendidas · 18%</div>
+          </div>
+          <div class="st"><b>$36.000</b><span>Recaudó</span></div>
+          <div class="st"><b class="w">31</b><span>Sin asignar</span></div>
+          <div class="cta"><span class="btn">Asignar entradas</span></div>
+        </div>
+
+        <div class="grid">
+          <div class="panel">
+            <div class="phd"><b>Pendiente</b><span class="c">8</span></div>
+            <div class="grp">Rendiciones · $378.000 sin rendir</div>
+            <div class="row"><span class="n">i</span><div class="md"><b>Beatriz Coria</b><span>Cobró hace 13 días</span></div><span class="amt">$112.000</span><span class="go">Registrar</span></div>
+            <div class="row"><span class="n">ii</span><div class="md"><b>Marta Ledesma</b><span>Cobró hace 16 días</span></div><span class="amt">$106.000</span><span class="go">Registrar</span></div>
+            <div class="row"><span class="n">iii</span><div class="md"><b>Silvia Rey</b><span>Cobró hace 15 días</span></div><span class="amt">$62.000</span><span class="go">Registrar</span></div>
+            <div class="grp">Invitaciones sin usar</div>
+            <div class="row"><span class="n">iv</span><div class="md"><b>Josefina Paz y Roxana Nieves</b><span>Invitadas hace 32 días</span></div><span class="go">Reenviar</span></div>
+            <div class="pfoot">Ver las 6 rendiciones en Plata</div>
+          </div>
+          <div class="panel">
+            <div class="phd"><b>Qué pasó</b><span class="lk">7 días</span></div>
+            <div class="row"><div class="md"><b>Carolina vendió 2 entradas</b><span>Lucía Molina · Cierre</span></div><span class="when">2 h</span></div>
+            <div class="row"><div class="md"><b>Virginia rindió $90.000</b><span>Transferencia</span></div><span class="when">Ayer</span></div>
+            <div class="row"><div class="md"><b>Beatriz vendió 1 entrada</b><span>Graciela Torres</span></div><span class="when">2 d</span></div>
+            <div class="row"><div class="md"><b>Recordatorio a Beatriz</b><span>Por email</span></div><span class="when">3 d</span></div>
+            <div class="row"><div class="md"><b>Marta vendió 4 entradas</b><span>Rosa Suárez · Cierre</span></div><span class="when">6 d</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VENTAS -->
+  <div class="cap"><b>2 · Ventas</b> — la prueba de fuego: una tabla densa tiene que seguir siendo legible. Los chips pasan a sello de contorno.</div>
+  <div class="frame">
+    <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.app/app/ventas</div></div>
+    <div class="app">
+      <div class="side">
+        <div class="lg">ACAPELIUS</div>
+        <div class="season"><div><b>Temporada 2026</b><span>● En curso</span></div><span class="mono" style="font-size:10px;">▾</span></div>
+        <nav>
+          <a>Inicio</a>
+          <a class="on">Ventas <span class="bg">10</span></a>
+          <a>Puerta</a>
+          <a>Temporada</a>
+          <a>Plata <span class="bg">6</span></a>
+        </nav>
+        <div class="grow"></div>
+        <div class="me"><b>Eli</b><span>Dirección</span></div>
+      </div>
+      <div class="main">
+        <div class="ph">
+          <div><h2>Ventas</h2><div class="sb">Temporada 2026 · 50 ventas</div></div>
+          <span class="btn fill">＋ Nueva venta</span>
+        </div>
+
+        <div class="strip">
+          <div><b>138</b><span>Entradas vendidas</span></div>
+          <div><b class="g">$1.016.000</b><span>Cobrado</span></div>
+          <div><b class="y">$218.000</b><span>Por cobrar</span></div>
+          <div><b>11</b><span>Cortesías</span></div>
+        </div>
+
+        <div class="tools">
+          <div class="search">🔍 Buscar comprador o vendedora</div>
+          <span class="f on">Todas · 50</span>
+          <span class="f">Deben · 10</span>
+          <span class="f">Pagas · 39</span>
+          <span class="f">Cortesías · 11</span>
+          <span class="f">Funciones ▾</span>
+        </div>
+
+        <div class="blocks">
+          <div class="blk">
+            <div class="bband">
+              <span class="t">Cierre de temporada</span>
+              <span class="d">Dom 13 sept · en venta</span>
+              <span class="sp"></span>
+              <span class="sub"><span>6 ventas</span><span><b>14</b> entradas</span><span>Debe <b class="y">$96.000</b></span></span>
+            </div>
+            <div class="th"><span></span><span>Comprador</span><span>Vendedora</span><span class="r">Entr.</span><span class="r">Total</span><span>Vendida</span><span>Entrada</span><span class="r">Estado</span><span></span></div>
+            <div class="tr">
+              <span><span class="cbx"></span></span>
+              <span class="who"><span class="ini">RS</span><span><b>Rosa Suárez</b><span>rosasuarez@gmail.com</span></span></span>
+              <span class="g2">Carolina Vega</span>
+              <span class="r num">4</span><span class="r num">$40.000</span>
+              <span class="g2">Hace 6 d</span>
+              <span class="del"><i style="background:var(--indigo)"></i>Abierta</span>
+              <span class="r"><span class="chip debt">Debe</span></span>
+              <span class="kb">⋮</span>
+            </div>
+            <div class="tr hov">
+              <span><span class="cbx"></span></span>
+              <span class="who"><span class="ini">LM</span><span><b>Lucía Molina</b><span>luciamolina@gmail.com</span></span></span>
+              <span class="g2">Carolina Vega</span>
+              <span class="r num">2</span><span class="r num">$20.000</span>
+              <span class="g2">Hace 3 d</span>
+              <span class="del"><i style="background:var(--ok)"></i>Enviada</span>
+              <span class="r"><span class="chip ok">Pagó</span></span>
+              <span class="kb">⋮</span>
+            </div>
+            <div class="tr">
+              <span><span class="cbx"></span></span>
+              <span class="who"><span class="ini">GT</span><span><b>Graciela Torres</b><span>Sin email</span></span></span>
+              <span class="g2">Beatriz Coria</span>
+              <span class="r num">1</span><span class="r num">$10.000</span>
+              <span class="g2">Hace 2 d</span>
+              <span class="del"><i style="background:var(--warn)"></i>Sin email</span>
+              <span class="r"><span class="chip debt">Debe</span></span>
+              <span class="kb">⋮</span>
+            </div>
+          </div>
+
+          <div class="blk">
+            <div class="bband done">
+              <span class="t">Función de apertura</span>
+              <span class="d">Vie 14 ago · hecha</span>
+              <span class="sp"></span>
+              <span class="sub"><span>15 ventas</span><span><b>38</b> entradas</span><span>Debe <b class="y">$32.000</b></span></span>
+            </div>
+            <div class="th"><span></span><span>Comprador</span><span>Vendedora</span><span class="r">Entr.</span><span class="r">Total</span><span>Vendida</span><span>Entrada</span><span class="r">Estado</span><span></span></div>
+            <div class="tr">
+              <span><span class="cbx"></span></span>
+              <span class="who"><span class="ini">MD</span><span><b>María Dutra</b><span>maria.dutra@gmail.com</span></span></span>
+              <span class="g2">Carolina Vega</span>
+              <span class="r num">3</span><span class="r num">$24.000</span>
+              <span class="g2">14 ago</span>
+              <span class="del"><i style="background:var(--indigo)"></i>Abierta</span>
+              <span class="r"><span class="chip ok">Pagó</span></span>
+              <span class="kb">⋮</span>
+            </div>
+            <div class="tr">
+              <span><span class="cbx"></span></span>
+              <span class="who"><span class="ini">PB</span><span><b>Padre Benítez</b><span>Sin email</span></span></span>
+              <span class="g2">Eli</span>
+              <span class="r num">2</span><span class="r g2">—</span>
+              <span class="g2">12 ago</span>
+              <span class="del"><i style="background:var(--warn)"></i>Sin email</span>
+              <span class="r"><span class="chip comp">Cortesía</span></span>
+              <span class="kb">⋮</span>
+            </div>
+            <div class="tr">
+              <span><span class="cbx"></span></span>
+              <span class="who"><span class="ini">CS</span><span><b>Clara Suárez</b><span>clarasuarez@gmail.com</span></span></span>
+              <span class="g2">Marta Ledesma</span>
+              <span class="r num">2</span><span class="r num">$16.000</span>
+              <span class="g2">13 ago</span>
+              <span class="del"><i style="background:var(--ok)"></i>Enviada</span>
+              <span class="r"><span class="chip void">Anulada</span></span>
+              <span class="kb">⋮</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUERTA -->
+  <div class="cap"><b>3 · Puerta</b> — donde el afiche brilla: Anton a escala grande funciona perfecto a un metro de distancia y con poca luz.</div>
+  <div class="frame">
+    <div class="chrome"><i style="background:#E5484D"></i><i style="background:#E8A33D"></i><i style="background:#46C68C"></i><div class="url">acapelius.app/app/puerta/4</div></div>
+    <div class="app">
+      <div class="side">
+        <div class="lg">ACAPELIUS</div>
+        <div class="season"><div><b>Temporada 2026</b><span>● En curso</span></div><span class="mono" style="font-size:10px;">▾</span></div>
+        <nav>
+          <a>Inicio</a><a>Ventas <span class="bg">10</span></a>
+          <a class="on">Puerta</a>
+          <a>Temporada</a><a>Plata <span class="bg">6</span></a>
+        </nav>
+        <div class="grow"></div>
+        <div class="me"><b>Eli</b><span>Dirección</span></div>
+      </div>
+      <div class="main door">
+        <div class="dhead">
+          <span class="fn">Cierre de temporada</span>
+          <span class="net">● En línea</span>
+        </div>
+        <div class="dcount">
+          <b>38<small> / 80</small></b>
+          <span class="l">Ingresaron</span>
+        </div>
+        <div class="dok">
+          <div class="rg">✓</div>
+          <div class="nm">María Dutra</div>
+          <div class="dt">2 entradas · le vendió Carolina</div>
+        </div>
+        <div class="dbtns">
+          <span class="btn">Buscar nombre</span>
+          <span class="btn ink">Siguiente escaneo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE -->
+  <div class="cap"><b>4 · En el celular</b> — la corista y la pestaña inferior.</div>
+  <div class="phones">
+    <div>
+      <div class="mini">
+        <div class="mt"><span class="lg">ACAPELIUS</span><span class="av">C</span></div>
+        <div class="mb">
+          <h3>Hola,<br>Carolina</h3>
+          <div class="ms">Martes 9 de septiembre</div>
+          <div class="mhero">
+            <div class="e">Próxima función · en 4 días</div>
+            <div class="fn">Cierre de temporada</div>
+            <div class="bar"><i></i></div>
+            <div class="bl"><span>Vendiste 17 de 20</span><span>Quedan 3</span></div>
+          </div>
+          <div class="mcta">＋ Nueva venta</div>
+          <div class="msec">Tenés que rendir</div>
+          <div class="owe"><b>$44.000</b><span>Cobrado y no entregado · 3 ventas</span></div>
+          <div class="msec">Te falta cobrar · 2</div>
+          <div class="mpanel">
+            <div class="mrow"><div class="md"><b>Rosa Suárez</b><span>4 entradas · hace 6 d</span></div><span class="amt">$40.000</span></div>
+            <div class="mrow"><div class="md"><b>Lucía Molina</b><span>2 entradas · hace 3 d</span></div><span class="amt">$20.000</span></div>
+          </div>
+        </div>
+        <div class="mtabs" style="grid-template-columns:repeat(3,1fr);">
+          <div class="mtab on"><span class="i">◆</span>Inicio</div>
+          <div class="mtab"><span class="i">▤</span>Ventas</div>
+          <div class="mtab"><span class="i">⛶</span>Puerta</div>
+        </div>
+      </div>
+      <div class="pcap">Corista</div>
+    </div>
+
+    <div>
+      <div class="mini">
+        <div class="mt"><span class="lg">ACAPELIUS</span><span class="av">E</span></div>
+        <div class="mb" style="padding:0;">
+          <div style="padding:14px 15px 0;">
+            <div class="dhead" style="padding-bottom:10px;">
+              <span class="fn" style="font-size:18px;">Cierre</span>
+              <span class="net" style="font-size:9px; color:var(--warn);">● Sin conexión</span>
+            </div>
+            <div class="dcount" style="margin-top:12px; padding:12px 14px;">
+              <b style="font-size:34px;">38<small style="font-size:16px;"> / 80</small></b>
+              <span class="l" style="font-size:9px;">Ingresaron</span>
+            </div>
+            <div class="dok" style="margin-top:12px; padding:34px 14px;">
+              <div class="rg" style="width:44px; height:44px; font-size:21px;">✓</div>
+              <div class="nm" style="font-size:24px; margin-top:12px;">María Dutra</div>
+              <div class="dt" style="font-size:10px;">2 entradas · vendió Carolina</div>
+            </div>
+            <div class="dbtns" style="margin-top:12px;">
+              <span class="btn" style="text-align:center; padding:14px; font-size:11px;">Buscar</span>
+              <span class="btn ink" style="text-align:center; padding:14px; font-size:11px;">Siguiente</span>
+            </div>
+            <div class="mono" style="margin-top:10px; font-size:9px; text-transform:uppercase; letter-spacing:0.06em; color:var(--warn); text-align:center;">4 ingresos por sincronizar</div>
+          </div>
+        </div>
+      </div>
+      <div class="pcap">Modo puerta</div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b class="t">Lo que hay que vigilar</b>
+    <p><b>1 · El naranja y el ámbar.</b> El naranja de ticket es la acción y el ámbar es la deuda: son vecinos. Por eso los chips pasaron a <b>contorno</b> en vez de relleno — el único bloque de color sólido naranja en toda la app es el botón primario, y así no compite con nada.</p>
+    <p><b>2 · Anton no se usa para leer.</b> Va en cifras, contadores, títulos de pantalla y nombres en la puerta. Todo lo que se lee de corrido —celdas, subtítulos, formularios— sigue en Inter. Si aparece Anton en una celda de tabla, está mal aplicado.</p>
+    <p><b>3 · Sin radios significa sin radios.</b> La mezcla de bordes duros con una card redondeada suelta es lo que hace que un rediseño parezca a medio hacer. Vale la pena una pasada final de <code>grep border-radius</code> sobre el CSS de la app.</p>
+    <p><b>4 · Modo nocturno.</b> El papel #F4F1EA es más luminoso que el gris anterior; en la puerta, de noche, encandila más. El modo nocturno del modo puerta (fondo tinta, texto papel) deja de ser opcional y pasa a ser necesario.</p>
+  </div>
+
+</div>
+</body>
+</html>

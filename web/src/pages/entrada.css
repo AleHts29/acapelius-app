@@ -35,9 +35,10 @@ body:has(.ent) { background: #F4F1EA; }
 
 /* El troquel: línea punteada con las dos muescas a los lados. */
 .talon__cut { position: relative; border-top: 2px dashed var(--ink); margin: 0 -2px; }
-.talon__cut::before, .talon__cut::after { content: ""; position: absolute; top: -9px; width: 16px; height: 16px; background: var(--paper); border: 2px solid var(--ink); border-radius: 50%; }
-.talon__cut::before { left: -9px; clip-path: inset(0 0 0 50%); }
-.talon__cut::after { right: -9px; clip-path: inset(0 50% 0 0); }
+/* Muescas del troquel: cuadrados girados, sin radio (C18: cero radios). */
+.talon__cut::before, .talon__cut::after { content: ""; position: absolute; top: -8px; width: 14px; height: 14px; background: var(--paper); border: 2px solid var(--ink); transform: rotate(45deg); }
+.talon__cut::before { left: -9px; }
+.talon__cut::after { right: -9px; }
 
 /* Cada QR */
 .qrbox { padding: 18px 18px 16px; text-align: center; }

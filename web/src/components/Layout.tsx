@@ -50,20 +50,7 @@ export function Layout() {
             {initial}
           </button>
           {menuOpen && (
-            <div
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 'calc(100% + 6px)',
-                zIndex: 60,
-                background: 'var(--surface)',
-                border: '1px solid var(--line)',
-                borderRadius: 12,
-                padding: '10px 12px',
-                minWidth: 180,
-                boxShadow: '0 8px 24px rgba(29,29,27,.12)',
-              }}
-            >
+            <div className="acct-menu">
               <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: 13 }}>{user.name}</p>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: 11.5 }}>
                 {user.email}

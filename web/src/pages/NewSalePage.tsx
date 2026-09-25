@@ -190,7 +190,7 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
     <div className="form-page">
       <h1 className="page-title">{isComp ? 'Nueva cortesía' : 'Nueva venta'}</h1>
 
-      <form className="panel" style={{ borderRadius: 18 }} onSubmit={handleSubmit}>
+      <form className="panel" onSubmit={handleSubmit}>
         {error && (
           <p className="alert" role="alert">
             {error}

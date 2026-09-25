@@ -32,7 +32,7 @@
   // Sólo se vuelve a un lugar de la app: un `next` externo se ignora.
   function destino() {
     var next = new URLSearchParams(window.location.search).get('next') || ''
-    return /^\/app(\/|$|\?)/.test(next) ? next : '/app'
+    return /^\/app(\/|$|\?)/.test(next) ? next : '/app/'
   }
 
   function enviar(form, url, armar, fallback) {
