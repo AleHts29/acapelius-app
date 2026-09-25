@@ -976,3 +976,21 @@ CSS, no tokens de la app.
 **`cmd/seeddemo` se borró.** Generaba SQL contra el esquema anterior a
 `season_members` (ya no corría) y sembraba dentro del coro real; la demo lo
 reemplaza con la misma idea en su propia organización.
+
+## C17 · Pieza D — la entrada pública es un talón
+
+`/e/{code}` y `/t/{code}` son lo único del producto que ve gente que no usa
+la app, y son literalmente una entrada: el lenguaje afiche les queda mejor
+que el de Papel pautado. Siguen siendo rutas del SPA (el QR se dibuja en el
+browser con el payload firmado; eso no cambió), pero con su propio CSS
+(`web/src/pages/entrada.css`) y sus propios tokens bajo `.ent`: no usan los
+de la app ni la app usa los suyos. Las fuentes son las del sitio público,
+servidas por Go en `/site/fonts` (Vite avisa que no las resuelve en el
+build; es lo esperado: se resuelven en runtime).
+
+El talón: cabecera negra con la función, la fecha en mono y la sala; "a
+nombre de" con el comprador y el chip de cortesía; el troquel punteado con
+las dos muescas; un QR por entrada con su etiqueta ("Entrada 2 de 3 · ya
+ingresó") y el botón de reenviar cuando la compra tiene más de una. Una
+venta anulada muestra el aviso en el lugar de los QR, en rojo. Pie con quién
+la vendió. Se borró el bloque de estilos viejo de `styles.css`.

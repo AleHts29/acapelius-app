@@ -6,6 +6,11 @@ import QRCode from 'qrcode'
 import { ApiError, api, publicTicketURL, shareOrCopy } from '../api/client'
 import type { PublicTicket } from '../api/client'
 import { formatDateTime } from '../lib/format'
+import './entrada.css'
+
+// La entrada pública va en lenguaje afiche (C17 §D): es lo único del producto
+// que ve el comprador, y es un talón de entrada. Los estilos viven en
+// entrada.css con sus propios tokens; nada de Papel pautado acá.
 
 /** Dibuja el QR del payload en un canvas, en el browser (spec §7). */
 function QRCanvas({ payload }: { payload: string }) {
@@ -17,14 +22,15 @@ function QRCanvas({ payload }: { payload: string }) {
         width: 240,
         margin: 2,
         errorCorrectionLevel: 'M',
+        color: { dark: '#141414', light: '#ffffff' },
       })
     }
   }, [payload])
 
-  return <canvas ref={ref} className="ticket__qr" aria-label="Codigo QR de la entrada" />
+  return <canvas ref={ref} className="qrbox__qr" aria-label="Código QR de la entrada" />
 }
 
-/** Boton para reenviarle a una persona SU entrada (link individual). */
+/** Botón para reenviarle a una persona SU entrada (link individual). */
 function ShareTicketButton({ code, index }: { code: string; index: number }) {
   const [label, setLabel] = useState<string | null>(null)
 
@@ -39,75 +45,98 @@ function ShareTicketButton({ code, index }: { code: string; index: number }) {
   }
 
   return (
-    <button className="ticket__share" type="button" onClick={() => void share()}>
+    <button className="qrbox__share" type="button" onClick={() => void share()}>
       {label ?? 'Reenviar esta entrada'}
     </button>
   )
 }
 
-function TicketCard({
+function QRBox({
   ticket,
   index,
   total,
   shareable,
 }: {
-  ticket: PublicTicket
+  ticket: Pick<PublicTicket, 'code' | 'status' | 'payload'>
   index: number
   total: number
   shareable: boolean
 }) {
   return (
-    <div className="ticket">
+    <div className="qrbox">
       {ticket.status === 'void' ? (
-        <p className="ticket__void">Entrada anulada</p>
+        <p className="qrbox__void">Entrada anulada</p>
       ) : (
         <QRCanvas payload={ticket.payload} />
       )}
-      <p className="ticket__label">
+      <p className="qrbox__label">
         Entrada {index} de {total}
-        {ticket.status === 'checked_in' && ' · ya ingresada'}
+        {ticket.status === 'checked_in' && (
+          <>
+            {' · '}
+            <em>ya ingresó</em>
+          </>
+        )}
       </p>
-      {shareable && ticket.status === 'issued' && (
-        <ShareTicketButton code={ticket.code} index={index} />
-      )}
+      {shareable && ticket.status === 'issued' && <ShareTicketButton code={ticket.code} index={index} />}
     </div>
   )
 }
 
-function TicketPageShell({
+function Talon({
   title,
   startsAt,
   venue,
-  buyerLine,
+  buyer,
+  isComp,
+  seller,
   children,
 }: {
   title: string
   startsAt: string
   venue: string
-  buyerLine: string
+  buyer: string
+  isComp: boolean
+  seller: string
   children: React.ReactNode
 }) {
   return (
-    <div className="ticket-page">
-      <header className="ticket-page__head">
-        <img src="/app/logo-full-blue.png" alt="Acapelius" style={{ width: 'min(60%, 240px)', marginBottom: '1rem' }} />
-        <h1 className="ticket-page__title">{title}</h1>
-        <p className="ticket-page__meta">
-          {formatDateTime(startsAt)}
-          <br />
-          {venue}
-        </p>
-        <p className="ticket-page__buyer">{buyerLine}</p>
-      </header>
-      {children}
+    <div className="ent">
+      <div className="ent__col">
+        <header className="ent__top">
+          <b>ACAPELIUS</b>
+          <span>Entrada</span>
+        </header>
+        <article className="talon">
+          <div className="talon__head">
+            <p className="talon__eyebrow">Función</p>
+            <h1 className="talon__title">{title}</h1>
+            <p className="talon__when">{formatDateTime(startsAt)}</p>
+            <p className="talon__venue">{venue}</p>
+          </div>
+          <div className="talon__buyer">
+            <div>
+              <small>A nombre de</small>
+              <b>{buyer}</b>
+            </div>
+            {isComp && <span className="talon__chip">Cortesía</span>}
+          </div>
+          <div className="talon__cut" aria-hidden="true" />
+          {children}
+        </article>
+        <footer className="ent__foot">
+          <span>Vendida por {seller}</span>
+          <a href="/">acapelius</a>
+        </footer>
+      </div>
     </div>
   )
 }
 
 function LoadingScreen() {
   return (
-    <div className="centered-screen">
-      <p className="muted">Cargando tu entrada...</p>
+    <div className="ent ent--centered">
+      <p className="ent__note">Cargando tu entrada…</p>
     </div>
   )
 }
@@ -118,17 +147,22 @@ function ErrorScreen({ error }: { error: unknown }) {
       ? 'Esta entrada no existe. Revisá el link.'
       : 'No se pudo cargar la entrada. Probá de nuevo en un rato.'
   return (
-    <div className="centered-screen">
-      <div className="card">
-        <img className="login-logo" src="/app/logo-full-blue.png" alt="Acapelius" />
-        <p className="alert">{message}</p>
+    <div className="ent ent--centered">
+      <div className="ent__col" style={{ width: '100%' }}>
+        <header className="ent__top">
+          <b>ACAPELIUS</b>
+          <span>Entrada</span>
+        </header>
+        <p className="ent__alert" role="alert">
+          {message}
+        </p>
       </div>
     </div>
   )
 }
 
-// TicketPage es la pagina publica /e/{sale_code}: todas las entradas de la
-// compra, cada una con su boton para reenviarla individualmente.
+// TicketPage es la página pública /e/{sale_code}: todas las entradas de la
+// compra, cada una con su botón para reenviarla individualmente.
 export function TicketPage() {
   const { saleCode } = useParams()
 
@@ -143,42 +177,41 @@ export function TicketPage() {
   if (error || !data) return <ErrorScreen error={error} />
 
   return (
-    <TicketPageShell
+    <Talon
       title={data.function.name ?? 'Acapelius'}
       startsAt={data.function.starts_at}
       venue={data.function.venue}
-      buyerLine={`${data.buyer_name}${data.is_comp ? ' · cortesia' : ''}`}
+      buyer={data.buyer_name}
+      isComp={data.is_comp}
+      seller={data.seller_name}
     >
       {data.voided ? (
-        <p className="alert" role="alert">
+        <p className="ent__alert" role="alert">
           Esta entrada fue anulada. Cualquier duda, hablá con {data.seller_name}.
         </p>
       ) : (
         <>
-          <div className="stack">
-            {data.tickets.map((ticket, i) => (
-              <TicketCard
-                key={ticket.code}
-                ticket={ticket}
-                index={i + 1}
-                total={data.tickets.length}
-                shareable={data.tickets.length > 1}
-              />
-            ))}
-          </div>
-          <p className="muted ticket-page__note">
-            Entrada general, sin numerar. Mostrá un QR por persona en la puerta.
-            {data.tickets.length > 1 &&
-              ' Con "Reenviar esta entrada" le mandás a cada persona la suya.'}
+          {data.tickets.map((ticket, i) => (
+            <QRBox
+              key={ticket.code}
+              ticket={ticket}
+              index={i + 1}
+              total={data.tickets.length}
+              shareable={data.tickets.length > 1}
+            />
+          ))}
+          <p className="ent__note" style={{ padding: '0 16px 14px' }}>
+            Entrada general, sin numerar · un QR por persona en la puerta
+            {data.tickets.length > 1 && ' · con "Reenviar" le mandás a cada uno la suya'}
           </p>
         </>
       )}
-    </TicketPageShell>
+    </Talon>
   )
 }
 
 // SingleTicketPage es /t/{ticket_code}: UNA sola entrada, pensada para que el
-// comprador le reenvie a cada persona la suya.
+// comprador le reenvíe a cada persona la suya.
 export function SingleTicketPage() {
   const { ticketCode } = useParams()
 
@@ -193,30 +226,31 @@ export function SingleTicketPage() {
   if (error || !data) return <ErrorScreen error={error} />
 
   return (
-    <TicketPageShell
+    <Talon
       title={data.function.name ?? 'Acapelius'}
       startsAt={data.function.starts_at}
       venue={data.function.venue}
-      buyerLine={`Entrada de ${data.buyer_name}${data.is_comp ? ' · cortesia' : ''}`}
+      buyer={data.buyer_name}
+      isComp={data.is_comp}
+      seller={data.seller_name}
     >
       {data.voided || !data.payload ? (
-        <p className="alert" role="alert">
+        <p className="ent__alert" role="alert">
           Esta entrada fue anulada. Cualquier duda, hablá con {data.seller_name}.
         </p>
       ) : (
         <>
-          <div className="ticket">
-            <QRCanvas payload={data.payload} />
-            <p className="ticket__label">
-              Entrada {data.ticket_index} de {data.sale_quantity}
-              {data.status === 'checked_in' && ' · ya ingresada'}
-            </p>
-          </div>
-          <p className="muted ticket-page__note">
-            Entrada general, sin numerar. Mostrá este QR en la puerta.
+          <QRBox
+            ticket={{ code: data.code, status: data.status, payload: data.payload }}
+            index={data.ticket_index}
+            total={data.sale_quantity}
+            shareable={false}
+          />
+          <p className="ent__note" style={{ padding: '0 16px 14px' }}>
+            Entrada general, sin numerar · mostrá este QR en la puerta
           </p>
         </>
       )}
-    </TicketPageShell>
+    </Talon>
   )
 }

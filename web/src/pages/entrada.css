@@ -1,0 +1,58 @@
+/* La entrada pública (/e/{code}, /t/{code}) en lenguaje afiche (C17 §D). Es
+   lo único del producto que ve gente que no usa la app, y es literalmente un
+   talón de entrada: bordes duros, troquel punteado, mono para los datos.
+   Tokens propios bajo .ent; no usa los de la app ni la app usa estos. Las
+   fuentes son las del sitio público (las sirve Go en /site/fonts). */
+@font-face { font-family: 'Anton'; font-style: normal; font-weight: 400; font-display: swap; src: url(/site/fonts/anton.woff2) format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 700; font-display: swap; src: url(/site/fonts/jetbrains-mono.woff2) format('woff2'); }
+
+body:has(.ent) { background: #F4F1EA; }
+
+.ent {
+  --paper: #F4F1EA; --ink: #141414; --ticket: #C4401E; --ok: #0E7A55; --mute: #5E5A4F;
+  --anton: 'Anton', Impact, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  min-height: 100%; background: var(--paper); color: var(--ink);
+  padding: max(20px, env(safe-area-inset-top)) 16px 40px;
+  font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+}
+.ent__col { max-width: 440px; margin: 0 auto; }
+.ent__top { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 3px solid var(--ink); padding-bottom: 8px; margin-bottom: 18px; }
+.ent__top b { font-family: var(--anton); font-weight: 400; font-size: 18px; letter-spacing: .05em; }
+.ent__top span { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+
+/* El talón */
+.talon { border: 2px solid var(--ink); background: var(--paper); }
+.talon__head { background: var(--ink); color: var(--paper); padding: 18px 18px 16px; }
+.talon__eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #BDB9AF; margin: 0; }
+.talon__title { font-family: var(--anton); font-weight: 400; font-size: clamp(28px, 8vw, 40px); line-height: .95; text-transform: uppercase; margin: 8px 0 0; }
+.talon__when { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin: 12px 0 0; color: var(--paper); }
+.talon__venue { margin: 4px 0 0; font-size: 13.5px; color: #DAD6CC; }
+.talon__buyer { padding: 14px 18px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.talon__buyer small { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); display: block; }
+.talon__buyer b { font-family: var(--anton); font-weight: 400; font-size: 22px; text-transform: uppercase; line-height: 1; }
+.talon__chip { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; border: 1.5px solid var(--ticket); color: var(--ticket); padding: 4px 8px; }
+
+/* El troquel: línea punteada con las dos muescas a los lados. */
+.talon__cut { position: relative; border-top: 2px dashed var(--ink); margin: 0 -2px; }
+.talon__cut::before, .talon__cut::after { content: ""; position: absolute; top: -9px; width: 16px; height: 16px; background: var(--paper); border: 2px solid var(--ink); border-radius: 50%; }
+.talon__cut::before { left: -9px; clip-path: inset(0 0 0 50%); }
+.talon__cut::after { right: -9px; clip-path: inset(0 50% 0 0); }
+
+/* Cada QR */
+.qrbox { padding: 18px 18px 16px; text-align: center; }
+.qrbox + .qrbox { border-top: 1px dashed var(--ink); }
+.qrbox__qr { display: block; width: 100%; max-width: 240px; height: auto; margin: 0 auto; border: 2px solid var(--ink); background: #fff; }
+.qrbox__label { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin: 10px 0 0; }
+.qrbox__label em { font-style: normal; color: var(--ok); }
+.qrbox__share { margin-top: 10px; width: 100%; min-height: 44px; border: 2px solid var(--ink); background: var(--ink); color: var(--paper); font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.qrbox__share:focus-visible { outline: 3px solid #3A3FC4; outline-offset: 2px; }
+.qrbox__void { font-family: var(--anton); font-size: 22px; text-transform: uppercase; color: var(--ticket); padding: 28px 0; margin: 0; }
+
+.ent__alert { border: 2px solid var(--ticket); color: var(--ticket); padding: 14px 16px; font-weight: 600; margin: 0; font-size: 14px; }
+.talon .ent__alert { border: 0; border-top: 2px solid var(--ticket); }
+.ent__note { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); line-height: 1.7; margin: 16px 0 0; text-align: center; }
+.ent__foot { margin-top: 26px; display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); border-top: 1px solid var(--ink); padding-top: 10px; }
+.ent__foot a { color: inherit; text-decoration: none; }
+.ent__foot a:focus-visible { outline: 3px solid #3A3FC4; }
+.ent--centered { display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; }
