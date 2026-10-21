@@ -154,3 +154,11 @@ export function dayAndMonthShort(iso: string): string {
   // es-AR abrevia con punto ("22 ago."): sobra cuando va dentro de un rango.
   return dayShortMonth.format(new Date(iso)).replace('.', '')
 }
+
+const weekday = new Intl.DateTimeFormat('es-AR', { weekday: 'long', timeZone: TIME_ZONE })
+
+/** ISO → "Sábado". La etiqueta de la tarjeta de función. */
+export function weekdayLong(iso: string): string {
+  const s = weekday.format(new Date(iso))
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}

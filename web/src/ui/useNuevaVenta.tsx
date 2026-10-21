@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { useIsDesktop } from '../lib/viewport'
 import { NewSalePage } from '../pages/NewSalePage'
-import { ActionPanel } from './ActionPanel'
+import { Modal } from './Modal'
 
 /**
  * "Nueva venta", en un solo lugar. En escritorio se resuelve encima de lo que
@@ -23,9 +23,9 @@ export function useNuevaVenta(): { abrir: () => void; panel: ReactNode } {
   }
 
   const panel = abierta ? (
-    <ActionPanel label="Nueva venta" size="form" onClose={() => setAbierta(false)}>
+    <Modal open label="Ventas" title="Nueva venta" onClose={() => setAbierta(false)}>
       <NewSalePage onDone={() => setAbierta(false)} />
-    </ActionPanel>
+    </Modal>
   ) : null
 
   return { abrir, panel }

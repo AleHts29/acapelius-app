@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 
 import { ApiError } from '../api/client'
 import { useSession } from '../auth/session'
+import { Button } from '../ui/Button'
 
 /** Tiene que coincidir con domain.MinPasswordLength en el backend. */
 const MIN_PASSWORD_LENGTH = 8
@@ -40,12 +41,15 @@ export function ChangePasswordPage() {
 
   return (
     <div className="centered-screen">
-      <form className="card" onSubmit={handleSubmit} noValidate>
+      <form
+        className="card"
+        onSubmit={handleSubmit}
+        noValidate
+        style={{ width: '100%', maxWidth: 400, padding: 'var(--s5) var(--s4)', display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}
+      >
         <img className="login-logo" src="/app/logo-full-indigo.png" alt="Acapelius" />
-        <h1 className="card__title">Elegí tu contraseña</h1>
-        <p className="card__subtitle">
-          Hola {user?.name}. Antes de seguir, cambiá la contraseña provisoria por una tuya.
-        </p>
+        <h1 className="pgt">Elegí tu contraseña</h1>
+        <p className="note">Hola {user?.name}. Antes de seguir, cambiá la contraseña provisoria por una tuya.</p>
 
         {error && (
           <p className="alert" role="alert">
@@ -58,7 +62,7 @@ export function ChangePasswordPage() {
         <input type="text" name="username" value={user?.email ?? ''} autoComplete="username" hidden readOnly />
 
         <label className="field">
-          <span className="field__label">Contraseña provisoria</span>
+          <span className="lbl">Contraseña provisoria</span>
           <input
             className="field__input"
             type="password"
@@ -71,7 +75,7 @@ export function ChangePasswordPage() {
         </label>
 
         <label className="field">
-          <span className="field__label">Contraseña nueva</span>
+          <span className="lbl">Contraseña nueva</span>
           <input
             className="field__input"
             type="password"
@@ -85,7 +89,7 @@ export function ChangePasswordPage() {
         </label>
 
         <label className="field">
-          <span className="field__label">Repetila</span>
+          <span className="lbl">Repetila</span>
           <input
             className="field__input"
             type="password"
@@ -96,15 +100,12 @@ export function ChangePasswordPage() {
           />
         </label>
 
-        <button className="button" type="submit" disabled={submitting}>
+        <Button go wide type="submit" disabled={submitting}>
           {submitting ? 'Guardando…' : 'Guardar y entrar'}
-        </button>
-
-        <p style={{ marginBottom: 0, marginTop: 12, textAlign: 'center' }}>
-          <button className="button--ghost button" type="button" onClick={() => void logout()}>
-            Salir
-          </button>
-        </p>
+        </Button>
+        <Button wide onClick={() => void logout()}>
+          Salir
+        </Button>
       </form>
     </div>
   )

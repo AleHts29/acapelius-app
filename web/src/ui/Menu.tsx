@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ChevronDown, MoreVertical } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
 
 import { useIsDesktop } from '../lib/viewport'
 
@@ -35,7 +35,7 @@ const MARGEN = 12
  * opción: acá cada una lleva su subtítulo, la elegida un check índigo, y las
  * acciones van separadas abajo.
  *
- * Dos presentaciones, un solo componente (como ActionPanel): en escritorio es
+ * Dos presentaciones, un solo componente: en escritorio es
  * un panel anclado al disparador; en celular entra desde abajo, donde una
  * lista pegada al dedo se lee y se toca mejor que un popover de 260px.
  *
@@ -52,8 +52,8 @@ export function Menu({
   width,
   ariaLabel,
 }: {
-  /** `pill`: selector de contexto. `kebab`: ⋮ de una fila. `field`: campo de formulario. */
-  trigger: 'pill' | 'kebab' | 'field'
+  /** `btn`: un botón del sistema B. `field`: un campo de formulario. */
+  trigger: 'field' | 'btn'
   /** Texto del disparador (y aria-label cuando es un ⋮). */
   label: string
   /** Qué se está eligiendo. En un campo de formulario el texto del botón es el
@@ -206,7 +206,7 @@ export function Menu({
       {groups.map((grupo, gi) => (
         <div key={gi}>
           {grupo.separated && gi > 0 && <div className="menu__sep" />}
-          {grupo.label && <p className="menu__lbl">{grupo.label}</p>}
+          {grupo.label && <p className="lbl menu__lbl">{grupo.label}</p>}
           {grupo.options.map((op) => {
             const elegida = value !== undefined && op.id === value
             return (
@@ -243,24 +243,18 @@ export function Menu({
   )
 
   return (
-    <span className={`menu-anchor${trigger === 'field' ? ' menu-anchor--field' : ''}`}>
+    <span className={trigger === 'field' ? 'menu-anchor menu-anchor--field' : 'menu-anchor'}>
       <button
         ref={botonRef}
         type="button"
-        className={`menu-btn menu-btn--${trigger}${abierto ? ' menu-btn--open' : ''}`}
+        className={trigger === 'btn' ? 'btn menu-btn' : 'field__input menu-btn'}
         aria-haspopup="menu"
         aria-expanded={abierto}
-        aria-label={ariaLabel ?? (trigger === 'kebab' ? label : undefined)}
+        aria-label={ariaLabel}
         onClick={() => (abierto ? cerrar(true) : abrir())}
       >
-        {trigger === 'kebab' ? (
-          <MoreVertical size={16} aria-hidden />
-        ) : (
-          <>
-            <span className="menu-btn__tx">{label}</span>
-            <ChevronDown size={13} aria-hidden className="menu-btn__chev" />
-          </>
-        )}
+        <span className="menu-btn__tx">{label}</span>
+        <ChevronDown size={14} aria-hidden />
       </button>
       {abierto &&
         createPortal(

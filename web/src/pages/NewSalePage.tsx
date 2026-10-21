@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Mail } from 'lucide-react'
 
 import { ApiError, api, publicSaleURL, shareOrCopy } from '../api/client'
 import type { EmailStatus, Sale } from '../api/client'
 import { useSession } from '../auth/session'
 import { formatMoney, functionDay, functionTime } from '../lib/format'
+import { Button } from '../ui/Button'
 import { Menu } from '../ui/Menu'
-import { Stepper } from '../ui/controls'
+import { Stepper } from '../ui/Stepper'
 
 interface CreatedSale {
   sale: Sale
@@ -23,17 +22,17 @@ function ShareLinkButton({ url, buyerName }: { url: string; buyerName: string })
   async function share() {
     const result = await shareOrCopy(`Entradas de ${buyerName} — Acapelius`, url)
     if (result === 'copied') {
-      setLabel('Link copiado ✓')
+      setLabel('Link copiado')
       setTimeout(() => setLabel(null), 2500)
     } else if (result === 'failed') {
-      setLabel('No se pudo copiar; tocá el link de abajo y copialo a mano')
+      setLabel('No se pudo copiar; copiá el link de abajo a mano')
     }
   }
 
   return (
-    <button className="button" type="button" onClick={() => void share()}>
+    <Button go wide onClick={() => void share()}>
       {label ?? 'Compartir por WhatsApp'}
-    </button>
+    </Button>
   )
 }
 
@@ -124,87 +123,75 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
 
   if (created) {
     return (
-      <div className="form-page">
-        <h1 className="page-title">Venta registrada ✓</h1>
-
-        <div className="panel panel--success">
-          <p className="panel__label">Entradas de {created.sale.buyer_name}</p>
-          <div className="success-actions">
-            {created.emailStatus === 'sent' && (
-              <p className="muted" style={{ margin: 0, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Mail size={14} aria-hidden style={{ flexShrink: 0 }} />
-                El email con los QR ya salió para {created.sale.buyer_email}.
-              </p>
-            )}
-            {created.emailStatus === 'failed' && (
-              <p className="alert" role="alert">
-                El email no salió. Compartile el link, o reintentá desde "Mis ventas".
-              </p>
-            )}
-            {created.emailStatus === 'preview' && (
-              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-                En la demo no se mandan mails: la entrada que le llegaría a {created.sale.buyer_email} es este link.
-              </p>
-            )}
-            {created.emailStatus === 'none' && (
-              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-                Sin email: compartile el link, o en la puerta la buscan por nombre.
-              </p>
-            )}
-            <ShareLinkButton url={created.publicURL} buyerName={created.sale.buyer_name} />
-            <span className="link-chip">{created.publicURL}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
+        <div>
+          <span className="lbl">Venta registrada</span>
+          <h1 className="pgt" style={{ marginTop: 6 }}>
+            Entradas de {created.sale.buyer_name}
+          </h1>
+        </div>
+        <p className="rs" style={{ margin: 0, whiteSpace: 'normal' }} role="status">
+          {created.emailStatus === 'sent' && `El mail con los QR ya salió para ${created.sale.buyer_email}.`}
+          {created.emailStatus === 'failed' && 'El mail no salió. Compartile el link, o reintentá desde Ventas.'}
+          {created.emailStatus === 'preview' &&
+            `En la demo no se mandan mails: la entrada que le llegaría a ${created.sale.buyer_email} es este link.`}
+          {created.emailStatus === 'none' && 'Sin mail: compartile el link, o en la puerta la buscan por nombre.'}
+        </p>
+        <ShareLinkButton url={created.publicURL} buyerName={created.sale.buyer_name} />
+        <div className="dl">
+          <div className="dl__r">
+            <span className="dl__k">Link</span>
+            <span className="dl__v" style={{ wordBreak: 'break-all' }}>
+              {created.publicURL}
+            </span>
           </div>
         </div>
-
-        <div className="stack" style={{ marginTop: 12 }}>
-          <button
-            className="button"
-            type="button"
-            onClick={() => {
-              setCreated(null)
-              setBuyerName('')
-              setBuyerEmail('')
-              setBuyerPhone('')
-              setQuantity(1)
-              setIsComp(false)
-            }}
-          >
-            Registrar otra venta
-          </button>
-          {/* Dentro del modal ya estamos en la lista: cerrar alcanza. */}
-          {onDone ? (
-            <button className="button button--ghost" style={{ width: '100%' }} type="button" onClick={onDone}>
-              Volver a la lista
-            </button>
-          ) : (
-            <Link className="button button--ghost" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', width: '100%' }} to="/ventas">
-              Ir a mis ventas
-            </Link>
-          )}
-        </div>
+        <Button
+          wide
+          onClick={() => {
+            setCreated(null)
+            setBuyerName('')
+            setBuyerEmail('')
+            setBuyerPhone('')
+            setQuantity(1)
+            setIsComp(false)
+          }}
+        >
+          Registrar otra venta
+        </Button>
+        {/* Dentro del popup ya estamos en la lista: cerrar alcanza. */}
+        {onDone ? (
+          <Button wide onClick={onDone}>
+            Volver a la lista
+          </Button>
+        ) : (
+          <Button to="/ventas">Ir a mis ventas</Button>
+        )}
       </div>
     )
   }
 
   return (
-    <div className="form-page">
-      <h1 className="page-title">{isComp ? 'Nueva cortesía' : 'Nueva venta'}</h1>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
+      {/* En el popup de escritorio el título ya está en la cabecera. */}
+      {!onDone && <h1 className="pgt">{isComp ? 'Nueva cortesía' : 'Nueva venta'}</h1>}
+      {onDone && isComp && <span className="lbl">Cortesía</span>}
 
-      <form className="panel" onSubmit={handleSubmit}>
-        {error && (
-          <p className="alert" role="alert">
-            {error}
-          </p>
-        )}
+      {error && (
+        <p className="alert" role="alert">
+          {error}
+        </p>
+      )}
 
-        <div className="field">
-          <span className="field__label">Función</span>
+      <div>
+        <span className="lbl">Función</span>
+        <div style={{ marginTop: 7 }}>
           <Menu
             trigger="field"
             ariaLabel="Función"
             label={
               selectedFunction
-                ? `${selectedFunction.name ?? selectedFunction.venue} · ${functionDay(selectedFunction.starts_at)}`
+                ? `${functionDay(selectedFunction.starts_at)} · ${functionTime(selectedFunction.starts_at)}`
                 : 'Elegí la función…'
             }
             value={functionId === '' ? undefined : functionId}
@@ -219,9 +206,7 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
                     // El cupo que le queda a la corista es lo que decide si
                     // puede vender: va como contexto de cada opción, no
                     // escondido detrás de un "disabled" sin explicación.
-                    hint: isAdmin
-                      ? cuando
-                      : `${cuando} · te quedan ${cupo?.remaining ?? 0} de ${cupo?.assigned ?? 0}`,
+                    hint: isAdmin ? cuando : `${cuando} · te quedan ${cupo?.remaining ?? 0} de ${cupo?.assigned ?? 0}`,
                     disabled: !isAdmin && !cupo,
                     disabledReason: `${cuando} · dirección todavía no te asignó cupo`,
                     onSelect: () => setFunctionId(String(fn.id)),
@@ -231,92 +216,82 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
             ]}
           />
         </div>
-
         {!isAdmin && selectedAllocation && !isComp && (
-          <div className="quota-banner">
-            Te quedan <b>{selectedAllocation.remaining}</b> de {selectedAllocation.assigned} para{' '}
-            {selectedFunction?.name ?? selectedFunction?.venue} · Asignadas por dirección
-          </div>
+          <p className="rs" style={{ margin: '6px 0 0' }}>
+            Te quedan {selectedAllocation.remaining} de {selectedAllocation.assigned} para esta función
+          </p>
         )}
+      </div>
 
-        <label className="field">
-          <span className="field__label">Quién compra</span>
+      <div>
+        <span className="lbl">Comprador</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s1)', marginTop: 7 }}>
           <input
             className="field__input"
+            style={{ marginTop: 0 }}
             type="text"
             value={buyerName}
             onChange={(e) => setBuyerName(e.target.value)}
-            placeholder="María Dutra"
+            placeholder="Nombre y apellido"
+            aria-label="Nombre y apellido de quien compra"
           />
-        </label>
-
-        <label className="field">
-          <span className="field__label">Email</span>
           <input
             className="field__input"
+            style={{ marginTop: 0 }}
             type="email"
             value={buyerEmail}
             onChange={(e) => setBuyerEmail(e.target.value)}
             autoCapitalize="none"
             autoCorrect="off"
             inputMode="email"
-            placeholder="maria@gmail.com"
+            placeholder="Mail"
+            aria-label="Mail de quien compra"
           />
-          <span className="field__hint">
-            Le llega la entrada con los QR. Si no tiene, después compartís el link.
-          </span>
-        </label>
-
-        <label className="field">
-          <span className="field__label">Teléfono (opcional)</span>
           <input
             className="field__input"
+            style={{ marginTop: 0 }}
             type="tel"
             value={buyerPhone}
             onChange={(e) => setBuyerPhone(e.target.value)}
             inputMode="tel"
+            placeholder="Teléfono (opcional)"
+            aria-label="Teléfono de quien compra (opcional)"
           />
-        </label>
+        </div>
+        <p className="rs" style={{ margin: '6px 0 0', whiteSpace: 'normal' }}>
+          Al mail le llega el QR. Si no tiene, después compartís el link.
+        </p>
+      </div>
 
-        <div className="field">
-          <span className="field__label">Cantidad</span>
-          <div className="qty">
-            <Stepper
-              value={quantity}
-              onChange={setQuantity}
-              min={1}
-              max={maxQty}
-              maxReason={
-                quotaLimited
-                  ? 'Llegaste a tu cupo. Si necesitás más, pedile a Eli.'
-                  : 'No queda más cupo en la función.'
-              }
-            />
-            <div className="qty__total">
-              Total
-              <b>{isComp ? 'Cortesía' : formatMoney(total)}</b>
+      <div>
+        <span className="lbl">Cantidad</span>
+        <div className="card" style={{ marginTop: 7, padding: 'var(--s2) var(--s3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s3)' }}>
+          <Stepper
+            value={quantity}
+            onChange={setQuantity}
+            min={1}
+            max={maxQty}
+            maxReason={quotaLimited ? 'Llegaste a tu cupo. Si necesitás más, pedile a dirección.' : 'No queda más cupo en la función.'}
+          />
+          <div style={{ textAlign: 'right' }} aria-live="polite">
+            <span className="lbl">Total</span>
+            <div className="rn" style={{ fontSize: 17 }}>
+              {isComp ? 'Cortesía' : formatMoney(total)}
             </div>
           </div>
         </div>
+      </div>
 
-        <button className="button" style={{ marginTop: 16 }} type="submit" disabled={create.isPending}>
-          {create.isPending
-            ? 'Registrando…'
-            : isComp
-              ? 'Emitir cortesía'
-              : 'Registrar venta y enviar QR'}
-        </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s1)' }}>
         {isAdmin && (
-          <button
-            className="button button--ghost"
-            style={{ width: '100%', marginTop: 9 }}
-            type="button"
-            onClick={() => setIsComp(!isComp)}
-          >
+          <Button wide onClick={() => setIsComp(!isComp)}>
             {isComp ? 'Volver a venta común' : 'Marcar como cortesía'}
-          </button>
+          </Button>
         )}
-      </form>
-    </div>
+        <Button go wide type="submit" disabled={create.isPending}>
+          {create.isPending ? 'Registrando…' : isComp ? 'Emitir cortesía' : 'Registrar venta'}
+        </Button>
+      </div>
+    </form>
   )
 }

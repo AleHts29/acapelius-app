@@ -1,334 +1,370 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Check, Hand, Minus, PartyPopper, ScanLine, Search, Theater } from 'lucide-react'
 
 import { api } from '../api/client'
-import type { AttendanceSale } from '../api/client'
-import { functionDay } from '../lib/format'
-import { initials, normalizeText } from '../lib/search'
+import type { AttendanceReport, AttendanceSale } from '../api/client'
+import { dayLabel, functionTime } from '../lib/format'
+import { porMinuto, ritmo } from '../lib/rhythm'
+import { normalizeText } from '../lib/search'
 import { useIsDesktop } from '../lib/viewport'
+import { Button, Search } from '../ui/Button'
+import { Card } from '../ui/Card'
+import { DataList } from '../ui/DataList'
+import { Heel } from '../ui/Heel'
 import { Menu } from '../ui/Menu'
-import { EmptyState, Hl, LiveDot, ProgressBar, SearchBar, SegmentedToggle } from '../ui/controls'
-import { CounterChip } from '../ui/StatusChip'
+import { PageHeader } from '../ui/Page'
+import { Rhythm } from '../ui/Rhythm'
+import { Row } from '../ui/Row'
+import { Drawer, Sheet } from '../ui/Sheet'
+import { Status } from '../ui/Status'
 
-function timeOf(iso: string): string {
-  return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-}
+// Asistencia (C19 §5.3, design/acapelius-B-entidades.html §02). Es una
+// pantalla en vivo: el talón cuenta quién entró y a qué ritmo, a la derecha
+// están los que faltan, y abajo el registro de la puerta, la hora primero.
 
-/** "Gala · vie 4": etiqueta compacta de la pill selectora de función. */
-function fnLabel(name: string | null, venue: string, startsAt: string): string {
-  const when = new Date(startsAt)
-    .toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' })
-    .replace(/[.,]/g, '')
-  return `${name ?? venue} · ${when}`
-}
+const MIN = 60_000
+/** Ventana del ritmo: una hora antes y una después de la función. */
+const ANTES = 60 * MIN
+const DESPUES = 60 * MIN
 
-/** Ícono del método de ingreso: escaneado o manual (C6, nunca emoji). */
-function MethodIcon({ method }: { method: 'scan' | 'manual' }) {
-  return method === 'scan' ? (
-    <ScanLine size={13} aria-label="escaneado" className="att-m" />
-  ) : (
-    <Hand size={13} aria-label="manual" className="att-m" />
-  )
-}
+const hora = (d: Date | string) =>
+  new Date(d).toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  })
 
-/** Subtítulo de la fila: quién la vendió (o emitió, si es cortesía). */
-function SellerLine({ sale, q, extra }: { sale: AttendanceSale; q: string; extra?: string }) {
-  return (
-    <span>
-      {sale.is_comp ? 'cortesía · emitió ' : 'vendió '}
-      <Hl text={sale.seller_name} q={q} />
-      {extra && ` · ${extra}`}
-    </span>
-  )
-}
+const entradas = (n: number) => `${n} ${n === 1 ? 'entrada' : 'entradas'}`
+const primerNombre = (nombre: string) => nombre.trim().split(/\s+/)[0] ?? nombre
 
-/** Cuánto le falta a una venta parcial o sin usar ("falta 1 de 3"). */
-function missingLabel(sale: AttendanceSale): string {
-  const missing = sale.total - sale.entered
-  if (sale.entered === 0) {
-    return sale.total === 1 ? '1 entrada' : `${sale.total} entradas`
-  }
-  return missing === 1 ? `falta 1 de ${sale.total}` : `faltan ${missing} de ${sale.total}`
+/** Un renglón del registro: las entradas de una compra que entraron juntas. */
+interface Ingreso {
+  key: string
+  at: string
+  sale: AttendanceSale
+  cantidad: number
+  por: string
 }
 
 /**
- * Fila por comprador (C6): colapsada muestra chip k/N, método y hora del
- * último ingreso; expandida, el detalle de cada entrada con quién registró.
+ * El registro de la puerta. Las entradas de una misma compra que entraron en
+ * el mismo minuto, con la misma persona en la puerta, son un solo renglón:
+ * "2 entradas", no dos filas iguales.
  */
-function BuyerRow({
-  sale,
-  q,
-  tab,
-  expanded,
-  selected,
-  onToggle,
-}: {
-  sale: AttendanceSale
-  q: string
-  tab: 'ingresaron' | 'faltan'
-  expanded: boolean
-  selected?: boolean
-  onToggle: () => void
-}) {
-  const complete = sale.entered >= sale.total
-  const header = (
-    <>
-      <span className={`att-ini ${complete ? 'att-ini--ok' : 'att-ini--warn'}`} aria-hidden>
-        {initials(sale.buyer_name)}
-      </span>
-      <span className="mrow__mid">
-        <b>
-          <Hl text={sale.buyer_name} q={q} />
-        </b>
-        <SellerLine sale={sale} q={q} extra={tab === 'faltan' ? missingLabel(sale) : undefined} />
-      </span>
-      <CounterChip count={sale.entered} total={sale.total} />
-      {tab === 'ingresaron' && sale.last_method && <MethodIcon method={sale.last_method} />}
-      {tab === 'ingresaron' && sale.last_checkin_at && (
-        <span className="att-when">{timeOf(sale.last_checkin_at)}</span>
-      )}
-    </>
-  )
-
-  if (!expanded) {
-    return (
-      <button
-        className={`mrow${selected ? ' mrow--sel' : ''}`}
-        type="button"
-        aria-expanded={false}
-        aria-current={selected ? 'true' : undefined}
-        onClick={onToggle}
-      >
-        {header}
-      </button>
-    )
+function registro(data: AttendanceReport): Ingreso[] {
+  const grupos = new Map<string, Ingreso>()
+  for (const sale of data.sales) {
+    for (const t of sale.tickets) {
+      if (!t.checkin) continue
+      const key = `${sale.sale_id}·${t.checkin.at.slice(0, 16)}·${t.checkin.by_name}`
+      const g = grupos.get(key)
+      if (g) g.cantidad++
+      else grupos.set(key, { key, at: t.checkin.at, sale, cantidad: 1, por: t.checkin.by_name })
+    }
   }
+  return [...grupos.values()].sort((a, b) => b.at.localeCompare(a.at))
+}
 
-  return (
-    <div className="att-x">
-      <button className="att-x__h" type="button" aria-expanded onClick={onToggle}>
-        {header}
-      </button>
-      <TicketBreakdown sale={sale} />
-    </div>
+/** Sin elección, la función más cercana a ahora: la de hoy o la de anoche. */
+function masCercana<T extends { id: number; starts_at: string }>(fns: T[]): T | undefined {
+  return [...fns].sort(
+    (a, b) =>
+      Math.abs(new Date(a.starts_at).getTime() - Date.now()) -
+      Math.abs(new Date(b.starts_at).getTime() - Date.now()),
+  )[0]
+}
+
+// --- El detalle de una compra: entrada por entrada ---------------------------
+
+function DetalleCompra({ sale, onClose }: { sale: AttendanceSale; onClose: () => void }) {
+  const escritorio = useIsDesktop()
+  const filas: Array<[string, string]> = sale.tickets.map((t, i) => [
+    `Entrada ${i + 1}`,
+    t.checkin
+      ? `${hora(t.checkin.at)} · ${t.checkin.method === 'scan' ? 'escaneó' : 'manual,'} ${t.checkin.by_name}`
+      : 'todavía no',
+  ])
+  const sub = `${sale.is_comp ? 'Cortesía de' : 'Le vendió'} ${sale.seller_name}`
+  const estado =
+    sale.entered >= sale.total ? (
+      <Status tone="ok">Entró</Status>
+    ) : sale.entered > 0 ? (
+      <Status tone="warn">
+        {sale.entered} de {sale.total}
+      </Status>
+    ) : (
+      <Status tone="mute">Falta</Status>
+    )
+  return escritorio ? (
+    <Drawer open onClose={onClose} label="Ingreso" title={sale.buyer_name} sub={sub}>
+      {estado}
+      <DataList rows={filas} />
+    </Drawer>
+  ) : (
+    <Sheet open onClose={onClose} title={sale.buyer_name} sub={sub} status={estado}>
+      <DataList rows={filas} />
+    </Sheet>
   )
 }
 
-/** Entrada por entrada de una compra: quién entró, cuándo y con qué método. */
-function TicketBreakdown({ sale }: { sale: AttendanceSale }) {
-  return (
-    <div className="att-x__tks">
-      {sale.tickets.map((ticket, i) => (
-        <div key={ticket.ticket_id} className="att-tk">
-          <span className="att-tk__l">
-            <i className={`att-tk__st ${ticket.checkin ? 'in' : 'no'}`} aria-hidden>
-              {ticket.checkin ? <Check size={10} strokeWidth={3} /> : <Minus size={10} strokeWidth={3} />}
-            </i>
-            Entrada {i + 1}
-          </span>
-          {ticket.checkin ? (
-            <span className="att-tk__meta">
-              <MethodIcon method={ticket.checkin.method} /> {timeOf(ticket.checkin.at)} ·{' '}
-              {ticket.checkin.method === 'scan' ? 'escaneó' : 'manual ·'} {ticket.checkin.by_name}
-            </span>
-          ) : (
-            <span className="att-tk__meta">sin ingresar</span>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
+// --- Pantalla ----------------------------------------------------------------
 
 export function AttendancePage() {
-  const escritorio = useIsDesktop()
-  // ?fn=N llega del ⋮ de una función en Temporadas.
-  const [searchParams] = useSearchParams()
-  const [functionId, setFunctionId] = useState<number | null>(
-    Number(searchParams.get('fn')) || null,
-  )
-  const [tab, setTab] = useState<'ingresaron' | 'faltan'>('ingresaron')
+  const navigate = useNavigate()
+  // ?fn=N llega del popup de una función en Temporadas.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const fnDeURL = Number(searchParams.get('fn')) || undefined
   const [q, setQ] = useState('')
-  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [todosFaltan, setTodosFaltan] = useState(false)
+  const [todoElRegistro, setTodoElRegistro] = useState(false)
+  const [abierta, setAbierta] = useState<AttendanceSale | null>(null)
 
   const functions = useQuery({ queryKey: ['functions'], queryFn: () => api.listFunctions() })
-  // Sin eleccion, la funcion mas cercana a ahora (pasada o no): la de "anoche"
-  // o la de hoy es lo que Eli quiere mirar.
-  const effectiveFunctionId =
-    functionId ??
-    (functions.data && functions.data.functions.length > 0
-      ? [...functions.data.functions].sort(
-          (a, b) =>
-            Math.abs(new Date(a.starts_at).getTime() - Date.now()) -
-            Math.abs(new Date(b.starts_at).getTime() - Date.now()),
-        )[0].id
-      : null)
+  const lista = functions.data?.functions ?? []
+  const elegida = lista.find((fn) => fn.id === fnDeURL) ?? masCercana(lista)
 
   const report = useQuery({
-    queryKey: ['attendance', effectiveFunctionId],
-    queryFn: () => api.attendanceReport(effectiveFunctionId!),
-    enabled: effectiveFunctionId !== null,
+    queryKey: ['attendance', elegida?.id],
+    queryFn: () => api.attendanceReport(elegida!.id),
+    enabled: elegida !== undefined,
     // "En tiempo real" con polling alcanza (spec §11: sin websockets).
     refetchInterval: 15_000,
   })
-
   const data = report.data
+
+  if (functions.isPending || (elegida && report.isPending)) return <p className="rs">Cargando…</p>
+  if (!elegida || !data) {
+    return (
+      <>
+        <PageHeader title="Asistencia" />
+        <Card title="No hay funciones cargadas" />
+      </>
+    )
+  }
+
+  const ahora = new Date()
+  const inicio = new Date(data.function.starts_at)
+  const desde = new Date(inicio.getTime() - ANTES)
+  const hasta = new Date(inicio.getTime() + DESPUES)
+  const enVivo = ahora >= desde && ahora <= hasta
+
+  const checkins = data.sales.flatMap((s) => s.tickets.flatMap((t) => (t.checkin ? [t.checkin.at] : [])))
+  const r = ritmo(checkins, desde, hasta, ahora)
+  const mitad = new Date((desde.getTime() + hasta.getTime()) / 2)
+  const ejes = [
+    hora(desde),
+    hora(mitad),
+    enVivo ? `Ahora ${hora(ahora)}` : hora(new Date(mitad.getTime() + (hasta.getTime() - mitad.getTime()) / 2)),
+    hora(hasta),
+  ]
+
+  const faltanEntradas = Math.max(data.issued - data.entered, 0)
+  const comps = data.sales.filter((s) => s.is_comp)
+  const compsTotal = comps.reduce((acc, s) => acc + s.total, 0)
+  const compsUsadas = comps.reduce((acc, s) => acc + s.entered, 0)
+
   const nq = normalizeText(q)
-  const matches = (sale: AttendanceSale) =>
-    nq === '' || normalizeText(sale.buyer_name).includes(nq) || normalizeText(sale.seller_name).includes(nq)
+  const coincide = (s: AttendanceSale) =>
+    nq === '' || normalizeText(s.buyer_name).includes(nq) || normalizeText(s.seller_name).includes(nq)
+  const faltan = data.sales
+    .filter((s) => s.entered < s.total && coincide(s))
+    .sort((a, b) => a.buyer_name.localeCompare(b.buyer_name, 'es'))
+  const ingresos = registro(data).filter((i) => coincide(i.sale))
 
-  const filtered = (data?.sales ?? []).filter(matches)
-  // Ingresaron: orden del server (último ingreso primero). Faltan: por nombre.
-  const entered = filtered.filter((sale) => sale.entered > 0)
-  const missing = [...filtered.filter((sale) => sale.entered < sale.total)].sort((a, b) =>
-    a.buyer_name.localeCompare(b.buyer_name, 'es'),
-  )
-  const missingTickets = missing.reduce((acc, sale) => acc + (sale.total - sale.entered), 0)
-  const occupancy = data && data.issued > 0 ? Math.round((data.entered / data.issued) * 100) : 0
+  const verFaltan = todosFaltan || nq !== '' ? faltan : faltan.slice(0, 3)
+  const verIngresos = todoElRegistro ? ingresos : ingresos.slice(0, 6)
 
-  const elegida = functions.data?.functions.find((fn) => fn.id === effectiveFunctionId)
-  const rows = tab === 'ingresaron' ? entered : missing
-  const seleccionada = rows.find((sale) => sale.sale_id === expandedId)
+  const elegir = (id: number) => {
+    setSearchParams({ fn: String(id) }, { replace: true })
+    setAbierta(null)
+  }
 
   return (
     <>
-      <div className="page-head">
-        <h1 className="page-title">Asistencia</h1>
-        {functions.data && functions.data.functions.length > 1 && (
-          <Menu
-            trigger="pill"
-            label={
-              elegida ? fnLabel(elegida.name, elegida.venue, elegida.starts_at) : 'Elegí la función'
-            }
-            value={effectiveFunctionId === null ? undefined : String(effectiveFunctionId)}
-            align="right"
-            groups={[
-              {
-                label: 'Funciones',
-                options: functions.data.functions.map((fn) => ({
-                  id: String(fn.id),
-                  label: fn.name ?? fn.venue,
-                  hint: `${functionDay(fn.starts_at)} · ${fn.sold} entradas`,
-                  onSelect: () => {
-                    setFunctionId(fn.id)
-                    setExpandedId(null)
+      <PageHeader
+        title="Asistencia"
+        label={`${dayLabel(data.function.starts_at)} · ${functionTime(data.function.starts_at)} · ${data.function.venue}`}
+        actions={
+          <>
+            {enVivo ? <Status tone="ok">En vivo</Status> : <Status tone="mute">Fuera de horario</Status>}
+            {lista.length > 1 && (
+              <Menu
+                trigger="btn"
+                label="Cambiar función"
+                ariaLabel="Cambiar función"
+                align="right"
+                value={String(elegida.id)}
+                groups={[
+                  {
+                    label: 'Funciones',
+                    options: lista.map((fn) => ({
+                      id: String(fn.id),
+                      label: `${dayLabel(fn.starts_at)} · ${functionTime(fn.starts_at)}`,
+                      hint: `${fn.name ?? fn.venue} · ${fn.sold} entradas`,
+                      onSelect: () => elegir(fn.id),
+                    })),
                   },
-                })),
-              },
-            ]}
-          />
-        )}
-      </div>
-
-      {report.isPending ? (
-        <p className="muted">Cargando…</p>
-      ) : !data ? (
-        <p className="muted">No hay funciones cargadas.</p>
-      ) : (
-        <>
-          <div className="att-live" aria-live="polite">
-            <div className="att-live__r1">
-              <b className="att-live__n">
-                {data.entered}
-                <span> / {data.issued}</span>
-              </b>
-              <LiveDot label="En vivo" />
-            </div>
-            <ProgressBar value={data.entered} max={data.issued} tone="ok" />
-            <div className="att-live__leg">
-              <span>
-                <b>{data.buyers_complete}</b> de {data.buyers_total} compradores entraron con
-                todas sus entradas
-              </span>
-              <span>{occupancy}%</span>
-            </div>
-          </div>
-
-          <div className="md">
-          <div className="md__list">
-          <div className="sticky-bar">
-            <SearchBar value={q} onChange={setQ} placeholder="Buscar comprador o vendedora…" />
-            <div style={{ marginTop: 8 }}>
-              <SegmentedToggle<'ingresaron' | 'faltan'>
-                value={tab}
-                onChange={(next) => {
-                  setTab(next)
-                  setExpandedId(null)
-                }}
-                options={[
-                  { value: 'ingresaron', label: `Ingresaron · ${entered.length}` },
-                  { value: 'faltan', label: `Faltan · ${missing.length}` },
                 ]}
               />
-            </div>
-          </div>
+            )}
+          </>
+        }
+      />
 
-          <div className="ghead">
-            <b>{tab === 'ingresaron' ? 'Últimos ingresos' : 'Sin ingresar aún'}</b>
-            {tab === 'faltan' && missingTickets > 0 && (
-              <span>{missingTickets === 1 ? '1 entrada' : `${missingTickets} entradas`}</span>
+      <div className="asym">
+        <Heel>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--s3)' }}>
+            <div aria-live="polite">
+              <span className="lbl">Ingresaron</span>
+              <div className="heel__n" style={{ marginTop: 6 }}>
+                {data.entered} <span>de {data.issued}</span>
+              </div>
+            </div>
+            {enVivo && (
+              <div style={{ textAlign: 'right' }}>
+                <span className="lbl">Entrando ahora</span>
+                <div className="heel__rate" style={{ marginTop: 6 }}>
+                  {porMinuto(checkins, ahora)} / min
+                </div>
+              </div>
             )}
           </div>
 
-          {rows.length === 0 ? (
-            q !== '' ? (
-              <EmptyState icon={<Search size={18} />} title="Sin resultados">
-                Nadie coincide con «{q}» en esta pestaña.
-              </EmptyState>
-            ) : tab === 'ingresaron' ? (
-              <EmptyState icon={<Theater size={18} />} title="Todavía no entró nadie">
-                Apenas se escanee la primera entrada la vas a ver acá.
-              </EmptyState>
-            ) : (
-              <EmptyState icon={<PartyPopper size={18} />} title="Están todos adentro">
-                No queda ninguna entrada sin usar.
-              </EmptyState>
-            )
+          <Rhythm
+            tramos={r.tramos}
+            ahora={r.ahora}
+            ejes={ejes}
+            label={
+              r.pico
+                ? `Ingresos cada 10 minutos. El pico fue a las ${hora(r.pico.desde)}, con ${r.pico.cantidad}.`
+                : 'Ingresos cada 10 minutos. Todavía no entró nadie.'
+            }
+          />
+
+          <div className="heel__foot">
+            <div>
+              <span className="lbl">Pico</span>
+              <b>{r.pico ? `${hora(r.pico.desde)} · ${r.pico.cantidad} personas` : '—'}</b>
+            </div>
+            <div>
+              <span className="lbl">Faltan</span>
+              <b className={faltanEntradas > 0 ? 'warn' : undefined}>
+                {faltanEntradas} {faltanEntradas === 1 ? 'persona' : 'personas'}
+              </b>
+            </div>
+            {compsTotal > 0 && (
+              <div>
+                <span className="lbl">Cortesías</span>
+                <b>
+                  {compsUsadas} de {compsTotal}
+                </b>
+              </div>
+            )}
+          </div>
+        </Heel>
+
+        <Card
+          title="Buscar en la puerta"
+          footer={
+            faltan.length > 0 ? (
+              <>
+                <span>
+                  {verFaltan.length} de {faltan.length}
+                </span>
+                {verFaltan.length < faltan.length && (
+                  <button className="card__a" type="button" onClick={() => setTodosFaltan(true)}>
+                    Ver todos
+                  </button>
+                )}
+              </>
+            ) : undefined
+          }
+        >
+          <div style={{ padding: '0 var(--s3) var(--s2)', display: 'flex' }}>
+            <Search
+              aria-label="Buscar comprador o corista"
+              placeholder="Nombre o corista"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <div className="grp__h" style={{ margin: 'var(--s2) var(--s3) 0' }}>
+            <h3 className="lbl">Todavía no llegaron</h3>
+            <span className="grp__n">{faltan.length}</span>
+          </div>
+          {faltan.length === 0 ? (
+            <Row title={nq !== '' ? 'Nadie coincide' : 'Están todos adentro'} />
           ) : (
-            rows.map((sale) => (
-              <BuyerRow
-                key={sale.sale_id}
-                sale={sale}
-                q={q}
-                tab={tab}
-                /* En escritorio la fila no se despliega: el desglose vive en el
-                   panel de la derecha y no empuja el resto de la lista. */
-                expanded={!escritorio && expandedId === sale.sale_id}
-                selected={escritorio && expandedId === sale.sale_id}
-                onToggle={() => setExpandedId(expandedId === sale.sale_id ? null : sale.sale_id)}
+            verFaltan.map((s) => (
+              <Row
+                key={s.sale_id}
+                title={s.buyer_name}
+                sub={[
+                  s.entered > 0 ? `falta ${s.total - s.entered} de ${s.total}` : entradas(s.total),
+                  primerNombre(s.seller_name),
+                  s.is_comp ? 'cortesía' : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                status={
+                  // Marcar pasa por la puerta: el ingreso manual tiene su flujo
+                  // (cola offline, idempotencia) y no se duplica acá.
+                  <Button
+                    aria-label={`Marcar el ingreso de ${s.buyer_name} en la puerta`}
+                    onClick={() => navigate(`/puerta/${elegida.id}?buscar=${encodeURIComponent(s.buyer_name)}`)}
+                  >
+                    Marcar
+                  </Button>
+                }
               />
             ))
           )}
-          </div>
-          {escritorio && (
-            <div className="md__detail">
-              {seleccionada ? (
-                <>
-                  <div className="att-detail__h">
-                    <span className="att-ini att-ini--warn" aria-hidden>
-                      {initials(seleccionada.buyer_name)}
-                    </span>
-                    <span>
-                      <b>{seleccionada.buyer_name}</b>
-                      <SellerLine sale={seleccionada} q="" />
-                    </span>
-                    <CounterChip count={seleccionada.entered} total={seleccionada.total} />
+        </Card>
+      </div>
+
+      <section className="grp" style={{ marginTop: 'var(--s4)' }}>
+        <div className="grp__h">
+          <h2 className="lbl">Entrando</h2>
+          <span className="grp__n">
+            {enVivo ? 'en vivo · ' : ''}
+            {verIngresos.length < ingresos.length ? `últimos ${verIngresos.length}` : `${ingresos.length}`}
+          </span>
+        </div>
+        <div className="card">
+          {ingresos.length === 0 ? (
+            <Row title={nq !== '' ? 'Nadie coincide' : 'Todavía no entró nadie'} />
+          ) : (
+            verIngresos.map((i) => (
+              <button key={i.key} className="feed" type="button" onClick={() => setAbierta(i.sale)}>
+                <span className="feed__t">{hora(i.at)}</span>
+                <div>
+                  <div className="rt">{i.sale.buyer_name}</div>
+                  <div className="rs">
+                    {entradas(i.cantidad)} · {i.sale.is_comp ? 'cortesía de' : 'le vendió'} {i.sale.seller_name}
                   </div>
-                  <TicketBreakdown sale={seleccionada} />
-                </>
-              ) : (
-                <p className="muted" style={{ margin: 0 }}>
-                  Elegí un comprador de la lista para ver entrada por entrada quién entró y a qué
-                  hora.
-                </p>
+                </div>
+                <span className="rs">{primerNombre(i.por)}</span>
+              </button>
+            ))
+          )}
+          {ingresos.length > 0 && (
+            <div className="card__f">
+              <span>
+                {data.entered} {data.entered === 1 ? 'ingreso' : 'ingresos'}
+              </span>
+              {verIngresos.length < ingresos.length && (
+                <button className="card__a" type="button" onClick={() => setTodoElRegistro(true)}>
+                  Ver todos
+                </button>
               )}
             </div>
           )}
-          </div>
-        </>
-      )}
+        </div>
+      </section>
+
+      {abierta && <DetalleCompra sale={abierta} onClose={() => setAbierta(null)} />}
     </>
   )
 }

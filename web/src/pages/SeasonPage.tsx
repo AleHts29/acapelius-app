@@ -2,25 +2,38 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, Copy, Lock, Pencil, Receipt, Trash2, UserCheck, Users, X } from 'lucide-react'
 
 import { ApiError, api } from '../api/client'
 import type { FunctionSummary } from '../api/client'
-import { AllocationsEditor } from '../components/AllocationsEditor'
+import { RepartirModal } from '../components/RepartirModal'
 import { useSeason } from '../season/SeasonProvider'
 import {
   calendarDaysUntil,
-  dayAndMonth,
+  dayAndMonthShort,
+  dayLabel,
   formatMoney,
   functionDay,
   functionTime,
   isoToLocalInput,
   localInputToISO,
   pesosToCents,
+  weekdayLong,
 } from '../lib/format'
-import { ActionPanel } from '../ui/ActionPanel'
+import { Button } from '../ui/Button'
+import { Card } from '../ui/Card'
+import { DataList } from '../ui/DataList'
+import { Figure, SubFigs } from '../ui/Figure'
+import { Label } from '../ui/Label'
 import { Menu } from '../ui/Menu'
-import { EmptyState, PageHead, ProgressBar } from '../ui/controls'
+import { Modal } from '../ui/Modal'
+import { PageHeader } from '../ui/Page'
+import { Row } from '../ui/Row'
+import { Status } from '../ui/Status'
+import { FnTile } from '../ui/Tile'
+
+// Temporada (C19 §5.5, design/acapelius-B-entidades.html §04). Una función es
+// una ENTIDAD: tarjeta con la fecha en Anton, y el detalle en el popup. El
+// formulario de función (crear, editar, duplicar) no cambia.
 
 /** La misma gracia que usa Inicio: a las 21:00 la función de las 20:00 no "pasó". */
 const GRACIA_MS = 3 * 60 * 60 * 1000
@@ -42,12 +55,12 @@ function sinAsignar(fn: FunctionSummary): number {
   return Math.max(fn.capacity - fn.assigned, 0)
 }
 
-/** "Hoy" / "Mañana" / "En 4 días" para la función más cercana. */
+/** "hoy" / "mañana" / "en 4 días". */
 function cuandoFalta(iso: string): string {
   const dias = calendarDaysUntil(iso)
-  if (dias <= 0) return 'Hoy'
-  if (dias === 1) return 'Mañana'
-  return `En ${dias} días`
+  if (dias <= 0) return 'hoy'
+  if (dias === 1) return 'mañana'
+  return `en ${dias} días`
 }
 
 // --- Formulario de función ---------------------------------------------------
@@ -182,253 +195,259 @@ function FuncionForm({
   const set = (patch: Partial<FormValues>) => setValues({ ...values, ...patch })
 
   return (
-    <form className="sheet-form" onSubmit={handleSubmit}>
-      <div className="sheet-head">
-        <span>
-          <b>{titulos[modo]}</b>
-          {fn && modo !== 'nueva' && (
+    <Modal
+      open
+      onClose={onDone}
+      label="Función"
+      title={titulos[modo]}
+      sub={
+        fn && modo !== 'nueva'
+          ? `${nombre(fn)}${modo === 'editar' && fn.sold > 0 ? ` · ${fn.sold} entradas vendidas` : ''}`
+          : 'Fecha, lugar, cupo y precio'
+      }
+      footer={
+        <>
+          <Button onClick={onDone}>Cancelar</Button>
+          <Button go type="submit" form="funcion-form" disabled={guardando}>
+            {guardando ? 'Guardando…' : modo === 'editar' ? 'Guardar cambios' : 'Crear función'}
+          </Button>
+        </>
+      }
+    >
+      <form id="funcion-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>
+        {error && (
+          <p className="alert" role="alert">
+            {error}
+          </p>
+        )}
+        <label className="field">
+          <span className="lbl">Nombre</span>
+          <input className="field__input" type="text" autoFocus value={values.name} onChange={(e) => set({ name: e.target.value })} placeholder="Función de gala" />
+        </label>
+        <label className="field">
+          <span className="lbl">Lugar</span>
+          <input className="field__input" type="text" value={values.venue} onChange={(e) => set({ venue: e.target.value })} placeholder="Teatro Municipal" />
+        </label>
+        <label className="field">
+          <span className="lbl">Fecha y hora</span>
+          <input className="field__input" type="datetime-local" value={values.startsAtLocal} onChange={(e) => set({ startsAtLocal: e.target.value })} />
+        </label>
+        <div className="form-grid">
+          <label className="field">
+            <span className="lbl">Cupo</span>
+            <input
+              className="field__input"
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={values.capacity}
+              onChange={(e) => set({ capacity: e.target.value })}
+              placeholder="80"
+            />
+          </label>
+          <label className="field">
+            <span className="lbl">Precio ($)</span>
+            <input
+              className="field__input"
+              type="text"
+              inputMode="decimal"
+              disabled={precioTrabado}
+              value={values.pricePesos}
+              onChange={(e) => set({ pricePesos: e.target.value })}
+              placeholder="8000"
+            />
+          </label>
+        </div>
+
+        {precioTrabado && fn && (
+          <div className="banner" style={{ margin: 0 }}>
             <span>
-              {nombre(fn)}
-              {modo === 'editar' && fn.sold > 0 && ` · ${fn.sold} entradas vendidas`}
+              Ya se vendieron {fn.sold} entradas a {formatMoney(fn.price_cents)}. Esas ventas guardan su
+              propio importe y no cambian, pero de acá en adelante la misma función tendría dos precios.
             </span>
-          )}
-        </span>
-      </div>
-
-      {error && (
-        <p className="alert" role="alert">
-          {error}
-        </p>
-      )}
-
-      <label className="field">
-        <span className="field__label">Nombre</span>
-        <input
-          className="field__input"
-          type="text"
-          autoFocus
-          value={values.name}
-          onChange={(e) => set({ name: e.target.value })}
-          placeholder="Función de gala"
-        />
-      </label>
-      <label className="field">
-        <span className="field__label">Lugar</span>
-        <input
-          className="field__input"
-          type="text"
-          value={values.venue}
-          onChange={(e) => set({ venue: e.target.value })}
-          placeholder="Teatro Municipal"
-        />
-      </label>
-      <label className="field">
-        <span className="field__label">Fecha y hora</span>
-        <input
-          className="field__input"
-          type="datetime-local"
-          value={values.startsAtLocal}
-          onChange={(e) => set({ startsAtLocal: e.target.value })}
-        />
-      </label>
-      <div className="form-grid">
-        <label className="field">
-          <span className="field__label">Cupo</span>
-          <input
-            className="field__input"
-            type="number"
-            min={1}
-            inputMode="numeric"
-            value={values.capacity}
-            onChange={(e) => set({ capacity: e.target.value })}
-            placeholder="80"
-          />
-        </label>
-        <label className="field">
-          <span className="field__label">Precio ($)</span>
-          <input
-            className="field__input"
-            type="text"
-            inputMode="decimal"
-            disabled={precioTrabado}
-            value={values.pricePesos}
-            onChange={(e) => set({ pricePesos: e.target.value })}
-            placeholder="8000"
-          />
-        </label>
-      </div>
-
-      {precioTrabado && fn && (
-        <div className="lockmsg">
-          <Lock size={13} aria-hidden />
-          <div>
-            <p>
-              Ya se vendieron {fn.sold} entradas a {formatMoney(fn.price_cents)}. Esas ventas
-              guardan su propio importe y no cambian, pero de acá en adelante la misma función
-              tendría dos precios distintos.
-            </p>
-            <button type="button" className="linkish" onClick={() => setPrecioTrabado(false)}>
+            <button type="button" className="card__a" onClick={() => setPrecioTrabado(false)}>
               Cambiar el precio igual
             </button>
           </div>
-        </div>
-      )}
-
-      <div className="form-row" style={{ marginTop: 14 }}>
-        <button className="button" type="submit" disabled={guardando}>
-          {guardando ? 'Guardando…' : modo === 'editar' ? 'Guardar cambios' : 'Crear función'}
-        </button>
-        <button className="button button--ghost form-row__action" type="button" onClick={onDone}>
-          Cancelar
-        </button>
-      </div>
-    </form>
+        )}
+      </form>
+    </Modal>
   )
 }
 
-// --- Fila de función ---------------------------------------------------------
+// --- La tarjeta de función ------------------------------------------------------
 
-function Fila({
+function FuncionTile({ fn, onClick }: { fn: FunctionSummary; onClick: () => void }) {
+  const pasada = yaPaso(fn)
+  const libres = sinAsignar(fn)
+  const agotada = fn.sold >= fn.capacity
+  const dia = weekdayLong(fn.starts_at)
+  // DECISION: agotada lleva AGOTADA en la fecha grande (§4.9); la fecha pasa
+  // a la etiqueta para no perderla.
+  const label = pasada
+    ? dia
+    : agotada
+      ? `${dia} ${dayAndMonthShort(fn.starts_at)} · ${cuandoFalta(fn.starts_at)}`
+      : `${dia} · ${cuandoFalta(fn.starts_at)}`
+  const lugar = fn.name ? `${fn.name} · ${fn.venue}` : fn.venue
+  const pctEntro = fn.sold > 0 ? Math.round((fn.entered / fn.sold) * 100) : 0
+
+  return (
+    <FnTile
+      label={label}
+      date={!pasada && agotada ? 'AGOTADA' : dayAndMonthShort(fn.starts_at).toUpperCase()}
+      venue={`${functionTime(fn.starts_at)} · ${lugar}`}
+      bar={{ value: fn.sold, max: fn.capacity, tone: pasada ? 'ok' : undefined }}
+      quantity={
+        <>
+          {fn.sold} <em>de {fn.capacity} vendidas</em>
+        </>
+      }
+      aside={<span className="rs">{formatMoney(fn.collected_cents)}</span>}
+      footer={
+        pasada ? (
+          <>
+            <Status tone={fn.entered > 0 ? 'ok' : 'mute'}>{fn.entered} entraron</Status>
+            <span className="rs">{pctEntro}%</span>
+          </>
+        ) : fn.assigned === 0 ? (
+          <Status tone="mute">Sin repartir</Status>
+        ) : libres > 0 ? (
+          <Status tone="warn">{libres} sin repartir</Status>
+        ) : (
+          <Status tone="ok">Repartida</Status>
+        )
+      }
+      flag={!pasada && fn.assigned > 0 && libres > 0}
+      off={pasada}
+      onClick={onClick}
+    />
+  )
+}
+
+// --- El popup de una función -------------------------------------------------
+
+function FuncionModal({
   fn,
-  destacada,
-  onAsignar,
+  seasonName,
+  onClose,
   onEditar,
   onDuplicar,
   onCancelar,
+  onRepartir,
 }: {
   fn: FunctionSummary
-  destacada: boolean
-  onAsignar: () => void
+  seasonName: string
+  onClose: () => void
   onEditar: () => void
   onDuplicar: () => void
   onCancelar: () => void
+  onRepartir: () => void
 }) {
   const navigate = useNavigate()
   const pasada = yaPaso(fn)
   const trabada = congelada(fn)
-  const faltan = sinAsignar(fn)
+  const libres = sinAsignar(fn)
+
+  const tablero = useQuery({
+    queryKey: ['function-allocations', fn.id],
+    queryFn: () => api.functionAllocations(fn.id),
+  })
+  const ventas = useQuery({
+    queryKey: ['sales', 'fn-summary', fn.id],
+    queryFn: () => api.listSales({ functionId: fn.id }),
+  })
+  const anuladas = useQuery({
+    queryKey: ['sales', 'fn-void', fn.id],
+    queryFn: () => api.listSales({ functionId: fn.id, status: 'void' }),
+  })
+  const conCupo = (tablero.data?.allocations ?? []).filter((a) => a.assigned > 0)
 
   return (
-    <article className={`fnline${destacada ? ' fnline--next' : ''}`}>
-      <div className="fnline__nm">
-        <div className="fnline__t">
-          <b>{nombre(fn)}</b>
-          {destacada ? (
-            <span className="fntag fntag--next">{cuandoFalta(fn.starts_at)}</span>
-          ) : pasada ? (
-            <span className="fntag">Hecha</span>
-          ) : null}
+    <Modal
+      open
+      onClose={onClose}
+      label={`Función · ${seasonName}`}
+      title={`${dayLabel(fn.starts_at)} · ${functionTime(fn.starts_at)}`}
+      sub={`${fn.name ? `${fn.name} · ` : ''}${fn.venue}${pasada ? '' : ` · ${cuandoFalta(fn.starts_at)}`}`}
+      footer={
+        <>
+          <Button disabled={trabada} onClick={onEditar}>
+            Editar
+          </Button>
+          <Button onClick={() => navigate(`/ventas?fn=${fn.id}`)}>Ver ventas</Button>
+          {pasada ? (
+            <Button go onClick={() => navigate(`/panel/asistencia?fn=${fn.id}`)}>
+              Ver asistencia
+            </Button>
+          ) : (
+            <Button go onClick={onRepartir}>
+              {libres > 0 ? `Repartir las ${libres}` : 'Cambiar el reparto'}
+            </Button>
+          )}
+        </>
+      }
+    >
+      <div style={{ display: 'flex', gap: 'var(--s6)', flexWrap: 'wrap' }}>
+        <Figure label="Vendidas" unit={`/ ${fn.capacity}`}>
+          {fn.sold}
+        </Figure>
+        <Figure label="Recaudado" tone="ok">
+          {formatMoney(fn.collected_cents)}
+        </Figure>
+      </div>
+
+      <div>
+        <Label>Cupos por corista</Label>
+        <div className="mini" style={{ marginTop: 7 }}>
+          {tablero.isPending && <Row title="Cargando…" />}
+          {conCupo.map((a) => (
+            <Row
+              key={a.user_id}
+              title={a.seller_name}
+              sub={
+                <div className="tile__bar" aria-hidden>
+                  <i style={{ width: `${Math.min(100, (a.sold / a.assigned) * 100)}%` }} />
+                </div>
+              }
+              amount={`${a.sold} / ${a.assigned}`}
+            />
+          ))}
+          {!pasada && libres > 0 && <Row title="Sin repartir" sub="nadie las puede vender" amount={String(libres)} warn />}
         </div>
-        {fn.name && fn.name !== '' && <div className="fnline__v">{fn.venue}</div>}
       </div>
 
-      <div className="fnline__dt">
-        <b>{functionDay(fn.starts_at)}</b>
-        <span>
-          {functionTime(fn.starts_at)} · cupo {fn.capacity} · {formatMoney(fn.price_cents)}
-        </span>
-      </div>
+      <DataList
+        rows={[
+          ['Capacidad', `${fn.capacity} lugares`],
+          ['Precio', formatMoney(fn.price_cents)],
+          ...(ventas.data
+            ? ([['Cortesías', `${ventas.data.summary.comp_tickets} usadas`]] as Array<[string, string]>)
+            : []),
+          ...(anuladas.data
+            ? ([['Anuladas', String(anuladas.data.filtered.total_count)]] as Array<[string, string]>)
+            : []),
+        ]}
+      />
 
-      <div className="fnline__prog">
-        <ProgressBar value={fn.sold} max={fn.capacity} tone={pasada ? 'ok' : 'blue'} />
-        <div className="fnline__lg">
-          <span>
-            <b>{fn.sold}</b>/{fn.capacity} vendidas
-          </span>
-          <span>{pasada ? `${fn.entered} entraron` : `${fn.assigned} asignadas`}</span>
+      <div>
+        <Label>Más</Label>
+        <div className="mini" style={{ marginTop: 7 }}>
+          <Row title="Duplicar" sub="Mismo lugar, cupo y precio, con otra fecha" onClick={onDuplicar} />
+          {!pasada && <Row title="Ver asistencia" onClick={() => navigate(`/panel/asistencia?fn=${fn.id}`)} />}
+          {fn.sold > 0 ? (
+            <Row title="Cancelar función" sub={`Ya vendió ${fn.sold}: primero hay que resolver los reembolsos`} dim />
+          ) : (
+            <Row title="Cancelar función" sub="Se borra con su cupo repartido" onClick={onCancelar} />
+          )}
         </div>
-      </div>
-
-      <div className="fnline__money">
-        <b>{formatMoney(fn.collected_cents)}</b>
-        <span>Recaudado</span>
-      </div>
-
-      <div className="fnline__acts">
-        {!pasada && (
-          <>
-            <button
-              className={`button button--sm${faltan > 0 ? ' button--warn' : ' button--ghost'}`}
-              type="button"
-              onClick={onAsignar}
-            >
-              <Users size={13} aria-hidden />
-              {faltan > 0 ? `Asignar · faltan ${faltan}` : 'Asignar'}
-            </button>
-            {!trabada && (
-              <button className="button button--ghost button--sm" type="button" onClick={onEditar}>
-                <Pencil size={13} aria-hidden />
-                Editar
-              </button>
-            )}
-          </>
-        )}
         {trabada && (
-          <span
-            className="fntag fntag--lock"
-            title={`Ya tiene ${fn.entered} ingresos registrados en la puerta: cambiarle fecha, lugar o cupo a esta altura sólo genera lío`}
-          >
-            <Lock size={11} aria-hidden />
-            {/* "Cerrada" sólo se entiende si la función ya pasó; en una que
-                todavía se vende, el chip tiene que decir qué es lo que no se
-                puede hacer. */}
-            {pasada ? 'Cerrada' : 'No se edita'}
-          </span>
+          <p className="rs" style={{ whiteSpace: 'normal', margin: 'var(--s1) 0 0' }}>
+            Ya tiene {fn.entered} ingresos en la puerta: la fecha, el lugar y el cupo no se editan.
+          </p>
         )}
-        <Menu
-          trigger="kebab"
-          label={`Más opciones de ${nombre(fn)}`}
-          align="right"
-          groups={[
-            {
-              options: [
-                {
-                  id: 'editar',
-                  label: 'Editar función',
-                  icon: <Pencil size={15} />,
-                  disabled: trabada,
-                  disabledReason: `Ya tiene ${fn.entered} ingresos registrados en la puerta`,
-                  onSelect: onEditar,
-                },
-                {
-                  id: 'duplicar',
-                  label: 'Duplicar',
-                  hint: 'Mismo lugar, cupo y precio, con otra fecha',
-                  icon: <Copy size={15} />,
-                  onSelect: onDuplicar,
-                },
-                {
-                  id: 'asistencia',
-                  label: 'Ver asistencia',
-                  icon: <UserCheck size={15} />,
-                  onSelect: () => navigate(`/panel/asistencia?fn=${fn.id}`),
-                },
-                {
-                  id: 'ventas',
-                  label: 'Ver ventas',
-                  icon: <Receipt size={15} />,
-                  onSelect: () => navigate(`/ventas?fn=${fn.id}`),
-                },
-              ],
-            },
-            {
-              separated: true,
-              options: [
-                {
-                  id: 'cancelar',
-                  label: 'Cancelar función',
-                  tone: 'danger',
-                  icon: <X size={15} />,
-                  disabled: fn.sold > 0,
-                  disabledReason: `Ya vendió ${fn.sold} entradas: primero hay que resolver los reembolsos`,
-                  onSelect: onCancelar,
-                },
-              ],
-            },
-          ]}
-        />
       </div>
-    </article>
+    </Modal>
   )
 }
 
@@ -436,14 +455,16 @@ function Fila({
 
 type Panel =
   | { kind: 'funcion'; modo: Modo; fn?: FunctionSummary }
+  | { kind: 'ver'; fn: FunctionSummary }
   | { kind: 'asignar'; fn: FunctionSummary }
   | { kind: 'cancelar'; fn: FunctionSummary }
   | null
 
 export function SeasonPage() {
   const { seasonId: rawSeasonId } = useParams()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
-  // ?fn=N llega de las alertas de Dirección: esa función abre asignaciones.
+  // ?fn=N llega de las alertas de Dirección: esa función abre el reparto.
   const [searchParams] = useSearchParams()
   const focoId = Number(searchParams.get('fn')) || undefined
   const [panel, setPanel] = useState<Panel>(null)
@@ -468,8 +489,6 @@ export function SeasonPage() {
     enabled: seasonId !== undefined,
   })
 
-  // Llegó desde una alerta de Dirección apuntando a una función: se abre
-  // directamente el panel de asignaciones de esa función.
   const cargadas = summary.data?.functions
   useEffect(() => {
     if (!focoId || foco.current || !cargadas) return
@@ -520,21 +539,23 @@ export function SeasonPage() {
     },
   })
 
-  if (loading) return <p className="muted">Cargando…</p>
+  if (loading) return <p className="rs">Cargando…</p>
 
   // El alta de temporadas vive en el índice: acá no se duplica el formulario.
   if (todas.length === 0) {
     return (
       <>
-        <PageHead title="Temporada" />
-        <EmptyState icon={<CalendarDays size={20} />} title="Todavía no hay ninguna temporada">
-          <Link to="/temporadas">Creá la primera</Link> para empezar a cargar funciones.
-        </EmptyState>
+        <PageHeader title="Temporada" />
+        <Card title="Todavía no hay ninguna temporada">
+          <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', whiteSpace: 'normal', margin: 0 }}>
+            <Link to="/temporadas">Creá la primera</Link> para empezar a cargar funciones.
+          </p>
+        </Card>
       </>
     )
   }
 
-  if (!season) return <p className="alert">Esa temporada no existe.</p>
+  if (!season) return <p className="st st--bad">Esa temporada no existe.</p>
 
   const funciones = summary.data?.functions ?? []
   const proximas = funciones.filter((fn) => !yaPaso(fn))
@@ -542,189 +563,170 @@ export function SeasonPage() {
 
   const cupo = funciones.reduce((acc, fn) => acc + fn.capacity, 0)
   const vendidas = funciones.reduce((acc, fn) => acc + fn.sold, 0)
-  const recaudado = funciones.reduce((acc, fn) => acc + fn.collected_cents, 0)
-  // Sólo de las próximas: repartir cupo de una función que ya pasó no arregla
-  // nada, y contarlo dejaría un número en ámbar que nunca se puede bajar.
-  const libres = proximas.reduce((acc, fn) => acc + sinAsignar(fn), 0)
-
-  const primera = funciones[0]
-  const ultima = funciones[funciones.length - 1]
-  const sub =
-    funciones.length === 0
-      ? 'Todavía sin funciones'
-      : `${funciones.length} ${funciones.length === 1 ? 'función' : 'funciones'}` +
-        (funciones.length > 1
-          ? ` · del ${dayAndMonth(primera.starts_at)} al ${dayAndMonth(ultima.starts_at)}`
-          : ` · ${dayAndMonth(primera.starts_at)}`)
-
-  const abrirAsignar = (fn: FunctionSummary) => setPanel({ kind: 'asignar', fn })
+  const potencial = funciones.reduce((acc, fn) => acc + fn.capacity * fn.price_cents, 0)
+  const precios = [...new Set(funciones.map((fn) => fn.price_cents))].sort((x, y) => x - y)
+  const ingresos = pasadas.reduce((acc, fn) => acc + fn.entered, 0)
+  const anio = new Date(funciones[0]?.starts_at ?? season.created_at).getFullYear()
 
   return (
     <>
-      <PageHead
+      <PageHeader
+        eyebrow={`Temporadas · ${anio}`}
         title={season.name}
-        sub={sub}
-        action={{ label: 'Agregar función', onClick: () => setPanel({ kind: 'funcion', modo: 'nueva' }) }}
+        actions={
+          <>
+            <Menu
+              trigger="btn"
+              label="Cambiar temporada"
+              ariaLabel="Cambiar temporada"
+              align="right"
+              groups={[
+                {
+                  label: 'Temporadas',
+                  options: todas.map((s) => ({
+                    id: String(s.id),
+                    label: s.name,
+                    hint: s.id === enCurso?.id ? 'En curso' : undefined,
+                    onSelect: () => elegir(s.id),
+                  })),
+                },
+                {
+                  separated: true,
+                  options: [
+                    { id: 'todas', label: 'Ver todas las temporadas', onSelect: () => navigate('/temporadas') },
+                  ],
+                },
+              ]}
+            />
+            <Button go onClick={() => setPanel({ kind: 'funcion', modo: 'nueva' })}>
+              Nueva función
+            </Button>
+          </>
+        }
       />
 
       {season.id !== enCurso?.id && (
-        <div className="seasonbar">
+        <div className="banner">
           <span>
             Estás mirando una temporada que no está en curso. Inicio, Rendiciones y Dirección
             siguen mostrando <b>{enCurso?.name}</b>.
           </span>
-          <button
-            className="button button--sm"
-            type="button"
-            disabled={activar.isPending}
-            onClick={() => activar.mutate(season.id)}
-          >
+          <Button disabled={activar.isPending} onClick={() => activar.mutate(season.id)}>
             Usar esta temporada
-          </button>
+          </Button>
         </div>
       )}
       {errorTemporada && (
-        <p className="alert" role="alert">
+        <p className="st st--bad" role="alert">
           {errorTemporada}
         </p>
       )}
 
-      <div className="tstrip">
-        <div>
-          <b>{funciones.length}</b>
-          <span>Funciones</span>
+      {funciones.length > 0 && (
+        <div style={{ marginBottom: 'var(--s5)' }}>
+          <SubFigs
+            items={[
+              { label: 'Funciones', value: funciones.length },
+              { label: 'Vendidas', value: vendidas, unit: `/ ${cupo}` },
+              {
+                label: 'Precio',
+                value:
+                  precios.length === 1
+                    ? formatMoney(precios[0])
+                    : `${formatMoney(precios[0])} a ${formatMoney(precios[precios.length - 1])}`,
+              },
+              { label: 'Si se vende todo', value: formatMoney(potencial), tone: 'ok' },
+            ]}
+          />
         </div>
-        <div>
-          <b>
-            {vendidas} <small>/ {cupo}</small>
-          </b>
-          <span>Entradas vendidas</span>
-        </div>
-        <div>
-          <b className="g">{formatMoney(recaudado)}</b>
-          <span>Recaudado</span>
-        </div>
-        <div title="En las funciones que todavía no pasaron">
-          <b className={libres > 0 ? 'y' : undefined}>{libres}</b>
-          <span>Sin asignar</span>
-        </div>
-      </div>
+      )}
 
       {summary.isPending ? (
-        <p className="muted">Cargando funciones…</p>
+        <p className="rs">Cargando funciones…</p>
       ) : funciones.length === 0 ? (
-        <EmptyState icon={<CalendarDays size={20} />} title="Esta temporada todavía no tiene funciones">
-          Agregá la primera con fecha, cupo y precio: recién ahí se le puede repartir entradas a
-          las coristas.
-        </EmptyState>
+        <Card title="Esta temporada todavía no tiene funciones">
+          <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', whiteSpace: 'normal', margin: 0 }}>
+            Agregá la primera con fecha, cupo y precio: recién ahí se le puede repartir entradas a
+            las coristas.
+          </p>
+        </Card>
       ) : (
         <>
           {proximas.length > 0 && (
-            <>
-              <p className="sectrule">
-                <b>Próximas · {proximas.length}</b>
-              </p>
-              <div className="fnlines">
-                {proximas.map((fn, i) => (
-                  <Fila
-                    key={fn.id}
-                    fn={fn}
-                    destacada={i === 0}
-                    onAsignar={() => abrirAsignar(fn)}
-                    onEditar={() => setPanel({ kind: 'funcion', modo: 'editar', fn })}
-                    onDuplicar={() => setPanel({ kind: 'funcion', modo: 'duplicar', fn })}
-                    onCancelar={() => setPanel({ kind: 'cancelar', fn })}
-                  />
+            <section className="grp">
+              <div className="grp__h">
+                <h2 className="lbl">Vienen</h2>
+                <span className="grp__n">
+                  {proximas.length} {proximas.length === 1 ? 'función' : 'funciones'} ·{' '}
+                  {proximas.reduce((acc, fn) => acc + fn.capacity, 0)} lugares
+                </span>
+              </div>
+              <div className="tiles tiles--3">
+                {proximas.map((fn) => (
+                  <FuncionTile key={fn.id} fn={fn} onClick={() => setPanel({ kind: 'ver', fn })} />
                 ))}
               </div>
-            </>
+            </section>
           )}
           {pasadas.length > 0 && (
-            <>
-              <p className="sectrule">
-                <b>Ya pasaron · {pasadas.length}</b>
-              </p>
-              <div className="fnlines fnlines--done">
+            <section className="grp">
+              <div className="grp__h">
+                <h2 className="lbl">Ya pasaron</h2>
+                <span className="grp__n">
+                  {pasadas.length} {pasadas.length === 1 ? 'función' : 'funciones'} · {ingresos} ingresos
+                </span>
+              </div>
+              <div className="tiles tiles--3">
                 {pasadas.map((fn) => (
-                  <Fila
-                    key={fn.id}
-                    fn={fn}
-                    destacada={false}
-                    onAsignar={() => abrirAsignar(fn)}
-                    onEditar={() => setPanel({ kind: 'funcion', modo: 'editar', fn })}
-                    onDuplicar={() => setPanel({ kind: 'funcion', modo: 'duplicar', fn })}
-                    onCancelar={() => setPanel({ kind: 'cancelar', fn })}
-                  />
+                  <FuncionTile key={fn.id} fn={fn} onClick={() => setPanel({ kind: 'ver', fn })} />
                 ))}
               </div>
-            </>
+            </section>
           )}
         </>
       )}
 
+      {panel?.kind === 'ver' && (
+        <FuncionModal
+          fn={panel.fn}
+          seasonName={season.name}
+          onClose={() => setPanel(null)}
+          onEditar={() => setPanel({ kind: 'funcion', modo: 'editar', fn: panel.fn })}
+          onDuplicar={() => setPanel({ kind: 'funcion', modo: 'duplicar', fn: panel.fn })}
+          onCancelar={() => setPanel({ kind: 'cancelar', fn: panel.fn })}
+          onRepartir={() => setPanel({ kind: 'asignar', fn: panel.fn })}
+        />
+      )}
+
       {panel?.kind === 'funcion' && (
-        <ActionPanel label={titulos[panel.modo]} size="form" onClose={() => setPanel(null)}>
-          <FuncionForm
-            modo={panel.modo}
-            fn={panel.fn}
-            seasonId={season.id}
-            onDone={() => setPanel(null)}
-          />
-        </ActionPanel>
+        <FuncionForm modo={panel.modo} fn={panel.fn} seasonId={season.id} onDone={() => setPanel(null)} />
       )}
 
       {panel?.kind === 'asignar' && (
-        <ActionPanel
-          label={`Asignar entradas de ${nombre(panel.fn)}`}
-          size="form"
-          onClose={() => setPanel(null)}
-        >
-          <div className="sheet-head">
-            <span>
-              <b>Asignar entradas</b>
-              <span>
-                {nombre(panel.fn)} · {functionDay(panel.fn.starts_at)}
-              </span>
-            </span>
-          </div>
-          <AllocationsEditor fn={{ id: panel.fn.id, capacity: panel.fn.capacity }} />
-        </ActionPanel>
+        <RepartirModal funciones={funciones} inicial={panel.fn} onClose={() => setPanel(null)} />
       )}
 
       {panel?.kind === 'cancelar' && (
-        <ActionPanel label={`Cancelar ${nombre(panel.fn)}`} onClose={() => setPanel(null)}>
-          <div className="sheet-head">
-            <span>
-              <b>¿Cancelar {nombre(panel.fn)}?</b>
-              <span>
-                {functionDay(panel.fn.starts_at)} · {functionTime(panel.fn.starts_at)}
-              </span>
-            </span>
-          </div>
-          <p className="muted" style={{ fontSize: 12.5, margin: '12px 2px 0', lineHeight: 1.55 }}>
-            La función se borra de la temporada junto con el cupo que tengan repartido las
-            coristas. No se puede deshacer, pero como todavía no vendió nada, no hay entradas ni
-            plata en juego.
+        <Modal
+          open
+          onClose={() => setPanel(null)}
+          label="Cancelar función"
+          title={`¿Cancelar ${nombre(panel.fn)}?`}
+          sub={`${functionDay(panel.fn.starts_at)} · ${functionTime(panel.fn.starts_at)}`}
+          footer={
+            <>
+              <Button onClick={() => setPanel(null)}>No, volver</Button>
+              <Button className="btn--bad" disabled={cancelar.isPending} onClick={() => cancelar.mutate(panel.fn.id)}>
+                {cancelar.isPending ? 'Cancelando…' : 'Sí, cancelarla'}
+              </Button>
+            </>
+          }
+        >
+          <p className="note">
+            La función se borra de la temporada junto con el cupo que tengan repartido las coristas. No se
+            puede deshacer, pero como todavía no vendió nada, no hay entradas ni plata en juego.
           </p>
-          <div className="form-row" style={{ marginTop: 14 }}>
-            <button
-              className="button button--danger-solid"
-              type="button"
-              disabled={cancelar.isPending}
-              onClick={() => cancelar.mutate(panel.fn.id)}
-            >
-              <Trash2 size={15} aria-hidden />
-              {cancelar.isPending ? 'Cancelando…' : 'Sí, cancelar la función'}
-            </button>
-            <button
-              className="button button--ghost form-row__action"
-              type="button"
-              onClick={() => setPanel(null)}
-            >
-              No, volver
-            </button>
-          </div>
-        </ActionPanel>
+        </Modal>
       )}
     </>
   )

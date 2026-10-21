@@ -41,7 +41,7 @@ export function SeasonSelector() {
     <>
       <div className="seasonsel">
         <Menu
-          trigger="pill"
+          trigger="btn"
           ariaLabel="Temporada"
           label={season.name}
           value={String(season.id)}

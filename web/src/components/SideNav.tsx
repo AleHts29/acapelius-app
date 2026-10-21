@@ -17,8 +17,8 @@ import type { NavItem } from './nav'
  * pantalla, así que las dos se renderizan siempre y ninguna necesita saber del
  * tamaño de la ventana.
  *
- * Para dirección tiene dos niveles (C12): lo del día a día arriba y, bajo el
- * título DIRECCIÓN, lo que se mira de vez en cuando.
+ * Para dirección tiene dos niveles (C12): lo del día a día arriba y, bajo
+ * Administración (C19 §6), lo que se mira de vez en cuando.
  */
 export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }) {
   const location = useLocation()
@@ -43,7 +43,7 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
       <Link
         key={item.to}
         to={item.to}
-        className={`sidenav__item${active ? ` sidenav__item--on ${item.activeClass}` : ''}`}
+        className={active ? 'sidenav__item sidenav__item--on' : 'sidenav__item'}
         aria-current={active ? 'page' : undefined}
       >
         <Icon size={17} strokeWidth={active ? 2.4 : 2} aria-hidden />
@@ -71,7 +71,7 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
         {primerNivel.map(fila)}
         {direccion.length > 0 && (
           <>
-            <p className="sidenav__sect">Dirección</p>
+            <p className="lbl sidenav__sect">Administración</p>
             {direccion.map(fila)}
           </>
         )}
@@ -81,12 +81,12 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
         <ThemeToggle />
       </div>
       <div className="sidenav__account">
-        <span className="avatar avatar--sm" aria-hidden>
+        <span className="avatar" aria-hidden>
           {initial}
         </span>
         <span className="sidenav__who">
           <b>{user.name}</b>
-          <span className="muted">{roleLabel(user.role)}</span>
+          <span className="rs">{roleLabel(user.role)}</span>
         </span>
         <button className="sidenav__out" type="button" onClick={onLogout} aria-label="Cerrar sesión">
           <LogOut size={16} aria-hidden />

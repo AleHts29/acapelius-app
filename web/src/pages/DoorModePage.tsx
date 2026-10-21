@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft, Moon, Search, Sun } from 'lucide-react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 
 import type { CheckinResponse, DoorCheckin, DoorTicket } from '../api/client'
 import type { CheckinAttempt } from '../door/useDoorStore'
 import { useDoorStore } from '../door/useDoorStore'
 import { doorCounter, effectiveCheckins, effectiveTickets, nocturnoPorDefecto } from '../door/logic'
-import { filterTickets, groupByBuyer, initials } from '../lib/search'
+import { filterTickets, groupByBuyer } from '../lib/search'
 import { useIsDesktop } from '../lib/viewport'
-import { Hl } from '../ui/controls'
-import { CounterChip } from '../ui/StatusChip'
+import { Button, Search } from '../ui/Button'
+import { Card } from '../ui/Card'
+import { Heel } from '../ui/Heel'
+import { Row } from '../ui/Row'
+import { Status } from '../ui/Status'
 
 // Preferencia por dispositivo del modo nocturno (design system §3.7).
 const NIGHT_KEY = 'acapelius-door-night'
@@ -41,8 +43,8 @@ function toDisplay(resp: CheckinResponse): DisplayResult {
     case 'already_checked_in':
       return {
         ok: false,
-        title: resp.buyer_name ?? 'Ya ingresó',
-        detail: `Ya ingresó ${resp.checked_in_at ? `a las ${timeOf(resp.checked_in_at)}` : 'antes'} · ${resp.by_name ?? ''}`,
+        title: `Ya entró · ${resp.buyer_name ?? 'esta entrada'}`,
+        detail: `${resp.checked_in_at ? `A las ${timeOf(resp.checked_in_at)}` : 'Antes'}${resp.by_name ? ` · la escaneó ${resp.by_name}` : ''}`,
         autoCloseMs: 5000,
       }
     case 'void':
@@ -169,7 +171,7 @@ function useCamera(onScan: (payload: string) => void, enabled: boolean) {
   return { camState, startCamera }
 }
 
-/** Zona de camara con sus cuatro estados visibles. */
+/** Zona de camara con sus estados visibles: nunca falla en silencio. */
 function CameraStage({
   camState,
   onStart,
@@ -181,134 +183,126 @@ function CameraStage({
     <div className="door__scan">
       <div id="door-scanner" />
       {camState === 'idle' && (
+        // Un solo "Escanear" en pantalla: el de abajo. Acá sólo se explica.
         <div className="camstate">
-          <button className="camstate__start" type="button" onClick={onStart}>
-            Escanear
-          </button>
-          <p className="camstate__hint">La cámara se enciende con un toque</p>
+          <p className="camstate__t">Cámara apagada</p>
+          <p className="camstate__h">Se enciende con un toque en Escanear</p>
         </div>
       )}
       {camState === 'starting' && (
         <div className="camstate" aria-live="polite">
-          <span className="camstate__spinner" aria-hidden />
-          <p className="camstate__hint">Iniciando cámara…</p>
+          <p className="camstate__h">Iniciando cámara…</p>
         </div>
       )}
       {camState === 'denied' && (
         <div className="camstate" role="alert">
-          <p className="camstate__title">Sin permiso de cámara</p>
-          <p className="camstate__hint">
+          <p className="camstate__t">Sin permiso de cámara</p>
+          <p className="camstate__h">
             iPhone: Ajustes → Safari → Cámara → Permitir.
             <br />
             Android: candado en la barra de dirección → Permisos → Cámara.
           </p>
-          <button className="camstate__start" type="button" onClick={onStart}>
+          <Button go onClick={onStart}>
             Reintentar
-          </button>
+          </Button>
         </div>
       )}
       {camState === 'blank' && (
         <div className="camstate" role="alert">
-          <p className="camstate__title">La cámara no se ve</p>
-          <p className="camstate__hint">
-            Se encendió pero no llega imagen. Probá de nuevo; si sigue igual,
-            cerrá y volvé a abrir la app.
-            <br />
-            Mientras tanto usá <strong>Buscar nombre</strong>.
+          <p className="camstate__t">La cámara no se ve</p>
+          <p className="camstate__h">
+            Se encendió pero no llega imagen. Probá de nuevo; si sigue igual, cerrá y volvé a abrir
+            la app. Mientras tanto usá <strong>Buscar por nombre</strong>.
           </p>
-          <button className="camstate__start" type="button" onClick={onStart}>
+          <Button go onClick={onStart}>
             Reintentar
-          </button>
+          </Button>
         </div>
       )}
       {camState === 'unavailable' && (
         <div className="camstate" role="alert">
-          <p className="camstate__title">La cámara no está disponible</p>
-          <p className="camstate__hint">
+          <p className="camstate__t">La cámara no está disponible</p>
+          <p className="camstate__h">
             {window.isSecureContext
               ? 'Este dispositivo no tiene una cámara utilizable.'
-              : 'El escaneo necesita una conexión segura (HTTPS).'}
-            <br />
-            Usá <strong>Buscar nombre</strong>: encontrás a la persona y marcás el ingreso con un toque.
+              : 'El escaneo necesita una conexión segura (HTTPS).'}{' '}
+            Usá <strong>Buscar por nombre</strong>: encontrás a la persona y marcás el ingreso con un
+            toque.
           </p>
         </div>
       )}
-      {camState === 'active' && <p className="door__scan-hint">Apuntá al QR de la entrada</p>}
+      {camState === 'active' && <p className="door__hint">Apuntá al QR de la entrada</p>}
     </div>
+  )
+}
+
+/**
+ * Una compra en los resultados de búsqueda: quién, cuántas entraron, y los
+ * botones para marcar. "Solo 1" existe porque llega uno y los demás después.
+ */
+function Compra({
+  grupo,
+  on,
+  onCheckin,
+}: {
+  grupo: ReturnType<typeof groupByBuyer>[number]
+  on?: boolean
+  onCheckin: (codes: string[]) => void
+}) {
+  const faltan = grupo.pending.length
+  return (
+    <Row
+      title={grupo.buyerName}
+      sub={`${grupo.total === 1 ? '1 entrada' : `${grupo.entered} de ${grupo.total} entraron`} · le vendió ${grupo.sellerName}${grupo.isComp ? ' · cortesía' : ''}`}
+      on={on}
+      status={
+        faltan === 0 ? (
+          <Status tone="bad">Ya entró</Status>
+        ) : (
+          <span style={{ display: 'flex', gap: 'var(--s1)' }}>
+            {faltan > 1 && <Button onClick={() => onCheckin([grupo.pending[0].code])}>Solo 1</Button>}
+            <Button go={on !== false} onClick={() => onCheckin(grupo.pending.map((t) => t.code))}>
+              {faltan === 1 ? 'Marcar ingreso' : `Marcar ${faltan === grupo.total ? 'las' : 'las otras'} ${faltan}`}
+            </Button>
+          </span>
+        )
+      }
+    />
   )
 }
 
 function SearchSheet({
   tickets,
+  inicial = '',
   onCheckin,
 }: {
   tickets: DoorTicket[]
+  /** Búsqueda que llega de Asistencia ("Marcar"). */
+  inicial?: string
   /** Marca de una las entradas que se le pasen (una compra entera, o una sola). */
   onCheckin: (codes: string[]) => void
 }) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(inicial)
   const grupos = groupByBuyer(filterTickets(tickets, query))
 
   return (
-    <div className="door__sheet">
-      <input
-        className="field__input"
-        style={{ marginTop: 0 }}
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Nombre de quien compró, o de la corista"
-        aria-label="Buscar entrada"
-        autoFocus
-      />
-      <div className="door__results">
-        {query.trim() !== '' && grupos.length === 0 && (
-          <p className="muted" style={{ padding: '10px 2px' }}>
-            No aparece. Probá con menos letras, o solo el apellido.
-          </p>
-        )}
-        {grupos.slice(0, 20).map((grupo) => {
-          const faltan = grupo.pending.length
-          return (
-            <div key={grupo.key} className="door-ticket">
-              <span>
-                <strong>{grupo.buyerName}</strong>
-                {grupo.isComp && ' · cortesía'}
-                <br />
-                <span className="muted" style={{ fontSize: 11.5 }}>
-                  {grupo.total === 1 ? '1 entrada' : `${grupo.entered} de ${grupo.total} entraron`}
-                  {' · le vendió '}
-                  {grupo.sellerName}
-                </span>
-              </span>
-              {faltan === 0 ? (
-                <span className="muted" style={{ fontSize: 11.5, flexShrink: 0 }}>
-                  Ya entró
-                </span>
-              ) : (
-                <span className="door-ticket__acts">
-                  <button
-                    className="mark-btn"
-                    type="button"
-                    onClick={() => onCheckin(grupo.pending.map((t) => t.code))}
-                  >
-                    {faltan === 1 ? 'Marcar ingreso' : `Marcar ${faltan === grupo.total ? 'las' : 'las otras'} ${faltan}`}
-                  </button>
-                  {faltan > 1 && (
-                    <button
-                      className="mark-btn mark-btn--one"
-                      type="button"
-                      onClick={() => onCheckin([grupo.pending[0].code])}
-                    >
-                      Solo 1
-                    </button>
-                  )}
-                </span>
-              )}
-            </div>
-          )
-        })}
+    <div className="door__results">
+      <div style={{ display: 'flex', padding: 'var(--s3) var(--s3) var(--s2)' }}>
+        <Search
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Nombre de quien compró, o de la corista"
+          aria-label="Buscar entrada"
+          autoFocus
+        />
       </div>
+      {query.trim() !== '' && grupos.length === 0 && (
+        <Row title="No aparece" sub="Probá con menos letras, o sólo el apellido" />
+      )}
+      {grupos.slice(0, 20).map((grupo) => (
+        <Compra key={grupo.key} grupo={grupo} onCheckin={onCheckin} />
+      ))}
     </div>
   )
 }
@@ -337,22 +331,22 @@ function useWakeLock() {
 }
 
 /**
- * La mesa de entrada (C11, frame 5): el modo puerta en escritorio. No hay
- * cámara —nadie escanea un QR con la webcam de una notebook— así que
- * html5-qrcode ni se monta. Todo gira alrededor de la búsqueda, pensada para
- * teclado: se escribe, se baja con las flechas y se marca con Enter, sin
- * soltar las manos.
+ * La mesa de entrada: el modo puerta en escritorio. No hay cámara —nadie
+ * escanea un QR con la webcam de una notebook— así que html5-qrcode ni se
+ * monta. Todo gira alrededor de la búsqueda, pensada para teclado: se
+ * escribe, se baja con las flechas y se marca con Enter.
  */
 function EntryDesk({
   tickets,
-  checkins,
+  inicial = '',
   onCheckin,
 }: {
   tickets: DoorTicket[]
-  checkins: DoorCheckin[]
+  /** Búsqueda que llega de Asistencia ("Marcar"). */
+  inicial?: string
   onCheckin: (codes: string[]) => void
 }) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(inicial)
   const [cursor, setCursor] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -363,12 +357,6 @@ function EntryDesk({
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
-
-  // Nombre del comprador por código, para los últimos ingresos.
-  const porCodigo = new Map(tickets.map((t) => [t.code, t]))
-  const ultimos = [...checkins]
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    .slice(0, 6)
 
   function marcar(codes: string[]) {
     onCheckin(codes)
@@ -396,11 +384,11 @@ function EntryDesk({
   }
 
   return (
-    <div className="desk">
-      <div className="desk__search">
-        <Search size={20} aria-hidden />
+    <section className="grp" style={{ margin: 0 }}>
+      <div className="bar">
         <input
           ref={inputRef}
+          className="search"
           type="search"
           value={query}
           onChange={(e) => {
@@ -412,96 +400,73 @@ function EntryDesk({
           aria-label="Buscar entrada"
         />
       </div>
-
-      {query.trim() !== '' && grupos.length === 0 && (
-        <p className="muted" style={{ padding: '12px 2px' }}>
-          No aparece. Probá con menos letras, o solo el apellido.
-        </p>
-      )}
-
-      {grupos.map((grupo, i) => {
-        const faltan = grupo.pending.length
-        return (
-          <div
-            key={grupo.key}
-            className={`desk__row${i === activo ? ' desk__row--on' : ''}`}
-            onMouseEnter={() => setCursor(i)}
-          >
-            <span className={`ini${faltan === 0 ? ' ini--ok' : ''}`}>{initials(grupo.buyerName)}</span>
-            <span className="desk__mid">
-              <b>
-                <Hl text={grupo.buyerName} q={query} />
-              </b>
-              <span>
-                le vendió {grupo.sellerName} · {grupo.total}{' '}
-                {grupo.total === 1 ? 'entrada' : 'entradas'}
-                {faltan > 0 && faltan < grupo.total && ` · falta${faltan === 1 ? '' : 'n'} ${faltan}`}
-              </span>
-            </span>
-            <CounterChip count={grupo.entered} total={grupo.total} />
-            <span className="desk__acts">
-              <button
-                className="mark-btn"
-                type="button"
-                disabled={faltan === 0}
-                onClick={() => marcar(grupo.pending.map((t) => t.code))}
-              >
-                {faltan === 0
-                  ? 'Ya ingresó'
-                  : faltan === 1
-                    ? 'Marcar ingreso'
-                    : `Marcar ${faltan === grupo.total ? 'las' : 'las otras'} ${faltan}`}
-              </button>
-              {/* Llega uno solo y los demás vienen después: no hay que
-                  marcarlos a todos de prepo. */}
-              {faltan > 1 && (
-                <button
-                  className="mark-btn mark-btn--one"
-                  type="button"
-                  onClick={() => marcar([grupo.pending[0].code])}
-                >
-                  Solo 1
-                </button>
-              )}
-            </span>
-          </div>
-        )
-      })}
-
-      {grupos.length > 0 && (
-        <p className="desk__kbd">
-          <kbd>↑</kbd> <kbd>↓</kbd> para moverte · <kbd>Enter</kbd> marca el ingreso
-        </p>
-      )}
-
-      {ultimos.length > 0 && (
+      {(query.trim() !== '' || grupos.length > 0) && (
         <>
-          <div className="ghead">
-            <b>Últimos ingresos</b>
+          <div className="grp__h">
+            <h2 className="lbl">Resultados</h2>
+            <span className="grp__n">↑ ↓ para moverte · Enter marca</span>
           </div>
-          {ultimos.map((c) => (
-            <div key={c.ticket_code + c.created_at} className="desk__last">
-              <span>
-                <b>{porCodigo.get(c.ticket_code)?.buyer_name ?? 'Entrada'}</b>{' '}
-                <span className="muted">
-                  {c.method === 'scan' ? 'escaneo' : 'manual'} · {c.by_name}
-                </span>
-              </span>
-              <span className="muted">{timeOf(c.created_at)}</span>
-            </div>
-          ))}
+          <div className="card">
+            {grupos.length === 0 ? (
+              <Row title="No aparece" sub="Probá con menos letras, o sólo el apellido" />
+            ) : (
+              grupos.map((grupo, i) => (
+                <div key={grupo.key} onMouseEnter={() => setCursor(i)}>
+                  <Compra grupo={grupo} on={i === activo} onCheckin={marcar} />
+                </div>
+              ))
+            )}
+          </div>
         </>
       )}
-
-      <p className="desk__tip">
-        Para escanear QRs usá el celular — esta mesa resuelve búsquedas e ingresos manuales.
+      <p className="rs" style={{ whiteSpace: 'normal', marginTop: 'var(--s2)' }}>
+        Para escanear QRs usá el celular: esta mesa resuelve búsquedas e ingresos manuales.
       </p>
+    </section>
+  )
+}
+
+/** Los últimos ingresos y quién está en la puerta, al costado de la mesa. */
+function Costado({ tickets, checkins }: { tickets: DoorTicket[]; checkins: DoorCheckin[] }) {
+  const porCodigo = new Map(tickets.map((t) => [t.code, t]))
+  const ultimos = [...checkins].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 6)
+  const enLaPuerta = new Map<string, number>()
+  for (const c of checkins) enLaPuerta.set(c.by_name, (enLaPuerta.get(c.by_name) ?? 0) + 1)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
+      <Card title="Últimos ingresos">
+        {ultimos.length === 0 ? (
+          <Row title="Todavía no entró nadie" />
+        ) : (
+          ultimos.map((c) => (
+            <div key={c.ticket_code + c.created_at} className="feed">
+              <span className="feed__t">{timeOf(c.created_at)}</span>
+              <div>
+                <div className="rt">{porCodigo.get(c.ticket_code)?.buyer_name ?? 'Entrada'}</div>
+                <div className="rs">{c.method === 'scan' ? 'escaneo' : 'manual'}</div>
+              </div>
+              <span className="rs">{c.by_name}</span>
+            </div>
+          ))
+        )}
+      </Card>
+      {enLaPuerta.size > 0 && (
+        <Card title="Quién está en la puerta">
+          {[...enLaPuerta.entries()].map(([nombre, n]) => (
+            <Row key={nombre} title={nombre} amount={n} unit={n === 1 ? 'ingreso' : 'ingresos'} />
+          ))}
+        </Card>
+      )}
     </div>
   )
 }
 
 export function DoorModePage() {
   const { functionId: raw } = useParams()
+  // ?buscar= llega del "Marcar" de Asistencia: la búsqueda arranca con ese
+  // nombre y el ingreso pasa por el flujo de siempre de la puerta.
+  const [searchParams] = useSearchParams()
+  const buscar = searchParams.get('buscar') ?? ''
   const functionId = Number(raw)
   const navigate = useNavigate()
 
@@ -513,7 +478,7 @@ export function DoorModePage() {
     const saved = localStorage.getItem(NIGHT_KEY)
     return saved === null ? null : saved === '1'
   })
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(buscar !== '')
   const [result, setResult] = useState<DisplayResult | null>(null)
   const timerRef = useRef<number | null>(null)
 
@@ -595,11 +560,11 @@ export function DoorModePage() {
     return (
       <div className="door">
         <div className="door__top">
-          <button className="door__exit" type="button" onClick={() => navigate('/puerta')}>
-            <ChevronLeft size={18} aria-hidden /> Salir
-          </button>
+          <Button onClick={() => navigate('/puerta')}>‹ Salir</Button>
         </div>
-        <p className="alert">{store.loadError}</p>
+        <p className="st st--bad" role="alert" style={{ whiteSpace: 'normal' }}>
+          {store.loadError}
+        </p>
       </div>
     )
   }
@@ -608,98 +573,107 @@ export function DoorModePage() {
   const night = nightPref ?? nocturnoPorDefecto(snapshot?.function.starts_at)
   const { entered, issued } = snapshot ? doorCounter(snapshot, store.pending) : { entered: 0, issued: 0 }
   const tickets = snapshot ? effectiveTickets(snapshot, store.pending) : []
+  const checkins = snapshot ? effectiveCheckins(snapshot, store.pending) : []
+  const fn = snapshot?.function
+
+  const talon = (
+    <Heel label={fn ? `${fn.name ?? fn.venue} · ${timeOf(fn.starts_at)}` : 'Puerta'}>
+      <div className="heel__n" style={{ marginTop: 6 }} aria-live="polite">
+        {entered} <span>de {issued} ingresaron</span>
+      </div>
+    </Heel>
+  )
 
   return (
-    <div className={`door${night ? ' night' : ''}`}>
+    // El nocturno es el modo oscuro de los tokens, sólo para la puerta del
+    // celular: de noche, en la sala, el papel encandila. En la mesa de
+    // escritorio manda el modo de la app.
+    <div className="door" data-theme={escritorio ? undefined : night ? 'dark' : 'light'}>
       <div className="door__top">
-        <button className="door__exit" type="button" onClick={() => navigate('/puerta')}>
-          <ChevronLeft size={18} aria-hidden /> Salir
-        </button>
-        <button className="door__night" type="button" onClick={toggleNight} aria-pressed={night}>
-          {night ? <Sun size={13} aria-hidden style={{ verticalAlign: -2 }} /> : <Moon size={13} aria-hidden style={{ verticalAlign: -2 }} />}{' '}
-          {night ? 'Modo claro' : 'Modo nocturno'}
-        </button>
+        <Button onClick={() => navigate('/puerta')}>‹ Salir</Button>
+        {store.online ? <Status tone="ok">En línea</Status> : <Status tone="warn">Sin conexión</Status>}
+        {!escritorio && (
+          <Button onClick={toggleNight} aria-pressed={night}>
+            {night ? 'Modo claro' : 'Modo nocturno'}
+          </Button>
+        )}
       </div>
 
-      <div className="door__head">
-        <div className="door__fn">{snapshot ? (snapshot.function.name ?? snapshot.function.venue) : 'Puerta'}</div>
-        <div className={`net${store.online ? '' : ' net--off'}`}>
-          {store.online
-            ? '● En línea'
-            : `⬤ Sin conexión${store.pending.length > 0 ? ` · ${store.pending.length} por sincronizar` : ''}`}
-        </div>
-      </div>
-
-      <div className="door__counter" aria-live="polite">
-        <div className="n">
-          {entered}
-          <span> / {issued}</span>
-        </div>
-        <div className="st">INGRESARON</div>
-      </div>
+      {!store.online && (
+        <p className="banner" role="status" style={{ margin: 0 }}>
+          <b>Seguí escaneando</b>: la lista está guardada en el teléfono y se sincroniza sola.
+          {store.pending.length > 0 &&
+            ` ${store.pending.length} ${store.pending.length === 1 ? 'ingreso espera' : 'ingresos esperan'} para subir.`}
+        </p>
+      )}
 
       {escritorio ? (
-        <EntryDesk
-          tickets={tickets}
-          checkins={snapshot ? effectiveCheckins(snapshot, store.pending) : []}
-          onCheckin={(codes) => void attemptGroup(codes)}
-        />
+        <div className="asym">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
+            {talon}
+            <EntryDesk tickets={tickets} inicial={buscar} onCheckin={(codes) => void attemptGroup(codes)} />
+          </div>
+          <Costado tickets={tickets} checkins={checkins} />
+        </div>
       ) : (
-      <>
-      <div className="door__stage">
-        <CameraStage camState={camState} onStart={() => void startCamera()} />
-        {result && (
-          <button
-            type="button"
-            className={`verdict ${result.ok ? 'verdict--ok' : 'verdict--bad'}`}
-            onClick={clearResult}
-            aria-live="assertive"
-          >
-            <span className="verdict__ring" aria-hidden>{result.ok ? '✓' : '✕'}</span>
-            <span className="verdict__who">{result.title}</span>
-            {result.detail && <span className="verdict__det">{result.detail}</span>}
-            {result.seal && <span className="verdict__seal">{result.seal}</span>}
-          </button>
-        )}
-        {sheetOpen && !result && (
-          <SearchSheet tickets={tickets} onCheckin={(codes) => void attemptGroup(codes)} />
-        )}
-      </div>
+        <>
+          {talon}
+          <div className="door__stage">
+            <CameraStage camState={camState} onStart={() => void startCamera()} />
+            {result && (
+              <button
+                type="button"
+                className={`verdict ${result.ok ? 'verdict--ok' : 'verdict--bad'}`}
+                onClick={clearResult}
+                aria-live="assertive"
+              >
+                <span className="verdict__i" aria-hidden>
+                  {result.ok ? '✓' : '✕'}
+                </span>
+                <span className="verdict__n">{result.title}</span>
+                {result.detail && <span className="verdict__d">{result.detail}</span>}
+                {result.seal && <span className="verdict__s">{result.seal}</span>}
+              </button>
+            )}
+            {sheetOpen && !result && (
+              <SearchSheet tickets={tickets} inicial={buscar} onCheckin={(codes) => void attemptGroup(codes)} />
+            )}
+          </div>
 
-      <div className="door__btns">
-        <button
-          className="door__btn"
-          type="button"
-          onClick={() => {
-            clearResult()
-            setSheetOpen(!sheetOpen)
-          }}
-        >
-          {sheetOpen ? 'Cerrar búsqueda' : 'Buscar nombre'}
-        </button>
-        <button
-          className="door__btn door__btn--primary"
-          type="button"
-          onClick={() => {
-            clearResult()
-            setSheetOpen(false)
-            if (camState === 'idle' || camState === 'denied' || camState === 'blank') {
-              void startCamera()
-            }
-          }}
-        >
-          {result
-            ? 'Siguiente escaneo'
-            : sheetOpen
-              ? 'Volver a escanear'
-              : camState === 'active'
-                ? 'Escaneando…'
-                : camState === 'starting'
-                  ? 'Iniciando…'
-                  : 'Escanear'}
-        </button>
-      </div>
-      </>
+          <div className="door__btns">
+            <button
+              className="btn door__btn"
+              type="button"
+              onClick={() => {
+                clearResult()
+                setSheetOpen(!sheetOpen)
+              }}
+            >
+              {sheetOpen ? 'Cerrar búsqueda' : 'Buscar por nombre'}
+            </button>
+            <button
+              className="btn btn--go door__btn"
+              type="button"
+              onClick={() => {
+                clearResult()
+                setSheetOpen(false)
+                if (camState === 'idle' || camState === 'denied' || camState === 'blank') {
+                  void startCamera()
+                }
+              }}
+            >
+              {result
+                ? 'Siguiente escaneo'
+                : sheetOpen
+                  ? 'Volver a escanear'
+                  : camState === 'active'
+                    ? 'Escaneando…'
+                    : camState === 'starting'
+                      ? 'Iniciando…'
+                      : 'Escanear'}
+            </button>
+          </div>
+        </>
       )}
     </div>
   )

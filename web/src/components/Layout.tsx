@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 
 import { SeasonSelector } from '../season/SeasonSelector'
 import { useSession } from '../auth/session'
@@ -9,21 +9,13 @@ import { TabBar } from './TabBar'
 
 export function Layout() {
   const { user, logout } = useSession()
-  const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   if (!user) return null
 
   const initial = user.name.trim().charAt(0).toUpperCase() || 'A'
-  // Las pantallas de dirección son listas largas y tablas: en escritorio se les
-  // da más ancho que a las de venta, que son de una columna.
-  const wide = location.pathname.startsWith('/direccion') || location.pathname.startsWith('/panel')
-  // En el celular el modo puerta es pantalla completa: es táctil y el visor
-  // necesita todo el alto. En escritorio es una mesa de entrada más, con su
-  // navegación al lado; sin ella la columna quedaba flotando en el medio.
-  const puerta = /^\/puerta\/\d/.test(location.pathname)
 
   return (
-    <div className={`app-shell${puerta ? ' app-shell--puerta' : ''}${user.organization_is_demo ? ' app-shell--demo' : ''}`}>
+    <div className={`app-shell${user.organization_is_demo ? ' app-shell--demo' : ''}`}>
       {/* La única concesión al lenguaje afiche dentro de la app (C17 §C). */}
       {user.organization_is_demo && (
         <div className="demobar" role="status">
@@ -53,11 +45,11 @@ export function Layout() {
           {menuOpen && (
             <div className="acct-menu">
               <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: 13 }}>{user.name}</p>
-              <p className="muted" style={{ margin: '0 0 10px', fontSize: 11.5 }}>
+              <p className="note" style={{ marginBottom: 'var(--s2)' }}>
                 {user.email}
               </p>
               <ThemeToggle />
-              <button className="button button--ghost" style={{ width: '100%', marginTop: 10 }} type="button" onClick={() => void logout()}>
+              <button className="btn btn--w" style={{ marginTop: 'var(--s2)' }} type="button" onClick={() => void logout()}>
                 Cerrar sesión
               </button>
             </div>
@@ -65,7 +57,7 @@ export function Layout() {
         </div>
       </header>
 
-      <main className={`app-main${wide ? ' app-main--wide' : ''}`} onClick={() => menuOpen && setMenuOpen(false)}>
+      <main className="app-main" onClick={() => menuOpen && setMenuOpen(false)}>
         <Outlet />
       </main>
 

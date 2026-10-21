@@ -1,16 +1,18 @@
 import { Suspense, lazy } from "react";
 import type { ReactNode } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { SeasonProvider } from "./season/SeasonProvider";
 
 import { useSession } from "./auth/session";
 import { Layout } from "./components/Layout";
+import { puedeEntrar } from "./components/nav";
 import { AttendancePage } from "./pages/AttendancePage";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 import { DireccionPage } from "./pages/DireccionPage";
 import { DoorPage } from "./pages/DoorPage";
 import { HomePage } from "./pages/HomePage";
+import { MiPlataPage } from "./pages/MiPlataPage";
 import { NewSalePage } from "./pages/NewSalePage";
 import { SalesPage } from "./pages/SalesPage";
 import { SeasonPage } from "./pages/SeasonPage";
@@ -38,18 +40,14 @@ const DevUIPage = import.meta.env.DEV
     )
   : null;
 
-/** Solo deja pasar al admin; el resto vuelve al inicio. */
-function RequireAdmin({ children }: { children: ReactNode }) {
+/**
+ * Deja pasar a quien le corresponde la ruta (`puedeEntrar`, en nav.ts: la
+ * misma regla que prueban los tests); el resto vuelve al inicio.
+ */
+function Acceso({ children }: { children: ReactNode }) {
   const { user } = useSession();
-  if (user?.role !== "admin") return <Navigate to="/" replace />;
-  return children;
-}
-
-/** Vendedoras y admin; la puerta vuelve al inicio. */
-function RequireSeller({ children }: { children: ReactNode }) {
-  const { user } = useSession();
-  if (user?.role !== "seller" && user?.role !== "admin")
-    return <Navigate to="/" replace />;
+  const { pathname } = useLocation();
+  if (!user || !puedeEntrar(user.role, pathname)) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -64,7 +62,7 @@ function IrAEntrar() {
   );
   return (
     <div className="centered-screen">
-      <p className="muted">Redirigiendo…</p>
+      <p className="rs">Redirigiendo…</p>
     </div>
   );
 }
@@ -76,7 +74,7 @@ function AuthenticatedApp() {
   if (loading) {
     return (
       <div className="centered-screen">
-        <p className="muted">Cargando…</p>
+        <p className="rs">Cargando…</p>
       </div>
     );
   }
@@ -104,30 +102,38 @@ function AuthenticatedApp() {
             <Route
               path="/dev/ui"
               element={
-                <RequireAdmin>
-                  <Suspense fallback={<p className="muted">Cargando…</p>}>
+                <Acceso>
+                  <Suspense fallback={<p className="rs">Cargando…</p>}>
                     <DevUIPage />
                   </Suspense>
-                </RequireAdmin>
+                </Acceso>
               }
             />
           )}
           <Route
             path="/direccion"
             element={
-              <RequireAdmin>
+              <Acceso>
                 <DireccionPage />
-              </RequireAdmin>
+              </Acceso>
             }
           />
           {/* El modo puerta lo usan door, seller (puede estar en la puerta) y
             admin; el backend aplica la misma regla. */}
           <Route path="/puerta" element={<DoorPage />} />
           <Route
+            path="/mi-plata"
+            element={
+              <Acceso>
+                <MiPlataPage />
+              </Acceso>
+            }
+          />
+          <Route
             path="/puerta/:functionId"
             element={
               <Suspense
-                fallback={<p className="muted">Abriendo el modo puerta…</p>}
+                fallback={<p className="rs">Abriendo el modo puerta…</p>}
               >
                 <DoorModePage />
               </Suspense>
@@ -136,41 +142,41 @@ function AuthenticatedApp() {
           <Route
             path="/ventas"
             element={
-              <RequireSeller>
+              <Acceso>
                 <SalesPage />
-              </RequireSeller>
+              </Acceso>
             }
           />
           <Route
             path="/ventas/nueva"
             element={
-              <RequireSeller>
+              <Acceso>
                 <NewSalePage />
-              </RequireSeller>
+              </Acceso>
             }
           />
           <Route
             path="/temporadas"
             element={
-              <RequireAdmin>
+              <Acceso>
                 <SeasonsPage />
-              </RequireAdmin>
+              </Acceso>
             }
           />
           <Route
             path="/temporadas/:seasonId"
             element={
-              <RequireAdmin>
+              <Acceso>
                 <SeasonPage />
-              </RequireAdmin>
+              </Acceso>
             }
           />
           <Route
             path="/usuarios"
             element={
-              <RequireAdmin>
+              <Acceso>
                 <UsersPage />
-              </RequireAdmin>
+              </Acceso>
             }
           />
           {/* C16: el panel de ventas no tenía contenido propio —su franja es la
@@ -184,33 +190,33 @@ function AuthenticatedApp() {
           <Route
             path="/panel/rendiciones"
             element={
-              <RequireAdmin>
+              <Acceso>
                 <SettlementsScreen />
-              </RequireAdmin>
+              </Acceso>
             }
           />
           <Route
             path="/panel/rendiciones/historial"
             element={
-              <RequireAdmin>
+              <Acceso>
                 <SettlementsHistoryPage />
-              </RequireAdmin>
+              </Acceso>
             }
           />
           <Route
             path="/panel/rendiciones/:sellerId"
             element={
-              <RequireAdmin>
+              <Acceso>
                 <SettlementsScreen />
-              </RequireAdmin>
+              </Acceso>
             }
           />
           <Route
             path="/panel/asistencia"
             element={
-              <RequireAdmin>
+              <Acceso>
                 <AttendancePage />
-              </RequireAdmin>
+              </Acceso>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />

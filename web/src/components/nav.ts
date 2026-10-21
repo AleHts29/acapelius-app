@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, Mic2, Music, ScanLine, Ticket, Users, Wallet } from 'lucide-react'
+import { BarChart3, CalendarDays, Coins, Mic2, Music, ScanLine, Ticket, Users, Wallet } from 'lucide-react'
 
 import type { Role } from '../api/client'
 
@@ -6,8 +6,6 @@ export interface NavItem {
   to: string
   label: string
   icon: typeof Music
-  /** Color de la categoria cuando esta activa (design system §3.1). */
-  activeClass: 'on-blue' | 'on-ok' | 'on-ink'
   matches: (path: string) => boolean
   roles: Role[]
   /**
@@ -29,7 +27,6 @@ export const NAV_ITEMS: NavItem[] = [
     to: '/',
     label: 'Inicio',
     icon: Music,
-    activeClass: 'on-blue',
     matches: (p) => p === '/',
     roles: ['admin', 'seller'],
   },
@@ -38,7 +35,6 @@ export const NAV_ITEMS: NavItem[] = [
     // La pantalla es el listado; vender es una acción adentro (C16).
     label: 'Ventas',
     icon: Ticket,
-    activeClass: 'on-blue',
     matches: (p) => p.startsWith('/ventas'),
     roles: ['admin', 'seller'],
     badge: 'sales_pending',
@@ -47,15 +43,23 @@ export const NAV_ITEMS: NavItem[] = [
     to: '/puerta',
     label: 'Puerta',
     icon: ScanLine,
-    activeClass: 'on-ok',
     matches: (p) => p.startsWith('/puerta'),
     roles: ['admin', 'seller', 'door'],
+  },
+  {
+    // Lo que la corista tiene que rendir (C19 §7.1). Antes su acceso apuntaba
+    // a /panel/rendiciones, que es de dirección: rebotaba al inicio y nunca
+    // veía lo que debía.
+    to: '/mi-plata',
+    label: 'Mi plata',
+    icon: Coins,
+    matches: (p) => p.startsWith('/mi-plata'),
+    roles: ['seller'],
   },
   {
     to: '/direccion',
     label: 'Dirección',
     icon: BarChart3,
-    activeClass: 'on-ink',
     // En el celular esta pestaña cubre todo el panel: los destinos del segundo
     // nivel no tienen pestaña propia. En escritorio gana el más específico.
     matches: (p) =>
@@ -69,7 +73,6 @@ export const NAV_ITEMS: NavItem[] = [
     to: '/panel/rendiciones',
     label: 'Rendiciones',
     icon: Wallet,
-    activeClass: 'on-ink',
     matches: (p) => p.startsWith('/panel/rendiciones'),
     roles: ['admin'],
     section: 'direccion',
@@ -79,7 +82,6 @@ export const NAV_ITEMS: NavItem[] = [
     to: '/panel/asistencia',
     label: 'Asistencia',
     icon: Users,
-    activeClass: 'on-ink',
     matches: (p) => p.startsWith('/panel/asistencia'),
     roles: ['admin'],
     section: 'direccion',
@@ -88,7 +90,6 @@ export const NAV_ITEMS: NavItem[] = [
     to: '/temporadas',
     label: 'Temporadas',
     icon: CalendarDays,
-    activeClass: 'on-ink',
     matches: (p) => p.startsWith('/temporadas'),
     roles: ['admin'],
     section: 'direccion',
@@ -97,7 +98,6 @@ export const NAV_ITEMS: NavItem[] = [
     to: '/usuarios',
     label: 'Equipo',
     icon: Mic2,
-    activeClass: 'on-ink',
     matches: (p) => p.startsWith('/usuarios'),
     roles: ['admin'],
     section: 'direccion',
@@ -130,4 +130,27 @@ export function tabsFor(role: Role): NavItem[] {
 export function activeItem(items: NavItem[], path: string): NavItem | undefined {
   const coinciden = items.filter((item) => item.matches(path))
   return coinciden.find((item) => item.section !== undefined) ?? coinciden[0]
+}
+
+/**
+ * Quién entra a cada ruta, en un solo lugar: lo usan las rutas de la app
+ * (`<Acceso>`) y los tests. Gana el prefijo más largo; lo que no figura es de
+ * cualquiera con sesión. El backend aplica las mismas reglas a la API: esto
+ * sólo evita mostrar una pantalla que va a fallar.
+ */
+const ACCESO: Array<{ prefijo: string; roles: Role[] }> = [
+  { prefijo: '/direccion', roles: ['admin'] },
+  { prefijo: '/panel', roles: ['admin'] },
+  { prefijo: '/temporadas', roles: ['admin'] },
+  { prefijo: '/usuarios', roles: ['admin'] },
+  { prefijo: '/dev', roles: ['admin'] },
+  { prefijo: '/ventas', roles: ['admin', 'seller'] },
+  { prefijo: '/mi-plata', roles: ['seller'] },
+]
+
+export function puedeEntrar(role: Role, path: string): boolean {
+  const regla = ACCESO.filter((r) => path === r.prefijo || path.startsWith(`${r.prefijo}/`)).sort(
+    (a, b) => b.prefijo.length - a.prefijo.length,
+  )[0]
+  return regla === undefined || regla.roles.includes(role)
 }

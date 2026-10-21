@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, CopyPlus, Play } from 'lucide-react'
 
 import { ApiError, api } from '../api/client'
 import type { SeasonOverview } from '../api/client'
 import { calendarDaysUntil, dayAndMonthShort, formatMoney } from '../lib/format'
-import { ActionPanel } from '../ui/ActionPanel'
 import { DEPENDEN_DE_LA_TEMPORADA, NuevaTemporada } from '../season/NuevaTemporada'
-import { Menu } from '../ui/Menu'
-import { EmptyState, PageHead, ProgressBar } from '../ui/controls'
-
-/** Las claves que hay que refrescar cuando cambia cuál es la temporada en curso. */
+import { Button } from '../ui/Button'
+import { Card } from '../ui/Card'
+import { DataList } from '../ui/DataList'
+import { Figure } from '../ui/Figure'
+import { Modal } from '../ui/Modal'
+import { PageHeader } from '../ui/Page'
+import { FnTile } from '../ui/Tile'
 
 function rango(s: SeasonOverview): string {
   if (!s.first_at || !s.last_at) return 'Sin funciones'
@@ -49,94 +50,88 @@ function contexto(s: SeasonOverview): string {
   return `${funciones} · próxima en ${dias} días`
 }
 
-function Fila({
+function SeasonTile({ s, onClick }: { s: SeasonOverview; onClick: () => void }) {
+  const cerrada = estado(s) === 'cerrada'
+  const ocupacion = s.capacity > 0 ? Math.round((s.sold / s.capacity) * 100) : 0
+  const libres = Math.max(s.capacity - s.assigned, 0)
+  return (
+    <FnTile
+      label={`${anio(s)} · ${estado(s)}`}
+      date={s.name}
+      venue={rango(s)}
+      bar={{ value: s.sold, max: s.capacity, tone: cerrada ? 'ok' : undefined }}
+      quantity={
+        <>
+          {s.sold} <em>de {s.capacity} vendidas</em>
+        </>
+      }
+      aside={<span className="rs">{formatMoney(s.collected_cents)}</span>}
+      footer={
+        <>
+          <span className="rs">{contexto(s)}</span>
+          {/* Mientras se puede vender, lo que importa es lo que falta repartir;
+              en una cerrada, cómo terminó. */}
+          <span className="rs">{cerrada ? `${ocupacion}%` : libres > 0 ? `${libres} sin repartir` : ''}</span>
+        </>
+      }
+      on={s.is_active}
+      off={cerrada}
+      onClick={onClick}
+    />
+  )
+}
+
+function SeasonModal({
   s,
+  onClose,
   onVer,
   onUsar,
   onCopiar,
 }: {
   s: SeasonOverview
+  onClose: () => void
   onVer: () => void
   onUsar: () => void
   onCopiar: () => void
 }) {
-  const ocupacion = s.capacity > 0 ? Math.round((s.sold / s.capacity) * 100) : 0
-  const libres = Math.max(s.capacity - s.assigned, 0)
-  const cerrada = estado(s) === 'cerrada'
-
   return (
-    <article className={`seasonrow${s.is_active ? ' seasonrow--live' : ''}`}>
-      <div className="seasonrow__nm">
-        <div className="seasonrow__t">
-          <b>{s.name}</b>
-          <span className={`fntag${s.is_active ? ' fntag--live' : ''}`}>{estado(s)}</span>
-        </div>
-        <div className="seasonrow__v">{contexto(s)}</div>
+    <Modal
+      open
+      onClose={onClose}
+      label={`Temporada · ${estado(s)}`}
+      title={s.name}
+      sub={`${rango(s)} · ${contexto(s)}`}
+      footer={
+        <>
+          <Button onClick={onCopiar}>Crear otra a partir de esta</Button>
+          {!s.is_active && <Button onClick={onUsar}>Usar esta temporada</Button>}
+          <Button go onClick={onVer}>
+            Ver funciones
+          </Button>
+        </>
+      }
+    >
+      <div style={{ display: 'flex', gap: 'var(--s6)', flexWrap: 'wrap' }}>
+        <Figure label="Vendidas" unit={`/ ${s.capacity}`}>
+          {s.sold}
+        </Figure>
+        <Figure label="Recaudado" tone="ok">
+          {formatMoney(s.collected_cents)}
+        </Figure>
       </div>
-
-      <div className="seasonrow__dt">
-        <b>{rango(s)}</b>
-        <span>{anio(s)}</span>
-      </div>
-
-      <div className="seasonrow__prog">
-        <ProgressBar value={s.sold} max={s.capacity} tone={cerrada ? 'ok' : 'blue'} />
-        <div className="seasonrow__lg">
-          <span>
-            <b>{s.sold}</b>/{s.capacity} vendidas
-          </span>
-          {/* Mientras se puede vender, lo que importa es lo que falta
-              repartir; en una cerrada eso ya no se cambia, y lo que queda para
-              mirar es cómo terminó. */}
-          <span>{cerrada ? `${ocupacion}% de ocupación` : `${libres} sin asignar`}</span>
-        </div>
-      </div>
-
-      <div className="seasonrow__money">
-        <b>{formatMoney(s.collected_cents)}</b>
-        <span>Recaudado</span>
-      </div>
-
-      <div className="seasonrow__acts">
-        <button className="button button--ghost button--sm" type="button" onClick={onVer}>
-          Ver funciones
-        </button>
-        <Menu
-          trigger="kebab"
-          label={`Más opciones de ${s.name}`}
-          align="right"
-          groups={[
-            {
-              options: [
-                { id: 'ver', label: 'Ver funciones', icon: <CalendarDays size={15} />, onSelect: onVer },
-                {
-                  id: 'copiar',
-                  label: 'Crear una temporada a partir de esta',
-                  hint: 'Copia las funciones con su lugar, cupo y precio',
-                  icon: <CopyPlus size={15} />,
-                  onSelect: onCopiar,
-                },
-              ],
-            },
-            {
-              separated: true,
-              options: [
-                {
-                  id: 'usar',
-                  label: 'Usar esta temporada',
-                  hint: 'Pasa a ser la que muestran Inicio, Rendiciones y Dirección',
-                  icon: <Play size={15} />,
-                  tone: 'action',
-                  disabled: s.is_active,
-                  disabledReason: 'Ya es la temporada en curso',
-                  onSelect: onUsar,
-                },
-              ],
-            },
-          ]}
-        />
-      </div>
-    </article>
+      <DataList
+        rows={[
+          ['Funciones', String(s.functions)],
+          ['Coristas que vendieron', String(s.sellers)],
+          ['Cupo repartido', `${s.assigned} de ${s.capacity}`],
+        ]}
+      />
+      {!s.is_active && (
+        <p className="rs" style={{ whiteSpace: 'normal', margin: 0 }}>
+          Usarla la vuelve la temporada que muestran Inicio, Rendiciones y Dirección.
+        </p>
+      )}
+    </Modal>
   )
 }
 
@@ -148,6 +143,7 @@ export function SeasonsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const pedidaNueva = searchParams.get('nueva') === '1'
   const [creando, setCreando] = useState<{ copiarDe?: SeasonOverview } | null>(null)
+  const [abierta, setAbierta] = useState<SeasonOverview | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const { data, isPending } = useQuery({
@@ -181,58 +177,70 @@ export function SeasonsPage() {
 
   return (
     <>
-      <PageHead
+      <PageHeader
         title="Temporadas"
-        sub={
+        label={
           temporadas.length > 0
             ? `${temporadas.length} ${temporadas.length === 1 ? 'temporada' : 'temporadas'} · desde ${desde}`
             : undefined
         }
-        action={{ label: 'Nueva temporada', onClick: () => setCreando({ copiarDe: enCurso }) }}
+        actions={
+          <Button go onClick={() => setCreando({ copiarDe: enCurso })}>
+            Nueva temporada
+          </Button>
+        }
       />
 
       {error && (
-        <p className="alert" role="alert">
+        <p className="st st--bad" role="alert">
           {error}
         </p>
       )}
 
       {isPending ? (
-        <p className="muted">Cargando…</p>
+        <p className="rs">Cargando…</p>
       ) : temporadas.length === 0 ? (
-        <EmptyState icon={<CalendarDays size={20} />} title="Todavía no hay ninguna temporada">
-          Una temporada agrupa las funciones del año y todo lo que se calcula sobre ellas: lo
-          vendido, lo cobrado y lo que cada corista tiene que rendir.
-        </EmptyState>
+        <Card title="Todavía no hay ninguna temporada">
+          <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', whiteSpace: 'normal', margin: 0 }}>
+            Una temporada agrupa las funciones del año y todo lo que se calcula sobre ellas: lo
+            vendido, lo cobrado y lo que cada corista tiene que rendir.
+          </p>
+        </Card>
       ) : (
-        <>
-          <div className="slist">
+        <section className="grp">
+          <div className="grp__h">
+            <h2 className="lbl">Todas</h2>
+            <span className="grp__n">{temporadas.length}</span>
+          </div>
+          <div className="tiles tiles--3">
             {temporadas.map((s) => (
-              <Fila
-                key={s.id}
-                s={s}
-                onVer={() => navigate(`/temporadas/${s.id}`)}
-                onUsar={() => activar.mutate(s.id)}
-                onCopiar={() => setCreando({ copiarDe: s })}
-              />
+              <SeasonTile key={s.id} s={s} onClick={() => setAbierta(s)} />
             ))}
           </div>
-          <p className="slist__tip">
+          <p className="rs" style={{ whiteSpace: 'normal', marginTop: 'var(--s2)' }}>
             Las temporadas cerradas se conservan para consultar su historial de ventas, asistencia
             y rendiciones.
           </p>
-        </>
+        </section>
       )}
 
-      {creando && (
-        <ActionPanel label="Nueva temporada" size="form" onClose={() => setCreando(null)}>
-          <NuevaTemporada
-            copiarDe={creando.copiarDe}
-            enCurso={enCurso}
-            onClose={() => setCreando(null)}
-          />
-        </ActionPanel>
+      {abierta && (
+        <SeasonModal
+          s={abierta}
+          onClose={() => setAbierta(null)}
+          onVer={() => navigate(`/temporadas/${abierta.id}`)}
+          onUsar={() => {
+            activar.mutate(abierta.id)
+            setAbierta(null)
+          }}
+          onCopiar={() => {
+            setAbierta(null)
+            setCreando({ copiarDe: abierta })
+          }}
+        />
       )}
+
+      {creando && <NuevaTemporada copiarDe={creando.copiarDe} enCurso={enCurso} onClose={() => setCreando(null)} />}
     </>
   )
 }

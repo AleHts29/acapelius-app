@@ -1231,3 +1231,355 @@ los dos tokens de nivel 1 (`--line-head`, `--line-hero`), los `outline` de
 foco (accesibilidad, no borde) y `pages/entrada.css`, que es la entrada
 pública en lenguaje afiche, no una pantalla de la app. Nada más cambió:
 mismas pantallas, tipografía, radios y densidad; 56 tests verdes.
+
+## C19 · Fases 0 y 1 — tokens del sistema B y los once componentes
+
+**Contraste: el spec gana sobre los mockups, y lo medido gana sobre el
+spec.** Medí cada token de texto contra las tres superficies donde vive
+(papel, card, card2), no sólo contra la card:
+
+- `--ink3` claro pasa de `#7A7465` a **`#736D5F`**. El del spec da 4,7:1
+  sobre la card pero 4,1:1 sobre el papel y 4,4:1 sobre `--card2`, y ahí
+  viven `.lbl` (encabezado de grupo, sobre papel) y `.dl__k` (sobre card2).
+  El nuevo da 4,5 / 4,8 / 5,1.
+- `--ink3` oscuro pasa de `#8E887A` a **`#918B7C`**: el del spec da 4,4:1
+  sobre `--card2` oscuro.
+- **`--ticket-text`** (token nuevo): el naranja como texto. En claro es
+  `--ticket`; en oscuro `#EC6E4C` (5,5:1), porque `#C4401E` sobre `#211E1A`
+  da 3,2:1. Los rellenos naranjas siguen siendo `--ticket` en los dos modos.
+
+/dev/ui recalcula estos contrastes en vivo desde los tokens de cada modo.
+
+**La excepción 1 de §3.1 es un token, no una regla por modo.**
+`--card-edge` vale `none` en claro y `0 0 0 1px var(--hair)` en oscuro, y
+`.card, .tile, .fn` lo leen. Mismo resultado que el CSS del spec, pero
+funciona en los tres caminos al modo oscuro (elegido, del sistema, y un
+`[data-theme]` anidado, que es lo que usa /dev/ui para mostrar los dos modos
+lado a lado).
+
+**Los tokens se declaran sobre `:root` y sobre `[data-theme]`.** En la app
+sólo `<html>` lleva el atributo; el selector extra deja que un bloque
+anidado cambie de modo. Los alias de C18 (`--paper2`, `--line-*`,
+`--font-*`, `--hero-*`…) quedan en un bloque marcado LEGADO para que las
+pantallas sin migrar sigan andando; la fase 8 lo borra entero.
+
+**Nombres que ya existían, renombrados del lado viejo** (el caso `.dim` de
+§11): `.card` del formulario de contraseña → `.authcard`; `.sheet` del
+ActionPanel → `.asheet`; `.door__counter .st` → `.door__st`. Así `.card`,
+`.sheet` y `.st` quedan libres para el sistema nuevo. `.verdict` también
+existe y se resuelve en la fase 7, cuando se reemplaza la puerta.
+
+**Clases muertas: 64, no 100.** El grep de §8.1 da por muertas las clases
+que se arman con template literal (`chip--${tone}`, `sheet-act--${tone}`…).
+`web/scripts/dead-css.mjs` (`npm run css:dead`) reconoce esos prefijos;
+las 36 de diferencia están vivas y se van con su familia.
+
+**El popup y la hoja van en z-index 80**, no en 50: la tab bar y la lateral
+viven en 60 y quedarían encima del scrim.
+
+**Hoja y drawer llevan cabecera propia** (`.sheet__h/__t/__s/__acts`,
+`.drawer__x/__t/__s/__acts`), tomada de `acapelius-B-referencia.html`: el
+§4.13 sólo define el contenedor.
+
+**`useDialog`**: el foco atrapado, Esc, el bloqueo de scroll y la vuelta del
+foco salieron del ActionPanel a un hook. Lo usan el ActionPanel, el popup,
+la hoja y el drawer; no hay una segunda implementación.
+
+**El segmented es un radiogroup de `<button>`**, no de `<b>` como el
+mockup: tiene que poder operarse con teclado y anunciar cuál está elegido.
+
+**El CSS del sistema nuevo va compacto, una regla por línea**, como lo trae
+el spec. El de C18 queda en su formato hasta que se borre.
+
+## C19 · Fase 2 — Equipo
+
+**Tarjetas y popup; los formularios no cambian.** Coristas, dirección y
+puerta, y temporadas anteriores van en `.tile`. El clic abre el popup
+(corista: Debe / Vendió, cupo función por función, cobró, ya rindió, última
+rendición, cortesías; dirección y puerta: último ingreso, escaneos). Sumar y
+editar siguen siendo el ActionPanel de siempre: salieron a
+`pages/UserForms.tsx` sin cambios. `UsersPage.tsx` baja de 1.061 a ~710
+líneas; los ~350 de formularios se mudaron, no se borraron.
+
+**Datos, todos derivados de endpoints que ya existían** (§10): el cupo por
+función sale del tablero de cada función (`/functions/{id}/allocations`,
+la misma query que usa el editor); la última rendición, de
+`/settlements?season_id=` agrupado por corista; las cortesías, del resumen
+de `/sales?seller_id=`. No hay tope de cortesías modelado: se muestran sólo
+las usadas.
+
+**Lo que hacía la lista vieja y ahora vive en el popup.** "Sacar de la
+temporada" (antes sólo desde la selección múltiple) va en "Cuenta", con
+doble toque para confirmar; reenviar la invitación y resetear la clave
+siguen en "Datos y acceso". Reincorporar a alguien de otra temporada se hace
+desde su tarjeta. Se van el buscador, los filtros y la selección múltiple:
+el mockup no los tiene y en un equipo de una docena de personas la grilla
+se lee entera.
+
+**"Cambiar cupo" y "Repartir cupos" abren el mismo popup**: elegir la
+función y, adentro, el `AllocationsEditor`. El editor conserva su piel de
+C18 hasta la fase 3, que lo comparte con Temporadas.
+
+**`.pgh` / `.pgt` / `PageHeader`**: el encabezado de página que el spec
+nombra en §5 pero no está entre los once componentes. **`SubFigs`** suma
+`unit` ("/ 255") y `tone: 'warn'` para las subcifras que piden atención.
+
+**Copy**: el porcentaje y la fecha de la última rendición de la tarjeta van
+en `.rs`, no en `.lbl` como en el mockup: son metadatos, y §4.1 deja las
+mayúsculas sólo para etiquetas.
+
+## C19 · Fase 3 — Temporadas
+
+**Funciones y temporadas en tarjeta, con popup.** El detalle de una
+temporada agrupa sus funciones en "Vienen" y "Ya pasaron" (`.fn`, la fecha
+en Anton). El popup de función trae Vendidas / Recaudado, el cupo por
+corista con su barra y la banda "Sin repartir · N" (sólo si la función no
+pasó), y capacidad, precio, cortesías usadas y anuladas, las dos últimas
+del resumen de `/sales?function_id=` (con `status=void` para las anuladas).
+El índice de temporadas y su alta se conservan: cada temporada es una
+tarjeta, la en curso en negro (`.fn--on`), y el popup lleva lo que antes
+estaba en el ⋮ ("Usar esta temporada", "Crear otra a partir de esta").
+
+**Lo que estaba en el ⋮ de cada función** (duplicar, ver asistencia,
+cancelar) pasa a un grupo "Más" dentro del popup. Cancelar con ventas
+aparece apagado y dice por qué. El formulario de función (crear, editar,
+duplicar) y la confirmación de cancelar no cambian.
+
+**Agotada** (§4.9): la fecha grande dice AGOTADA y la fecha pasa a la
+etiqueta ("Sábado 12 dic · en 3 días"), para no perderla.
+
+**"Cambiar temporada" usa el `Menu` existente** con un disparador nuevo,
+`trigger="btn"`, que toma la forma de `.btn`. Nunca un `<select>`.
+
+**`AllocationsEditor` pasa al sistema B** (lo comparten Equipo, Temporadas y
+Dirección): una barra de cuánto se repartió, el estado ("Sin repartir · N",
+"Te pasaste por N") con `.st`, una fila por corista con el stepper, y el
+botón de guardar. Misma lógica, mismas invalidaciones. El stepper pierde el
+borde: fondo `--sunk` y radio `--rc`, como el segmented. "Repartir cupos"
+es un componente compartido (`components/RepartirModal.tsx`).
+
+**`.modal__b > *` y `.drawer > *` no se achican.** `.dl` y `.mini` llevan
+`overflow: hidden`, y adentro de una columna flex que scrollea eso los
+dejaba cortados en lugar de hacer scroll. Se veía en los popups largos.
+
+**`Row warn`** (banda `--warn-soft`) y **`SubFigs tone="ok"`** ("Si se vende
+todo") se suman a los componentes; los pide el mockup.
+
+## C19 · Fase 4 — Ventas
+
+**Una función por vez.** Arriba, la tira de funciones (`.fn`, la elegida en
+negro, AGOTADA en lugar de "80 / 80"); abajo, en la grilla asimétrica, las
+ventas de esa función y "Quién vendió". La función elegida vive en la URL
+(`?fn=`), así que los links de Temporadas y Dirección siguen cayendo en la
+función correcta. Sin `?fn=`, se abre la próxima (o la última, si ya
+pasaron todas).
+
+**La lista muestra 5 filas y "Ver todas"**; con todas a la vista, "Cargar
+más" trae la página siguiente. Las filas son de dos líneas: comprador y
+"corista · N entradas". El resto (mail, cobros, ingreso, link) va al
+detalle. En celular el monto pasa a la segunda línea (`row--2`, como el
+mockup).
+
+**Buscar es por toda la temporada**, no sólo la función elegida: quien
+busca a un comprador no siempre sabe a qué función fue. Con búsqueda, la
+fila suma el día de la función.
+
+**"Quién vendió"** sale del tablero de cupos de la función (vendidas sobre
+asignadas por corista), ordenado por vendidas. Tocar una corista filtra la
+lista por ella; reemplaza al menú "Todas las vendedoras". El pie "Sin
+repartir · N" abre el reparto de esa función (sólo si no pasó).
+
+**El detalle de una venta es un drawer en escritorio y una hoja en
+celular**, no el popup: se trabaja la lista de corrido (§4.10). Conserva
+todos los flujos del sheet anterior: cobrar en efectivo o transferencia,
+cobrar una parte, ver y quitar cobros, volver a pendiente, copiar el link,
+reenviar el QR, ver la entrada y anular (con doble toque).
+
+**Lo que se fue, a confirmar con Eli:** la selección múltiple (cobrar,
+reenviar y exportar en lote), el orden por columnas y las acciones rápidas
+por fila (Cobrar, Reenviar, Copiar link, el ⋮). El mockup no las tiene y la
+fila de dos líneas no tiene dónde ponerlas. Cada una sigue existiendo de a
+una venta en el detalle; "Exportar" queda en el encabezado (escritorio,
+dirección) y baja el CSV de lo que se está mirando.
+
+**Columnas de la fila: monto 96px, estado 108px** (no 88): "Pagó (transf.)"
+y "Debe $ 16.000" no entran en 88 a 11,5px. El orden es el del mockup:
+monto, estado, chevron.
+
+**Filtro "Anuladas"** en el segmented (`status=void`, que el backend ya
+aceptaba).
+
+## C19 · Fase 5 — Asistencia
+
+**Talón en vivo, faltantes a la derecha, registro abajo.** El talón tiene
+el contador (`aria-live`), "Entrando ahora · N / min" (los últimos 5
+minutos, sólo durante la función), el ritmo y el pie con pico, faltan y
+cortesías. Todo se deriva en el cliente de los check-ins que ya trae
+`/reports/attendance` (§10): el ritmo con `lib/rhythm.ts`, que tiene su
+test. La ventana del ritmo es una hora antes y una después del horario de
+la función; quien entró antes o después cuenta en el tramo del borde.
+
+**"En vivo" sólo dentro de esa ventana.** Fuera de ella el encabezado dice
+"Fuera de horario" y el ritmo no tiene tramo "ahora". La pantalla se
+refresca cada 15 segundos igual, como antes.
+
+**"Marcar" pasa por la puerta.** El ingreso manual tiene su flujo (snapshot
+en IndexedDB, cola idempotente, §11: no se toca) y no se duplica en
+Asistencia. "Marcar" lleva a `/puerta/:id?buscar=<nombre>`, y la puerta
+arranca la búsqueda con ese nombre: en escritorio queda listo para Enter;
+en el celular se abre la hoja de búsqueda. Es el único cambio en
+`DoorModePage` en esta fase.
+
+**El registro agrupa:** las entradas de una compra que entraron en el
+mismo minuto con la misma persona en la puerta son un renglón ("2
+entradas"). Tocarlo abre el detalle entrada por entrada (quién, a qué hora,
+escaneo o manual), que antes era el panel de la derecha.
+
+**El botón "Marcar" no es `.btn--go`**: hay uno por faltante y §4.7 permite
+un solo `.btn--go` por pantalla. El mockup lo pinta naranja; manda el spec.
+
+**Sin "Exportar"** (el mockup lo tiene): no hay endpoint de exportación de
+asistencia y §10 dice omitir lo que no existe.
+
+## C19 · Fase 6 — Inicio, Dirección y Rendiciones
+
+**Una cifra grande por pantalla, y cada una distinta.** Inicio de
+dirección: "Falta cobrar" (lo que deben los compradores) con Recaudado,
+Vendidas e Ingresaron; Inicio de la corista: "Tenés que rendir" con
+Cobraste, Ya rendiste y Te quedan para vender. Rendiciones: "Sin rendir".
+Dirección queda como pantalla aparte (§5.6 pide evaluarlo) pero no repite
+Inicio: su cifra es "Vendido en la temporada" con dónde está esa plata (en
+tu poder, sin rendir, sin cobrar), y suma "Quién todavía debe", cómo rindió
+cada función (con la comparación completa en el popup) y lo que hay que
+mirar. La próxima función y "falta cobrar" son de Inicio.
+
+**La plata de Inicio sale de `/reports/direccion`**, la misma que usa
+Dirección: el endpoint de la home no la trae y §10 dice derivar antes que
+agregar backend.
+
+**§7.2 no aplica: la tarjeta "Administración" no existe en este repo**, ni
+en Dirección ni en ningún otro lado. El spec parece escrito contra otra
+versión. Nada que borrar.
+
+**Rendiciones es una sola pantalla con drawer.** `/panel/rendiciones/:id`
+abre la lista con el detalle de esa corista al costado (o desde abajo en el
+celular), así los links de Equipo, Inicio y los mails siguen funcionando.
+Cerrar vuelve a `/panel/rendiciones`. Se va el master-detail de dos
+columnas y el panel "Sin selección": su ranking es la lista misma, ordenada
+por deuda, y sus dos acciones ("Recordar a las N", con confirmación, y
+"Exportar") pasan al pie de "Con deuda". El historial pasa a grupos por día
+con el filtro de corista en un `Menu`.
+
+**Registrar una rendición es un popup** (se abre sobre el drawer o desde
+Inicio): mismo monto precargado con la deuda, "Todo / Otra cifra" y el
+método en segmented, la nota, y la línea "queda al día / le van a quedar".
+
+**Diálogos apilados.** `useDialog` lleva una pila: con el registro abierto
+sobre el drawer, Esc cierra sólo el de arriba. Y corrige un bug que venía
+del ActionPanel: con StrictMode (desarrollo), el montar-desmontar-montar
+devolvía el foco detrás del diálogo recién abierto. Ahora el foco vuelve
+sólo si el diálogo de verdad se cerró.
+
+**El drawer tiene cuerpo con scroll y acciones fijas abajo**: con una
+deuda de muchas ventas, "Registrar rendición" quedaba al final del scroll.
+
+**Lo que salió de Inicio:** "La temporada" / "Tu cupo por función" (la
+lista lateral de funciones con barras). No está en el mockup; las funciones
+viven en Ventas y en Temporadas.
+
+## C19 · Fase 7 — Puerta, celular y Mi plata
+
+**§7.1 — Mi plata.** Pestaña propia de la corista (`/mi-plata`, fuera de
+lo de dirección): cifra "Tenés que rendir", cobraste / ya rendiste, "De
+dónde sale" y "Ya rendiste". Todo de endpoints que la corista ya puede leer
+y que el backend acota a lo suyo: `/home` (`my_settlement`), `/sales?mine=1`
+(las ventas con algo cobrado: la misma regla que `SellerDebtSources`) y
+`/settlements`. El detalle de rendición de dirección
+(`/settlements/{id}/detail`) sigue siendo sólo de admin. La cifra dice
+"Tenés que rendir" y no "Le tenés que dar a Eli": la app no conoce el
+nombre de quien dirige.
+
+**Quién entra a cada ruta, en un solo lugar.** `puedeEntrar(rol, ruta)` en
+`components/nav.ts`; las rutas lo usan con `<Acceso>` (reemplaza a
+`RequireAdmin` y `RequireSeller`) y los tests también. El test de §7.1
+recorre todos los ítems de navegación de cada rol y verifica que ninguno
+lleve a una pantalla que rebota: es el bug de "Mi rendición", como regla.
+
+**Navegación (§6).** La lateral va sobre el papel, sin borde; el ítem
+activo es una card; el contador va en mono naranja; el segundo nivel se
+llama "Administración" con `.lbl`. La barra del celular, blanca, con la
+pestaña activa en naranja. El selector de temporada y el de tema usan los
+controles nuevos (`Menu trigger="btn"`, segmented).
+
+**Puerta.** Celular: talón compacto con el contador (`aria-live`), visor,
+y dos botones de 52px ("Buscar por nombre" / "Escanear", el único
+naranja). Escritorio: el talón y la mesa de búsqueda a la izquierda,
+"Últimos ingresos" y "Quién está en la puerta" (derivado de los check-ins)
+a la derecha. Veredictos a pantalla completa, radio 0, con colores propios
+(`--verdict-ok/--verdict-bad`) que no cambian en oscuro. Sin conexión: el
+estado en el encabezado y la banda `--warn-soft` "Seguí escaneando", con
+cuántos ingresos esperan para subir. **La lógica no se tocó**: cámara,
+snapshot en IndexedDB, cola idempotente, intentos y wake lock son los
+mismos; cambió sólo el marcado. Probado marcando ingresos reales en el demo
+local.
+
+**El modo nocturno es el modo oscuro de los tokens**, aplicado sólo al
+contenedor de la puerta (`data-theme`), y sólo en el celular: en la mesa de
+escritorio manda el modo de la app. Se van todas las reglas `.night`.
+
+**"Dejarla pasar igual" no está** (el spec lo pone en el veredicto de "ya
+usada"): ni el store ni el backend lo soportan, y sería una feature nueva.
+
+**Un solo "Escanear" en pantalla**: el visor apagado ya no lleva su propio
+botón, sólo explica cómo prenderlo.
+
+**Nueva venta (celular)** sigue el mockup: función, comprador, cantidad con
+el total en vivo y el botón ancho abajo. Los campos y el `Menu` de función
+conservan la piel de C18 hasta la fase 8, que barre los formularios.
+
+## C19 · Fase 8 — Barrido final
+
+**Números.** `styles.css`: 7.256 → **612 líneas**. Clases definidas: 555 →
+**184** contando elementos y modificadores BEM (68 bloques). Clases muertas:
+0 (`npm run css:dead`). Tests: 56 → 67, todos verdes. El objetivo del spec
+eran ~2.000 líneas: el sistema nuevo va compacto, una regla por línea, como
+lo trae el propio spec.
+
+**Se fue C18 entero.** El bloque de alias de tokens (`--paper2`, `--line-*`,
+`--font-*`, `--hero-*`, `--night-*`…): nada lo lee. `ActionPanel`,
+`StatusChip` y `controls.tsx` (el `Stepper`, lo único vivo, pasa a
+`ui/Stepper.tsx`). Los triggers `pill` y `kebab` de `Menu`. Las clases que
+el script daba por vivas sólo porque su nombre aparecía como palabra en el
+código (`panel`, `hero`, `list`, `find`, `dot`…) se borraron a mano.
+
+**Todos los diálogos son el popup del sistema.** Sumar y editar persona,
+crear/editar/duplicar función, cancelar función, nueva temporada (con su
+paso de equipo) y nueva venta en escritorio. Mismos campos, mismas
+validaciones, mismas mutaciones e invalidaciones. Las acciones que eran
+filas del ActionPanel (reenviar invitación, resetear clave, desactivar)
+son filas del popup.
+
+**Formularios.** `.field__input` es una superficie hundida sin borde, como
+el buscador, a 16px: con menos, iOS hace zoom al enfocar (lo mismo para
+`.search` en el celular). Los rótulos de campo son `.lbl`. `.alert` (error)
+y `.banner` (aviso, `--warn-soft`) reemplazan a los avisos con borde;
+`.note` es el texto secundario de párrafo, el que sí puede cortarse en
+líneas (`.rs` es de una sola línea, para las filas).
+
+**Los títulos no traen estilo propio.** La regla global `h1, h2, h3` de
+C18 los hacía Anton en mayúsculas; ahora es un reset y el estilo lo pone
+la clase. La entrada pública define los suyos en `entrada.css`.
+
+**Bug arreglado:** el aviso flotante de Equipo se cerraba con
+`onAnimationEnd`, y con prefers-reduced-motion la animación no corre: el
+aviso no se iba nunca. Ahora lo cierra un temporizador.
+
+**Auditoría.** Mayúsculas: sólo `.lbl`, el sello del veredicto (§4.14) y
+la barra de la demo (el lenguaje de la landing, C17 §C). Bordes: sólo el
+divisor `--hair` (pies de card, de tarjeta y de popup, el pie del talón) y
+la regla negra del grupo (§4.3). Los tamaños de letra que no son token son
+los que el CSS del spec escribe a mano (12,5px en fila y botón, 24px del
+talón, 25px de la fecha, 26px del popup…).
+
+**Pendiente, fuera de C19:** `docs/DESIGN_SYSTEM.md` y `docs/ui-inventory.md`
+describen C18; la referencia vigente es `docs/C19_SPEC.md` más este archivo.

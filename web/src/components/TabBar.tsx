@@ -24,7 +24,6 @@ export function TabBar({ role }: { role: Role }) {
             <Link
               key={tab.to}
               to={tab.to}
-              className={active ? tab.activeClass : ''}
               aria-current={active ? 'page' : undefined}
             >
               <Icon size={19} strokeWidth={active ? 2.4 : 2} aria-hidden />

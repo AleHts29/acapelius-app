@@ -3,12 +3,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api } from '../api/client'
 import type { ShowFunction } from '../api/client'
-import { StackedBar, Stepper } from '../ui/controls'
+import { Button } from '../ui/Button'
+import { Stepper } from '../ui/Stepper'
+import { Row } from '../ui/Row'
+import { Status } from '../ui/Status'
 
 /**
- * Tablero de asignacion de cupos de una funcion (C8, mockup
- * acapelius-usuarios-cupos pantallas 3-4): barra apilada vendidas /
- * asignadas / sin asignar, una fila por corista activa con stepper, y
+ * Tablero de asignacion de cupos de una funcion (C8; sistema B en C19):
+ * cuánto se repartió del cupo, una fila por corista activa con stepper, y
  * guardado en batch. El "−" se frena en lo ya vendido.
  */
 export function AllocationsEditor({ fn }: { fn: Pick<ShowFunction, 'id' | 'capacity'> }) {
@@ -42,12 +44,12 @@ export function AllocationsEditor({ fn }: { fn: Pick<ShowFunction, 'id' | 'capac
       setError(err instanceof ApiError ? err.message : 'No se pudieron guardar las asignaciones.'),
   })
 
-  if (board.isPending) return <p className="muted">Cargando coristas…</p>
-  if (!board.data) return <p className="alert">No se pudo cargar el tablero.</p>
+  if (board.isPending) return <p className="rs">Cargando coristas…</p>
+  if (!board.data) return <p className="st st--bad">No se pudo cargar el tablero.</p>
 
   const rows = board.data.allocations
   if (rows.length === 0) {
-    return <p className="muted">No hay coristas activas para asignar.</p>
+    return <p className="rs">No hay coristas activas para asignar.</p>
   }
 
   const value = (userId: number, assigned: number) => drafts[userId] ?? assigned
@@ -60,56 +62,57 @@ export function AllocationsEditor({ fn }: { fn: Pick<ShowFunction, 'id' | 'capac
   const overCapacity = totalAssigned > fn.capacity
 
   return (
-    <div className="team-edit">
-      <StackedBar
-        label={`${totalSold} vendidas, ${totalAssigned - totalSold} asignadas sin vender, ${unassigned} sin asignar`}
-        total={fn.capacity}
-        segments={[
-          { value: totalSold, tone: 'ok' },
-          { value: Math.max(totalAssigned - totalSold, 0), tone: 'blue' },
-          { value: unassigned, tone: 'line' },
-        ]}
-      />
-      <p className="eyebrow" style={{ margin: '6px 0 4px', color: overCapacity ? 'var(--danger)' : undefined }}>
-        {overCapacity
-          ? `Te pasaste por ${totalAssigned - fn.capacity} del cupo de ${fn.capacity}`
-          : `Quedan ${unassigned} sin asignar · cupo ${fn.capacity}`}
-      </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>
+      <div>
+        <div className="tile__meta">
+          <span className="tile__q">
+            {totalAssigned} <em>de {fn.capacity} repartidas · {totalSold} vendidas</em>
+          </span>
+          {overCapacity ? (
+            <Status tone="bad">Te pasaste por {totalAssigned - fn.capacity}</Status>
+          ) : unassigned > 0 ? (
+            <Status tone="warn">Sin repartir · {unassigned}</Status>
+          ) : (
+            <Status tone="ok">Repartida</Status>
+          )}
+        </div>
+        <div className="tile__bar" aria-hidden>
+          <i className={overCapacity ? 'tk' : undefined} style={{ width: `${Math.min(100, (totalAssigned / fn.capacity) * 100)}%` }} />
+        </div>
+      </div>
 
       {error && (
-        <p className="alert" role="alert">
+        <p className="st st--bad" role="alert">
           {error}
         </p>
       )}
 
-      {rows.map((row) => {
-        const current = value(row.user_id, row.assigned)
-        return (
-          <div key={row.user_id} className="alloc-row">
-            <span>
-              {row.seller_name}
-              <br />
-              <span className="muted" style={{ fontSize: 11 }}>
-                Vendió {row.sold} de {current}
-              </span>
-            </span>
-            <Stepper
-              value={current}
-              min={row.sold}
-              onChange={(n) => setDrafts({ ...drafts, [row.user_id]: n })}
-              maxReason={undefined}
+      <div className="mini">
+        {rows.map((row) => {
+          const current = value(row.user_id, row.assigned)
+          return (
+            <Row
+              key={row.user_id}
+              title={row.seller_name}
+              sub={`Vendió ${row.sold} de ${current}`}
+              status={
+                <Stepper
+                  value={current}
+                  min={row.sold}
+                  onChange={(n) => setDrafts({ ...drafts, [row.user_id]: n })}
+                />
+              }
             />
-          </div>
-        )
-      })}
-      <p className="muted" style={{ margin: '6px 0 0', fontSize: 10.5 }}>
+          )
+        })}
+      </div>
+      <p className="rs" style={{ whiteSpace: 'normal', margin: 0 }}>
         El − se frena en lo ya vendido: no podés bajar un cupo por debajo de eso.
       </p>
 
-      <button
-        className="button"
-        style={{ marginTop: 10 }}
-        type="button"
+      <Button
+        go
+        wide
         disabled={!dirty || overCapacity || save.isPending}
         onClick={() =>
           save.mutate(
@@ -120,8 +123,8 @@ export function AllocationsEditor({ fn }: { fn: Pick<ShowFunction, 'id' | 'capac
           )
         }
       >
-        {save.isPending ? 'Guardando…' : saved ? 'Guardado ✓' : 'Guardar asignaciones'}
-      </button>
+        {save.isPending ? 'Guardando…' : saved ? 'Guardado' : 'Guardar el reparto'}
+      </Button>
     </div>
   )
 }
