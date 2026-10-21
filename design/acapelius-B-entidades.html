@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acapelius B · v2 — entidades en card, transacciones en fila</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F2F0E9; --card:#FFF; --card2:#FAF8F2; --hair:#E8E4DA; --sunk:rgba(26,26,24,.045);
+  --ink:#1A1A18; --ink2:#6B665B; --ink3:#97917F; --black:#141414;
+  --ticket:#C4401E; --ok:#1E6B4A; --warn:#8A5A08; --bad:#A32D2D; --indigo:#3A3FC4;
+  --r:8px; --rc:5px;
+  --s1:8px; --s2:12px; --s3:16px; --s4:20px; --s5:28px; --s6:40px;
+  --fd:'Anton',Impact,sans-serif; --fm:'JetBrains Mono',ui-monospace,monospace; --fb:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fb);background:#EAE7DE;color:var(--ink);font-size:13.5px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:80px}
+
+/* ---------- documento ---------- */
+.doc-top{background:var(--black);color:#F4F1EA;padding:28px 32px;border-bottom:4px solid var(--ticket)}
+.doc-top h1{font-family:var(--fd);font-size:38px;line-height:1}
+.doc-top p{font-family:var(--fm);font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:rgba(244,241,234,.6);margin-top:8px}
+.doc-wrap{max-width:1340px;margin:0 auto;padding:0 24px}
+.doc-sec{margin-top:52px}
+.doc-k{font-family:var(--fm);font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--ticket);margin-bottom:8px}
+.doc-h{font-family:var(--fd);font-size:25px;line-height:1.1}
+.doc-p{max-width:72ch;color:var(--ink2);margin:13px 0;font-size:14px}
+.doc-p b{color:var(--ink);font-weight:600}
+.doc-frame{background:var(--paper);border-radius:var(--r);overflow:hidden;margin-top:16px}
+.doc-scroll{overflow-x:auto}
+.doc-hint{display:none;font-family:var(--fm);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ticket);margin:10px 0}
+@media(max-width:1240px){.doc-hint{display:block}}
+.doc-note{background:var(--card);border-radius:var(--r);padding:16px 18px;margin:18px 0;max-width:74ch;color:var(--ink2);border-left:3px solid var(--ticket);font-size:14px}
+.doc-note b{color:var(--ink);font-weight:600}
+.rule2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+@media(max-width:900px){.rule2{grid-template-columns:1fr}}
+.rule2 > div{background:var(--card);border-radius:var(--r);padding:var(--s4)}
+.rule2 h4{font-family:var(--fd);font-size:19px;margin-bottom:6px}
+.rule2 p{font-size:13.5px;color:var(--ink2)}
+
+/* ---------- piezas base ---------- */
+.lbl{font-family:var(--fm);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.15em;color:var(--ink3)}
+.card{background:var(--card);border-radius:var(--r);overflow:hidden}
+.card__h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2);padding:var(--s2) var(--s3) var(--s1)}
+.card__t{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.card__a{font-size:12px;font-weight:600;color:var(--ticket);text-decoration:none}
+.card__f{display:flex;justify-content:space-between;align-items:center;padding:9px var(--s3);font-size:11.5px;color:var(--ink3);border-top:1px solid var(--hair)}
+.card__f a{color:var(--ticket);font-weight:600;text-decoration:none}
+.grp{margin-bottom:var(--s4)}
+.grp__h{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s2);padding-bottom:7px;border-bottom:1px solid var(--ink)}
+.grp__n{font-family:var(--fm);font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.grp .card{border-radius:0 0 var(--r) var(--r)}
+.row{display:grid;grid-template-columns:1fr 96px 88px 14px;align-items:center;gap:var(--s2);padding:9px var(--s3);text-decoration:none;color:inherit;position:relative}
+.row+.row:before{content:"";position:absolute;top:0;left:var(--s3);right:var(--s3);height:1px;background:var(--hair)}
+.row:hover{background:var(--sunk)}
+.row--2{grid-template-columns:1fr auto 14px}
+.row--3{grid-template-columns:1fr auto}
+.rt{font-size:13.5px;font-weight:500;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs{font-size:11.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rn{font-family:var(--fm);font-size:12.5px;font-weight:500;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.st{font-size:11.5px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.st i{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+.st--ok{color:var(--ok)} .st--warn{color:var(--warn)} .st--bad{color:var(--bad)} .st--cor{color:var(--indigo)} .st--mute{color:var(--ink3)}
+.go{color:var(--ink3);font-size:13px;opacity:.6;text-align:right}
+.row--dim{opacity:.45}
+.fig{font-family:var(--fd);font-size:36px;line-height:1}
+.fig--ok{color:var(--ok)} .fig--warn{color:var(--warn)}
+.fig span{font-family:var(--fb);font-size:15px;font-weight:400;color:var(--ink3)}
+.subfigs{display:flex;gap:var(--s6);flex-wrap:wrap}
+.subfig b{font-family:var(--fm);font-size:16px;font-weight:500;display:block;font-variant-numeric:tabular-nums}
+.subfig .lbl{display:block;margin-top:2px}
+.btn{font-size:12.5px;font-weight:600;padding:8px 15px;border:0;border-radius:var(--rc);background:var(--sunk);color:var(--ink);text-decoration:none;display:inline-block;cursor:pointer}
+.btn--go{background:var(--ticket);color:#fff}
+.search{flex:1;background:var(--sunk);border-radius:var(--rc);padding:8px 11px;font-size:12.5px;color:var(--ink3);min-width:180px}
+.seg{display:flex;gap:1px;background:var(--sunk);border-radius:var(--rc);padding:2px}
+.seg b{font-size:11.5px;font-weight:500;color:var(--ink2);padding:5px 11px;border-radius:4px;white-space:nowrap}
+.seg b.on{background:var(--card);color:var(--ink);font-weight:600}
+.bar{display:flex;gap:var(--s1);align-items:center;margin-bottom:var(--s4);flex-wrap:wrap}
+.heel{background:var(--black);color:#F4F1EA;padding:var(--s4);border-radius:0}
+.heel .lbl{color:rgba(244,241,234,.5)}
+.dl{background:var(--card2);border-radius:var(--r);overflow:hidden}
+.dl__r{display:flex;justify-content:space-between;gap:var(--s3);padding:9px var(--s3);font-size:12.5px;position:relative}
+.dl__r+.dl__r:before{content:"";position:absolute;top:0;left:var(--s3);right:var(--s3);height:1px;background:var(--hair)}
+.dl__k{color:var(--ink3)}
+.dl__v{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ---------- shell ---------- */
+.sh{display:grid;grid-template-columns:208px 1fr;min-height:640px;background:var(--paper);min-width:1040px;position:relative}
+.sh__nav{padding:var(--s4) var(--s2)}
+.brand{font-family:var(--fd);font-size:17px;letter-spacing:.06em;padding:0 var(--s2) var(--s4)}
+.nav-i{display:flex;align-items:center;gap:10px;padding:7px var(--s2);border-radius:var(--rc);font-size:13px;font-weight:500;color:var(--ink2);text-decoration:none;margin-bottom:1px}
+.nav-i.on{background:var(--card);color:var(--ink);font-weight:600}
+.nav-i b{margin-left:auto;font-family:var(--fm);font-size:10px;font-weight:700;color:var(--ticket)}
+.nav-g{padding:var(--s4) var(--s2) 6px}
+.sh__main{padding:var(--s4) var(--s5) var(--s5);min-width:0}
+.pgh{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s4)}
+.pgt{font-family:var(--fd);font-size:29px;line-height:1}
+.asym{display:grid;grid-template-columns:1.75fr 1fr;gap:var(--s4);align-items:start}
+.stack{display:flex;flex-direction:column;gap:var(--s4)}
+
+/* ======================================================================
+   NUEVO · LA TARJETA DE ENTIDAD
+   ====================================================================== */
+.tiles{display:grid;gap:var(--s2)}
+.tiles--3{grid-template-columns:repeat(3,1fr)}
+.tiles--4{grid-template-columns:repeat(4,1fr)}
+.tiles--5{grid-template-columns:repeat(5,1fr)}
+
+.tile{background:var(--card);border-radius:var(--r);padding:var(--s3);text-decoration:none;color:inherit;display:block;position:relative}
+.tile:hover{background:var(--card2)}
+.tile__top{display:flex;align-items:flex-start;gap:10px;margin-bottom:var(--s2)}
+/* iniciales en cuadrado, no círculo: el círculo es el gesto social de Apple */
+.mono-sq{width:34px;height:34px;border-radius:var(--rc);background:var(--sunk);color:var(--ink2);
+         display:grid;place-items:center;font-family:var(--fm);font-size:11.5px;font-weight:700;flex:none}
+.tile__n{font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile__r{font-size:11.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* la barra de progreso de la tarjeta: cuatro píxeles que cuentan la historia */
+.tile__bar{height:4px;background:var(--sunk);margin:var(--s2) 0 7px;overflow:hidden}
+.tile__bar i{display:block;height:100%;background:var(--ink)}
+.tile__bar i.ok{background:var(--ok)} .tile__bar i.tk{background:var(--ticket)}
+.tile__meta{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tile__q{font-family:var(--fm);font-size:12.5px;font-weight:500;font-variant-numeric:tabular-nums}
+.tile__q em{font-style:normal;color:var(--ink3);font-weight:400}
+.tile__f{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:var(--s2);padding-top:var(--s2);border-top:1px solid var(--hair)}
+.tile--flag:after{content:"";position:absolute;top:var(--s3);right:var(--s3);width:6px;height:6px;border-radius:50%;background:var(--warn)}
+.tile--off{opacity:.5}
+
+/* tarjeta de función: la fecha manda, en Anton */
+.fn{background:var(--card);border-radius:var(--r);padding:var(--s3);text-decoration:none;color:inherit;display:block;position:relative}
+.fn:hover{background:var(--card2)}
+.fn--on{background:var(--black);color:#F4F1EA}
+.fn--on .lbl{color:rgba(244,241,234,.5)}
+.fn--on .fn__v,.fn--on .tile__q em{color:rgba(244,241,234,.6)}
+.fn--on .tile__bar{background:rgba(244,241,234,.2)}
+.fn--on .tile__bar i{background:var(--ticket)}
+.fn--on .tile__f{border-top-color:rgba(244,241,234,.18)}
+.fn__d{font-family:var(--fd);font-size:25px;line-height:1;margin:5px 0 1px}
+.fn__v{font-size:11.5px;color:var(--ink3)}
+
+/* ritmo de entrada — asistencia */
+.rhythm{display:flex;align-items:flex-end;gap:3px;height:76px;margin:var(--s2) 0 6px}
+.rhythm b{flex:1;background:var(--ok);border-radius:1px;min-height:2px;opacity:.85}
+.rhythm b.now{background:var(--ticket);opacity:1}
+.rhythm b.soft{background:var(--sunk)}
+.rhythm-x{display:flex;justify-content:space-between;font-family:var(--fm);font-size:9.5px;color:var(--ink3);letter-spacing:.06em}
+
+/* feed de la puerta — el tiempo manda, a la izquierda */
+.feed{display:grid;grid-template-columns:52px 1fr auto;gap:var(--s2);align-items:baseline;padding:8px var(--s3);position:relative}
+.feed+.feed:before{content:"";position:absolute;top:0;left:var(--s3);right:var(--s3);height:1px;background:var(--hair)}
+.feed__t{font-family:var(--fm);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ok)}
+
+/* ======================================================================
+   NUEVO · EL POPUP
+   ====================================================================== */
+.modal-wrap{position:absolute;inset:0;display:grid;place-items:center;z-index:5;padding:var(--s4)}
+.modal-scrim{position:absolute;inset:0;background:rgba(26,26,24,.3)}
+.modal{position:relative;width:520px;max-width:100%;background:var(--card);border-radius:var(--r);
+       box-shadow:0 20px 60px rgba(20,20,20,.22);overflow:hidden;max-height:100%;display:flex;flex-direction:column}
+.modal__h{background:var(--black);color:#F4F1EA;padding:var(--s4);position:relative}
+.modal__h .lbl{color:rgba(244,241,234,.5)}
+.modal__t{font-family:var(--fd);font-size:26px;line-height:1.05;margin:6px 0 2px}
+.modal__s{font-size:12px;color:rgba(244,241,234,.6)}
+.modal__x{position:absolute;top:var(--s3);right:var(--s3);color:rgba(244,241,234,.65);font-size:15px;cursor:pointer}
+.modal__b{padding:var(--s4);display:flex;flex-direction:column;gap:var(--s4);overflow:auto}
+.modal__f{display:flex;gap:8px;padding:var(--s3) var(--s4);border-top:1px solid var(--hair);background:var(--card2)}
+.modal__f .btn{flex:1;text-align:center}
+.modal__f .btn--x{flex:none}
+.mini{background:var(--card2);border-radius:var(--r);overflow:hidden}
+</style>
+</head>
+<body>
+
+<div class="doc-top">
+  <h1>ENTIDAD O TRANSACCIÓN</h1>
+  <p>Acapelius B · v2 · Ventas, Asistencia, Equipo y Temporadas, de nuevo</p>
+</div>
+
+<div class="doc-wrap">
+
+<!-- ================= EL PRINCIPIO ================= -->
+<section class="doc-sec">
+  <div class="doc-k">00 · Por qué se sentían planas</div>
+  <h2 class="doc-h">Metí todo en filas. No todo es una fila.</h2>
+  <p class="doc-p">Las cuatro pantallas que marcaste tienen el mismo problema de fondo, y tenés razón en las cuatro. Me pasé para el otro lado: después de encontrar diez familias de fila distintas en el repo, reduje todo a una sola — y una lista uniforme sirve para algunas cosas y aplana otras.</p>
+
+  <div class="rule2">
+    <div>
+      <span class="lbl">Card</span>
+      <h4>Entidades</h4>
+      <p>Una persona, una función, una temporada. Tienen identidad y un estado propio, son pocas, y lo que querés es <b>compararlas de un vistazo</b>: quién va bien, qué función se está quedando. Una card puede mostrar una barra de progreso, un estado y dos números a la vez sin verse apretada. Y entrás al detalle en un popup.</p>
+    </div>
+    <div>
+      <span class="lbl">Fila</span>
+      <h4>Transacciones</h4>
+      <p>Una venta, un ingreso, una rendición. Son muchas, todas iguales, y lo que hacés es <b>escanear una columna o buscar una</b>. Acá la fila sigue siendo lo correcto — pero debajo de su entidad, no como la pantalla entera.</p>
+    </div>
+  </div>
+
+  <div class="doc-note">De ahí sale el cambio más grande: <b>en Ventas, la función deja de ser un encabezado y pasa a ser una tarjeta que se elige.</b> La lista muestra una función por vez, no 148 ventas de corrido.</div>
+</section>
+
+<!-- ================= VENTAS ================= -->
+<section class="doc-sec">
+  <div class="doc-k">01 · Ventas</div>
+  <h2 class="doc-h">Elegís la función arriba. Abajo pasa lo de esa función.</h2>
+  <p class="doc-p">La función elegida se pone negra: el talón del afiche marcando dónde estás parado. Y aparece algo que antes no estaba y que a Eli le importa más que la lista — <b>quién vendió qué</b> en esa función.</p>
+  <div class="doc-hint">↔ Deslizá para ver la pantalla completa</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i" href="#">♪ Inicio</a>
+        <a class="nav-i on" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i" href="#">◉ Asistencia</a>
+        <a class="nav-i" href="#">▦ Temporadas</a>
+        <a class="nav-i" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><div class="pgt">Ventas</div><span class="lbl">Temporada 2026 · 148 de 400 entradas</span></div>
+          <a class="btn btn--go" href="#">Nueva venta</a>
+        </div>
+
+        <div class="tiles tiles--5" style="margin-bottom:var(--s5)">
+          <a class="fn" href="#"><span class="lbl">Vie 4 dic</span><div class="fn__d">AGOTADA</div><div class="fn__v">78 entraron</div>
+            <div class="tile__bar"><i class="ok" style="width:100%"></i></div>
+            <div class="tile__meta"><span class="tile__q">80<em>/80</em></span><span class="lbl">$120.000</span></div></a>
+          <a class="fn" href="#"><span class="lbl">Sáb 5 dic</span><div class="fn__d">AGOTADA</div><div class="fn__v">74 entraron</div>
+            <div class="tile__bar"><i class="ok" style="width:100%"></i></div>
+            <div class="tile__meta"><span class="tile__q">80<em>/80</em></span><span class="lbl">$120.000</span></div></a>
+          <a class="fn fn--on" href="#"><span class="lbl">Sáb 12 dic · en 3 días</span><div class="fn__d">68 / 80</div><div class="fn__v">quedan 12</div>
+            <div class="tile__bar"><i style="width:85%"></i></div>
+            <div class="tile__meta"><span class="tile__q">85%</span><span class="lbl">$105.000</span></div></a>
+          <a class="fn" href="#"><span class="lbl">Vie 18 dic</span><div class="fn__d">0 / 80</div><div class="fn__v">sin repartir</div>
+            <div class="tile__bar"><i class="tk" style="width:2%"></i></div>
+            <div class="tile__meta"><span class="tile__q">0%</span><span class="lbl">$0</span></div></a>
+          <a class="fn" href="#"><span class="lbl">Sáb 19 dic</span><div class="fn__d">0 / 80</div><div class="fn__v">sin repartir</div>
+            <div class="tile__bar"><i class="tk" style="width:2%"></i></div>
+            <div class="tile__meta"><span class="tile__q">0%</span><span class="lbl">$0</span></div></a>
+        </div>
+
+        <div class="asym">
+          <div>
+            <div class="bar">
+              <div class="search">🔍 Buscar comprador, mail o corista…</div>
+              <div class="seg"><b class="on">Todas</b><b>Debe</b><b>Pagó</b><b>Cortesías</b><b>Anuladas</b></div>
+            </div>
+            <div class="grp" style="margin:0">
+              <div class="grp__h"><span class="lbl">Ventas · Sáb 12 dic</span><span class="grp__n">68 entradas · $ 105.000</span></div>
+              <div class="card">
+                <a class="row" href="#"><div><div class="rt">Roberto Silva</div><div class="rs">Carolina · 3 entradas</div></div><span class="rn">45.000</span><span class="st st--ok"><i></i>Pagó</span><span class="go">›</span></a>
+                <a class="row" href="#"><div><div class="rt">Paula Ortiz</div><div class="rs">Ana · 2 entradas</div></div><span class="rn">30.000</span><span class="st st--warn"><i></i>Debe</span><span class="go">›</span></a>
+                <a class="row" href="#"><div><div class="rt">Julián Ferrer</div><div class="rs">Sofía · 1 entrada</div></div><span class="rn">15.000</span><span class="st st--warn"><i></i>Debe</span><span class="go">›</span></a>
+                <a class="row" href="#"><div><div class="rt">Lucía Gómez</div><div class="rs">Ana · 1 entrada</div></div><span class="rn">—</span><span class="st st--cor"><i></i>Cortesía</span><span class="go">›</span></a>
+                <a class="row row--dim" href="#"><div><div class="rt" style="text-decoration:line-through">Pedro Luna</div><div class="rs">anulada el 2 dic</div></div><span class="rn">15.000</span><span class="st st--bad"><i></i>Anulada</span><span class="go">›</span></a>
+                <div class="card__f"><span>5 de 68</span><a href="#">Ver todas</a></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="grp" style="margin:0">
+              <div class="grp__h"><span class="lbl">Quién vendió</span><span class="grp__n">Sáb 12 dic</span></div>
+              <div class="card">
+                <div class="row row--3" style="pointer-events:none;padding:10px var(--s3)">
+                  <div style="min-width:0"><div class="rt">Carolina Méndez</div>
+                    <div class="tile__bar" style="margin:6px 0 0"><i style="width:100%"></i></div></div>
+                  <span class="rn">24</span>
+                </div>
+                <div class="row row--3" style="pointer-events:none;padding:10px var(--s3)">
+                  <div style="min-width:0"><div class="rt">Ana Pérez</div>
+                    <div class="tile__bar" style="margin:6px 0 0"><i style="width:75%"></i></div></div>
+                  <span class="rn">18</span>
+                </div>
+                <div class="row row--3" style="pointer-events:none;padding:10px var(--s3)">
+                  <div style="min-width:0"><div class="rt">Sofía Ruiz</div>
+                    <div class="tile__bar" style="margin:6px 0 0"><i style="width:58%"></i></div></div>
+                  <span class="rn">14</span>
+                </div>
+                <div class="row row--3" style="pointer-events:none;padding:10px var(--s3)">
+                  <div style="min-width:0"><div class="rt" style="color:var(--ink3)">Valentina Ríos</div>
+                    <div class="tile__bar" style="margin:6px 0 0"></div></div>
+                  <span class="rn" style="color:var(--ink3)">0</span>
+                </div>
+                <div class="card__f"><span>Sin repartir</span><a href="#">12 entradas</a></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="doc-p">Las dos funciones agotadas dicen <b>AGOTADA</b> en Anton en vez de "80 / 80". Un número que no te pide nada no merece el mismo espacio que uno que sí.</p>
+</section>
+
+<!-- ================= ASISTENCIA ================= -->
+<section class="doc-sec">
+  <div class="doc-k">02 · Asistencia</div>
+  <h2 class="doc-h">Es una pantalla en vivo. Que se note.</h2>
+  <p class="doc-p">La lista de quién entró no era el problema: el problema es que la pantalla no mostraba <b>lo único que pasa en vivo, que es el ritmo</b>. Las barras son la gente entrando cada diez minutos. De un vistazo sabés si ya pasó el pico o si todavía está entrando gente, que es lo que Eli mira desde atrás del escenario.</p>
+  <div class="doc-hint">↔ Deslizá para ver la pantalla completa</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i" href="#">♪ Inicio</a>
+        <a class="nav-i" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i on" href="#">◉ Asistencia</a>
+        <a class="nav-i" href="#">▦ Temporadas</a>
+        <a class="nav-i" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><div class="pgt">Asistencia</div><span class="lbl">Sáb 12 dic · 20:00 · Teatro Municipal</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="st st--ok"><i></i>En vivo</span><a class="btn" href="#">Exportar</a></div>
+        </div>
+
+        <div class="asym" style="align-items:stretch">
+          <div class="heel">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3)">
+              <div>
+                <span class="lbl">Ingresaron</span>
+                <div style="display:flex;align-items:baseline;gap:10px;margin-top:6px">
+                  <span style="font-family:var(--fd);font-size:54px;line-height:1;color:#6DC79A">62</span>
+                  <span style="font-size:17px;color:rgba(244,241,234,.55)">de 80</span>
+                </div>
+              </div>
+              <div style="text-align:right">
+                <span class="lbl">Entrando ahora</span>
+                <div style="font-family:var(--fm);font-size:19px;font-weight:700;color:var(--ticket);margin-top:6px">7 / min</div>
+              </div>
+            </div>
+
+            <div class="rhythm">
+              <b style="height:12%"></b><b style="height:22%"></b><b style="height:31%"></b>
+              <b style="height:52%"></b><b style="height:74%"></b><b style="height:100%"></b>
+              <b style="height:88%"></b><b style="height:61%"></b><b class="now" style="height:44%"></b>
+              <b class="soft" style="height:8%"></b><b class="soft" style="height:8%"></b><b class="soft" style="height:8%"></b>
+            </div>
+            <div class="rhythm-x"><span>19:20</span><span>19:50</span><span style="color:var(--ticket)">AHORA 20:17</span><span>20:50</span></div>
+
+            <div style="display:flex;justify-content:space-between;margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid rgba(244,241,234,.18)">
+              <div><span class="lbl">Pico</span><div style="font-family:var(--fm);font-size:14px;font-weight:500;margin-top:3px">20:00 · 14 personas</div></div>
+              <div><span class="lbl">Faltan</span><div style="font-family:var(--fm);font-size:14px;font-weight:500;margin-top:3px;color:#E8A33D">18 personas</div></div>
+              <div><span class="lbl">Cortesías</span><div style="font-family:var(--fm);font-size:14px;font-weight:500;margin-top:3px">3 de 5</div></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__h"><span class="card__t">Buscar en la puerta</span></div>
+            <div style="padding:0 var(--s3) var(--s2)"><div class="search">🔍 Nombre o mail…</div></div>
+            <div class="grp__h" style="margin:var(--s2) var(--s3) 0"><span class="lbl">Todavía no llegaron</span><span class="grp__n">18</span></div>
+            <a class="row row--2" href="#"><div><div class="rt">Julián Ferrer</div><div class="rs">1 entrada · Sofía</div></div><span class="btn btn--go" style="padding:4px 10px;font-size:11px">Marcar</span><span class="go">›</span></a>
+            <a class="row row--2" href="#"><div><div class="rt">Lucía Gómez</div><div class="rs">1 entrada · Ana · cortesía</div></div><span class="btn btn--go" style="padding:4px 10px;font-size:11px">Marcar</span><span class="go">›</span></a>
+            <a class="row row--2" href="#"><div><div class="rt">Diego Arias</div><div class="rs">2 entradas · Carolina</div></div><span class="btn btn--go" style="padding:4px 10px;font-size:11px">Marcar</span><span class="go">›</span></a>
+            <div class="card__f"><span>3 de 18</span><a href="#">Ver todos</a></div>
+          </div>
+        </div>
+
+        <div class="grp" style="margin-top:var(--s4)">
+          <div class="grp__h"><span class="lbl">Entrando</span><span class="grp__n">en vivo · últimos 6</span></div>
+          <div class="card">
+            <div class="feed"><span class="feed__t">20:17</span><div><div class="rt">Sergio Dutra</div><div class="rs">1 entrada · le vendió Ana Pérez</div></div><span class="lbl">Marcos</span></div>
+            <div class="feed"><span class="feed__t">20:16</span><div><div class="rt">Claudia Benítez</div><div class="rs">2 entradas · le vendió Carolina</div></div><span class="lbl">Jorge</span></div>
+            <div class="feed"><span class="feed__t">20:14</span><div><div class="rt">María Dutra</div><div class="rs">2 entradas · le vendió Carolina</div></div><span class="lbl">Marcos</span></div>
+            <div class="feed"><span class="feed__t">20:12</span><div><div class="rt">Roberto Silva</div><div class="rs">3 entradas · le vendió Carolina</div></div><span class="lbl">Marcos</span></div>
+            <div class="feed"><span class="feed__t">20:09</span><div><div class="rt">Paula Ortiz</div><div class="rs">2 entradas · le vendió Ana Pérez</div></div><span class="lbl">Jorge</span></div>
+            <div class="card__f"><span>62 ingresos</span><a href="#">Ver todos</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="doc-p">El feed de abajo tampoco es una fila común: <b>la hora va primero y en verde</b>, como un registro de puerta. Y dice quién escaneó, que es un dato que antes se perdía y sirve si después hay que revisar algo.</p>
+</section>
+
+<!-- ================= EQUIPO ================= -->
+<section class="doc-sec">
+  <div class="doc-k">03 · Equipo · con el popup abierto</div>
+  <h2 class="doc-h">Una tarjeta por persona. El detalle, en popup.</h2>
+  <p class="doc-p">Cada tarjeta cuenta la historia de esa corista en cuatro píxeles de barra: cuánto del cupo vendió. El punto naranja arriba a la derecha es "esta pide atención". Tocás y se abre la ficha completa.</p>
+  <div class="doc-hint">↔ Deslizá para ver la pantalla completa</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i" href="#">♪ Inicio</a>
+        <a class="nav-i" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i" href="#">◉ Asistencia</a>
+        <a class="nav-i" href="#">▦ Temporadas</a>
+        <a class="nav-i on" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><div class="pgt">Equipo</div><span class="lbl">Temporada 2026 · 9 personas</span></div>
+          <div style="display:flex;gap:8px"><a class="btn" href="#">Repartir cupos</a><a class="btn btn--go" href="#">Sumar persona</a></div>
+        </div>
+
+        <div class="subfigs" style="margin-bottom:var(--s4)">
+          <div class="subfig"><b>148 <span style="color:var(--ink3)">/ 400</span></b><span class="lbl">Cupos repartidos</span></div>
+          <div class="subfig"><b style="color:var(--warn)">12</b><span class="lbl">Sin asignar</span></div>
+          <div class="subfig"><b style="color:var(--warn)">$ 90.000</b><span class="lbl">Sin rendir</span></div>
+        </div>
+
+        <div class="grp__h" style="margin-bottom:var(--s2)"><span class="lbl">Coristas</span><span class="grp__n">6 · 48 de 60 cupos</span></div>
+        <div class="tiles tiles--3" style="margin-bottom:var(--s4)">
+          <a class="tile tile--flag" href="#">
+            <div class="tile__top"><span class="mono-sq">CM</span><div style="min-width:0"><div class="tile__n">Carolina Méndez</div><div class="tile__r">carolina@mail.com</div></div></div>
+            <div class="tile__bar"><i style="width:50%"></i></div>
+            <div class="tile__meta"><span class="tile__q">6 <em>de 12 vendidas</em></span><span class="lbl">50%</span></div>
+            <div class="tile__f"><span class="st st--warn"><i></i>Debe $ 45.000</span><span class="lbl">hace 11 d</span></div>
+          </a>
+          <a class="tile tile--flag" href="#">
+            <div class="tile__top"><span class="mono-sq">SR</span><div style="min-width:0"><div class="tile__n">Sofía Ruiz</div><div class="tile__r">sofia.r@mail.com</div></div></div>
+            <div class="tile__bar"><i style="width:25%"></i></div>
+            <div class="tile__meta"><span class="tile__q">3 <em>de 12 vendidas</em></span><span class="lbl">25%</span></div>
+            <div class="tile__f"><span class="st st--warn"><i></i>Debe $ 45.000</span><span class="lbl">hace 4 d</span></div>
+          </a>
+          <a class="tile" href="#">
+            <div class="tile__top"><span class="mono-sq">AP</span><div style="min-width:0"><div class="tile__n">Ana Pérez</div><div class="tile__r">ana.perez@mail.com</div></div></div>
+            <div class="tile__bar"><i class="ok" style="width:33%"></i></div>
+            <div class="tile__meta"><span class="tile__q">4 <em>de 12 vendidas</em></span><span class="lbl">33%</span></div>
+            <div class="tile__f"><span class="st st--ok"><i></i>Al día</span><span class="lbl">8 dic</span></div>
+          </a>
+          <a class="tile" href="#">
+            <div class="tile__top"><span class="mono-sq">LT</span><div style="min-width:0"><div class="tile__n">Lara Tobar</div><div class="tile__r">lara.t@mail.com</div></div></div>
+            <div class="tile__bar"><i class="ok" style="width:83%"></i></div>
+            <div class="tile__meta"><span class="tile__q">10 <em>de 12 vendidas</em></span><span class="lbl">83%</span></div>
+            <div class="tile__f"><span class="st st--ok"><i></i>Al día</span><span class="lbl">9 dic</span></div>
+          </a>
+          <a class="tile" href="#">
+            <div class="tile__top"><span class="mono-sq">NF</span><div style="min-width:0"><div class="tile__n">Noelia Fava</div><div class="tile__r">noelia@mail.com</div></div></div>
+            <div class="tile__bar"><i class="ok" style="width:100%"></i></div>
+            <div class="tile__meta"><span class="tile__q">12 <em>de 12 vendidas</em></span><span class="lbl">completo</span></div>
+            <div class="tile__f"><span class="st st--ok"><i></i>Al día</span><span class="lbl">7 dic</span></div>
+          </a>
+          <a class="tile tile--flag" href="#">
+            <div class="tile__top"><span class="mono-sq">VR</span><div style="min-width:0"><div class="tile__n">Valentina Ríos</div><div class="tile__r">se sumó hace 2 días</div></div></div>
+            <div class="tile__bar"></div>
+            <div class="tile__meta"><span class="tile__q" style="color:var(--ink3)">Sin cupo asignado</span><span class="lbl">—</span></div>
+            <div class="tile__f"><span class="st st--mute"><i></i>Sin ventas</span><a class="lbl" style="color:var(--ticket)" href="#">Asignar ›</a></div>
+          </a>
+        </div>
+
+        <div class="grp__h" style="margin-bottom:var(--s2)"><span class="lbl">Dirección y puerta</span><span class="grp__n">3</span></div>
+        <div class="tiles tiles--3">
+          <a class="tile" href="#"><div class="tile__top" style="margin:0"><span class="mono-sq">ES</span><div style="min-width:0"><div class="tile__n">Eli Sosa</div><div class="tile__r">Dirección · eli@acapelius.com</div></div></div></a>
+          <a class="tile" href="#"><div class="tile__top" style="margin:0"><span class="mono-sq">MD</span><div style="min-width:0"><div class="tile__n">Marcos Díaz</div><div class="tile__r">Puerta · 38 escaneos</div></div></div></a>
+          <a class="tile" href="#"><div class="tile__top" style="margin:0"><span class="mono-sq">JP</span><div style="min-width:0"><div class="tile__n">Jorge Pérez</div><div class="tile__r">Puerta · 24 escaneos</div></div></div></a>
+        </div>
+
+        <!-- POPUP -->
+        <div class="modal-wrap">
+          <div class="modal-scrim"></div>
+          <div class="modal">
+            <div class="modal__h">
+              <span class="modal__x">✕</span>
+              <span class="lbl">Corista · temporada 2026</span>
+              <div class="modal__t">Carolina Méndez</div>
+              <div class="modal__s">carolina@mail.com · en el coro desde 2024</div>
+            </div>
+            <div class="modal__b">
+              <div style="display:flex;gap:var(--s6)">
+                <div><span class="lbl">Debe</span><div class="fig fig--warn" style="font-size:30px;margin-top:4px">$ 45.000</div></div>
+                <div><span class="lbl">Vendió</span><div class="fig" style="font-size:30px;margin-top:4px">6 <span>/ 12</span></div></div>
+              </div>
+
+              <div>
+                <span class="lbl">Cupo por función</span>
+                <div class="mini" style="margin-top:7px">
+                  <div class="row row--3" style="pointer-events:none;padding:8px var(--s3)"><div><div class="rt">Vie 11 dic</div><div class="rs">vendió 4</div></div><span class="rn">4 / 4</span></div>
+                  <div class="row row--3" style="pointer-events:none;padding:8px var(--s3)"><div><div class="rt">Sáb 12 dic</div><div class="rs">vendió 2</div></div><span class="rn">2 / 8</span></div>
+                  <div class="row row--3" style="pointer-events:none;padding:8px var(--s3)"><div><div class="rt" style="color:var(--ink3)">Vie 18 dic</div><div class="rs">sin asignar</div></div><span class="rn" style="color:var(--ink3)">— / —</span></div>
+                </div>
+              </div>
+
+              <div class="dl">
+                <div class="dl__r"><span class="dl__k">Cobró</span><span class="dl__v">$ 90.000</span></div>
+                <div class="dl__r"><span class="dl__k">Ya rindió</span><span class="dl__v">$ 45.000</span></div>
+                <div class="dl__r"><span class="dl__k">Última rendición</span><span class="dl__v">9 dic · efectivo</span></div>
+                <div class="dl__r"><span class="dl__k">Cortesías usadas</span><span class="dl__v">1 de 2</span></div>
+              </div>
+            </div>
+            <div class="modal__f">
+              <a class="btn" href="#">Cambiar cupo</a>
+              <a class="btn" href="#">Recordarle</a>
+              <a class="btn btn--go" href="#">Registrar rendición</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="doc-p">La cabecera negra del popup es el talón otra vez. <b>Es el mismo componente para los cuatro popups</b> de la app — corista, función, venta e ingreso — así que se construye una sola vez.</p>
+</section>
+
+<!-- ================= TEMPORADAS ================= -->
+<section class="doc-sec">
+  <div class="doc-k">04 · Temporadas · con el popup abierto</div>
+  <h2 class="doc-h">La fecha manda. Es un afiche chiquito.</h2>
+  <p class="doc-p">Acá la card se gana el Anton: la fecha grande, el lugar abajo, la barra de venta y el estado. Puestas en grilla se comparan solas — ves de un saque cuál está en problemas.</p>
+  <div class="doc-hint">↔ Deslizá para ver la pantalla completa</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i" href="#">♪ Inicio</a>
+        <a class="nav-i" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i" href="#">◉ Asistencia</a>
+        <a class="nav-i on" href="#">▦ Temporadas</a>
+        <a class="nav-i" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><span class="lbl">Temporadas · 2026</span><div class="pgt" style="margin-top:3px">Navidad 2026</div></div>
+          <div style="display:flex;gap:8px"><a class="btn" href="#">Cambiar temporada</a><a class="btn btn--go" href="#">Nueva función</a></div>
+        </div>
+
+        <div class="subfigs" style="margin-bottom:var(--s4)">
+          <div class="subfig"><b>5</b><span class="lbl">Funciones</span></div>
+          <div class="subfig"><b>148 <span style="color:var(--ink3)">/ 400</span></b><span class="lbl">Vendidas</span></div>
+          <div class="subfig"><b>$ 15.000</b><span class="lbl">Precio</span></div>
+          <div class="subfig"><b style="color:var(--ok)">$ 2.220.000</b><span class="lbl">Si se vende todo</span></div>
+        </div>
+
+        <div class="grp__h" style="margin-bottom:var(--s2)"><span class="lbl">Vienen</span><span class="grp__n">3 funciones · 240 lugares</span></div>
+        <div class="tiles tiles--3" style="margin-bottom:var(--s4)">
+          <a class="fn tile--flag" href="#">
+            <span class="lbl">Sábado · en 3 días</span>
+            <div class="fn__d">12 DIC</div>
+            <div class="fn__v">20:00 · Teatro Municipal</div>
+            <div class="tile__bar"><i style="width:85%"></i></div>
+            <div class="tile__meta"><span class="tile__q">68 <em>de 80 vendidas</em></span><span class="lbl">$ 1.020.000</span></div>
+            <div class="tile__f"><span class="st st--warn"><i></i>12 sin repartir</span><span class="lbl">4 coristas</span></div>
+          </a>
+          <a class="fn" href="#">
+            <span class="lbl">Viernes · en 9 días</span>
+            <div class="fn__d">18 DIC</div>
+            <div class="fn__v">20:00 · Teatro Municipal</div>
+            <div class="tile__bar"><i class="tk" style="width:2%"></i></div>
+            <div class="tile__meta"><span class="tile__q">0 <em>de 80 vendidas</em></span><span class="lbl">$ 0</span></div>
+            <div class="tile__f"><span class="st st--mute"><i></i>Sin repartir</span><a class="lbl" style="color:var(--ticket)" href="#">Repartir ›</a></div>
+          </a>
+          <a class="fn" href="#">
+            <span class="lbl">Sábado · en 10 días</span>
+            <div class="fn__d">19 DIC</div>
+            <div class="fn__v">21:00 · Teatro Municipal</div>
+            <div class="tile__bar"><i class="tk" style="width:2%"></i></div>
+            <div class="tile__meta"><span class="tile__q">0 <em>de 80 vendidas</em></span><span class="lbl">$ 0</span></div>
+            <div class="tile__f"><span class="st st--mute"><i></i>Sin repartir</span><a class="lbl" style="color:var(--ticket)" href="#">Repartir ›</a></div>
+          </a>
+        </div>
+
+        <div class="grp__h" style="margin-bottom:var(--s2)"><span class="lbl">Ya pasaron</span><span class="grp__n">2 funciones · 152 ingresos</span></div>
+        <div class="tiles tiles--3">
+          <a class="fn tile--off" href="#">
+            <span class="lbl">Viernes</span>
+            <div class="fn__d">4 DIC</div>
+            <div class="fn__v">20:00 · Teatro Municipal</div>
+            <div class="tile__bar"><i class="ok" style="width:100%"></i></div>
+            <div class="tile__meta"><span class="tile__q">80 <em>de 80 vendidas</em></span><span class="lbl">$ 1.200.000</span></div>
+            <div class="tile__f"><span class="st st--ok"><i></i>78 entraron</span><span class="lbl">98%</span></div>
+          </a>
+          <a class="fn tile--off" href="#">
+            <span class="lbl">Sábado</span>
+            <div class="fn__d">5 DIC</div>
+            <div class="fn__v">20:00 · Teatro Municipal</div>
+            <div class="tile__bar"><i class="ok" style="width:100%"></i></div>
+            <div class="tile__meta"><span class="tile__q">80 <em>de 80 vendidas</em></span><span class="lbl">$ 1.200.000</span></div>
+            <div class="tile__f"><span class="st st--ok"><i></i>74 entraron</span><span class="lbl">93%</span></div>
+          </a>
+        </div>
+
+        <!-- POPUP -->
+        <div class="modal-wrap">
+          <div class="modal-scrim"></div>
+          <div class="modal">
+            <div class="modal__h">
+              <span class="modal__x">✕</span>
+              <span class="lbl">Función · Navidad 2026</span>
+              <div class="modal__t">Sáb 12 dic · 20:00</div>
+              <div class="modal__s">Teatro Municipal · entrada general · en 3 días</div>
+            </div>
+            <div class="modal__b">
+              <div style="display:flex;gap:var(--s6)">
+                <div><span class="lbl">Vendidas</span><div class="fig" style="font-size:30px;margin-top:4px">68 <span>/ 80</span></div></div>
+                <div><span class="lbl">Recaudado</span><div class="fig fig--ok" style="font-size:30px;margin-top:4px">$ 1.020.000</div></div>
+              </div>
+
+              <div>
+                <span class="lbl">Cupos por corista</span>
+                <div class="mini" style="margin-top:7px">
+                  <div class="row row--3" style="pointer-events:none;padding:8px var(--s3)"><div style="min-width:0"><div class="rt">Carolina Méndez</div><div class="tile__bar" style="margin:5px 0 0"><i style="width:100%"></i></div></div><span class="rn">24 / 24</span></div>
+                  <div class="row row--3" style="pointer-events:none;padding:8px var(--s3)"><div style="min-width:0"><div class="rt">Ana Pérez</div><div class="tile__bar" style="margin:5px 0 0"><i style="width:90%"></i></div></div><span class="rn">18 / 20</span></div>
+                  <div class="row row--3" style="pointer-events:none;padding:8px var(--s3)"><div style="min-width:0"><div class="rt">Sofía Ruiz</div><div class="tile__bar" style="margin:5px 0 0"><i style="width:58%"></i></div></div><span class="rn">14 / 24</span></div>
+                  <div class="row row--3" style="pointer-events:none;padding:8px var(--s3);background:#F6EEDF"><div><div class="rt" style="color:var(--warn)">Sin repartir</div><div class="rs" style="color:var(--warn);opacity:.8">nadie las puede vender</div></div><span class="rn" style="color:var(--warn)">12</span></div>
+                </div>
+              </div>
+
+              <div class="dl">
+                <div class="dl__r"><span class="dl__k">Capacidad</span><span class="dl__v">80 lugares</span></div>
+                <div class="dl__r"><span class="dl__k">Precio</span><span class="dl__v">$ 15.000</span></div>
+                <div class="dl__r"><span class="dl__k">Cortesías</span><span class="dl__v">5 de 8 usadas</span></div>
+                <div class="dl__r"><span class="dl__k">Anuladas</span><span class="dl__v">1</span></div>
+              </div>
+            </div>
+            <div class="modal__f">
+              <a class="btn btn--x" href="#">Editar</a>
+              <a class="btn" href="#">Ver ventas</a>
+              <a class="btn btn--go" href="#">Repartir las 12</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<!-- ================= CIERRE ================= -->
+<section class="doc-sec">
+  <div class="doc-k">05 · Lo que se agrega al sistema</div>
+  <h2 class="doc-h">Tres piezas nuevas, no treinta.</h2>
+  <p class="doc-p"><b>La tarjeta de entidad</b> (<code>.tile</code>), con dos caras: persona —iniciales en cuadrado, nombre, barra de cupo, estado abajo— y función —fecha grande en Anton, lugar, barra, estado. Misma estructura, distinto contenido.</p>
+  <p class="doc-p"><b>El popup</b> (<code>.modal</code>), con cabecera negra, cuerpo y pie de acciones. Uno solo para toda la app: corista, función, venta e ingreso.</p>
+  <p class="doc-p"><b>El ritmo</b> (<code>.rhythm</code>), las barras de entrada por tramo. Sólo vive en Asistencia y en la puerta.</p>
+  <p class="doc-p">La fila y la card de grupo siguen igual, pero ahora con su lugar claro: <b>debajo de una entidad, nunca como la pantalla entera.</b> Rendiciones e Inicio quedan como estaban, porque ahí la fila sí es lo correcto — son plata y movimientos, no entidades.</p>
+</section>
+
+</div>
+</body>
+</html>

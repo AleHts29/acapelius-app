@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acapelius B — todas las vistas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   ACAPELIUS · tratamiento B — afiche × suizo
+   El afiche vive en tres lugares: el talón negro, los títulos en Anton y la
+   regla negra de cada grupo. Todo lo demás es suizo: grilla, tipografía,
+   columnas alineadas y aire. Cero bordes, cero sombras.
+   De Apple se toman dos COMPORTAMIENTOS, no su piel: la fila de dos líneas
+   y la hoja de detalle.
+   ========================================================================== */
+
+:root{
+  /* superficies */
+  --paper:#F2F0E9; --card:#FFF; --card2:#FAF8F2; --hair:#E8E4DA; --sunk:rgba(26,26,24,.045);
+  /* tinta */
+  --ink:#1A1A18; --ink2:#6B665B; --ink3:#97917F; --black:#141414;
+  /* acento y semánticos */
+  --ticket:#C4401E; --ok:#1E6B4A; --warn:#8A5A08; --bad:#A32D2D; --indigo:#3A3FC4;
+  /* radios — 8 es la posición: empaquetado sin ser iOS */
+  --r:8px; --rc:5px; --rs:3px;
+  /* espacio, base 4 */
+  --s1:8px; --s2:12px; --s3:16px; --s4:20px; --s5:28px; --s6:40px;
+  /* tipografía */
+  --fd:'Anton',Impact,sans-serif; --fm:'JetBrains Mono',ui-monospace,monospace; --fb:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fb);background:#EAE7DE;color:var(--ink);font-size:13.5px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:80px}
+
+/* ====================== cromo del documento ====================== */
+.doc-top{background:var(--black);color:#F4F1EA;padding:28px 32px;border-bottom:4px solid var(--ticket)}
+.doc-top h1{font-family:var(--fd);font-size:38px;line-height:1}
+.doc-top p{font-family:var(--fm);font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:rgba(244,241,234,.6);margin-top:8px}
+.doc-wrap{max-width:1340px;margin:0 auto;padding:0 24px}
+.doc-sec{margin-top:52px}
+.doc-k{font-family:var(--fm);font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--ticket);margin-bottom:8px}
+.doc-h{font-family:var(--fd);font-size:25px;line-height:1.1}
+.doc-p{max-width:72ch;color:var(--ink2);margin:13px 0;font-size:14px}
+.doc-p b{color:var(--ink);font-weight:600}
+.doc-p code{font-family:var(--fm);font-size:.88em;background:var(--sunk);padding:1px 5px;border-radius:4px}
+.doc-cap{font-family:var(--fm);font-size:10px;text-transform:uppercase;letter-spacing:.13em;color:var(--ink3);margin:26px 0 10px}
+.doc-frame{background:var(--paper);border-radius:var(--r);overflow:hidden;margin-top:10px}
+.doc-scroll{overflow-x:auto}
+.doc-hint{display:none;font-family:var(--fm);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ticket);margin:10px 0}
+@media(max-width:1240px){.doc-hint{display:block}}
+.doc-note{background:var(--card);border-radius:var(--r);padding:16px 18px;margin:20px 0;max-width:74ch;color:var(--ink2);border-left:3px solid var(--ticket);font-size:14px}
+.doc-note b{color:var(--ink);font-weight:600}
+.swatches{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.sw{width:84px}
+.sw i{display:block;height:44px;border-radius:var(--rs)}
+.sw b{display:block;font-family:var(--fm);font-size:9.5px;margin-top:5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.08em}
+
+/* ====================== PIEZAS DEL SISTEMA ====================== */
+.lbl{font-family:var(--fm);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.15em;color:var(--ink3)}
+
+.card{background:var(--card);border-radius:var(--r);overflow:hidden}
+.card__h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2);padding:var(--s2) var(--s3) var(--s1)}
+.card__t{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.card__a{font-size:12px;font-weight:600;color:var(--ticket);text-decoration:none}
+.card__f{display:flex;justify-content:space-between;align-items:center;padding:9px var(--s3);font-size:11.5px;color:var(--ink3);border-top:1px solid var(--hair)}
+.card__f a{color:var(--ticket);font-weight:600;text-decoration:none}
+
+/* EL GRUPO — la regla negra. Acá vive el afiche. */
+.grp{margin-bottom:var(--s4)}
+.grp__h{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s2);padding-bottom:7px;border-bottom:1px solid var(--ink)}
+.grp__n{font-family:var(--fm);font-size:11.5px;font-weight:500;color:var(--ink2);font-variant-numeric:tabular-nums}
+.grp .card{border-radius:0 0 var(--r) var(--r)}
+
+/* LA FILA — dos líneas, columnas alineadas */
+.row{display:grid;grid-template-columns:1fr 96px 88px 14px;align-items:center;gap:var(--s2);
+     padding:9px var(--s3);text-decoration:none;color:inherit;position:relative}
+.row+.row:before{content:"";position:absolute;top:0;left:var(--s3);right:var(--s3);height:1px;background:var(--hair)}
+.row:hover{background:var(--sunk)}
+.row--2{grid-template-columns:1fr auto 14px}
+.row--3{grid-template-columns:1fr auto auto}
+.row--nav{grid-template-columns:1fr 14px}
+.rt{font-size:13.5px;font-weight:500;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt--off{text-decoration:line-through}
+.rs{font-size:11.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rn{font-family:var(--fm);font-size:12.5px;font-weight:500;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rn s{display:block;text-decoration:none;font-size:10px;color:var(--ink3);font-weight:400;letter-spacing:.02em}
+.st{font-size:11.5px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.st i{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+.st--ok{color:var(--ok)} .st--warn{color:var(--warn)} .st--bad{color:var(--bad)} .st--cor{color:var(--indigo)} .st--mute{color:var(--ink3)}
+.go{color:var(--ink3);font-size:13px;opacity:.6;text-align:right}
+.row--dim{opacity:.45}
+
+/* cifras */
+.fig{font-family:var(--fd);font-size:36px;line-height:1}
+.fig--ok{color:var(--ok)} .fig--warn{color:var(--warn)}
+.fig span{font-family:var(--fb);font-size:15px;font-weight:400;color:var(--ink3)}
+.subfigs{display:flex;gap:var(--s6);flex-wrap:wrap}
+.subfig b{font-family:var(--fm);font-size:16px;font-weight:500;display:block;font-variant-numeric:tabular-nums}
+.subfig .lbl{display:block;margin-top:2px}
+
+/* controles */
+.btn{font-size:12.5px;font-weight:600;padding:8px 15px;border:0;border-radius:var(--rc);background:var(--sunk);color:var(--ink);text-decoration:none;display:inline-block;cursor:pointer}
+.btn--go{background:var(--ticket);color:#fff}
+.btn--w{display:block;text-align:center;padding:12px}
+.search{flex:1;background:var(--sunk);border-radius:var(--rc);padding:8px 11px;font-size:12.5px;color:var(--ink3);min-width:180px}
+.seg{display:flex;gap:1px;background:var(--sunk);border-radius:var(--rc);padding:2px}
+.seg b{font-size:11.5px;font-weight:500;color:var(--ink2);padding:5px 11px;border-radius:4px;cursor:pointer;white-space:nowrap}
+.seg b.on{background:var(--card);color:var(--ink);font-weight:600}
+.bar{display:flex;gap:var(--s1);align-items:center;margin-bottom:var(--s4);flex-wrap:wrap}
+
+/* EL TALÓN — el único radio 0 de la app */
+.heel{background:var(--black);color:#F4F1EA;padding:var(--s4);border-radius:0}
+.heel .lbl{color:rgba(244,241,234,.5)}
+.heel__t{font-family:var(--fd);font-size:24px;line-height:1.05;margin:7px 0 2px}
+.heel__m{font-size:12px;color:rgba(244,241,234,.6)}
+.heel__bar{height:4px;background:rgba(244,241,234,.18);margin-top:var(--s3)}
+.heel__bar i{display:block;height:100%;background:var(--ticket)}
+.heel__l{display:flex;justify-content:space-between;font-size:11.5px;color:rgba(244,241,234,.65);margin-top:7px;font-family:var(--fm)}
+
+/* lista de datos (hoja / drawer) */
+.dl{background:var(--card2);border-radius:var(--r);overflow:hidden}
+.dl__r{display:flex;justify-content:space-between;gap:var(--s3);padding:9px var(--s3);font-size:12.5px;position:relative}
+.dl__r+.dl__r:before{content:"";position:absolute;top:0;left:var(--s3);right:var(--s3);height:1px;background:var(--hair)}
+.dl__k{color:var(--ink3)}
+.dl__v{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ====================== SHELL DE ESCRITORIO ====================== */
+.sh{display:grid;grid-template-columns:208px 1fr;min-height:620px;background:var(--paper);min-width:1000px}
+.sh__nav{padding:var(--s4) var(--s2)}
+.brand{font-family:var(--fd);font-size:17px;letter-spacing:.06em;padding:0 var(--s2) var(--s4)}
+.nav-i{display:flex;align-items:center;gap:10px;padding:7px var(--s2);border-radius:var(--rc);font-size:13px;font-weight:500;color:var(--ink2);text-decoration:none;margin-bottom:1px}
+.nav-i.on{background:var(--card);color:var(--ink);font-weight:600}
+.nav-i b{margin-left:auto;font-family:var(--fm);font-size:10px;font-weight:700;color:var(--ticket)}
+.nav-g{padding:var(--s4) var(--s2) 6px}
+.sh__main{padding:var(--s4) var(--s5) var(--s5);min-width:0;position:relative}
+.pgh{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s5)}
+.pgt{font-family:var(--fd);font-size:29px;line-height:1}
+.asym{display:grid;grid-template-columns:1.75fr 1fr;gap:var(--s4);align-items:start}
+.stack{display:flex;flex-direction:column;gap:var(--s4)}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4);align-items:start}
+
+/* drawer lateral de escritorio */
+.drawer{position:absolute;top:0;right:0;bottom:0;width:360px;background:var(--card);padding:var(--s4);
+        box-shadow:-20px 0 50px rgba(20,20,20,.1);display:flex;flex-direction:column;gap:var(--s3);z-index:3}
+.drawer__x{position:absolute;top:var(--s3);right:var(--s3);color:var(--ink3);font-size:16px}
+.scrim{position:absolute;inset:0;background:rgba(26,26,24,.22);z-index:2}
+
+/* ====================== TELÉFONO ====================== */
+.phones{display:flex;gap:22px;flex-wrap:wrap}
+.phone{width:332px;border-radius:22px;background:var(--paper);overflow:hidden;display:flex;flex-direction:column;min-height:646px;position:relative;box-shadow:0 2px 12px rgba(20,20,20,.1)}
+.ph-h{display:flex;align-items:center;justify-content:space-between;padding:var(--s2) var(--s3)}
+.ph-b{flex:1;padding:0 var(--s3) var(--s3);display:flex;flex-direction:column;gap:var(--s4);overflow:hidden}
+.ph-tabs{display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.9);border-top:1px solid var(--hair)}
+.ph-t{padding:8px 0 10px;text-align:center;font-size:9.5px;color:var(--ink3)}
+.ph-t.on{color:var(--ticket);font-weight:600}
+.ph-t i{display:block;font-style:normal;font-size:15px;margin-bottom:2px}
+.ph-full{flex:1;padding:0;display:flex;flex-direction:column}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:10px 0 var(--s4);z-index:3;box-shadow:0 -10px 40px rgba(20,20,20,.16)}
+.grab{width:36px;height:4px;border-radius:999px;background:var(--hair);margin:0 auto var(--s3)}
+.sheet__h{padding:0 var(--s3) var(--s3);display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s2)}
+.sheet__t{font-size:18px;font-weight:600;letter-spacing:-.015em}
+.sheet__s{font-size:12px;color:var(--ink3);margin-top:1px}
+.sheet__acts{display:flex;gap:8px;padding:var(--s3) var(--s3) 0}
+.sheet__acts .btn{flex:1;text-align:center;padding:10px}
+
+/* paneles de resultado de puerta — semánticos, a pantalla completa, radio 0 */
+.verdict{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:var(--s4);color:#F4F1EA}
+.verdict--ok{background:var(--ok)} .verdict--bad{background:var(--bad)}
+.verdict__i{font-size:44px;line-height:1}
+.verdict__n{font-family:var(--fd);font-size:26px;line-height:1.1;margin-top:6px}
+.verdict__d{font-size:13px;opacity:.85}
+.verdict__s{font-family:var(--fm);font-size:10px;text-transform:uppercase;letter-spacing:.14em;opacity:.7;margin-top:var(--s3)}
+.cam{flex:1;background:var(--sunk);border-radius:var(--r);display:grid;place-items:center;color:var(--ink3);text-align:center;margin:0 var(--s3)}
+</style>
+</head>
+<body>
+
+<div class="doc-top">
+  <h1>ACAPELIUS · B</h1>
+  <p>Afiche × suizo · todas las vistas · radio 8 · cero bordes · cero sombras</p>
+</div>
+
+<div class="doc-wrap">
+
+<!-- ========================= SISTEMA ========================= -->
+<section class="doc-sec">
+  <div class="doc-k">00 · El sistema, en una pantalla</div>
+  <h2 class="doc-h">Lo que hay que construir.</h2>
+  <p class="doc-p">Todas las vistas de abajo están hechas con estas piezas y nada más. Si una pantalla necesitara algo que no está acá, primero se discute si de verdad lo necesita.</p>
+
+  <div class="swatches">
+    <div class="sw"><i style="background:#F2F0E9"></i><b>paper F2F0E9</b></div>
+    <div class="sw"><i style="background:#FFF"></i><b>card FFFFFF</b></div>
+    <div class="sw"><i style="background:#E8E4DA"></i><b>hair E8E4DA</b></div>
+    <div class="sw"><i style="background:#1A1A18"></i><b>ink 1A1A18</b></div>
+    <div class="sw"><i style="background:#6B665B"></i><b>ink2 6B665B</b></div>
+    <div class="sw"><i style="background:#97917F"></i><b>ink3 97917F</b></div>
+    <div class="sw"><i style="background:#C4401E"></i><b>ticket C4401E</b></div>
+    <div class="sw"><i style="background:#1E6B4A"></i><b>ok 1E6B4A</b></div>
+    <div class="sw"><i style="background:#8A5A08"></i><b>warn 8A5A08</b></div>
+    <div class="sw"><i style="background:#A32D2D"></i><b>bad A32D2D</b></div>
+    <div class="sw"><i style="background:#3A3FC4"></i><b>indigo 3A3FC4</b></div>
+    <div class="sw"><i style="background:#141414"></i><b>talón 141414</b></div>
+  </div>
+
+  <div class="doc-cap">El grupo — la regla negra es donde vive el afiche</div>
+  <div class="doc-frame" style="padding:var(--s4)">
+    <div class="grp" style="margin:0;max-width:560px">
+      <div class="grp__h"><span class="lbl">Vie 11 dic · 20:00</span><span class="grp__n">80 entradas · $ 120.000</span></div>
+      <div class="card">
+        <a class="row" href="#"><div><div class="rt">María Dutra</div><div class="rs">Carolina · 2 entradas</div></div><span class="rn">30.000</span><span class="st st--ok"><i></i>Pagó</span><span class="go">›</span></a>
+        <a class="row" href="#"><div><div class="rt">Julián Ferrer</div><div class="rs">Sofía · 1 entrada</div></div><span class="rn">15.000</span><span class="st st--warn"><i></i>Debe</span><span class="go">›</span></a>
+        <a class="row" href="#"><div><div class="rt">Lucía Gómez</div><div class="rs">Ana · 1 entrada</div></div><span class="rn">—</span><span class="st st--cor"><i></i>Cortesía</span><span class="go">›</span></a>
+        <div class="card__f"><span>3 de 80</span><a href="#">Ver todas</a></div>
+      </div>
+    </div>
+    <p class="doc-p" style="margin-top:var(--s4)">Fijate que el monto cae siempre en la misma columna, en números tabulares, y que el estado es un punto de color con la palabra al lado. <b>El ojo baja por un borde recto</b> en vez de ir saltando. Nada tiene borde ni sombra: lo que separa la card del fondo es que es blanca sobre papel.</p>
+  </div>
+</section>
+
+<!-- ========================= INICIO ========================= -->
+<section class="doc-sec">
+  <div class="doc-k">01 · Inicio · Dirección</div>
+  <h2 class="doc-h">La pregunta de Eli se contesta sola.</h2>
+  <p class="doc-p">Una cifra grande arriba y tres de contexto en una línea. Nada de cuatro KPI del mismo tamaño en cuatro cajas: si todos pesan igual, hay que leerlos todos.</p>
+  <div class="doc-hint">↔ Deslizá para ver la pantalla completa</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i on" href="#">♪ Inicio</a>
+        <a class="nav-i" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i" href="#">◉ Asistencia</a>
+        <a class="nav-i" href="#">▦ Temporadas</a>
+        <a class="nav-i" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><div class="pgt">Hola, Eli</div><span class="lbl">Temporada 2026 · 2 de 5 funciones hechas</span></div>
+          <a class="btn btn--go" href="#">Nueva venta</a>
+        </div>
+
+        <div class="asym">
+          <div class="stack">
+            <div class="heel">
+              <span class="lbl">Próxima función · en 3 días</span>
+              <div class="heel__t">Sáb 12 dic · 20:00</div>
+              <div class="heel__m">Teatro Municipal · entrada general</div>
+              <div class="heel__bar"><i style="width:85%"></i></div>
+              <div class="heel__l"><span>68 de 80 vendidas</span><span>85%</span></div>
+            </div>
+
+            <div>
+              <span class="lbl">Falta cobrar</span>
+              <div class="fig fig--warn" style="margin:6px 0 var(--s4)">$ 90.000</div>
+              <div class="subfigs">
+                <div class="subfig"><b style="color:var(--ok)">$ 135.000</b><span class="lbl">Recaudado</span></div>
+                <div class="subfig"><b>148 <span style="color:var(--ink3)">/ 400</span></b><span class="lbl">Vendidas</span></div>
+                <div class="subfig"><b>62</b><span class="lbl">Ingresaron</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="card">
+              <div class="card__h"><span class="card__t">Te están esperando</span></div>
+              <a class="row row--nav" href="#"><div><div class="rt">2 coristas sin rendir</div><div class="rs">$ 90.000 en la calle</div></div><span class="go">›</span></a>
+              <a class="row row--nav" href="#"><div><div class="rt">12 entradas sin corista</div><div class="rs">Sáb 12 dic</div></div><span class="go">›</span></a>
+              <a class="row row--nav" href="#"><div><div class="rt">Valentina no tiene cupo</div><div class="rs">se sumó hace 2 días</div></div><span class="go">›</span></a>
+            </div>
+            <div class="card">
+              <div class="card__h"><span class="card__t">Últimas ventas</span><a class="card__a" href="#">Ver todas</a></div>
+              <a class="row row--2" href="#"><div><div class="rt">Roberto Silva</div><div class="rs">Carolina · hace 2 h</div></div><span class="rn">45.000</span><span class="go">›</span></a>
+              <a class="row row--2" href="#"><div><div class="rt">María Dutra</div><div class="rs">Carolina · ayer</div></div><span class="rn">30.000</span><span class="go">›</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<!-- ========================= VENTAS ========================= -->
+<section class="doc-sec">
+  <div class="doc-k">02 · Ventas</div>
+  <h2 class="doc-h">Una regla por función, tres filas y "ver todas".</h2>
+  <div class="doc-hint">↔ Deslizá para ver la pantalla completa</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i" href="#">♪ Inicio</a>
+        <a class="nav-i on" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i" href="#">◉ Asistencia</a>
+        <a class="nav-i" href="#">▦ Temporadas</a>
+        <a class="nav-i" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><div class="pgt">Ventas</div><span class="lbl">148 entradas · $ 225.000 cobrados · $ 90.000 por cobrar</span></div>
+          <a class="btn btn--go" href="#">Nueva venta</a>
+        </div>
+        <div class="bar">
+          <div class="search">🔍 Buscar comprador, mail o corista…</div>
+          <div class="seg"><b class="on">Todas</b><b>Debe</b><b>Pagó</b><b>Cortesías</b><b>Anuladas</b></div>
+        </div>
+
+        <div class="grp">
+          <div class="grp__h"><span class="lbl">Vie 11 dic · 20:00</span><span class="grp__n">80 entradas · $ 120.000</span></div>
+          <div class="card">
+            <a class="row" href="#"><div><div class="rt">María Dutra</div><div class="rs">Carolina · 2 entradas</div></div><span class="rn">30.000</span><span class="st st--ok"><i></i>Pagó</span><span class="go">›</span></a>
+            <a class="row" href="#"><div><div class="rt">Julián Ferrer</div><div class="rs">Sofía · 1 entrada</div></div><span class="rn">15.000</span><span class="st st--warn"><i></i>Debe</span><span class="go">›</span></a>
+            <a class="row" href="#"><div><div class="rt">Lucía Gómez</div><div class="rs">Ana · 1 entrada</div></div><span class="rn">—</span><span class="st st--cor"><i></i>Cortesía</span><span class="go">›</span></a>
+            <div class="card__f"><span>3 de 80</span><a href="#">Ver todas</a></div>
+          </div>
+        </div>
+
+        <div class="grp">
+          <div class="grp__h"><span class="lbl">Sáb 12 dic · 20:00</span><span class="grp__n">68 entradas · $ 105.000</span></div>
+          <div class="card">
+            <a class="row" href="#"><div><div class="rt">Roberto Silva</div><div class="rs">Carolina · 3 entradas</div></div><span class="rn">45.000</span><span class="st st--ok"><i></i>Pagó</span><span class="go">›</span></a>
+            <a class="row" href="#"><div><div class="rt">Paula Ortiz</div><div class="rs">Ana · 2 entradas</div></div><span class="rn">30.000</span><span class="st st--warn"><i></i>Debe</span><span class="go">›</span></a>
+            <a class="row row--dim" href="#"><div><div class="rt rt--off">Pedro Luna</div><div class="rs">anulada el 2 dic</div></div><span class="rn">15.000</span><span class="st st--bad"><i></i>Anulada</span><span class="go">›</span></a>
+            <div class="card__f"><span>3 de 68</span><a href="#">Ver todas</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<!-- ========================= RENDICIONES + DRAWER ========================= -->
+<section class="doc-sec">
+  <div class="doc-k">03 · Rendiciones · con el detalle abierto</div>
+  <h2 class="doc-h">El panel lateral: la hoja de Apple, en escritorio.</h2>
+  <p class="doc-p">Tocaste la fila de Carolina y se abrió el detalle al costado. <b>La lista sigue ahí atrás</b>: no perdés el contexto ni navegás a otra pantalla. Es el mismo componente que en el celular sube desde abajo.</p>
+  <div class="doc-hint">↔ Deslizá para ver la pantalla completa</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i" href="#">♪ Inicio</a>
+        <a class="nav-i" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i on" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i" href="#">◉ Asistencia</a>
+        <a class="nav-i" href="#">▦ Temporadas</a>
+        <a class="nav-i" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><div class="pgt">Rendiciones</div><span class="lbl">Temporada 2026</span></div>
+          <a class="btn" href="#">Historial</a>
+        </div>
+
+        <div style="margin-bottom:var(--s5)">
+          <span class="lbl">Sin rendir</span>
+          <div class="fig fig--warn" style="margin:6px 0 var(--s4)">$ 90.000</div>
+          <div class="subfigs">
+            <div class="subfig"><b style="color:var(--ok)">$ 135.000</b><span class="lbl">Ya rendido</span></div>
+            <div class="subfig"><b>2 <span style="color:var(--ink3)">de 6</span></b><span class="lbl">Coristas con deuda</span></div>
+          </div>
+        </div>
+
+        <div class="grp">
+          <div class="grp__h"><span class="lbl">Con deuda</span><span class="grp__n">$ 90.000</span></div>
+          <div class="card">
+            <a class="row" href="#" style="background:var(--sunk)"><div><div class="rt">Carolina Méndez</div><div class="rs">cobró 90.000 · rindió 45.000 · hace 11 días</div></div><span class="rn">45.000<s>debe</s></span><span class="st st--warn"><i></i>Debe</span><span class="go">›</span></a>
+            <a class="row" href="#"><div><div class="rt">Sofía Ruiz</div><div class="rs">cobró 45.000 · rindió 0 · hace 4 días</div></div><span class="rn">45.000<s>debe</s></span><span class="st st--warn"><i></i>Debe</span><span class="go">›</span></a>
+          </div>
+        </div>
+
+        <div class="grp" style="margin-bottom:0">
+          <div class="grp__h"><span class="lbl">Al día</span><span class="grp__n">4 coristas</span></div>
+          <div class="card">
+            <a class="row" href="#"><div><div class="rt">Ana Pérez</div><div class="rs">rindió todo el 8 dic</div></div><span class="rn">60.000<s>rindió</s></span><span class="st st--ok"><i></i>Al día</span><span class="go">›</span></a>
+            <a class="row" href="#"><div><div class="rt">Valentina Ríos</div><div class="rs">sin ventas todavía</div></div><span class="rn">—</span><span class="st st--mute"><i></i>Sin ventas</span><span class="go">›</span></a>
+            <div class="card__f"><span>2 de 4</span><a href="#">Ver todas</a></div>
+          </div>
+        </div>
+
+        <div class="scrim"></div>
+        <div class="drawer">
+          <span class="drawer__x">✕</span>
+          <div>
+            <span class="lbl">Rendición</span>
+            <div style="font-family:var(--fd);font-size:23px;line-height:1.1;margin-top:6px">Carolina Méndez</div>
+            <div style="font-size:12px;color:var(--ink3)">carolina@mail.com · corista desde 2024</div>
+          </div>
+
+          <div>
+            <span class="lbl">Debe</span>
+            <div class="fig fig--warn" style="font-size:32px;margin-top:5px">$ 45.000</div>
+          </div>
+
+          <div class="dl">
+            <div class="dl__r"><span class="dl__k">Cupo asignado</span><span class="dl__v">12 entradas</span></div>
+            <div class="dl__r"><span class="dl__k">Vendió</span><span class="dl__v">6 entradas</span></div>
+            <div class="dl__r"><span class="dl__k">Cobró</span><span class="dl__v">$ 90.000</span></div>
+            <div class="dl__r"><span class="dl__k">Ya rindió</span><span class="dl__v">$ 45.000</span></div>
+            <div class="dl__r"><span class="dl__k">Última rendición</span><span class="dl__v">9 dic · efectivo</span></div>
+          </div>
+
+          <div>
+            <span class="lbl">De dónde sale la deuda</span>
+            <div class="card" style="background:var(--card2);margin-top:8px">
+              <div class="row row--3" style="padding:8px var(--s2)"><div><div class="rt">Roberto Silva</div><div class="rs">3 entradas · 12 dic</div></div><span class="rn">45.000</span></div>
+            </div>
+          </div>
+
+          <div style="margin-top:auto;display:flex;gap:8px">
+            <a class="btn" href="#" style="flex:1;text-align:center">Recordarle</a>
+            <a class="btn btn--go" href="#" style="flex:1;text-align:center">Registrar rendición</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<!-- ========================= ASISTENCIA + EQUIPO ========================= -->
+<section class="doc-sec">
+  <div class="doc-k">04 · Asistencia y Equipo</div>
+  <h2 class="doc-h">Las dos listas largas del panel.</h2>
+  <div class="doc-hint">↔ Deslizá para ver las pantallas completas</div>
+
+  <div class="doc-cap">Asistencia — en vivo durante la función</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i" href="#">♪ Inicio</a>
+        <a class="nav-i" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i on" href="#">◉ Asistencia</a>
+        <a class="nav-i" href="#">▦ Temporadas</a>
+        <a class="nav-i" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><div class="pgt">Asistencia</div><span class="lbl">Sáb 12 dic · 20:00 · Teatro Municipal</span></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="st st--ok"><i></i>En vivo</span><a class="btn" href="#">Exportar</a></div>
+        </div>
+
+        <div style="margin-bottom:var(--s5)">
+          <span class="lbl">Ingresaron</span>
+          <div class="fig fig--ok" style="margin:6px 0 var(--s3)">62 <span>/ 80</span></div>
+          <div style="height:4px;background:var(--sunk);max-width:420px"><i style="display:block;height:100%;width:77%;background:var(--ok)"></i></div>
+        </div>
+
+        <div class="bar">
+          <div class="search" style="max-width:320px">🔍 Buscar por nombre…</div>
+          <div class="seg"><b class="on">Todos</b><b>Ingresaron</b><b>Faltan</b></div>
+        </div>
+
+        <div class="cols2">
+          <div class="grp" style="margin:0">
+            <div class="grp__h"><span class="lbl">Últimos en entrar</span><span class="grp__n">62</span></div>
+            <div class="card">
+              <a class="row row--2" href="#"><div><div class="rt">María Dutra</div><div class="rs">2 entradas · Carolina</div></div><span class="rn">20:14</span><span class="go">›</span></a>
+              <a class="row row--2" href="#"><div><div class="rt">Roberto Silva</div><div class="rs">3 entradas · Carolina</div></div><span class="rn">20:12</span><span class="go">›</span></a>
+              <a class="row row--2" href="#"><div><div class="rt">Paula Ortiz</div><div class="rs">2 entradas · Ana</div></div><span class="rn">20:09</span><span class="go">›</span></a>
+              <div class="card__f"><span>3 de 62</span><a href="#">Ver todos</a></div>
+            </div>
+          </div>
+          <div class="grp" style="margin:0">
+            <div class="grp__h"><span class="lbl">Todavía no llegaron</span><span class="grp__n">18</span></div>
+            <div class="card">
+              <a class="row row--2" href="#"><div><div class="rt">Julián Ferrer</div><div class="rs">1 entrada · Sofía</div></div><span class="st st--mute"><i></i>Falta</span><span class="go">›</span></a>
+              <a class="row row--2" href="#"><div><div class="rt">Lucía Gómez</div><div class="rs">1 entrada · Ana · cortesía</div></div><span class="st st--mute"><i></i>Falta</span><span class="go">›</span></a>
+              <div class="card__f"><span>2 de 18</span><a href="#">Ver todos</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="doc-cap">Equipo — con los cupos de la temporada</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i" href="#">♪ Inicio</a>
+        <a class="nav-i" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i" href="#">◉ Asistencia</a>
+        <a class="nav-i" href="#">▦ Temporadas</a>
+        <a class="nav-i on" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><div class="pgt">Equipo</div><span class="lbl">Temporada 2026 · 9 personas</span></div>
+          <div style="display:flex;gap:8px"><a class="btn" href="#">Repartir cupos</a><a class="btn btn--go" href="#">Sumar persona</a></div>
+        </div>
+
+        <div class="subfigs" style="margin-bottom:var(--s5)">
+          <div class="subfig"><b>148 <span style="color:var(--ink3)">/ 400</span></b><span class="lbl">Cupos repartidos</span></div>
+          <div class="subfig"><b style="color:var(--warn)">12</b><span class="lbl">Sin asignar</span></div>
+          <div class="subfig"><b>6</b><span class="lbl">Coristas</span></div>
+        </div>
+
+        <div class="asym">
+          <div class="grp" style="margin:0">
+            <div class="grp__h"><span class="lbl">Coristas</span><span class="grp__n">48 de 60 cupos</span></div>
+            <div class="card">
+              <a class="row" href="#"><div><div class="rt">Carolina Méndez</div><div class="rs">carolina@mail.com</div></div><span class="rn">6 / 12<s>vendidas</s></span><span class="st st--warn"><i></i>Debe</span><span class="go">›</span></a>
+              <a class="row" href="#"><div><div class="rt">Sofía Ruiz</div><div class="rs">sofia.r@mail.com</div></div><span class="rn">3 / 12<s>vendidas</s></span><span class="st st--warn"><i></i>Debe</span><span class="go">›</span></a>
+              <a class="row" href="#"><div><div class="rt">Ana Pérez</div><div class="rs">ana.perez@mail.com</div></div><span class="rn">4 / 12<s>vendidas</s></span><span class="st st--ok"><i></i>Al día</span><span class="go">›</span></a>
+              <a class="row" href="#"><div><div class="rt">Valentina Ríos</div><div class="rs">valen@mail.com · se sumó hace 2 días</div></div><span class="rn">0 / 0<s>vendidas</s></span><span class="st st--mute"><i></i>Sin cupo</span><span class="go">›</span></a>
+              <div class="card__f"><span>4 de 6</span><a href="#">Ver todas</a></div>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="grp" style="margin:0">
+              <div class="grp__h"><span class="lbl">Dirección y puerta</span><span class="grp__n">3</span></div>
+              <div class="card">
+                <a class="row row--nav" href="#"><div><div class="rt">Eli Sosa</div><div class="rs">Dirección</div></div><span class="go">›</span></a>
+                <a class="row row--nav" href="#"><div><div class="rt">Marcos Díaz</div><div class="rs">Puerta</div></div><span class="go">›</span></a>
+                <a class="row row--nav" href="#"><div><div class="rt">Jorge Pérez</div><div class="rs">Puerta</div></div><span class="go">›</span></a>
+              </div>
+            </div>
+            <div class="grp" style="margin:0">
+              <div class="grp__h"><span class="lbl">Temporadas anteriores</span><span class="grp__n">1</span></div>
+              <div class="card">
+                <a class="row row--nav" href="#"><div><div class="rt">Temporada 2025</div><div class="rs">11 personas · 3 ya no están</div></div><span class="go">›</span></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<!-- ========================= TEMPORADA + PUERTA ========================= -->
+<section class="doc-sec">
+  <div class="doc-k">05 · Temporada y Puerta</div>
+  <h2 class="doc-h">Las funciones, y la puerta desde escritorio.</h2>
+  <div class="doc-hint">↔ Deslizá para ver las pantallas completas</div>
+
+  <div class="doc-cap">Temporada 2026 — las funciones con sus cupos</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i" href="#">♪ Inicio</a>
+        <a class="nav-i" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i" href="#">◉ Asistencia</a>
+        <a class="nav-i on" href="#">▦ Temporadas</a>
+        <a class="nav-i" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><span class="lbl">Temporadas · 2026</span><div class="pgt" style="margin-top:3px">Navidad 2026</div></div>
+          <div style="display:flex;gap:8px"><a class="btn" href="#">Cambiar temporada</a><a class="btn btn--go" href="#">Nueva función</a></div>
+        </div>
+
+        <div class="subfigs" style="margin-bottom:var(--s5)">
+          <div class="subfig"><b>5</b><span class="lbl">Funciones</span></div>
+          <div class="subfig"><b>400</b><span class="lbl">Capacidad total</span></div>
+          <div class="subfig"><b>148</b><span class="lbl">Vendidas</span></div>
+          <div class="subfig"><b>$ 15.000</b><span class="lbl">Precio</span></div>
+        </div>
+
+        <div class="grp">
+          <div class="grp__h"><span class="lbl">Ya pasaron</span><span class="grp__n">2 funciones · 160 entradas</span></div>
+          <div class="card">
+            <a class="row row--dim" href="#"><div><div class="rt">Vie 4 dic · 20:00</div><div class="rs">Teatro Municipal</div></div><span class="rn">80 / 80<s>vendidas</s></span><span class="st st--ok"><i></i>78 entraron</span><span class="go">›</span></a>
+            <a class="row row--dim" href="#"><div><div class="rt">Sáb 5 dic · 20:00</div><div class="rs">Teatro Municipal</div></div><span class="rn">80 / 80<s>vendidas</s></span><span class="st st--ok"><i></i>74 entraron</span><span class="go">›</span></a>
+          </div>
+        </div>
+
+        <div class="grp">
+          <div class="grp__h"><span class="lbl">Vienen</span><span class="grp__n">3 funciones · 240 lugares</span></div>
+          <div class="card">
+            <a class="row" href="#"><div><div class="rt">Sáb 12 dic · 20:00</div><div class="rs">Teatro Municipal · en 3 días</div></div><span class="rn">68 / 80<s>vendidas</s></span><span class="st st--warn"><i></i>12 sin cupo</span><span class="go">›</span></a>
+            <a class="row" href="#"><div><div class="rt">Vie 18 dic · 20:00</div><div class="rs">Teatro Municipal</div></div><span class="rn">0 / 80<s>vendidas</s></span><span class="st st--mute"><i></i>Sin repartir</span><span class="go">›</span></a>
+            <a class="row" href="#"><div><div class="rt">Sáb 19 dic · 21:00</div><div class="rs">Teatro Municipal</div></div><span class="rn">0 / 80<s>vendidas</s></span><span class="st st--mute"><i></i>Sin repartir</span><span class="go">›</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="doc-cap">Puerta en escritorio — sin cámara: acá se elige la función y se busca por nombre</div>
+  <div class="doc-frame"><div class="doc-scroll">
+    <div class="sh">
+      <div class="sh__nav">
+        <div class="brand">ACAPELIUS</div>
+        <a class="nav-i" href="#">♪ Inicio</a>
+        <a class="nav-i" href="#">◫ Ventas <b>3</b></a>
+        <a class="nav-i on" href="#">⌗ Puerta</a>
+        <a class="nav-i" href="#">▤ Dirección</a>
+        <div class="nav-g"><span class="lbl">Administración</span></div>
+        <a class="nav-i" href="#">◷ Rendiciones <b>2</b></a>
+        <a class="nav-i" href="#">◉ Asistencia</a>
+        <a class="nav-i" href="#">▦ Temporadas</a>
+        <a class="nav-i" href="#">✶ Equipo</a>
+      </div>
+      <div class="sh__main">
+        <div class="pgh">
+          <div><div class="pgt">Puerta</div><span class="lbl">Escaneá desde el celular · acá buscás por nombre</span></div>
+          <span class="st st--ok"><i></i>En línea</span>
+        </div>
+
+        <div class="asym">
+          <div class="stack">
+            <div class="heel">
+              <span class="lbl">Función de hoy</span>
+              <div class="heel__t">Sáb 12 dic · 20:00</div>
+              <div class="heel__m">Teatro Municipal</div>
+              <div style="display:flex;align-items:baseline;gap:10px;margin-top:var(--s3)">
+                <span style="font-family:var(--fd);font-size:46px;line-height:1;color:#6DC79A">62</span>
+                <span style="font-size:15px;color:rgba(244,241,234,.6)">/ 80 ingresaron</span>
+              </div>
+              <div class="heel__bar"><i style="width:77%;background:#6DC79A"></i></div>
+            </div>
+
+            <div>
+              <div class="bar" style="margin-bottom:var(--s3)">
+                <div class="search">🔍 Buscar por nombre o mail del comprador…</div>
+              </div>
+              <div class="grp" style="margin:0">
+                <div class="grp__h"><span class="lbl">Resultados · "dutra"</span><span class="grp__n">2</span></div>
+                <div class="card">
+                  <div class="row"><div><div class="rt">María Dutra</div><div class="rs">2 entradas · le vendió Carolina</div></div><span class="rn">20:14</span><span class="st st--ok"><i></i>Ya entró</span><span class="go"></span></div>
+                  <div class="row"><div><div class="rt">Sergio Dutra</div><div class="rs">1 entrada · le vendió Ana</div></div><span class="rn">—</span><span class="btn btn--go" style="padding:5px 11px;font-size:11.5px">Marcar ingreso</span><span class="go"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="grp" style="margin:0">
+              <div class="grp__h"><span class="lbl">Otras funciones</span><span class="grp__n">4</span></div>
+              <div class="card">
+                <a class="row row--nav" href="#"><div><div class="rt">Vie 18 dic · 20:00</div><div class="rs">0 de 80 vendidas</div></div><span class="go">›</span></a>
+                <a class="row row--nav" href="#"><div><div class="rt">Sáb 19 dic · 21:00</div><div class="rs">0 de 80 vendidas</div></div><span class="go">›</span></a>
+                <a class="row row--nav row--dim" href="#"><div><div class="rt">Sáb 5 dic · 20:00</div><div class="rs">74 de 80 entraron</div></div><span class="go">›</span></a>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card__h"><span class="card__t">Quién está en la puerta</span></div>
+              <div class="row row--2" style="pointer-events:none"><div><div class="rt">Marcos Díaz</div><div class="rs">38 escaneos</div></div><span class="st st--ok"><i></i>Activo</span><span></span></div>
+              <div class="row row--2" style="pointer-events:none"><div><div class="rt">Jorge Pérez</div><div class="rs">24 escaneos</div></div><span class="st st--ok"><i></i>Activo</span><span></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<!-- ========================= CELULAR ========================= -->
+<section class="doc-sec">
+  <div class="doc-k">06 · El celular · la corista</div>
+  <h2 class="doc-h">Donde más se usa la app.</h2>
+  <p class="doc-p">El cuarto teléfono muestra la hoja de detalle abierta: tocaste una venta y subió con todo lo que la fila no mostraba, sin perder la lista de atrás.</p>
+
+  <div class="doc-frame" style="padding:24px 0;background:#EAE7DE">
+    <div class="phones" style="padding:0 24px">
+
+      <!-- INICIO CORISTA -->
+      <div class="phone">
+        <div class="ph-h"><span class="brand" style="padding:0;font-size:14px">ACAPELIUS</span><span class="lbl">Carolina</span></div>
+        <div class="ph-b">
+          <div class="heel" style="margin:0 calc(var(--s3) * -1)">
+            <span class="lbl">Próxima función · en 3 días</span>
+            <div class="heel__t">Sáb 12 dic · 20:00</div>
+            <div class="heel__m">Teatro Municipal</div>
+            <div class="heel__bar"><i style="width:50%"></i></div>
+            <div class="heel__l"><span>6 de tus 12</span><span>50%</span></div>
+          </div>
+
+          <div>
+            <span class="lbl">Tenés que rendir</span>
+            <div class="fig fig--warn" style="margin-top:5px">$ 45.000</div>
+            <div class="subfigs" style="margin-top:var(--s3);gap:var(--s5)">
+              <div class="subfig"><b>6</b><span class="lbl">Te quedan</span></div>
+              <div class="subfig"><b>$ 90.000</b><span class="lbl">Cobraste</span></div>
+            </div>
+          </div>
+
+          <div class="grp" style="margin:0">
+            <div class="grp__h"><span class="lbl">Tus últimas ventas</span><span class="grp__n">6</span></div>
+            <div class="card">
+              <a class="row row--2" href="#"><div><div class="rt">María Dutra</div><div class="rs">2 entradas · 30.000</div></div><span class="st st--ok"><i></i>Pagó</span><span class="go">›</span></a>
+              <a class="row row--2" href="#"><div><div class="rt">Julián Ferrer</div><div class="rs">1 entrada · 15.000</div></div><span class="st st--warn"><i></i>Debe</span><span class="go">›</span></a>
+              <div class="card__f"><span>2 de 6</span><a href="#">Ver todas</a></div>
+            </div>
+          </div>
+
+          <a class="btn btn--go btn--w" href="#">Nueva venta</a>
+        </div>
+        <div class="ph-tabs">
+          <div class="ph-t on"><i>♪</i>Inicio</div><div class="ph-t"><i>◫</i>Ventas</div><div class="ph-t"><i>⌗</i>Puerta</div><div class="ph-t"><i>◷</i>Mi plata</div>
+        </div>
+      </div>
+
+      <!-- NUEVA VENTA -->
+      <div class="phone">
+        <div class="ph-h"><span class="lbl">✕ Cancelar</span><span class="lbl">Nueva venta</span></div>
+        <div class="ph-b" style="gap:var(--s4)">
+          <div>
+            <span class="lbl">Función</span>
+            <div class="card" style="margin-top:7px"><div class="row row--2" style="pointer-events:none"><div><div class="rt">Sáb 12 dic · 20:00</div><div class="rs">te quedan 6 de 12</div></div><span class="lbl">Cambiar</span><span class="go">›</span></div></div>
+          </div>
+          <div>
+            <span class="lbl">Comprador</span>
+            <div style="background:var(--card);border-radius:var(--r);margin-top:7px;overflow:hidden">
+              <div class="row row--3" style="padding:11px var(--s3)"><span style="color:var(--ink3);font-size:13.5px">Nombre y apellido</span></div>
+              <div class="row row--3" style="padding:11px var(--s3)"><span style="color:var(--ink3);font-size:13.5px">Mail</span></div>
+            </div>
+            <div class="rs" style="margin-top:6px;white-space:normal">Ahí le llega el QR.</div>
+          </div>
+          <div>
+            <span class="lbl">Cantidad</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:var(--r);padding:var(--s2) var(--s3);margin-top:7px">
+              <div style="display:flex;align-items:center;gap:var(--s3)">
+                <span class="btn" style="padding:6px 13px">−</span>
+                <span style="font-family:var(--fd);font-size:26px;line-height:1">2</span>
+                <span class="btn" style="padding:6px 13px">+</span>
+              </div>
+              <div style="text-align:right"><span class="lbl">Total</span><div style="font-family:var(--fm);font-size:17px;font-weight:700">$ 30.000</div></div>
+            </div>
+          </div>
+          <div style="margin-top:auto;display:flex;flex-direction:column;gap:7px">
+            <span class="lbl" style="text-align:center">Marcar como cortesía</span>
+            <a class="btn btn--go btn--w" href="#">Registrar venta</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- MI PLATA -->
+      <div class="phone">
+        <div class="ph-h"><span class="brand" style="padding:0;font-size:14px">ACAPELIUS</span><span class="lbl">Carolina</span></div>
+        <div class="ph-b" style="gap:var(--s4)">
+          <div><div class="pgt" style="font-size:26px">Mi plata</div><span class="lbl">Temporada 2026</span></div>
+          <div>
+            <span class="lbl">Le tenés que dar a Eli</span>
+            <div class="fig fig--warn" style="margin-top:5px">$ 45.000</div>
+            <div class="subfigs" style="margin-top:var(--s3);gap:var(--s5)">
+              <div class="subfig"><b>$ 90.000</b><span class="lbl">Cobraste</span></div>
+              <div class="subfig"><b style="color:var(--ok)">$ 45.000</b><span class="lbl">Ya rendiste</span></div>
+            </div>
+          </div>
+          <div class="grp" style="margin:0">
+            <div class="grp__h"><span class="lbl">De dónde sale</span><span class="grp__n">$ 45.000</span></div>
+            <div class="card">
+              <div class="row row--3" style="pointer-events:none"><div><div class="rt">Roberto Silva</div><div class="rs">3 entradas · 12 dic</div></div><span class="rn">45.000</span></div>
+            </div>
+          </div>
+          <div class="grp" style="margin:0">
+            <div class="grp__h"><span class="lbl">Ya rendiste</span><span class="grp__n">1 vez</span></div>
+            <div class="card">
+              <div class="row row--3" style="pointer-events:none"><div><div class="rt">9 dic · efectivo</div><div class="rs">se lo diste a Eli</div></div><span class="rn">45.000</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="ph-tabs">
+          <div class="ph-t"><i>♪</i>Inicio</div><div class="ph-t"><i>◫</i>Ventas</div><div class="ph-t"><i>⌗</i>Puerta</div><div class="ph-t on"><i>◷</i>Mi plata</div>
+        </div>
+      </div>
+
+      <!-- VENTAS + HOJA -->
+      <div class="phone">
+        <div class="ph-h"><span class="brand" style="padding:0;font-size:14px">ACAPELIUS</span><span class="lbl">Carolina</span></div>
+        <div class="ph-b" style="gap:var(--s3)">
+          <div><div class="pgt" style="font-size:26px">Ventas</div><span class="lbl">34 entradas · $ 480.000</span></div>
+          <div class="search">🔍 Buscar comprador…</div>
+          <div class="seg" style="align-self:flex-start"><b class="on">Todas</b><b>Debe</b><b>Pagó</b></div>
+          <div class="grp" style="margin:0">
+            <div class="grp__h"><span class="lbl">Vie 11 dic</span><span class="grp__n">18 · $ 270.000</span></div>
+            <div class="card">
+              <a class="row row--2" href="#"><div><div class="rt">María Dutra</div><div class="rs">2 entradas · 30.000</div></div><span class="st st--ok"><i></i>Pagó</span><span class="go">›</span></a>
+            </div>
+          </div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="sheet__h">
+            <div style="min-width:0"><div class="sheet__t">María Dutra</div><div class="sheet__s">2 entradas · Vie 11 dic</div></div>
+            <span class="st st--ok"><i></i>Pagó</span>
+          </div>
+          <div style="padding:0 var(--s3)">
+            <div class="dl">
+              <div class="dl__r"><span class="dl__k">Mail</span><span class="dl__v">maria.dutra@mail.com</span></div>
+              <div class="dl__r"><span class="dl__k">Total</span><span class="dl__v">$ 30.000</span></div>
+              <div class="dl__r"><span class="dl__k">Pagó</span><span class="dl__v">8 dic · transferencia</span></div>
+              <div class="dl__r"><span class="dl__k">Ingreso</span><span class="dl__v" style="color:var(--ink3)">todavía no</span></div>
+            </div>
+          </div>
+          <div class="sheet__acts">
+            <a class="btn" href="#">Reenviar QR</a>
+            <a class="btn btn--go" href="#">Ver entrada</a>
+          </div>
+        </div>
+        <div class="ph-tabs" style="opacity:.4">
+          <div class="ph-t"><i>♪</i>Inicio</div><div class="ph-t on"><i>◫</i>Ventas</div><div class="ph-t"><i>⌗</i>Puerta</div><div class="ph-t"><i>◷</i>Mi plata</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ========================= PUERTA MOBILE ========================= -->
+<section class="doc-sec">
+  <div class="doc-k">07 · La puerta, de noche</div>
+  <h2 class="doc-h">Acá el sistema se corre a un costado.</h2>
+  <p class="doc-p">El resultado de un escaneo se lee a un metro de distancia, con el teatro lleno y alguien esperando. Los paneles verde y rojo van a <b>pantalla completa y con radio 0</b> — son semánticos, no decoración, y es el otro lugar donde el afiche tiene sentido.</p>
+
+  <div class="doc-frame" style="padding:24px 0;background:#EAE7DE">
+    <div class="phones" style="padding:0 24px">
+
+      <!-- ESCANEANDO -->
+      <div class="phone">
+        <div class="ph-h"><span class="brand" style="padding:0;font-size:14px">ACAPELIUS</span><span class="st st--ok"><i></i>En línea</span></div>
+        <div class="ph-b" style="gap:var(--s3)">
+          <div class="heel" style="margin:0 calc(var(--s3) * -1);padding:var(--s3) var(--s4)">
+            <span class="lbl">Sáb 12 dic · 20:00</span>
+            <div style="display:flex;align-items:baseline;gap:9px;margin-top:7px">
+              <span style="font-family:var(--fd);font-size:40px;line-height:1;color:#6DC79A">62</span>
+              <span style="font-size:14px;color:rgba(244,241,234,.6)">/ 80 ingresaron</span>
+            </div>
+            <div class="heel__bar"><i style="width:77%;background:#6DC79A"></i></div>
+          </div>
+          <div class="cam" style="margin:0"><div><div style="font-size:30px">⌗</div><div style="font-size:13px;margin-top:7px">Apuntá al QR</div></div></div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <a class="btn btn--go btn--w" href="#">Siguiente escaneo</a>
+            <a class="btn btn--w" href="#">Buscar por nombre</a>
+          </div>
+        </div>
+        <div class="ph-tabs">
+          <div class="ph-t"><i>♪</i>Inicio</div><div class="ph-t"><i>◫</i>Ventas</div><div class="ph-t on"><i>⌗</i>Puerta</div><div class="ph-t"><i>◷</i>Mi plata</div>
+        </div>
+      </div>
+
+      <!-- VÁLIDO -->
+      <div class="phone">
+        <div class="ph-h" style="background:var(--ok);color:#F4F1EA"><span class="brand" style="padding:0;font-size:14px">ACAPELIUS</span><span class="lbl" style="color:rgba(244,241,234,.7)">63 / 80</span></div>
+        <div class="ph-full">
+          <div class="verdict verdict--ok">
+            <div class="verdict__i">✓</div>
+            <div class="verdict__n">Sergio Dutra</div>
+            <div class="verdict__d">1 entrada · le vendió Ana Pérez</div>
+            <div class="verdict__s">Sello Acapelius · 20:17</div>
+          </div>
+          <div style="padding:var(--s3);background:var(--ok)">
+            <a class="btn btn--w" href="#" style="background:#F4F1EA;color:var(--ok);font-weight:700">Siguiente escaneo</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- YA USADA -->
+      <div class="phone">
+        <div class="ph-h" style="background:var(--bad);color:#F4F1EA"><span class="brand" style="padding:0;font-size:14px">ACAPELIUS</span><span class="lbl" style="color:rgba(244,241,234,.7)">62 / 80</span></div>
+        <div class="ph-full">
+          <div class="verdict verdict--bad">
+            <div class="verdict__i">✕</div>
+            <div class="verdict__n">Ya entró</div>
+            <div class="verdict__d" style="margin-top:4px"><b>María Dutra</b><br>20:14 · escaneó Marcos Díaz</div>
+            <div class="verdict__s">2 entradas · le vendió Carolina</div>
+          </div>
+          <div style="padding:var(--s3);background:var(--bad);display:flex;flex-direction:column;gap:7px">
+            <a class="btn btn--w" href="#" style="background:#F4F1EA;color:var(--bad);font-weight:700">Siguiente escaneo</a>
+            <a class="btn btn--w" href="#" style="background:transparent;color:#F4F1EA">Dejarla pasar igual</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIN CONEXIÓN -->
+      <div class="phone">
+        <div class="ph-h"><span class="brand" style="padding:0;font-size:14px">ACAPELIUS</span><span class="st st--warn"><i></i>Sin conexión</span></div>
+        <div class="ph-b" style="gap:var(--s3)">
+          <div class="heel" style="margin:0 calc(var(--s3) * -1);padding:var(--s3) var(--s4)">
+            <span class="lbl">Sáb 12 dic · 20:00</span>
+            <div style="display:flex;align-items:baseline;gap:9px;margin-top:7px">
+              <span style="font-family:var(--fd);font-size:40px;line-height:1;color:#6DC79A">62</span>
+              <span style="font-size:14px;color:rgba(244,241,234,.6)">/ 80 ingresaron</span>
+            </div>
+            <div class="heel__bar"><i style="width:77%;background:#6DC79A"></i></div>
+          </div>
+          <div class="card" style="background:#F6EEDF">
+            <div class="row row--3" style="pointer-events:none;padding:var(--s2) var(--s3)">
+              <div><div class="rt" style="color:var(--warn)">Seguí escaneando</div><div class="rs" style="color:var(--warn);opacity:.8;white-space:normal">La lista está guardada en el teléfono. Se sincroniza sola cuando vuelva internet.</div></div>
+              <span class="rn" style="color:var(--warn)">7<s style="color:var(--warn)">en cola</s></span>
+            </div>
+          </div>
+          <div class="cam" style="margin:0"><div><div style="font-size:30px">⌗</div><div style="font-size:13px;margin-top:7px">Apuntá al QR</div></div></div>
+          <a class="btn btn--go btn--w" href="#">Siguiente escaneo</a>
+        </div>
+        <div class="ph-tabs">
+          <div class="ph-t"><i>♪</i>Inicio</div><div class="ph-t"><i>◫</i>Ventas</div><div class="ph-t on"><i>⌗</i>Puerta</div><div class="ph-t"><i>◷</i>Mi plata</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="doc-note">El talón negro, los paneles de puerta y los títulos en Anton son los únicos lugares con radio 0 en toda la app. <b>Ese contraste es la marca.</b> Si todo fuera igual de blando, sería una app linda y anónima.</div>
+</section>
+
+<!-- ========================= CIERRE ========================= -->
+<section class="doc-sec">
+  <div class="doc-k">08 · Si te cierra</div>
+  <h2 class="doc-h">Qué le paso a Claude Code.</h2>
+  <p class="doc-p">El paquete va con tres cosas: <b>el diagnóstico de qué borrar</b> (las 100 clases muertas, las 10 familias de fila, los 27 tamaños, las 58 clases con mayúsculas), <b>el sistema de B</b> con sus tokens y sus ocho piezas, y <b>los dos comportamientos</b> — la fila de dos líneas y la hoja de detalle, que en escritorio es el panel lateral.</p>
+  <p class="doc-p">Más dos arreglos que salieron en el camino: el link de rendiciones de la corista, que hoy la rebota a Inicio y nunca la deja ver lo que debe, y la tarjeta "Administración" de Dirección, que es navegación dibujada dos veces.</p>
+</section>
+
+</div>
+</body>
+</html>
