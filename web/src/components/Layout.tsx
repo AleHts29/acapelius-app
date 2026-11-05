@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 
 import { SeasonSelector } from '../season/SeasonSelector'
@@ -12,6 +12,11 @@ export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
   // Hasta dos niveles: /panel/rendiciones/5 es la misma pantalla que /panel/rendiciones.
   const pantalla = useLocation().pathname.split('/').slice(0, 3).join('/')
+  // Cada pantalla arranca arriba. Sin esto, venir scrolleado de una pantalla
+  // larga a una corta deja a iOS con el scroll viejo y la barra de abajo flotando.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pantalla])
   if (!user) return null
 
   const initial = user.name.trim().charAt(0).toUpperCase() || 'A'

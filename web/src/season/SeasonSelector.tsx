@@ -6,6 +6,7 @@ import { LayoutList, Plus } from 'lucide-react'
 import { api } from '../api/client'
 import { Menu } from '../ui/Menu'
 import { NuevaTemporadaPanel } from './NuevaTemporada'
+import { ESTADO_TEXTO, estadoTemporada } from './estado'
 import { useSeason } from './SeasonProvider'
 
 /**
@@ -34,8 +35,13 @@ export function SeasonSelector() {
     const s = overview.data?.seasons.find((x) => x.id === id)
     if (!s) return id === current?.id ? 'En curso' : undefined
     const funciones = `${s.functions} ${s.functions === 1 ? 'función' : 'funciones'}`
-    return s.is_active ? `En curso · ${funciones}` : `Cerrada · ${funciones}`
+    return `${ESTADO_TEXTO[estadoTemporada(s)]} · ${funciones}`
   }
+
+  // Punto verde sólo si la elegida está en curso de verdad: con las fechas, no
+  // con la marca de activa. Si no, se dice en palabras qué es.
+  const elegida = overview.data?.seasons.find((x) => x.id === season.id)
+  const estado = elegida ? estadoTemporada(elegida) : season.id === current?.id ? 'en curso' : 'terminada'
 
   return (
     <>
@@ -78,10 +84,12 @@ export function SeasonSelector() {
         {/* Que la elegida no sea la en curso tiene que verse siempre, no sólo
             al abrir el menú: es la diferencia entre mirar el año pasado y
             creer que estás mirando el de ahora. */}
-        {season.id === current?.id ? (
+        {estado === 'en curso' && season.id === current?.id ? (
           <span className="seasonsel__dot seasonsel__dot--on" title="Temporada en curso" />
         ) : (
-          <span className="seasonsel__tag">Cerrada</span>
+          <span className={`seasonsel__tag${season.id === current?.id ? ' seasonsel__tag--mute' : ''}`}>
+            {ESTADO_TEXTO[estado]}
+          </span>
         )}
       </div>
 

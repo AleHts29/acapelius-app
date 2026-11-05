@@ -6,6 +6,7 @@ import { ApiError, api } from '../api/client'
 import type { SeasonOverview } from '../api/client'
 import { calendarDaysUntil, dayAndMonthShort, formatMoney } from '../lib/format'
 import { DEPENDEN_DE_LA_TEMPORADA, NuevaTemporada } from '../season/NuevaTemporada'
+import { ESTADO_TEXTO, estadoTemporada } from '../season/estado'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { DataList } from '../ui/DataList'
@@ -24,27 +25,19 @@ function anio(s: SeasonOverview): string {
   return new Date(s.first_at ?? s.created_at).getFullYear().toString()
 }
 
-/**
- * Estado de una temporada. "Cerrada" es sólo la que ya pasó: una temporada que
- * se carga para el año que viene todavía no está en curso, pero llamarla
- * cerrada sería exactamente al revés de lo que es.
- */
-function estado(s: SeasonOverview): 'en curso' | 'preparándose' | 'cerrada' {
-  if (s.is_active) return 'en curso'
-  return s.functions > 0 && !s.next_at ? 'cerrada' : 'preparándose'
-}
+const estado = estadoTemporada
 
 const FRANJAS = {
-  'en curso': { texto: 'En curso', tono: 'ok' },
-  preparándose: { texto: 'Preparándose', tono: 'warn' },
-  cerrada: { texto: 'Cerrada', tono: 'mute' },
+  'en curso': { texto: ESTADO_TEXTO['en curso'], tono: 'ok' },
+  preparándose: { texto: ESTADO_TEXTO.preparándose, tono: 'warn' },
+  terminada: { texto: ESTADO_TEXTO.terminada, tono: 'mute' },
 } as const
 
 /** El renglón bajo el nombre: qué falta si está en curso, qué pasó si ya no. */
 function contexto(s: SeasonOverview): string {
   const funciones = `${s.functions} ${s.functions === 1 ? 'función' : 'funciones'}`
   if (s.functions === 0) return 'Todavía sin funciones'
-  if (estado(s) === 'cerrada') {
+  if (estado(s) === 'terminada') {
     if (s.sellers === 0) return `${funciones} · sin ventas`
     return `${funciones} · ${s.sellers} ${s.sellers === 1 ? 'corista' : 'coristas'}`
   }
@@ -57,12 +50,16 @@ function contexto(s: SeasonOverview): string {
 }
 
 function SeasonTile({ s, onClick }: { s: SeasonOverview; onClick: () => void }) {
-  const cerrada = estado(s) === 'cerrada'
+  const cerrada = estado(s) === 'terminada'
   const ocupacion = s.capacity > 0 ? Math.round((s.sold / s.capacity) * 100) : 0
   const libres = Math.max(s.capacity - s.assigned, 0)
   return (
     <FnTile
-      franja={FRANJAS[estado(s)]}
+      franja={
+        s.is_active && cerrada
+          ? { texto: `${ESTADO_TEXTO.terminada} · es la que se muestra`, tono: 'mute' }
+          : FRANJAS[estado(s)]
+      }
       label={anio(s)}
       date={s.name}
       venue={rango(s)}
@@ -81,7 +78,7 @@ function SeasonTile({ s, onClick }: { s: SeasonOverview; onClick: () => void }) 
           <span className="rs">{cerrada ? `${ocupacion}%` : libres > 0 ? `${libres} sin repartir` : ''}</span>
         </>
       }
-      on={s.is_active}
+      on={estado(s) === 'en curso'}
       off={cerrada}
       onClick={onClick}
     />
@@ -136,6 +133,12 @@ function SeasonModal({
       {!s.is_active && (
         <p className="rs" style={{ whiteSpace: 'normal', margin: 0 }}>
           Usarla la vuelve la temporada que muestran Inicio, Rendiciones y Dirección.
+        </p>
+      )}
+      {s.is_active && estado(s) === 'terminada' && (
+        <p className="rs" style={{ whiteSpace: 'normal', margin: 0 }}>
+          Ya pasaron todas sus funciones. Sigue siendo la que muestran Inicio, Rendiciones y
+          Dirección hasta que uses otra.
         </p>
       )}
     </Modal>

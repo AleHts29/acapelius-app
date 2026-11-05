@@ -636,6 +636,7 @@ a.tile:active, button.tile:active, a.fn:active, button.fn:active { transform: tr
 .seasonsel .btn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .seasonsel__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex: none }
 .seasonsel__tag { font-size: var(--t-meta); font-weight: 500; color: var(--warn); white-space: nowrap }
+.seasonsel__tag--mute { color: var(--ink3) }
 .sidenav { display: none }
 @media (min-width: 1024px) {
   .app-header, .tabbar { display: none }
@@ -723,7 +724,8 @@ button.rule__c:hover { color: var(--ink) }
 /* ==========================================================================
    Shell, cámara y barra de la demo
    ========================================================================== */
-.app-shell { min-height: 100%; display: flex; flex-direction: column }
+/* dvh: en iOS la barra fija de abajo se corre si el documento queda más corto que la pantalla. */
+.app-shell { min-height: 100%; min-height: 100dvh; display: flex; flex-direction: column }
 .app-main { flex: 1; width: 100%; max-width: 480px; margin: 0 auto; padding: 6px var(--s4) calc(var(--tab-h) + var(--s5) + 24px + env(safe-area-inset-bottom)) }
 @media (min-width: 768px) {
   .app-main { max-width: 640px }
