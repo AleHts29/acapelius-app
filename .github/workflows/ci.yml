@@ -1,0 +1,67 @@
+# CI: corre en cada push y pull request. Railway espera a que pase ("Wait for
+# CI") antes de deployar main: si algo de acá falla, producción no se toca.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: acapelius
+          POSTGRES_PASSWORD: acapelius
+          POSTGRES_DB: acapelius_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U acapelius"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # El frontend primero: el binario de Go embebe web/dist.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Instalar dependencias del frontend
+        working-directory: web
+        run: npm ci
+      - name: Typecheck
+        working-directory: web
+        run: npm run typecheck
+      - name: Tests del frontend
+        working-directory: web
+        run: npm test
+      - name: CSS sin usar
+        working-directory: web
+        run: npm run css:dead
+      - name: Build del frontend
+        working-directory: web
+        run: npm run build
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: go vet
+        run: go vet ./...
+      - name: Tests del backend (con Postgres)
+        env:
+          TEST_DATABASE_URL: postgres://acapelius:acapelius@localhost:5432/acapelius_test?sslmode=disable
+        run: go test -count=1 ./...
