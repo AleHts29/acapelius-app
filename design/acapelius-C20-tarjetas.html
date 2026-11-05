@@ -1,0 +1,232 @@
+<title>Acapelius Tarjetas Opciones</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: seis tratamientos de la misma tarjeta de corista (y su versión de
+   función), con los tokens reales de la app. Switch claro/oscuro. Hover vivo. */
+:root{--pg-bg:#0f0e0c;--pg-fg:#f4f1ea;--pg-mute:#9a9282;--pg-hair:#2a2723;--pg-card:#171512;--pg-acc:#ec6e4c;
+  --fd:'Anton',Impact,sans-serif;--fb:'Inter',system-ui,sans-serif;--fm:'JetBrains Mono',ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg-bg);color:var(--pg-fg);font:400 15px/1.5 var(--fb);padding-block:36px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:52px}
+h1{font:400 40px/1 var(--fd);margin:0 0 8px;letter-spacing:.01em}
+h2{font:400 24px/1.1 var(--fd);margin:0;letter-spacing:.01em}
+.lbl{font:500 10px/1 var(--fm);text-transform:uppercase;letter-spacing:.15em;color:var(--pg-mute)}
+p{margin:0;max-width:68ch;color:var(--pg-mute)}
+.ctl{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:12px;align-items:center;padding:10px 14px;background:var(--pg-card);border:1px solid var(--pg-hair)}
+.ctl button{font:500 12.5px/1 var(--fb);padding:8px 12px;border:1px solid var(--pg-hair);background:none;color:var(--pg-fg);cursor:pointer}
+.ctl button[aria-pressed="true"]{border-color:var(--pg-acc);color:var(--pg-acc)}
+.ctl .hint{font-size:12.5px;margin-left:auto;color:var(--pg-mute)}
+.opt{display:flex;flex-direction:column;gap:12px}
+.opt header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;border-top:1px solid var(--pg-fg);padding-top:12px}
+.opt header .lbl{max-width:56ch;text-align:right}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px 24px;font-size:13.5px}
+.notes ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px}
+.notes li{color:var(--pg-mute)}.notes b{color:var(--pg-fg);font-weight:600}
+
+.app{--paper:#141311;--card2:#1a1815;--ink:#f4f1ea;--ink2:#9a9282;--ink3:#8f8878;--hair:rgba(244,241,234,.1);--sunk:rgba(244,241,234,.05);--ticket:#ec6e4c;--ok:#6dc79a;--warn:#e8a33d;--bad:#e07a7a;--ind:#9da0f2;--on-ticket:#141311;--black:#0e0d0b;--on-black:#f4f1ea;
+  background:var(--paper);color:var(--ink);padding:28px 32px;font-size:13.5px;line-height:1.45;font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--pg-hair)}
+.light .app{--paper:#e8e3d7;--card2:#dfd9cb;--ink:#1a1a18;--ink2:#5f5a4f;--ink3:#6a6457;--hair:rgba(26,26,24,.14);--sunk:rgba(26,26,24,.06);--ticket:#ad3518;--ok:#1e6b4a;--warn:#8a5a08;--bad:#a32d2d;--ind:#3a3fc4;--on-ticket:#fff;--black:#1a1a18;--on-black:#e8e3d7}
+.g{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media (max-width:860px){.g,.g4{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:520px){.g,.g4{grid-template-columns:1fr}}
+.rs{font-size:11.5px;color:var(--ink3)}
+.mono{font-family:var(--fm);font-size:12.5px}
+.st{font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.st::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.st.ok{color:var(--ok)}.st.warn{color:var(--warn)}.st.mute{color:var(--ink3)}
+.bar{height:4px;background:var(--sunk);overflow:hidden;margin:10px 0 7px}
+.bar i{display:block;height:100%;background:var(--ink)}
+.bar i.ok{background:var(--ok)}.bar i.tk{background:var(--ticket)}.bar i.w{background:var(--warn)}
+.btn{font:500 12.5px/1 var(--fb);padding:7px 11px;border:1px solid var(--hair);color:var(--ink);white-space:nowrap;background:none;cursor:pointer}
+.btn.go{background:var(--ticket);border-color:var(--ticket);color:var(--on-ticket);font-weight:600}
+.sq{width:38px;height:38px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font:400 15px/1 var(--fd);letter-spacing:.04em;flex:none}
+.meta{display:flex;justify-content:space-between;align-items:baseline}
+.f{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--hair)}
+.n{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.card{border:1px solid var(--hair);padding:16px;position:relative;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;cursor:pointer}
+.card:hover{border-color:var(--ink3)}
+.top{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+
+/* ---------- 1 · Talón ---------- */
+.t1 .head{background:var(--black);color:var(--on-black);margin:-16px -16px 14px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.t1 .head .n{font:400 22px/1 var(--fd);letter-spacing:.01em}
+.t1 .head .num{font:500 10px/1 var(--fm);letter-spacing:.15em;opacity:.6}
+.t1 .head .sq{background:var(--ticket);color:var(--on-ticket)}
+.t1:hover{transform:translateY(-2px)}
+/* ---------- 2 · Cifra ---------- */
+.t2 .big{font:400 44px/1 var(--fd);margin:4px 0 2px;letter-spacing:.01em}
+.t2 .big small{font:400 16px/1 var(--fb);color:var(--ink3);margin-left:4px}
+.t2 .bar{height:6px}
+.t2.warn .big{color:var(--warn)}
+.t2:hover .bar i{filter:brightness(1.15)}
+/* ---------- 3 · Entrada ---------- */
+.t3{padding:0;overflow:visible}
+.t3 .body{padding:16px}
+.t3 .stub{border-top:1px dashed var(--hair);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;position:relative;background:var(--card2)}
+.t3 .stub::before,.t3 .stub::after{content:"";position:absolute;top:-7px;width:14px;height:14px;border-radius:50%;background:var(--paper);border:1px solid var(--hair)}
+.t3 .stub::before{left:-8px;clip-path:inset(0 0 0 50%)}
+.t3 .stub::after{right:-8px;clip-path:inset(0 50% 0 0)}
+.t3 .serial{font:500 10px/1 var(--fm);letter-spacing:.15em;color:var(--ink3)}
+.t3:hover{transform:rotate(-.4deg)}
+/* ---------- 4 · Tinta ---------- */
+.t4 .sq{background:var(--tint);color:#fff}
+.t4{border-top:3px solid var(--tint)}
+.t4 .n{font-size:16px}
+.t4:hover{box-shadow:inset 0 0 0 1px var(--tint)}
+/* ---------- 5 · Afiche ---------- */
+.t5{overflow:hidden;min-height:168px}
+.t5 .wm{position:absolute;right:-8px;bottom:-22px;font:400 120px/1 var(--fd);color:var(--ink);opacity:.06;pointer-events:none;letter-spacing:-.02em;transition:opacity .2s ease,transform .3s ease}
+.t5:hover .wm{opacity:.1;transform:translateX(-4px)}
+.t5 .n{font:400 20px/1 var(--fd);letter-spacing:.01em}
+.t5 .eye{font:500 10px/1 var(--fm);letter-spacing:.15em;text-transform:uppercase;color:var(--ticket);margin-bottom:8px}
+/* ---------- 6 · Estado ---------- */
+.t6{padding-left:20px}
+.t6::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ink3)}
+.t6.warn::before{background:var(--warn)}.t6.ok::before{background:var(--ok)}.t6.off::before{background:var(--hair)}
+.t6 .tag{position:absolute;top:12px;right:12px;font:500 10px/1 var(--fm);letter-spacing:.12em;text-transform:uppercase;padding:4px 6px;border:1px solid currentColor}
+.t6.warn .tag{color:var(--warn)}.t6.ok .tag{color:var(--ok)}
+.t6:hover{transform:translateX(2px)}
+/* ---------- 5 + 4 · Afiche con tinta ---------- */
+.t54{overflow:hidden;min-height:172px;border-top:3px solid var(--tint)}
+.t54 .wm{position:absolute;right:-6px;bottom:-24px;font:400 124px/1 var(--fd);color:var(--tint);opacity:.16;pointer-events:none;letter-spacing:-.02em;transition:opacity .2s ease,transform .3s ease}
+.t54:hover .wm{opacity:.26;transform:translateX(-4px)}
+.t54 .n{font:400 21px/1 var(--fd);letter-spacing:.01em}
+.t54 .eye{font:500 10px/1 var(--fm);letter-spacing:.15em;text-transform:uppercase;color:var(--tint);margin-bottom:8px;filter:saturate(1.1)}
+.t54 .bar i{background:var(--tint)}
+.t54.b{border-top-color:var(--hair);border-top-width:1px}
+.t54.b .sq{background:var(--tint);color:#fff;position:absolute;top:14px;right:14px;width:32px;height:32px;font-size:13px}
+.t54.b .wm{opacity:.12}
+.light .t54 .wm{opacity:.14}
+.light .t54:hover .wm{opacity:.22}
+/* función (versión de cada una) */
+.fnd{font:400 28px/1 var(--fd);margin:6px 0 2px}
+.fnl{font:500 10px/1 var(--fm);letter-spacing:.15em;text-transform:uppercase;color:var(--ink3)}
+@media (prefers-reduced-motion:reduce){.card,.card *{transition:none!important}}
+.matrix{width:100%;border-collapse:collapse;font-size:13px}
+.matrix th,.matrix td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--pg-hair);vertical-align:top;color:var(--pg-mute)}
+.matrix th{font:500 10px/1.4 var(--fm);text-transform:uppercase;letter-spacing:.12em}
+.matrix td:first-child{color:var(--pg-fg);font-weight:600;white-space:nowrap}
+.mw{overflow-x:auto}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="lbl" style="margin-bottom:12px">Acapelius · la tarjeta de entidad · seis tratamientos</p>
+  <h1>Tarjetas con carácter</h1>
+  <p>La misma tarjeta de corista (y su versión de función) en seis tratamientos que caben en Backstage: sin sombras ni radios, pero con más tipografía, más color donde el dato lo pide y un gesto al pasar el mouse. Pasá el cursor por encima: cada una responde distinto.</p>
+</header>
+
+<div class="ctl"><span class="lbl">Tema</span><button type="button" data-t="dark" aria-pressed="true">Oscuro</button><button type="button" data-t="light" aria-pressed="false">Claro</button><span class="hint">Todas respetan prefers-reduced-motion.</span></div>
+
+<div id="frames">
+
+<section class="opt">
+  <header><h2>1 · Talón</h2><span class="lbl">la cabecera negra del afiche en cada tarjeta, el nombre en Anton, un número de orden</span></header>
+  <div class="app"><div class="g">
+    <div class="card t1"><div class="head"><div class="n">Beatriz Coria</div><span class="num">Nº 02</span></div><div class="rs">beatriz.coria@demo.acapelius.local</div><div class="bar"><i style="width:84%"></i></div><div class="meta"><span class="mono"><b>21</b> de 25 vendidas</span><span class="rs">84%</span></div><div class="f"><span class="st warn">Debe $ 161.500</span><span class="rs">rindió el 26 sept</span></div></div>
+    <div class="card t1"><div class="head"><div class="n">Josefina Paz</div><span class="num">Nº 04</span></div><div class="rs">Nunca entró · invitación pendiente</div><div class="bar"><i style="width:0"></i></div><div class="meta"><span class="mono"><b>0</b> de 7 vendidas</span><span class="rs">0%</span></div><div class="f"><span class="st ok">Al día</span></div></div>
+    <div class="card t1"><div class="head"><div class="n">Dom 27 sept</div><span class="num">Función de gala</span></div><div class="rs">21:00 · Teatro Municipal</div><div class="bar"><i class="ok" style="width:76%"></i></div><div class="meta"><span class="mono"><b>61</b> de 80 vendidas</span><span class="rs">$ 510.000</span></div><div class="f"><span class="st ok">15 entraron</span><span class="rs">25%</span></div></div>
+  </div></div>
+  <div class="notes"><ul><li><b>Qué suma:</b> cada tarjeta es un pequeño afiche; la cabecera negra es el gesto de marca más fuerte que tenés.</li><li><b>Hover:</b> se levanta 2px.</li></ul><ul><li><b>Riesgo:</b> doce cabeceras negras en Equipo pesan. En claro funciona mejor que en oscuro, donde el negro casi se funde.</li></ul></div>
+</section>
+
+<section class="opt">
+  <header><h2>2 · Cifra</h2><span class="lbl">el número grande en Anton manda; el nombre acompaña</span></header>
+  <div class="app"><div class="g">
+    <div class="card t2 warn"><div class="top"><span class="sq">BC</span><div><div class="n">Beatriz Coria</div><div class="rs">cobró hace 33 días</div></div></div><div class="big">$ 161.500<small>debe</small></div><div class="bar"><i class="w" style="width:0%"></i></div><div class="meta"><span class="mono">rindió <b>0</b> de 161.500</span><span class="btn">Registrar</span></div></div>
+    <div class="card t2"><div class="top"><span class="sq">NQ</span><div><div class="n">Norma Quiroga</div><div class="rs">rindió el 25 sept</div></div></div><div class="big">19<small>de 23 vendidas</small></div><div class="bar"><i class="ok" style="width:83%"></i></div><div class="meta"><span class="st ok">Al día</span><span class="rs">83%</span></div></div>
+    <div class="card t2"><div class="top"><div><div class="fnl">Dom 27 sept · 21:00</div><div class="n">Función de gala</div></div></div><div class="big">61<small>/ 80</small></div><div class="bar"><i class="ok" style="width:76%"></i></div><div class="meta"><span class="mono">$ 510.000</span><span class="st ok">15 entraron</span></div></div>
+  </div></div>
+  <div class="notes"><ul><li><b>Qué suma:</b> es la regla de cifras llevada a la tarjeta. Lo primero que ves es el dato que importa, en el color del estado.</li><li><b>Hover:</b> la barra se enciende.</li></ul><ul><li><b>Riesgo:</b> en Equipo la cifra de cada corista cambia según su situación (debe / vendió); hay que decidir una por pantalla.</li></ul></div>
+</section>
+
+<section class="opt">
+  <header><h2>3 · Entrada</h2><span class="lbl">la tarjeta es un ticket: troquel, muescas y número de serie</span></header>
+  <div class="app"><div class="g">
+    <div class="card t3"><div class="body"><div class="top"><span class="sq">BC</span><div><div class="n">Beatriz Coria</div><div class="rs">beatriz.coria@demo.acapelius.local</div></div></div><div class="bar"><i style="width:84%"></i></div><div class="meta"><span class="mono"><b>21</b> de 25 vendidas</span><span class="rs">84%</span></div></div><div class="stub"><span class="st warn">Debe $ 161.500</span><span class="serial">ACP·26·02</span></div></div>
+    <div class="card t3"><div class="body"><div class="top"><span class="sq">NQ</span><div><div class="n">Norma Quiroga</div><div class="rs">norma.quiroga@demo.acapelius.local</div></div></div><div class="bar"><i class="ok" style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23 vendidas</span><span class="rs">83%</span></div></div><div class="stub"><span class="st ok">Al día</span><span class="serial">ACP·26·07</span></div></div>
+    <div class="card t3"><div class="body"><div class="fnl">Domingo</div><div class="fnd">27 sept</div><div class="rs">21:00 · Función de gala · Teatro Municipal</div><div class="bar"><i class="ok" style="width:76%"></i></div><div class="meta"><span class="mono"><b>61</b> de 80 vendidas</span><span class="rs">$ 510.000</span></div></div><div class="stub"><span class="st ok">15 entraron</span><span class="serial">F·03</span></div></div>
+  </div></div>
+  <div class="notes"><ul><li><b>Qué suma:</b> el objeto del negocio hecho interfaz. El troquel separa el estado del resto sin una regla más.</li><li><b>Hover:</b> se inclina apenas, como un papel.</li></ul><ul><li><b>Riesgo:</b> es el más "temático"; si se exagera, cansa. Las muescas necesitan fondo liso detrás.</li></ul></div>
+</section>
+
+<section class="opt">
+  <header><h2>4 · Tinta</h2><span class="lbl">cada persona tiene su color, derivado del nombre; el naranja sigue siendo sólo acción</span></header>
+  <div class="app"><div class="g4">
+    <div class="card t4" style="--tint:#3a6ea5"><div class="top"><span class="sq">BC</span><div><div class="n">Beatriz Coria</div><div class="rs">cobró hace 33 días</div></div></div><div class="bar"><i style="width:84%"></i></div><div class="meta"><span class="mono"><b>21</b> de 25</span><span class="rs">84%</span></div><div class="f"><span class="st warn">Debe $ 161.500</span></div></div>
+    <div class="card t4" style="--tint:#8a5fa8"><div class="top"><span class="sq">NQ</span><div><div class="n">Norma Quiroga</div><div class="rs">rindió el 25 sept</div></div></div><div class="bar"><i style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23</span><span class="rs">83%</span></div><div class="f"><span class="st ok">Al día</span></div></div>
+    <div class="card t4" style="--tint:#2f8f7a"><div class="top"><span class="sq">AB</span><div><div class="n">Adriana Bustos</div><div class="rs">cobró hace 35 días</div></div></div><div class="bar"><i style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23</span><span class="rs">83%</span></div><div class="f"><span class="st warn">Debe $ 73.000</span></div></div>
+    <div class="card t4" style="--tint:#b5651d"><div class="top"><span class="sq">SR</span><div><div class="n">Silvia Rey</div><div class="rs">rindió el 22 sept</div></div></div><div class="bar"><i style="width:80%"></i></div><div class="meta"><span class="mono"><b>16</b> de 20</span><span class="rs">80%</span></div><div class="f"><span class="st warn">Debe $ 67.000</span></div></div>
+  </div></div>
+  <div class="notes"><ul><li><b>Qué suma:</b> reconocés a Beatriz por el azul antes de leer. Es lo que más ayuda a diferenciar personas, que era tu queja.</li><li><b>Hover:</b> el borde toma el color de la persona.</li></ul><ul><li><b>Riesgo:</b> rompe "un solo acento". Para que no compita, los tintes son apagados y sólo viven en el cuadrado y la línea de arriba; los estados siguen en verde y ámbar.</li></ul></div>
+</section>
+
+<section class="opt">
+  <header><h2>5 · Afiche</h2><span class="lbl">la inicial como marca de agua, el nombre en Anton, una línea naranja de contexto</span></header>
+  <div class="app"><div class="g">
+    <div class="card t5"><div class="eye">Corista · 2ª temporada</div><div class="n">Beatriz Coria</div><div class="rs">cobró hace 33 días</div><div class="bar"><i style="width:84%"></i></div><div class="meta"><span class="mono"><b>21</b> de 25 vendidas</span><span class="st warn">Debe $ 161.500</span></div><span class="wm">B</span></div>
+    <div class="card t5"><div class="eye">Corista · nueva</div><div class="n">Norma Quiroga</div><div class="rs">rindió el 25 sept</div><div class="bar"><i class="ok" style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23 vendidas</span><span class="st ok">Al día</span></div><span class="wm">N</span></div>
+    <div class="card t5"><div class="eye">Función 3 de 5</div><div class="n">Dom 27 sept · 21:00</div><div class="rs">Función de gala · Teatro Municipal</div><div class="bar"><i class="ok" style="width:76%"></i></div><div class="meta"><span class="mono"><b>61</b> de 80 vendidas</span><span class="st ok">15 entraron</span></div><span class="wm">27</span></div>
+  </div></div>
+  <div class="notes"><ul><li><b>Qué suma:</b> cada tarjeta parece un recorte de afiche. La marca de agua da identidad sin agregar un elemento que leer.</li><li><b>Hover:</b> la marca de agua se asoma un poco más.</li></ul><ul><li><b>Riesgo:</b> dos coristas con la misma inicial se parecen; se puede combinar con el tinte de la 4.</li></ul></div>
+</section>
+
+<section class="opt">
+  <header><h2>6 · Estado</h2><span class="lbl">la tarjeta dice cómo está antes de que la leas: franja lateral y etiqueta</span></header>
+  <div class="app"><div class="g">
+    <div class="card t6 warn"><span class="tag">Debe</span><div class="top"><span class="sq">BC</span><div><div class="n">Beatriz Coria</div><div class="rs">cobró hace 33 días</div></div></div><div class="bar"><i style="width:84%"></i></div><div class="meta"><span class="mono"><b>21</b> de 25 vendidas</span><span class="rs">84%</span></div><div class="f"><span class="mono" style="color:var(--warn)">$ 161.500</span><span class="btn">Registrar</span></div></div>
+    <div class="card t6 ok"><span class="tag">Al día</span><div class="top"><span class="sq">NQ</span><div><div class="n">Norma Quiroga</div><div class="rs">rindió el 25 sept</div></div></div><div class="bar"><i class="ok" style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23 vendidas</span><span class="rs">83%</span></div></div>
+    <div class="card t6 off"><span class="tag" style="color:var(--ink3)">Sin entrar</span><div class="top"><span class="sq" style="background:var(--sunk);color:var(--ink3)">JP</span><div><div class="n" style="color:var(--ink2)">Josefina Paz</div><div class="rs">invitación pendiente</div></div></div><div class="bar"><i style="width:0"></i></div><div class="meta"><span class="mono"><b>0</b> de 7 vendidas</span><span class="rs">0%</span></div><div class="f"><span class="rs">nunca entró a la app</span><span class="btn">Reenviar</span></div></div>
+  </div></div>
+  <div class="notes"><ul><li><b>Qué suma:</b> en Equipo ves de una pasada quién debe, quién está al día y quién nunca entró. Es la más útil para dirección.</li><li><b>Hover:</b> se desplaza 2px hacia la derecha, como si saliera del canto.</li></ul><ul><li><b>Riesgo:</b> la franja es un borde de color, que C19 prohibía. Acá se justifica porque es semántica, no decorativa.</li></ul></div>
+</section>
+
+</div>
+
+<section class="opt">
+  <header><h2>5 + 4 · Afiche con tinta</h2><span class="lbl">la marca de agua y la línea de arriba toman el color de la persona; el naranja queda para la acción</span></header>
+  <div class="app"><div class="g4">
+    <div class="card t54" style="--tint:#4a7fb5"><div class="eye">Corista · 2ª temporada</div><div class="n">Beatriz Coria</div><div class="rs">cobró hace 33 días</div><div class="bar"><i style="width:84%"></i></div><div class="meta"><span class="mono"><b>21</b> de 25</span><span class="st warn">Debe $ 161.500</span></div><span class="wm">B</span></div>
+    <div class="card t54" style="--tint:#9a6bb8"><div class="eye">Corista · nueva</div><div class="n">Norma Quiroga</div><div class="rs">rindió el 25 sept</div><div class="bar"><i style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23</span><span class="st ok">Al día</span></div><span class="wm">N</span></div>
+    <div class="card t54" style="--tint:#3a9c86"><div class="eye">Corista · 3ª temporada</div><div class="n">Adriana Bustos</div><div class="rs">cobró hace 35 días</div><div class="bar"><i style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23</span><span class="st warn">Debe $ 73.000</span></div><span class="wm">A</span></div>
+    <div class="card t54" style="--tint:#c2742a"><div class="eye">Corista · 2ª temporada</div><div class="n">Silvia Rey</div><div class="rs">rindió el 22 sept</div><div class="bar"><i style="width:80%"></i></div><div class="meta"><span class="mono"><b>16</b> de 20</span><span class="st warn">Debe $ 67.000</span></div><span class="wm">S</span></div>
+    <div class="card t54" style="--tint:#b85c6e"><div class="eye">Corista · nueva</div><div class="n">Mercedes Ibarra</div><div class="rs">rindió el 27 sept</div><div class="bar"><i style="width:80%"></i></div><div class="meta"><span class="mono"><b>12</b> de 15</span><span class="st warn">Debe $ 61.000</span></div><span class="wm">M</span></div>
+    <div class="card t54" style="--tint:#7d8f3a"><div class="eye">Corista · 2ª temporada</div><div class="n">Carolina Vega</div><div class="rs">rindió el 14 sept</div><div class="bar"><i style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23</span><span class="st warn">Debe $ 44.000</span></div><span class="wm">C</span></div>
+    <div class="card t54" style="--tint:#5f6f94"><div class="eye">Corista · nueva</div><div class="n">Josefina Paz</div><div class="rs">nunca entró · invitación pendiente</div><div class="bar"><i style="width:0"></i></div><div class="meta"><span class="mono"><b>0</b> de 7</span><span class="st mute">Sin entrar</span></div><span class="wm">J</span></div>
+    <div class="card t54" style="--tint:#ec6e4c"><div class="eye">Función 3 de 5</div><div class="n">Dom 27 sept · 21:00</div><div class="rs">Función de gala · Teatro Municipal</div><div class="bar"><i style="width:76%"></i></div><div class="meta"><span class="mono"><b>61</b> de 80</span><span class="st ok">15 entraron</span></div><span class="wm">27</span></div>
+  </div>
+  <p class="lbl" style="margin:26px 0 10px">Variante B · sin línea arriba, el tinte sólo en la marca de agua y en un cuadrado chico de iniciales</p>
+  <div class="g4">
+    <div class="card t54 b" style="--tint:#4a7fb5"><span class="sq">BC</span><div class="eye">Corista · 2ª temporada</div><div class="n">Beatriz Coria</div><div class="rs">cobró hace 33 días</div><div class="bar"><i style="width:84%"></i></div><div class="meta"><span class="mono"><b>21</b> de 25</span><span class="st warn">Debe $ 161.500</span></div><span class="wm">B</span></div>
+    <div class="card t54 b" style="--tint:#9a6bb8"><span class="sq">NQ</span><div class="eye">Corista · nueva</div><div class="n">Norma Quiroga</div><div class="rs">rindió el 25 sept</div><div class="bar"><i style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23</span><span class="st ok">Al día</span></div><span class="wm">N</span></div>
+    <div class="card t54 b" style="--tint:#3a9c86"><span class="sq">AB</span><div class="eye">Corista · 3ª temporada</div><div class="n">Adriana Bustos</div><div class="rs">cobró hace 35 días</div><div class="bar"><i style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23</span><span class="st warn">Debe $ 73.000</span></div><span class="wm">A</span></div>
+    <div class="card t54 b" style="--tint:#c2742a"><span class="sq">SR</span><div class="eye">Corista · 2ª temporada</div><div class="n">Silvia Rey</div><div class="rs">rindió el 22 sept</div><div class="bar"><i style="width:80%"></i></div><div class="meta"><span class="mono"><b>16</b> de 20</span><span class="st warn">Debe $ 67.000</span></div><span class="wm">S</span></div>
+  </div></div>
+  <div class="notes"><ul><li><b>Qué suma:</b> la identidad de cada persona está en tres lugares que no se leen (línea, letra de agua, barra), así el texto sigue siendo tinta y la acción sigue siendo naranja.</li><li><b>El color sale del nombre</b> con un hash, siempre el mismo para la misma persona, de una paleta de ocho tintes apagados que cumplen contraste sobre arena y sobre negro.</li></ul><ul><li><b>La función</b> usa el naranja de marca como tinte: es la única entidad que lo lleva, y la distingue de las personas.</li><li><b>Variante B</b> es más sobria: sin línea arriba, el tinte sólo en la marca de agua y en el cuadrado chico de la esquina. Para Equipo con doce tarjetas, probablemente la B.</li></ul></div>
+</section>
+
+<section class="opt">
+  <header><h2>Para elegir</h2></header>
+  <div class="mw"><table class="matrix">
+    <tr><th></th><th>Diferencia personas</th><th>Carácter de marca</th><th>Densidad en Equipo</th><th>Combina con</th></tr>
+    <tr><td>1 · Talón</td><td>media</td><td>alto</td><td>pesa con muchas</td><td>6</td></tr>
+    <tr><td>2 · Cifra</td><td>baja</td><td>alto</td><td>bien</td><td>4, 6</td></tr>
+    <tr><td>3 · Entrada</td><td>media</td><td>muy alto, temático</td><td>bien</td><td>4</td></tr>
+    <tr><td>4 · Tinta</td><td>alta</td><td>medio</td><td>bien</td><td>2, 3, 5, 6</td></tr>
+    <tr><td>5 · Afiche</td><td>media</td><td>alto</td><td>bien</td><td>4</td></tr>
+    <tr><td>6 · Estado</td><td>media</td><td>medio</td><td>muy bien</td><td>1, 2, 4</td></tr>
+  </table></div>
+  <p style="margin-top:14px">Mi combinación favorita: <b style="color:var(--pg-fg)">4 + 6</b>. El tinte por persona resuelve "no distingo una de otra"; la franja y la etiqueta de estado resuelven "qué tengo que hacer con cada una". Y en Inicio, las tarjetas de la opción D llevarían la cifra grande de la 2.</p>
+</section>
+</div>
+<script>
+(function(){
+  var f=document.getElementById('frames');
+  document.querySelectorAll('[data-t]').forEach(function(b){b.addEventListener('click',function(){
+    f.classList.toggle('light',b.getAttribute('data-t')==='light');
+    document.querySelectorAll('[data-t]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+  })});
+})();
+</script>

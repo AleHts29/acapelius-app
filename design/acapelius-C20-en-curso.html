@@ -1,0 +1,105 @@
+<title>Temporada en curso</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: seis propuestas en grilla, cada una con la tarjeta en curso al lado de una normal. Tokens de Acapelius. */
+:root{--paper:#e8e3d7;--floor:#f3efe6;--ink:#1a1a18;--ink2:#5f5a4f;--ink3:#6a6457;--hair:rgba(26,26,24,.14);--sunk:rgba(26,26,24,.08);--ticket:#c4401e;--ticket-text:#ad3518;--tinte:#efd6c4;
+  --fd:'Anton',Impact,sans-serif;--fb:'Inter',system-ui,sans-serif;--fm:'JetBrains Mono',ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#141311;--floor:#1d1b18;--ink:#f4f1ea;--ink2:#9a9282;--ink3:#8f8878;--hair:rgba(244,241,234,.12);--sunk:rgba(244,241,234,.1);--ticket:#ec6e4c;--ticket-text:#ec6e4c;--tinte:#3a241b;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#141311;--floor:#1d1b18;--ink:#f4f1ea;--ink2:#9a9282;--ink3:#8f8878;--hair:rgba(244,241,234,.12);--sunk:rgba(244,241,234,.1);--ticket:#ec6e4c;--ticket-text:#ec6e4c;--tinte:#3a241b;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 14px/1.45 var(--fb);font-variant-numeric:tabular-nums;padding-block:36px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1{font:400 44px/1.05 var(--fd);margin:0 0 10px;letter-spacing:.01em;text-wrap:balance}
+h2{font:400 24px/1.1 var(--fd);margin:0;letter-spacing:.01em}
+p{margin:0;max-width:68ch;color:var(--ink2)}
+.lbl{font:500 10px/1.3 var(--fm);text-transform:uppercase;letter-spacing:.15em;color:var(--ink3)}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:44px 36px}
+.opt{display:flex;flex-direction:column;gap:12px;min-width:0}
+.opt>header{border-top:1.5px solid var(--ink);padding-top:10px;display:flex;flex-direction:column;gap:4px}
+.pick{color:var(--ticket-text);font:500 10px/1 var(--fm);text-transform:uppercase;letter-spacing:.15em;margin-left:10px;vertical-align:middle}
+.par{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px}
+/* La tarjeta, igual a la de la app */
+.t{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:1px solid var(--hair);padding:0;cursor:pointer;min-width:0;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
+.t:hover{border-color:var(--ink);transform:translate(-2px,-2px);box-shadow:4px 4px 0 0 var(--ink)}
+.t:active{transform:translate(1px,1px);box-shadow:1px 1px 0 0 var(--ink)}
+.t:focus-visible{outline:2px solid var(--ticket);outline-offset:2px}
+.c{padding:16px;display:block}
+.c>.lbl{display:block}
+.d{display:block;font:400 25px/1.12 var(--fd);letter-spacing:.01em;margin-top:6px}
+.v{display:block;font-size:12.5px;color:var(--ink3)}
+.b{display:block;height:4px;background:var(--sunk);margin:14px 0 8px}.b i{display:block;height:100%;background:var(--ink)}
+.m{display:flex;justify-content:space-between;gap:8px;font:500 12.5px/1.3 var(--fm)}.m em{font-style:normal;color:var(--ink3);font-weight:400}
+.f{display:flex;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--hair);font-size:12px;color:var(--ink3)}
+/* A hoy: amarillo */
+.a{background:#f2c230;border-color:#f2c230;color:#1a1a18}
+.a .lbl,.a .v,.a .m em,.a .f{color:rgba(26,26,24,.82)}.a .b{background:rgba(26,26,24,.18)}.a .b i{background:#1a1a18}.a .f{border-top-color:rgba(26,26,24,.25)}
+.a:hover{border-color:var(--ink)}
+/* B etiqueta */
+.bb .lbl{color:var(--ticket-text);font-weight:700}
+.bb .lbl::before{content:"";display:inline-block;width:7px;height:7px;background:var(--ticket);margin-right:7px;vertical-align:1px}
+/* C franja */
+.cc .band{display:block;background:var(--ticket);color:#fff;padding:7px 16px;font:700 10px/1.3 var(--fm);text-transform:uppercase;letter-spacing:.15em}
+:root[data-theme="dark"] .cc .band{color:#141311}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cc .band{color:#141311}}
+/* D borde */
+.dd,.dd:hover{border:2px solid var(--ticket)}
+.dd .lbl{color:var(--ticket-text)}
+/* E levantada */
+.ee{background:var(--floor);border-color:var(--ink);box-shadow:4px 4px 0 0 var(--ink)}
+.ee:hover{box-shadow:6px 6px 0 0 var(--ink)}
+/* F tinte */
+.ff{background:var(--tinte);border-color:var(--tinte)}
+.ff .lbl{color:var(--ticket-text)}.ff .b{background:var(--hair)}.ff .b i{background:var(--ticket)}
+.ff .v,.ff .m em,.ff .f{color:var(--ink2)}
+.ff:hover{border-color:var(--ink)}
+/* Franja + tinte, con cada tema fijo sin importar el del visitante */
+.tema{--paper:#e8e3d7;--ink:#1a1a18;--ink2:#5f5a4f;--ink3:#6a6457;--hair:rgba(26,26,24,.14);--sunk:rgba(26,26,24,.08);--ticket:#c4401e;--tinte:#efd6c4;--franja-t:#fff;background:var(--paper);color:var(--ink);padding:18px;display:flex;flex-direction:column;gap:12px;border:1px solid var(--hair);min-width:0}
+.tema--o{--paper:#141311;--ink:#f4f1ea;--ink2:#b5ad9d;--ink3:#8f8878;--hair:rgba(244,241,234,.12);--sunk:rgba(244,241,234,.1);--ticket:#ec6e4c;--tinte:#3a241b;--franja-t:#141311}
+.temas{display:flex;flex-direction:column;gap:16px}
+.tres{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}
+.mix{background:var(--tinte);border-color:var(--tinte)}
+.mix:hover{border-color:var(--ink)}
+.mix .fr{display:block;background:var(--ticket);color:var(--franja-t);padding:7px 16px;font:700 10px/1.3 var(--fm);text-transform:uppercase;letter-spacing:.15em}
+.mix .lbl,.mix .v,.mix .m em,.mix .f{color:var(--ink2)}
+.mix .b{background:var(--hair)}.mix .b i{background:var(--ticket)}
+.tema .lbl{color:var(--ink3)}
+.tema .mix .lbl{color:var(--ink2)}
+.tema .t{color:var(--ink)}
+.colores{display:flex;flex-direction:column;gap:28px}
+.color{display:flex;flex-direction:column;gap:8px;min-width:0}
+.color h3{font:400 19px/1.2 var(--fd);letter-spacing:.02em;margin:0}
+.dos{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px}
+.dos .tres{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+</style>
+
+<div class="wrap">
+  <div>
+    <span class="lbl">Temporadas · La que está en curso</span>
+    <h1>Seis formas de marcar la temporada en curso</h1>
+    <p>Son tus dos temporadas de la demo. Pasá el mouse por las tarjetas para ver la sombra negra, que ahora se ve en todas.</p>
+  </div>
+  <section class="opt"><header><h2>Franja naranja con tinte suave</h2><p>Las tres tarjetas son iguales a las de la app. La del medio es Temporada 2026 como si estuviera en curso, para que veas la barra con ventas: Navidad todavía tiene 0.</p></header><div class="temas" id="mix"></div></section>
+  <section class="opt"><header><h2>La misma tarjeta en otros colores</h2><p>Cambia solo el color de la franja, el tinte y la barra. Cada color tiene su versión clara y oscura, con Temporada 2026 como ejemplo para que se vea la barra con ventas.</p></header><div class="colores" id="colores"></div></section>
+  <div class="g" id="g"></div>
+</div>
+
+<script>
+const O=[
+ ['a','A · Amarillo','Lo que hay hoy, para comparar. Se nota mucho, pero compite con el naranja de la marca.',''],
+ ['bb','B · Solo la etiqueta','Todas las tarjetas iguales y "En curso" en naranja con un cuadradito. Es la más tranquila, y la que menos se distingue de lejos.',''],
+ ['cc','C · Franja naranja','Una franja arriba, como el talón de una entrada, que dice "En curso". Se distingue de lejos y dice qué significa sin tener que aprenderlo.','Recomendada'],
+ ['dd','D · Borde naranja','Mismo fondo que las demás, con un borde naranja más grueso. Simple y claro, aunque se parece a una tarjeta seleccionada.',''],
+ ['ee','E · Levantada','Fondo más claro y sombra negra fija: esta tarjeta ya está apoyada arriba de las demás. Va con el estilo de los botones, pero la sombra deja de ser solo del mouse.',''],
+ ['ff','F · Tinte suave','Un fondo durazno, con la barra en naranja. Es la más cálida, y la que menos contraste tiene con el papel arena.','']
+];
+const curso=k=>`<button type="button" class="t ${k}">${k==='cc'?'<span class="band">En curso</span>':''}<span class="c"><span class="lbl">${k==='cc'?'2026':'2026 · En curso'}</span><span class="d">Temporada Navidad 2026</span><span class="v">13 nov</span><span class="b"><i style="width:0"></i></span><span class="m"><span>0 <em>de 80 vendidas</em></span><em>$ 0</em></span><span class="f"><span>1 función · próxima en 8 días</span></span></span></button>`;
+const otra=`<button type="button" class="t"><span class="c"><span class="lbl">2026 · Preparándose</span><span class="d">Temporada 2026</span><span class="v">17 oct – 20 nov</span><span class="b"><i style="width:57%"></i></span><span class="m"><span>146 <em>de 255 vendidas</em></span><em>$ 1.051.500</em></span><span class="f"><span>4 funciones · arranca el 20 nov</span><span>72 sin repartir</span></span></span></button>`;
+document.getElementById('g').innerHTML=O.map(([k,t,d,p])=>`<section class="opt"><header><h2>${t}${p?`<span class="pick">${p}</span>`:''}</h2><p>${d}</p></header><div class="par">${curso(k)}${otra}</div></section>`).join('');
+const mixCard=(d,v,pct,cant,plata,pie,extra)=>`<button type="button" class="t mix"><span class="fr">En curso</span><span class="c"><span class="lbl">2026</span><span class="d">${d}</span><span class="v">${v}</span><span class="b"><i style="width:${pct}%"></i></span><span class="m"><span>${cant} <em>vendidas</em></span><em>${plata}</em></span><span class="f"><span>${pie}</span>${extra?`<span>${extra}</span>`:''}</span></span></button>`;
+const tres=mixCard('Temporada Navidad 2026','13 nov',0,'0 de 80','$ 0','1 función · próxima en 8 días','')+mixCard('Temporada 2026','17 oct – 20 nov',57,'146 de 255','$ 1.051.500','4 funciones · arranca el 20 nov','72 sin repartir')+otra;
+document.getElementById('mix').innerHTML=[['','Modo claro'],['tema--o','Modo oscuro']].map(([c,t])=>`<div class="tema ${c}"><span class="lbl">${t}</span><div class="tres">${tres}</div></div>`).join('');
+const COL=[['Naranja','#c4401e','#efd6c4','#fff','#ec6e4c','#3a241b','#141311'],['Azul','#1f5fa8','#cfdfee','#fff','#6ea8e8','#1b2a3a','#141311'],['Verde','#1e6b4a','#cfe3d4','#fff','#6dc79a','#1a3026','#141311'],['Violeta','#6a3fa0','#e0d5ec','#fff','#b08fe0','#2b2138','#141311'],['Fucsia','#b02a63','#f0d2df','#fff','#ec7aa8','#38202b','#141311'],['Amarillo','#e0a800','#f4e3a8','#1a1a18','#f2c230','#38301a','#141311']];
+const muestra=mixCard('Temporada 2026','17 oct – 20 nov',57,'146 de 255','$ 1.051.500','4 funciones','72 sin repartir')+otra;
+document.getElementById('colores').innerHTML=COL.map(([n,a,b,c,d,e,f])=>`<div class="color"><h3>${n}</h3><div class="dos"><div class="tema" style="--ticket:${a};--tinte:${b};--franja-t:${c}"><span class="lbl">Modo claro</span><div class="tres">${muestra}</div></div><div class="tema tema--o" style="--ticket:${d};--tinte:${e};--franja-t:${f}"><span class="lbl">Modo oscuro</span><div class="tres">${muestra}</div></div></div></div>`).join('');
+</script>

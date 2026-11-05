@@ -1,0 +1,93 @@
+<title>Historial de rendición</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: cuatro propuestas apiladas; en cada una, tres coristas reales de la demo dentro de un popup. Tokens de Acapelius. */
+:root{--paper:#e8e3d7;--floor:#f3efe6;--ink:#1a1a18;--ink2:#5f5a4f;--ink3:#6a6457;--hair:rgba(26,26,24,.14);--sunk:rgba(26,26,24,.06);--ticket:#c4401e;--ticket-text:#ad3518;--ok:#1e6b4a;--warn:#8a5a08;
+  --fd:'Anton',Impact,sans-serif;--fb:'Inter',system-ui,sans-serif;--fm:'JetBrains Mono',ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#141311;--floor:#1d1b18;--ink:#f4f1ea;--ink2:#9a9282;--ink3:#8f8878;--hair:rgba(244,241,234,.1);--sunk:rgba(244,241,234,.05);--ticket:#ec6e4c;--ticket-text:#ec6e4c;--ok:#6dc79a;--warn:#e8a33d;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#141311;--floor:#1d1b18;--ink:#f4f1ea;--ink2:#9a9282;--ink3:#8f8878;--hair:rgba(244,241,234,.1);--sunk:rgba(244,241,234,.05);--ticket:#ec6e4c;--ticket-text:#ec6e4c;--ok:#6dc79a;--warn:#e8a33d;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 14px/1.45 var(--fb);font-variant-numeric:tabular-nums;padding-block:36px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{font:400 44px/1 var(--fd);margin:0 0 10px;letter-spacing:.01em;text-wrap:balance}
+h2{font:400 26px/1.1 var(--fd);margin:0;letter-spacing:.01em}
+p{margin:0;max-width:68ch;color:var(--ink2)}
+.lbl{font:500 10px/1.3 var(--fm);text-transform:uppercase;letter-spacing:.15em;color:var(--ink3)}
+.opt{display:flex;flex-direction:column;gap:14px}
+.opt>header{border-top:1.5px solid var(--ink);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+.pick{color:var(--ticket-text);font:500 10px/1 var(--fm);text-transform:uppercase;letter-spacing:.15em;margin-left:10px;vertical-align:middle}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+.pop{background:var(--floor);border:1px solid var(--hair);padding:16px 18px 18px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.who{font-weight:600;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.who span{font-weight:400;font-size:11.5px;color:var(--ink3)}
+.s{font-size:12px;color:var(--ink3)}
+.m{font-family:var(--fm);font-size:12.5px;white-space:nowrap}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.tk{color:var(--ticket-text)}
+/* A línea */
+.tl{list-style:none;margin:0;padding:0}
+.tl li{position:relative;padding:0 0 14px 22px}
+.tl li:last-child{padding-bottom:0}
+.tl li::before{content:"";position:absolute;left:4px;top:13px;bottom:-5px;width:1px;background:var(--hair)}
+.tl li:last-child::before{display:none}
+.tl i{position:absolute;left:0;top:4px;width:9px;height:9px;background:var(--ink3)}
+.tl .settlement i{background:var(--ok)}
+.tl .reminder i{background:none;border:1.5px solid var(--ticket)}
+.tl .t{display:flex;justify-content:space-between;gap:10px;font-weight:500}
+/* B talón */
+.led{display:grid;grid-template-columns:auto 1fr auto;column-gap:14px}
+.led>div{display:contents}
+.led>div>*{padding:8px 0;border-top:1px solid var(--hair)}
+.led>div:first-child>*{border-top:0}
+.led .d{color:var(--ink3);font:500 11.5px/1.7 var(--fm);white-space:nowrap}
+.led .a{text-align:right}
+/* C regla */
+.ax{position:relative;height:30px}
+.ax::before{content:"";position:absolute;left:0;right:0;top:14px;height:1px;background:var(--hair)}
+.ax b{position:absolute;top:10px;height:9px;background:var(--ink3)}
+.ax u{position:absolute;top:3px;width:3px;height:23px;margin-left:-1px;background:var(--ok)}
+.ax em{position:absolute;top:9px;width:11px;height:11px;margin-left:-5px;border:1.5px solid var(--ticket);background:var(--floor)}
+.axl{display:flex;justify-content:space-between;font:500 10.5px/1 var(--fm);color:var(--ink3)}
+.key{display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+.key div{display:flex;justify-content:space-between;gap:10px}
+/* D resumen */
+.res{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding-bottom:10px;border-bottom:1.5px solid var(--ink)}
+.res .big{font:400 21px/1.1 var(--fd);letter-spacing:.01em}
+.ev{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--hair)}
+.ev:last-child{border-bottom:0;padding-bottom:0}
+.ev .t{font-weight:500}
+.nada{color:var(--ink3);font-size:12.5px}
+</style>
+
+<div class="wrap">
+  <div>
+    <span class="lbl">Rendición · Su historial</span>
+    <h1>Cuatro formas de mostrar el historial</h1>
+    <p>Las tres coristas son datos reales de la demo: Marta solo tiene cobros, Adriana ya rindió una vez y Beatriz recibió un recordatorio. En todas saqué la hora, porque "02:42" no le dice nada a quien mira la deuda.</p>
+  </div>
+  <section class="opt" id="a"><header><h2>A · Línea de tiempo</h2><p>Cada hecho es un punto sobre una línea, el más nuevo arriba. Es la más visual y se lee como una historia, pero ocupa lo mismo que hoy.</p></header><div class="g"></div></section>
+  <section class="opt" id="b"><header><h2>B · Talón</h2><p>Renglones como un recibo: fecha, qué pasó y monto en columnas. Es la más compacta y sigue el estilo de las tarjetas de Equipo.</p></header><div class="g"></div></section>
+  <section class="opt" id="c"><header><h2>C · Regla de tiempo</h2><p>Una barra a escala real desde la primera venta hasta hoy. Se ve de golpe cuánto hace que no pasa nada, pero la fecha exacta queda en la lista de abajo.</p></header><div class="g"></div></section>
+  <section class="opt" id="d"><header><h2>D · Resumen y hechos<span class="pick">Recomendada</span></h2><p>Primera y última venta no son dos hechos: son un período. Se juntan en una sola línea, y debajo van solo las rendiciones y los recordatorios.</p></header><div class="g"></div></section>
+</div>
+
+<script>
+const HOY=new Date('2026-11-04');
+const C=[
+ {n:'Marta Ledesma',debe:'$ 106.000',ini:['Mié 9 sept','2026-09-09'],fin:['Jue 24 sept','2026-09-24'],hace:41,ev:[]},
+ {n:'Adriana Bustos',debe:'$ 73.000',ini:['Jue 10 sept','2026-09-10'],fin:['Mar 29 sept','2026-09-29'],hace:35,ev:[{k:'settlement',f:'Sáb 26 sept',d:'2026-09-26',t:'Rindió',a:'$ 89.000',s:'efectivo · “Lo del concierto”'}]},
+ {n:'Beatriz Coria',debe:'$ 161.500',ini:['Vie 11 sept','2026-09-11'],fin:['Jue 1 oct','2026-10-01'],hace:33,ev:[{k:'reminder',f:'Mié 4 nov',d:'2026-11-04',t:'Recordatorio',a:'$ 161.500',s:'por mail'}]}
+];
+const corto=f=>f.split(' ').slice(1).join(' ');
+const todos=c=>[...c.ev,{k:'paid',f:c.fin[0],d:c.fin[1],t:'Última venta cobrada'},{k:'paid',f:c.ini[0],d:c.ini[1],t:'Primera venta cobrada'}].sort((x,y)=>y.d.localeCompare(x.d));
+const cab=c=>`<div class="who">${c.n}<span>debe ${c.debe}</span></div><span class="lbl">Su historial</span>`;
+const tono=k=>k==='settlement'?'ok':k==='reminder'?'tk':'';
+const R={
+ a:c=>`<ol class="tl">${todos(c).map(e=>`<li class="${e.k}"><i></i><div class="t"><span>${e.t}${e.a&&e.k==='settlement'?' '+e.a:''}${e.k==='reminder'?' por '+e.a:''}</span></div><div class="s">${e.f}${e.s?' · '+e.s:''}</div></li>`).join('')}</ol>`,
+ b:c=>`<div class="led">${todos(c).map(e=>`<div><span class="d">${corto(e.f)}</span><span>${e.t}${e.s?`<br><span class="s">${e.s}</span>`:''}</span><span class="a m ${tono(e.k)}">${e.k==='settlement'?'− '+e.a:e.a||''}</span></div>`).join('')}</div>`,
+ c:c=>{const a=+new Date(c.ini[1]),z=+HOY,p=d=>((+new Date(d)-a)/(z-a)*100).toFixed(1);
+   return `<div class="ax"><b style="left:0;width:${p(c.fin[1])}%"></b>${c.ev.map(e=>e.k==='settlement'?`<u style="left:${p(e.d)}%"></u>`:`<em style="left:calc(${p(e.d)}% - 6px)"></em>`).join('')}</div><div class="axl"><span>${corto(c.ini[0])}</span><span>hoy</span></div><div class="key"><div><span>Vendió y cobró</span><span class="m">hasta ${corto(c.fin[0])}</span></div>${c.ev.map(e=>`<div><span class="${tono(e.k)}">${e.k==='settlement'?'Rindió '+e.a:'Recordatorio'}</span><span class="m">${corto(e.f)}</span></div>`).join('')}</div>`},
+ d:c=>`<div class="res"><div><span class="lbl">Cobró ventas</span><div class="big">${corto(c.ini[0])} → ${corto(c.fin[0])}</div></div><span class="s">hace ${c.hace} días</span></div>${c.ev.length?`<div>${c.ev.map(e=>`<div class="ev"><div><div class="t ${tono(e.k)}">${e.t==='Rindió'?'Rindió '+e.a:'Recordatorio por '+e.a}</div><div class="s">${e.f}${e.s?' · '+e.s:''}</div></div></div>`).join('')}</div>`:`<div class="nada">Sin rendiciones ni recordatorios todavía.</div>`}`
+};
+for(const k in R){document.querySelector('#'+k+' .g').innerHTML=C.map(c=>`<div class="pop">${cab(c)}${R[k](c)}</div>`).join('')}
+</script>

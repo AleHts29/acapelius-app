@@ -1,0 +1,426 @@
+<title>Acapelius en el celular</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una tira de cuatro teléfonos por opción, las mismas pantallas y los mismos datos, para comparar de corrido. */
+:root{--paper:#e8e3d7;--floor:#f3efe6;--card2:#dfd9cb;--ink:#1a1a18;--ink2:#5f5a4f;--ink3:#6a6457;--hair:rgba(26,26,24,.14);--sunk:rgba(26,26,24,.06);--ticket:#c4401e;--ticket-t:#ad3518;--on:#fff;--ok:#1e6b4a;--warn:#8a5a08;--bad:#a32d2d;--page:#d9d3c5;--bezel:#1a1a18;--cam:#100f0d;--on-cam:#f4f1ea;--vok:#1e6b4a;--fd:'Anton',Impact,sans-serif;--fb:'Inter',system-ui,sans-serif;--fm:'JetBrains Mono',ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--paper:#141311;--floor:#1d1b18;--card2:#24211d;--ink:#f4f1ea;--ink2:#9a9282;--ink3:#8f8878;--hair:rgba(244,241,234,.12);--sunk:rgba(244,241,234,.06);--ticket:#ec6e4c;--ticket-t:#ec6e4c;--on:#141311;--ok:#6dc79a;--warn:#e8a33d;--bad:#e07a7a;--page:#0c0b0a;--bezel:#35322c;color-scheme:dark}}
+:root[data-theme=dark]{--paper:#141311;--floor:#1d1b18;--card2:#24211d;--ink:#f4f1ea;--ink2:#9a9282;--ink3:#8f8878;--hair:rgba(244,241,234,.12);--sunk:rgba(244,241,234,.06);--ticket:#ec6e4c;--ticket-t:#ec6e4c;--on:#141311;--ok:#6dc79a;--warn:#e8a33d;--bad:#e07a7a;--page:#0c0b0a;--bezel:#35322c;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.5 var(--fb)}
+.wrap{max-width:1320px;margin:auto;padding-block:32px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:56px}
+h1,h2{font-family:var(--fd);font-weight:400;margin:0;line-height:1.1;text-wrap:balance}
+h1{font-size:clamp(34px,5vw,54px)}
+h2{font-size:30px}
+.lead{max-width:62ch;margin:10px 0 0;color:var(--ink2);font-size:15px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;align-items:center}
+.bar a,.bar button{font:500 13px var(--fb);padding:7px 12px;border:1px solid var(--hair);background:transparent;color:var(--ink);text-decoration:none;cursor:pointer}
+.bar button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.bar span{flex:0 0 12px}
+.hoy{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:28px;align-items:start;margin-top:16px}
+.hoy img{display:block;width:100%;border:1px solid var(--hair)}
+.hoy ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column}
+.hoy li{padding:11px 0;border-top:1px solid var(--hair)}
+.hoy b{font-weight:600}
+.head{display:flex;gap:14px;align-items:baseline}
+.let{font:400 30px var(--fd);color:var(--ticket-t)}
+.tesis{max-width:66ch;margin:6px 0 0;font-size:15px}
+.pros{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:16px 0 22px;padding:0}
+.pros div{border-top:1px solid var(--hair);padding-top:8px;min-width:0}
+.pros dt{font:500 10px var(--fm);letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.pros dd{margin:3px 0 0;color:var(--ink2)}
+.tira{display:flex;gap:22px;overflow-x:auto;padding-bottom:12px}
+figure{margin:0;flex:none;display:flex;flex-direction:column;gap:8px}
+figcaption{font:500 10px var(--fm);letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+.ph{width:300px;height:620px;border:7px solid var(--bezel);border-radius:34px;background:var(--paper);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:13px;line-height:1.35}
+.ph>.sb{height:24px;flex:none;display:flex;align-items:flex-end;padding:0 20px;font:600 10px var(--fb)}
+.sc{flex:1;min-height:0;overflow:hidden;padding:10px 16px;display:flex;flex-direction:column;gap:12px}
+.lb{font:500 9.5px var(--fm);letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+.an{font-family:var(--fd);font-weight:400;line-height:1.08}
+.mu{color:var(--ink2);font-size:11.5px}
+.warn{color:var(--warn)}.ok{color:var(--ok)}.tk{color:var(--ticket-t)}
+.tb{flex:none;display:flex;border-top:1px solid var(--hair);height:54px;background:var(--paper)}
+.tb a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:500 9.5px var(--fb);color:var(--ink2)}
+.tb a.on{color:var(--ticket-t);font-weight:600}
+.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--hair)}
+.row>div{flex:1;min-width:0}
+.row b{display:block;font-weight:600;font-size:13px}
+.row .i{width:14px;height:14px;color:var(--ink3)}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;height:46px;background:var(--ticket);color:var(--on);font:600 14px var(--fb);border:0;width:100%;flex:none}
+.btn2{display:inline-flex;align-items:center;justify-content:center;height:30px;padding:0 10px;font:600 11.5px var(--fb);border:1px solid var(--ink);color:var(--ink);background:transparent;flex:none}
+.barra{height:5px;background:var(--sunk)}.barra i{display:block;height:100%;background:var(--ink)}
+.field{display:flex;flex-direction:column;gap:3px;padding:8px 10px;background:var(--sunk)}
+.field span:last-child{font-size:13.5px;font-weight:500}
+.ph-hold{color:var(--ink3)!important;font-weight:400!important}
+.step{display:flex;align-items:center;justify-content:space-between}
+.step button{width:38px;height:38px;border:1px solid var(--ink);background:transparent;color:var(--ink);font:500 19px var(--fb);cursor:pointer;padding:0}
+.grow{flex:1;min-height:0}
+.visor{background:var(--cam);flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;color:var(--on-cam)}
+.mira{width:150px;height:150px;--c:var(--on-cam);background:linear-gradient(var(--c),var(--c)) 0 0/26px 3px,linear-gradient(var(--c),var(--c)) 0 0/3px 26px,linear-gradient(var(--c),var(--c)) 100% 0/26px 3px,linear-gradient(var(--c),var(--c)) 100% 0/3px 26px,linear-gradient(var(--c),var(--c)) 0 100%/26px 3px,linear-gradient(var(--c),var(--c)) 0 100%/3px 26px,linear-gradient(var(--c),var(--c)) 100% 100%/26px 3px,linear-gradient(var(--c),var(--c)) 100% 100%/3px 26px;background-repeat:no-repeat}
+.verd{background:var(--vok);color:#fff;padding:12px 16px;flex:none}
+.verd b{display:block;font:400 22px var(--fd)}
+.verd span{font-size:11.5px}
+
+/* A · Backstage afinado: mismo lenguaje, menos cosas */
+.oA .top{display:flex;align-items:flex-start;justify-content:space-between}
+.oA .av{width:30px;height:30px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font:400 12px var(--fd)}
+.oA .tit{font-size:27px}
+.oA .sel{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;color:var(--ink2)}
+.oA .sel .i{width:12px;height:12px}
+.oA .btn{box-shadow:3px 3px 0 var(--ink);border:1.5px solid var(--ink)}
+.oA .big{font-size:42px}
+.oA .dos{display:grid;grid-template-columns:1fr 1fr;border-block:1px solid var(--hair)}
+.oA .dos>div{padding:9px 0}.oA .dos>div+div{border-left:1px solid var(--hair);padding-left:12px}
+.oA .dos .an{font-size:24px}
+
+/* B · Para hacer: la pantalla es una lista de tareas, y vender está siempre al centro */
+.oB .sal{font-size:12px;color:var(--ink2)}
+.oB .tit{font-size:29px}
+.oB .tarea{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--hair)}
+.oB .tarea>div{flex:1;min-width:0}
+.oB .tarea b{display:block;font-weight:600;font-size:13px}
+.oB .tb a.mas{flex:none;width:58px;margin-top:-13px;height:58px;background:var(--ticket);color:var(--on);box-shadow:3px 3px 0 var(--ink);font-weight:600}
+.oB .tb a.mas .i{width:22px;height:22px}
+.oB .n{font-size:92px;text-align:center}
+.oB .pasos{display:flex;gap:4px}.oB .pasos i{flex:1;height:4px;background:var(--sunk)}.oB .pasos i.h{background:var(--ticket)}
+.oB .step button{width:54px;height:54px;font-size:25px}
+.oB .pz{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--ticket);color:var(--on);height:158px;font:600 15px var(--fb)}
+.oB .pz .i{width:44px;height:44px;stroke-width:1.6}
+.oB .btn2w{width:100%;height:44px;font-size:13px}
+
+/* C · Entrada: la próxima función es una entrada de verdad, con su talón */
+.oC .sc{background:var(--paper)}
+.oC .tira2{display:flex;gap:8px;margin-right:-16px;flex:none}
+.tq{background:var(--ticket);color:var(--on);position:relative;flex:none;width:240px;--n:var(--paper)}
+.tq.claro{background:var(--floor);color:var(--ink)}
+.tq .ar{padding:12px 14px 13px}
+.tq .lbq{font:500 9.5px var(--fm);letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+.tq .nom{font:400 32px/1.04 var(--fd);margin:5px 0 8px}
+.tq .dat{font-size:11.5px;font-weight:500}
+.tq .ta{border-top:2px dashed var(--n);padding:10px 14px 12px;position:relative}
+.tq .ta::before,.tq .ta::after{content:"";position:absolute;top:-10px;width:18px;height:18px;border-radius:50%;background:var(--n)}
+.tq .ta::before{left:-9px}.tq .ta::after{right:-9px}
+.tq .fig{font:400 27px/1 var(--fd)}
+.tq .bq{height:4px;background:color-mix(in srgb,currentColor 24%,transparent);margin-top:7px}.tq .bq i{display:block;height:100%;background:currentColor}
+.peek{flex:none;width:60px;background:var(--floor);display:flex;align-items:flex-end;padding:0 0 12px 9px;font:500 9.5px var(--fm);color:var(--ink2);letter-spacing:.06em}
+.dots{display:flex;gap:5px;flex:none}.dots i{width:6px;height:6px;border-radius:50%;background:var(--hair)}.dots i.h{background:var(--ticket)}
+.oC .an2{font-size:25px}
+.oC .sello{position:absolute;right:12px;top:46px;border:3px solid var(--vok);color:var(--vok);font:400 21px var(--fd);padding:2px 9px;transform:rotate(-9deg);letter-spacing:.03em}
+.oC .tq.w{width:100%}
+.oC .btn{height:48px}
+
+/* D · Suave: nativo de celular, redondeado, sin sombra dura */
+.oD .sc{gap:11px}
+.oD .tit{font:700 25px/1.15 var(--fb);letter-spacing:-.02em}
+.oD .cd{background:var(--floor);border-radius:18px;padding:13px 14px}
+.oD .an{letter-spacing:.005em}
+.oD .barra,.oD .barra i{border-radius:3px}.oD .barra i{background:var(--ticket)}
+.oD .row:first-child{border-top:0;padding-top:0}.oD .row:last-child{padding-bottom:0}
+.oD .tb{position:absolute;left:12px;right:12px;bottom:12px;height:56px;border:1px solid var(--hair);border-radius:28px;background:var(--floor);padding:0 4px}
+.oD .tb a.on{color:var(--ticket-t)}
+.oD .fab{position:absolute;right:14px;bottom:80px;height:48px;padding:0 18px;border-radius:24px;width:auto;box-shadow:0 8px 20px rgba(0,0,0,.22)}
+.oD .av{width:32px;height:32px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font:600 11px var(--fb)}
+.oD .top{display:flex;justify-content:space-between;align-items:center}
+.oD .chip{display:inline-flex;align-items:center;gap:3px;background:var(--sunk);border-radius:12px;padding:3px 9px;font-size:11px;color:var(--ink2)}
+.oD .chip .i{width:11px;height:11px}
+.oD .velo{position:absolute;inset:0;background:rgba(0,0,0,.46);z-index:1}
+.oD .hoja{position:absolute;left:0;right:0;bottom:0;background:var(--floor);border-radius:24px 24px 0 0;padding:9px 16px 18px;display:flex;flex-direction:column;gap:11px;z-index:2}
+.oD .asa{width:36px;height:4px;border-radius:2px;background:var(--hair);margin:0 auto 3px}
+.oD .field{background:var(--sunk);border-radius:12px}
+.oD .btn,.oD .btn2{border-radius:14px}
+.oD .btn2{border-color:var(--hair)}
+.oD .cant{display:flex;gap:6px}
+.oD .cant button{flex:1;height:42px;border:0;border-radius:12px;background:var(--sunk);color:var(--ink);font:600 14px var(--fb);cursor:pointer}
+.oD .cant button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.oD .mira{border-radius:0}
+.oD .ver2{position:absolute;left:10px;right:10px;bottom:10px;background:var(--vok);color:#fff;border-radius:20px;padding:13px 15px}
+.oD .ver2 b{display:block;font:700 16px var(--fb)}
+.oD .ver2 span{font-size:11.5px}
+
+/* Base común */
+.oB .ges,.oA .ges{display:flex;flex-direction:column}
+.ini{width:30px;height:30px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font:400 11.5px var(--fd);flex:none}
+.reco{background:var(--floor);padding:22px 24px;display:flex;flex-direction:column;gap:8px;max-width:800px}
+.reco p{margin:0}
+@media(max-width:800px){.hoy,.pros{grid-template-columns:minmax(0,1fr)}.pros{gap:10px}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+<symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v3a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3a3 3 0 0 1 0-6V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M13 5v2M13 17v2M13 11v2"/></symbol>
+<symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></symbol>
+<symbol id="i-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.1 10.4A6 6 0 1 1 10.3 18M7 6h1v4M16.7 13.9l.7.7-2.8 2.8"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-next" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+<header>
+  <h1>Acapelius en el celular</h1>
+  <p class="lead">Cuatro caminos para la app. Cada uno muestra las mismas cuatro pantallas con los mismos datos: el inicio de la corista, una venta, el inicio de dirección y la puerta. Todavía no hay código tocado.</p>
+  <div class="bar">
+    <a href="#a">A · Afinado</a><a href="#b">B · Para hacer</a><a href="#c">C · Entrada</a><a href="#d">D · Suave</a><a href="#base">Va en cualquiera</a>
+    <span></span>
+    <button type="button" id="t-l" aria-pressed="false">Claro</button><button type="button" id="t-d" aria-pressed="false">Oscuro</button>
+  </div>
+</header>
+
+<section>
+  <h2>Cómo se ve hoy</h2>
+  <div class="hoy">
+    <img src="hoy.jpg" alt="Inicio, Rendiciones y Equipo de la app actual en un celular de 390 píxeles">
+    <ul>
+      <li><b>El encabezado se come la pantalla.</b> Logo, selector cortado en "Temporad…", "Cerrada" y avatar, en cada pantalla.</li>
+      <li><b>Se cortan datos.</b> En Rendiciones se lee "Beatr…", "Mart…", "cobró 1…": no se sabe quién debe.</li>
+      <li><b>La respuesta queda abajo.</b> "16/80" manda, y qué hacer hoy aparece recién después de scrollear.</li>
+      <li><b>Todo llama la atención.</b> Cada botón lleva sombra dura y hay cajas dentro de cajas.</li>
+      <li><b>Equipo mide 2.800 px</b> para 12 personas: casi cuatro pantallas de scroll.</li>
+      <li><b>Temporadas y Equipo no tienen entrada</b> desde el menú del celular.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- A -->
+<section id="a" class="oA">
+  <div class="head"><span class="let">A</span><h2>Backstage afinado</h2></div>
+  <p class="tesis">La misma app, ordenada. Sigue siendo cuadrada y con Anton, pero con un encabezado mínimo, una sola sombra por pantalla y los números que importan primero.</p>
+  <dl class="pros"><div><dt>A favor</dt><dd>Idéntica a la web. Es la de menor costo y riesgo.</dd></div><div><dt>En contra</dt><dd>Mejora, pero no sorprende. Sigue siendo una versión angosta de la web.</dd></div><div><dt>Vender</dt><dd>Botón fijo sobre la barra. Formulario en una sola pantalla.</dd></div></dl>
+  <div class="tira">
+    <figure><figcaption>Corista · inicio</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div class="top"><div><div class="an tit">Hola, Adriana</div><span class="sel">Temporada 2026 <svg class="i"><use href="#i-down"/></svg></span></div><div class="av">AB</div></div>
+      <div class="dos"><div><div class="lb">Tenés que rendir</div><div class="an warn">$ 73.000</div></div><div><div class="lb">Te quedan</div><div class="an">3 entradas</div></div></div>
+      <div><div class="lb tk">Próxima · en 15 días</div><div style="font-weight:600;font-size:15px;margin-top:2px">Cierre de temporada</div><div class="mu">Vie 20 nov · 21:00 · Teatro Municipal</div></div>
+      <div><div class="lb" style="margin-bottom:6px">Te falta cobrar</div>
+      <div class="row"><div><b>Laura Méndez</b><span class="mu">1 entrada · hace 2 días</span></div><span>$ 9.000</span><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Hugo Paz</b><span class="mu">2 entradas · hace 5 días</span></div><span>$ 18.000</span><svg class="i"><use href="#i-next"/></svg></div></div>
+      <div class="grow"></div><button class="btn" type="button">Nueva venta</button>
+    </div><nav class="tb" data-t="cor" data-on="0"></nav></div></figure>
+
+    <figure><figcaption>Nueva venta</figcaption><div class="ph" data-sale data-max="3"><div class="sb">9:41</div><div class="sc">
+      <div class="top"><div class="an tit">Nueva venta</div><svg class="i"><use href="#i-x"/></svg></div>
+      <div class="field"><span class="lb">Función</span><span>Vie 20 nov · Cierre de temporada</span></div>
+      <div class="field"><span class="lb">Comprador</span><span>Sofía Castro</span></div>
+      <div class="field"><span class="lb">Mail o WhatsApp</span><span class="ph-hold">Para mandarle las entradas</span></div>
+      <div class="step" style="padding:6px 0"><div><div class="lb">Cantidad</div><span class="mu">Te quedan 3</span></div><div style="display:flex;align-items:center;gap:14px"><button type="button" data-m>−</button><span class="an" style="font-size:26px" data-q>2</span><button type="button" data-p>+</button></div></div>
+      <div class="row" style="justify-content:space-between"><span class="lb">Total · $ 9.000 cada una</span><span class="an" style="font-size:24px;flex:none" data-total>$ 18.000</span></div>
+      <div class="grow"></div><button class="btn" type="button" data-cta="Vender {q}">Vender 2 entradas</button>
+    </div></div></figure>
+
+    <figure><figcaption>Dirección · inicio</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div class="top"><div><div class="an tit">Temporada 2026</div><span class="sel">Cambiar <svg class="i"><use href="#i-down"/></svg></span></div><div class="av">D</div></div>
+      <div><div class="lb">Te deben rendir</div><div class="an big warn">$ 512.500</div><div class="mu">$ 192.500 sin cobrar a compradores</div></div>
+      <div><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-weight:600">Cierre · vie 20 nov</b><span class="mu">16 de 80</span></div><div class="barra" style="margin-top:5px"><i style="width:20%"></i></div><div class="mu tk" style="margin-top:4px">58 entradas sin repartir</div></div>
+      <div>
+      <div class="row"><div><b>Beatriz Coria</b><span class="mu">Debe rendir</span></div><span>$ 161.500</span><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Marta Ledesma</b><span class="mu">Debe rendir</span></div><span>$ 106.000</span><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Adriana Bustos</b><span class="mu">Debe rendir</span></div><span>$ 73.000</span><svg class="i"><use href="#i-next"/></svg></div>
+      </div>
+    </div><nav class="tb" data-t="dir" data-on="0"></nav></div></figure>
+
+    <figure><figcaption>Puerta · escaneando</figcaption><div class="ph"><div class="sb">9:41</div>
+      <div style="padding:6px 16px 10px;flex:none"><div class="top"><div><div class="an" style="font-size:20px">Cierre de temporada</div><div class="mu">4 de 16 ingresaron</div></div><svg class="i"><use href="#i-x"/></svg></div></div>
+      <div class="visor"><div class="mira"></div></div>
+      <div class="verd"><b>VÁLIDA · 3 ENTRADAS</b><span>Sofía Castro · le vendió Beatriz Coria</span></div>
+      <div style="padding:10px 16px 14px;flex:none"><button class="btn2" type="button" style="width:100%;height:42px;font-size:13px">Buscar por nombre</button></div>
+    </div></figure>
+  </div>
+</section>
+
+<!-- B -->
+<section id="b" class="oB">
+  <div class="head"><span class="let">B</span><h2>Para hacer</h2></div>
+  <p class="tesis">La app te dice qué sigue. El inicio es una lista de tareas con su botón al lado, y vender queda siempre en el centro de la barra. La venta se hace de a una pregunta por vez.</p>
+  <dl class="pros"><div><dt>A favor</dt><dd>La más intuitiva para quien entra poco y no conoce la app.</dd></div><div><dt>En contra</dt><dd>Hay que cambiar el inicio de raíz, y la venta lleva tres pasos en vez de una pantalla.</dd></div><div><dt>Vender</dt><dd>Botón central en todas las pantallas. Tres pasos, con números grandes.</dd></div></dl>
+  <div class="tira">
+    <figure><figcaption>Corista · inicio</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div><div class="sal">Hola, Adriana</div><div class="an tit">Tenés 3 cosas para hacer</div></div>
+      <div>
+      <div class="tarea"><div><b>Rendir $ 73.000</b><span class="mu">Es lo que cobraste y falta entregar</span></div><span class="btn2">Ver</span></div>
+      <div class="tarea"><div><b>Cobrarle a Laura Méndez</b><span class="mu">$ 9.000 · hace 2 días</span></div><span class="btn2">Cobrar</span></div>
+      <div class="tarea"><div><b>Mandarle el link a Hugo Paz</b><span class="mu">No dejó mail</span></div><span class="btn2">Enviar</span></div>
+      </div>
+      <div class="grow"></div>
+      <div><div style="display:flex;justify-content:space-between"><span class="lb">Cierre · vie 20 nov</span><span class="mu">Te quedan 3 de 6</span></div><div class="barra" style="margin-top:5px"><i style="width:50%"></i></div></div>
+    </div><nav class="tb" data-t="corB" data-on="0"></nav></div></figure>
+
+    <figure><figcaption>Nueva venta · paso 2 de 3</figcaption><div class="ph" data-sale data-max="3"><div class="sb">9:41</div><div class="sc">
+      <div class="pasos"><i class="h"></i><i class="h"></i><i></i></div>
+      <div class="top" style="display:flex;justify-content:space-between"><span class="mu">Para Sofía Castro · Cierre, 20 nov</span><svg class="i"><use href="#i-x"/></svg></div>
+      <div class="an" style="font-size:30px">¿Cuántas entradas?</div>
+      <div class="grow"></div>
+      <div class="step"><button type="button" data-m>−</button><span class="an n" data-q>2</span><button type="button" data-p>+</button></div>
+      <div style="text-align:center"><div class="an" style="font-size:26px" data-total>$ 18.000</div><span class="mu">$ 9.000 cada una · te quedan 3</span></div>
+      <div class="grow"></div>
+      <button class="btn" type="button">Seguir</button>
+    </div></div></figure>
+
+    <figure><figcaption>Dirección · inicio</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div><div class="sal">Temporada 2026 · te deben rendir $ 512.500</div><div class="an tit">4 cosas para resolver</div></div>
+      <div>
+      <div class="tarea"><div><b>Beatriz Coria debe rendir</b><span class="mu">$ 161.500</span></div><span class="btn2">Registrar</span></div>
+      <div class="tarea"><div><b>Marta Ledesma debe rendir</b><span class="mu">$ 106.000</span></div><span class="btn2">Registrar</span></div>
+      <div class="tarea"><div><b>58 entradas sin repartir</b><span class="mu">Cierre · vie 20 nov</span></div><span class="btn2">Repartir</span></div>
+      <div class="tarea"><div><b>Josefina Paz nunca entró</b><span class="mu">Tiene 7 entradas de cupo</span></div><span class="btn2">Invitar</span></div>
+      </div>
+      <div class="grow"></div>
+      <div><div style="display:flex;justify-content:space-between"><span class="lb">Cierre · vie 20 nov</span><span class="mu">16 de 80</span></div><div class="barra" style="margin-top:5px"><i style="width:20%"></i></div></div>
+    </div><nav class="tb" data-t="dirB" data-on="0"></nav></div></figure>
+
+    <figure><figcaption>Puerta · antes de escanear</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div><div class="sal">Hoy · 21:00 · Teatro Municipal</div><div class="an tit">Cierre de temporada</div></div>
+      <div><div style="display:flex;justify-content:space-between"><span class="lb">Ingresaron</span><span class="mu">4 de 16</span></div><div class="barra" style="margin-top:5px"><i style="width:25%"></i></div></div>
+      <div class="pz"><svg class="i"><use href="#i-scan"/></svg>Escanear entrada</div>
+      <button class="btn2 btn2w" type="button">Buscar por nombre</button>
+      <div><div class="lb" style="margin-bottom:5px">Últimos ingresos</div>
+      <div class="row"><div><b>Sofía Castro</b><span class="mu">3 entradas · hace 1 min</span></div></div>
+      <div class="row"><div><b>Rubén Casal</b><span class="mu">4 entradas · hace 3 min</span></div></div></div>
+    </div></div></figure>
+  </div>
+</section>
+
+<!-- C -->
+<section id="c" class="oC">
+  <div class="head"><span class="let">C</span><h2>Entrada</h2></div>
+  <p class="tesis">La función es una entrada de verdad. El inicio abre con su boleto y se desliza para ver las otras; al vender, el boleto se va escribiendo mientras cargás; en la puerta le cae el sello.</p>
+  <dl class="pros"><div><dt>A favor</dt><dd>La más propia y linda: no parece ninguna otra app. Cuenta de qué se trata sin explicarlo.</dd></div><div><dt>En contra</dt><dd>El boleto ocupa pantalla, así que entra menos lista a primera vista. Más trabajo de animación.</dd></div><div><dt>Vender</dt><dd>Botón fijo. Ves el boleto armándose arriba del formulario.</dd></div></dl>
+  <div class="tira">
+    <figure><figcaption>Corista · inicio</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div class="an" style="font-size:22px">Hola, Adriana</div>
+      <div class="tira2"><div class="tq"><div class="ar"><div class="lbq">Próxima · en 15 días</div><div class="nom">CIERRE DE TEMPORADA</div><div class="dat">Vie 20 nov · 21:00<br>Teatro Municipal</div></div><div class="ta"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbq">Vendiste</span><span class="fig">3 de 6</span></div><div class="bq"><i style="width:50%"></i></div></div></div><div class="peek"></div></div>
+      <div class="dots"><i class="h"></i><i></i><i></i><i></i></div>
+      <div>
+      <div class="row"><div><span class="lb">Tenés que rendir</span><div class="an an2 warn">$ 73.000</div></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Te falta cobrar a 2</b><span class="mu">Laura Méndez, Hugo Paz</span></div><span>$ 27.000</span><svg class="i"><use href="#i-next"/></svg></div>
+      </div>
+      <div class="grow"></div><button class="btn" type="button">Nueva venta</button>
+    </div><nav class="tb" data-t="cor" data-on="0"></nav></div></figure>
+
+    <figure><figcaption>Nueva venta</figcaption><div class="ph" data-sale data-max="3"><div class="sb">9:41</div><div class="sc">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div class="an" style="font-size:22px">Nueva venta</div><svg class="i"><use href="#i-x"/></svg></div>
+      <div class="tq claro w"><div class="ar"><div class="lbq tk">Vie 20 nov · 21:00 · Teatro Municipal</div><div class="nom" style="font-size:25px">CIERRE DE TEMPORADA</div><div class="dat">Para Sofía Castro</div></div><div class="ta"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="fig"><span data-q>2</span> <span data-qword>ENTRADAS</span></span><span class="fig tk" data-total>$ 18.000</span></div></div></div>
+      <div class="field"><span class="lb">Comprador</span><span>Sofía Castro</span></div>
+      <div class="field"><span class="lb">Mail o WhatsApp</span><span class="ph-hold">Para mandarle las entradas</span></div>
+      <div class="step"><div><div class="lb">Cantidad</div><span class="mu">Te quedan 3</span></div><div style="display:flex;gap:6px"><button type="button" data-m>−</button><button type="button" data-p>+</button></div></div>
+      <div class="grow"></div><button class="btn" type="button">Emitir entradas</button>
+    </div></div></figure>
+
+    <figure><figcaption>Dirección · inicio</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div class="an" style="font-size:22px">Temporada 2026</div><svg class="i" style="width:14px;height:14px"><use href="#i-down"/></svg></div>
+      <div class="tira2"><div class="tq"><div class="ar"><div class="lbq">Próxima · en 15 días</div><div class="nom">CIERRE DE TEMPORADA</div><div class="dat">Vie 20 nov · 21:00 · T. Municipal</div></div><div class="ta"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbq">Vendidas</span><span class="fig">16 de 80</span></div><div class="bq"><i style="width:20%"></i></div><div class="dat" style="margin-top:6px">58 sin repartir</div></div></div><div class="peek"></div></div>
+      <div class="dots"><i class="h"></i><i></i><i></i><i></i></div>
+      <div>
+      <div class="row"><div><span class="lb">Te deben rendir</span><div class="an an2 warn">$ 512.500</div></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Beatriz Coria</b><span class="mu">Debe rendir</span></div><span>$ 161.500</span><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Marta Ledesma</b><span class="mu">Debe rendir</span></div><span>$ 106.000</span><svg class="i"><use href="#i-next"/></svg></div>
+      </div>
+    </div><nav class="tb" data-t="dir" data-on="0"></nav></div></figure>
+
+    <figure><figcaption>Puerta · entrada válida</figcaption><div class="ph"><div class="sb">9:41</div>
+      <div style="padding:6px 16px 10px;flex:none;display:flex;justify-content:space-between"><div class="mu">Cierre de temporada · 5 de 16</div><svg class="i"><use href="#i-x"/></svg></div>
+      <div class="visor"><div class="mira" style="width:100px;height:100px"></div></div>
+      <div style="padding:14px 16px;flex:none;display:flex;flex-direction:column;gap:12px;--n:var(--paper)">
+        <div class="tq claro w" style="position:relative"><div class="ar"><div class="lbq tk">Vie 20 nov · 21:00</div><div class="nom" style="font-size:25px">SOFÍA CASTRO</div><div class="dat">Le vendió Beatriz Coria</div></div><div class="ta"><span class="fig">3 ENTRADAS</span></div><span class="sello">VÁLIDA</span></div>
+        <button class="btn2" type="button" style="width:100%;height:42px;font-size:13px">Buscar por nombre</button>
+      </div>
+    </div></figure>
+  </div>
+</section>
+
+<!-- D -->
+<section id="d" class="oD">
+  <div class="head"><span class="let">D</span><h2>Suave</h2></div>
+  <p class="tesis">Como una app nativa de iPhone: tarjetas redondeadas, barra flotante, y la venta sube como una hoja desde abajo. Anton queda sólo para los números, sobre el mismo papel y el mismo naranja.</p>
+  <dl class="pros"><div><dt>A favor</dt><dd>La más moderna y familiar: todo el mundo sabe usarla. Muy buena con el pulgar.</dd></div><div><dt>En contra</dt><dd>Se separa de la web, que es cuadrada, y pierde carácter. Se parece más a otras apps.</dd></div><div><dt>Vender</dt><dd>Botón flotante. Hoja corta encima de la pantalla, con la cantidad a un toque.</dd></div></dl>
+  <div class="tira">
+    <figure><figcaption>Corista · inicio</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div class="top"><div><div class="tit">Hola, Adriana</div><span class="chip">Temporada 2026 <svg class="i"><use href="#i-down"/></svg></span></div><div class="av">AB</div></div>
+      <div class="cd"><div class="lb">Tenés que rendir</div><div class="an warn" style="font-size:32px;margin-top:2px">$ 73.000</div></div>
+      <div class="cd"><div style="display:flex;justify-content:space-between"><b style="font-weight:600">Cierre de temporada</b><span class="mu">en 15 días</span></div><div class="mu">Vie 20 nov · 21:00 · Teatro Municipal</div><div class="barra" style="margin:9px 0 5px"><i style="width:50%"></i></div><span class="mu">Vendiste 3 de 6</span></div>
+      <div class="cd"><div class="row"><div><b>Laura Méndez</b><span class="mu">Te debe</span></div><span>$ 9.000</span></div></div>
+    </div><button class="btn fab" type="button"><svg class="i"><use href="#i-plus"/></svg>Vender</button><nav class="tb" data-t="cor" data-on="0"></nav></div></figure>
+
+    <figure><figcaption>Nueva venta · hoja</figcaption><div class="ph" data-sale data-max="3" data-chips><div class="sb">9:41</div><div class="sc">
+      <div class="tit">Hola, Adriana</div><div class="cd" style="height:90px"></div><div class="cd" style="height:90px"></div>
+      </div><div class="velo"></div><div class="hoja"><div class="asa"></div>
+      <div style="font:700 19px var(--fb)">Nueva venta</div><span class="chip" style="align-self:flex-start">Cierre · vie 20 nov <svg class="i"><use href="#i-down"/></svg></span>
+      <div class="field"><span class="lb">Comprador</span><span>Sofía Castro</span></div>
+      <div class="field"><span class="lb">Mail o WhatsApp</span><span class="ph-hold">Para mandarle las entradas</span></div>
+      <div><div class="lb" style="margin-bottom:5px">Cantidad · te quedan 3</div><div class="cant"><button type="button" data-c="1" aria-pressed="false">1</button><button type="button" data-c="2" aria-pressed="true">2</button><button type="button" data-c="3" aria-pressed="false">3</button></div></div>
+      <button class="btn" type="button"><span>Vender por <span data-total>$ 18.000</span></span></button>
+    </div></div></figure>
+
+    <figure><figcaption>Dirección · inicio</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div class="top"><div><div class="tit">Temporada 2026</div><span class="chip">Cambiar <svg class="i"><use href="#i-down"/></svg></span></div><div class="av">D</div></div>
+      <div class="cd"><div class="lb">Te deben rendir</div><div class="an warn" style="font-size:32px;margin-top:2px">$ 512.500</div><span class="mu">$ 192.500 sin cobrar a compradores</span></div>
+      <div class="cd"><div style="display:flex;justify-content:space-between"><b style="font-weight:600">Cierre · vie 20 nov</b><span class="mu">16 de 80</span></div><div class="barra" style="margin:8px 0 5px"><i style="width:20%"></i></div><span class="mu tk">58 entradas sin repartir</span></div>
+      <div class="cd"><div class="row"><div><b>Beatriz Coria</b></div><span>$ 161.500</span></div><div class="row"><div><b>Marta Ledesma</b></div><span>$ 106.000</span></div></div>
+    </div><nav class="tb" data-t="dir" data-on="0"></nav></div></figure>
+
+    <figure><figcaption>Puerta · entrada válida</figcaption><div class="ph" style="background:var(--cam);color:var(--on-cam)"><div class="sb">9:41</div>
+      <div style="padding:6px 16px;flex:none;display:flex;justify-content:space-between;align-items:center"><div><div style="font:700 15px var(--fb)">Cierre de temporada</div><div style="font-size:11.5px;opacity:.8">5 de 16 ingresaron</div></div><svg class="i"><use href="#i-search"/></svg></div>
+      <div class="visor" style="padding-bottom:90px"><div class="mira"></div></div>
+      <div class="ver2"><b>Válida · 3 entradas</b><span>Sofía Castro · le vendió Beatriz Coria</span></div>
+    </div></figure>
+  </div>
+</section>
+
+<!-- Base -->
+<section id="base" class="oA">
+  <div class="head"><h2>Va en cualquiera de las cuatro</h2></div>
+  <p class="tesis">Esto arregla los problemas de uso y no depende del estilo. Va dibujado en A; en las otras cambia sólo la piel.</p>
+  <div class="tira" style="margin-top:18px">
+    <figure><figcaption>Gestión · la entrada que falta</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div><div class="an tit">Gestión</div><span class="sel">Temporada 2026 <svg class="i"><use href="#i-down"/></svg></span></div>
+      <div class="ges">
+      <div class="row"><div><b>Resumen</b><span class="mu">Cómo viene la temporada</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Rendiciones</b><span class="mu warn">6 coristas deben $ 512.500</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Asignaciones</b><span class="mu tk">58 entradas sin repartir</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Asistencia</b><span class="mu">Última función: 15 de 61</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Temporadas</b><span class="mu">Crear, editar y cambiar</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div><b>Equipo</b><span class="mu">12 personas · 2 nunca entraron</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      </div>
+    </div><nav class="tb" data-t="dir" data-on="3"></nav></div></figure>
+
+    <figure><figcaption>Rendiciones · sin cortes</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc">
+      <div><div class="an tit">Rendiciones</div><div class="mu">Te deben rendir</div><div class="an warn" style="font-size:32px">$ 512.500</div></div>
+      <div>
+      <div class="row"><div class="ini">BC</div><div><b>Beatriz Coria</b><span class="mu">Cobró hace 12 días</span></div><span style="font-weight:600">$ 161.500</span></div>
+      <div class="row"><div class="ini">ML</div><div><b>Marta Ledesma</b><span class="mu">Cobró hace 8 días</span></div><span style="font-weight:600">$ 106.000</span></div>
+      <div class="row"><div class="ini">AB</div><div><b>Adriana Bustos</b><span class="mu">Cobró hace 6 días</span></div><span style="font-weight:600">$ 73.000</span></div>
+      <div class="row"><div class="ini">SR</div><div><b>Silvia Rey</b><span class="mu">Cobró hace 3 días</span></div><span style="font-weight:600">$ 67.000</span></div>
+      </div>
+    </div><nav class="tb" data-t="dir" data-on="3"></nav></div></figure>
+
+    <figure><figcaption>Equipo · de 2.800 px a una lista</figcaption><div class="ph"><div class="sb">9:41</div><div class="sc" style="gap:8px">
+      <div class="top"><div><div class="an tit">Equipo</div><div class="mu">12 personas · 2 nunca entraron</div></div><span class="btn2">Sumar</span></div>
+      <div>
+      <div class="row"><div class="ini">AB</div><div><b>Adriana Bustos</b><span class="mu">19 de 23 vendidas</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div class="ini">BC</div><div><b>Beatriz Coria</b><span class="mu">Cupo de 25</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div class="ini">CV</div><div><b>Carolina Vega</b><span class="mu">Cupo de 23</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div class="ini">JP</div><div><b>Josefina Paz</b><span class="mu warn">0 de 7 · nunca entró</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div class="ini">ML</div><div><b>Marta Ledesma</b><span class="mu">Cupo de 15</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      <div class="row"><div class="ini">MI</div><div><b>Mercedes Ibarra</b><span class="mu">Cupo de 15</span></div><svg class="i"><use href="#i-next"/></svg></div>
+      </div>
+    </div><nav class="tb" data-t="dir" data-on="3"></nav></div></figure>
+  </div>
+</section>
+
+<section class="reco">
+  <h2>Mi recomendación</h2>
+  <p><b>C con el botón central de B.</b> El boleto le da a la app una cara propia, y la barra con vender al medio resuelve la acción principal sin pensar. Es más trabajo que A, pero la entrada ya existe como pieza en la app (el talón y el QR que recibe el comprador), así que no arranca de cero.</p>
+  <p class="mu" style="font-size:13px">Las cifras de dirección, las coristas y las ventas salen de la demo (Temporada 2026). Lo particular de Adriana, Laura Méndez, Hugo Paz, los ingresos de la puerta y los días de Rendiciones son de ejemplo.</p>
+</section>
+</div>
+
+<script>
+const TABS={cor:[['Inicio','music'],['Ventas','ticket'],['Puerta','scan'],['Mi plata','coins']],dir:[['Inicio','music'],['Ventas','ticket'],['Puerta','scan'],['Gestión','grid']],corB:[['Inicio','music'],['Ventas','ticket'],['Vender','plus','mas'],['Puerta','scan'],['Mi plata','coins']],dirB:[['Inicio','music'],['Ventas','ticket'],['Vender','plus','mas'],['Puerta','scan'],['Gestión','grid']]};
+document.querySelectorAll('.tb[data-t]').forEach(n=>{n.innerHTML=TABS[n.dataset.t].map((t,i)=>`<a class="${i==n.dataset.on?'on ':''}${t[2]||''}"><svg class="i"><use href="#i-${t[1]}"/></svg>${t[0]}</a>`).join('')});
+const money=q=>'$ '+(q*9000).toLocaleString('es-AR');
+document.querySelectorAll('[data-sale]').forEach(p=>{let q=2;const max=+p.dataset.max;const pinta=()=>{p.querySelectorAll('[data-q]').forEach(e=>e.textContent=q);p.querySelectorAll('[data-qword]').forEach(e=>e.textContent=q===1?'ENTRADA':'ENTRADAS');p.querySelectorAll('[data-total]').forEach(e=>e.textContent=money(q));p.querySelectorAll('[data-cta]').forEach(e=>e.textContent=`Vender ${q} ${q===1?'entrada':'entradas'}`);p.querySelectorAll('[data-c]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.c===q))};p.querySelector('[data-m]')?.addEventListener('click',()=>{q=Math.max(1,q-1);pinta()});p.querySelector('[data-p]')?.addEventListener('click',()=>{q=Math.min(max,q+1);pinta()});p.querySelectorAll('[data-c]').forEach(b=>b.addEventListener('click',()=>{q=+b.dataset.c;pinta()}))});
+const R=document.documentElement,L=document.getElementById('t-l'),D=document.getElementById('t-d');const tema=t=>{R.dataset.theme=t;L.setAttribute('aria-pressed',t==='light');D.setAttribute('aria-pressed',t==='dark')};L.onclick=()=>tema('light');D.onclick=()=>tema('dark');
+</script>

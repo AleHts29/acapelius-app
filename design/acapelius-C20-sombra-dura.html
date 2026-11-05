@@ -1,0 +1,201 @@
+<title>Acapelius Sombra Dura</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: la sombra dura de Fluxara (borde 1,5px + sombra sólida desplazada,
+   sin desenfoque) aplicada a las piezas de Acapelius en tres intensidades.
+   Tokens reales de la app; switch claro/oscuro; hover y presión en vivo. */
+:root{--pg-bg:#0f0e0c;--pg-fg:#f4f1ea;--pg-mute:#9a9282;--pg-hair:#2a2723;--pg-card:#171512;--pg-acc:#ec6e4c;
+  --fd:'Anton',Impact,sans-serif;--fb:'Inter',system-ui,sans-serif;--fm:'JetBrains Mono',ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg-bg);color:var(--pg-fg);font:400 15px/1.5 var(--fb);padding-block:36px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:52px}
+h1{font:400 40px/1 var(--fd);margin:0 0 8px;letter-spacing:.01em}
+h2{font:400 24px/1.1 var(--fd);margin:0;letter-spacing:.01em}
+h3{font:600 14px/1.3 var(--fb);margin:0 0 4px}
+.lbl{font:500 10px/1 var(--fm);text-transform:uppercase;letter-spacing:.15em;color:var(--pg-mute)}
+p{margin:0;max-width:68ch;color:var(--pg-mute)}
+code{font:500 12px/1.4 var(--fm);color:var(--pg-fg);background:var(--pg-card);padding:1px 5px}
+.ctl{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:12px;align-items:center;padding:10px 14px;background:var(--pg-card);border:1px solid var(--pg-hair)}
+.ctl button{font:500 12.5px/1 var(--fb);padding:8px 12px;border:1px solid var(--pg-hair);background:none;color:var(--pg-fg);cursor:pointer}
+.ctl button[aria-pressed="true"]{border-color:var(--pg-acc);color:var(--pg-acc)}
+.ctl .hint{font-size:12.5px;margin-left:auto;color:var(--pg-mute)}
+.opt{display:flex;flex-direction:column;gap:12px}
+.opt header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;border-top:1px solid var(--pg-fg);padding-top:12px}
+.opt header .lbl{max-width:56ch;text-align:right}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px 24px;font-size:13.5px}
+.notes ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px}
+.notes li{color:var(--pg-mute)}.notes b{color:var(--pg-fg);font-weight:600}
+.recipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.recipe div{background:var(--pg-card);border:1px solid var(--pg-hair);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.recipe p{font-size:13px}
+
+/* ===== tokens de la app ===== */
+.app{--paper:#141311;--card2:#1a1815;--floor:#1d1b18;--ink:#f4f1ea;--ink2:#9a9282;--ink3:#8f8878;--hair:rgba(244,241,234,.1);--sunk:rgba(244,241,234,.05);--ticket:#ec6e4c;--ok:#6dc79a;--warn:#e8a33d;--bad:#e07a7a;--ind:#9da0f2;--on-ticket:#141311;--black:#0e0d0b;
+  --edge:var(--ink);--shadow:var(--ink);
+  background:var(--paper);color:var(--ink);padding:28px 32px 32px;font-size:13.5px;line-height:1.45;font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--pg-hair);display:flex;flex-direction:column;gap:26px}
+.light .app{--paper:#e8e3d7;--card2:#dfd9cb;--floor:#f3efe6;--ink:#1a1a18;--ink2:#5f5a4f;--ink3:#6a6457;--hair:rgba(26,26,24,.14);--sunk:rgba(26,26,24,.06);--ticket:#c4401e;--ok:#1e6b4a;--warn:#8a5a08;--bad:#a32d2d;--ind:#3a3fc4;--on-ticket:#fff;--black:#1a1a18}
+.row2{display:grid;grid-template-columns:1.2fr 1fr;gap:26px;align-items:start}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.row2,.row3{grid-template-columns:1fr}}
+.g{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.rs{font-size:11.5px;color:var(--ink3)}
+.mono{font-family:var(--fm);font-size:12.5px}
+.st{font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.st::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.st.ok{color:var(--ok)}.st.warn{color:var(--warn)}
+.bar{height:4px;background:var(--sunk);overflow:hidden;margin:10px 0 7px}
+.bar i{display:block;height:100%;background:var(--ink)}
+.bar i.ok{background:var(--ok)}
+.sq{width:38px;height:38px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font:400 15px/1 var(--fd);letter-spacing:.04em;flex:none}
+.cap{font:500 10px/1 var(--fm);letter-spacing:.15em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;display:block}
+
+/* --- piezas base (como están hoy) --- */
+.btn{font:500 13px/1 var(--fb);padding:10px 16px;border:1px solid var(--hair);background:none;color:var(--ink);cursor:pointer;display:inline-block;transition:transform .12s ease,box-shadow .12s ease}
+.btn.go{background:var(--ticket);border-color:var(--ticket);color:var(--on-ticket);font-weight:600}
+.field{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;border:1px solid var(--hair);color:var(--ink3);font-size:13.5px;flex:1;min-width:260px}
+.field span{flex:1}
+.tile{border:1px solid var(--hair);padding:16px;position:relative;transition:transform .12s ease,box-shadow .12s ease;cursor:pointer}
+.tile .top{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.tile .n{font-size:15px;font-weight:600}
+.tile .meta{display:flex;justify-content:space-between;align-items:baseline}
+.tile .f{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--hair)}
+.pop{background:var(--floor);border:1px solid var(--hair);max-width:360px}
+.pop .h{background:var(--black);color:#f4f1ea;padding:16px 18px}
+.pop .h .t{font:400 22px/1.05 var(--fd);margin-top:6px}
+.pop .h .lbl{color:rgba(244,241,234,.55)}
+.pop .b{padding:14px 18px;display:flex;flex-direction:column;gap:10px}
+.pop .dl{display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-top:1px solid var(--hair)}
+.pop .fo{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--hair)}
+.pop .fo .btn{flex:1;text-align:center}
+.rule{display:flex;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.rule .c{flex:1;padding:14px 16px;border-left:1px solid var(--hair);color:var(--ink2);display:flex;flex-direction:column;gap:4px}
+.rule .c:first-child{border-left:0;padding-left:0}
+.rule .d{font:500 10px/1 var(--fm);letter-spacing:.12em;text-transform:uppercase}
+.rule .nn{font:400 30px/1 var(--fd);color:var(--ink);opacity:.55}
+.rule .c.on{color:var(--ink);flex-grow:1.4}
+.rule .c.on .d{color:var(--ticket)}.rule .c.on .nn{opacity:1;font-size:44px;color:var(--ticket)}
+
+/* --- la sombra dura --- */
+.hard{border:1.5px solid var(--edge);box-shadow:6px 6px 0 0 var(--shadow)}
+.hard.s4{box-shadow:4px 4px 0 0 var(--shadow)}
+.hard:hover{transform:translate(-1px,-1px);box-shadow:7px 7px 0 0 var(--shadow)}
+.hard.s4:hover{box-shadow:5px 5px 0 0 var(--shadow)}
+.hard:active{transform:translate(4px,4px);box-shadow:1px 1px 0 0 var(--shadow)}
+.hard.s4:active{transform:translate(3px,3px);box-shadow:1px 1px 0 0 var(--shadow)}
+.hard.go{border-color:var(--ink)}
+/* color de sombra por variante */
+.v-ink{--edge:var(--ink);--shadow:var(--ink)}
+.v-tk{--edge:var(--ink);--shadow:var(--ticket)}
+.v-soft{--edge:var(--ink);--shadow:var(--hair)}
+.pop.hard{box-shadow:10px 10px 0 0 var(--shadow)}
+.pop.hard:hover{transform:none;box-shadow:10px 10px 0 0 var(--shadow)}
+.pop.hard:active{transform:none}
+.field.hard{cursor:text}
+.field.hard:hover,.field.hard:active{transform:none;box-shadow:6px 6px 0 0 var(--shadow)}
+.field.hard:focus-within{box-shadow:6px 6px 0 0 var(--ticket)}
+@media (prefers-reduced-motion:reduce){.hard,.hard:hover,.hard:active{transition:none;transform:none}}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="lbl" style="margin-bottom:12px">Acapelius · la sombra dura de Fluxara · tres intensidades</p>
+  <h1>Sombra dura</h1>
+  <p>Lo que te gustó de Fluxara tiene nombre: borde fino en tinta y una sombra sólida desplazada en diagonal, sin desenfoque. La pieza parece recortada y apoyada sobre el papel. Encaja con Backstage porque no es una sombra difusa: es tinta plana, como un sello. Tocá los botones y las tarjetas: se hunden al presionar.</p>
+</header>
+
+<div class="recipe">
+  <div><h3>La receta de Fluxara</h3><p><code>border: 1.5px solid ink</code> + <code>box-shadow: 6px 6px ink</code> en cajas, <code>4px 4px</code> en piezas chicas. Sin blur. En oscuro la tinta es crema, así que la sombra se vuelve clara.</p></div>
+  <div><h3>Trasladada a Acapelius</h3><p>Tinta = <code>--ink</code> (crema en oscuro, casi negro en claro). La sombra puede ser tinta, naranja o divisor, según lo que marques abajo. Radio 0, como todo lo demás.</p></div>
+  <div><h3>El gesto</h3><p>Hover: la pieza se levanta 1px y la sombra crece. Presión: se hunde 4px y la sombra casi desaparece. Es lo que la hace sentir física, y es barato.</p></div>
+</div>
+
+<div class="ctl"><span class="lbl">Tema</span><button type="button" data-t="dark" aria-pressed="true">Oscuro</button><button type="button" data-t="light" aria-pressed="false">Claro</button><span class="hint">Todo responde al hover y al clic.</span></div>
+
+<div id="frames">
+
+<!-- 1 -->
+<section class="opt">
+  <header><h2>1 · Sólo lo que se toca</h2><span class="lbl">botones, buscador y popups. Las tarjetas y las listas quedan planas</span></header>
+  <div class="app v-ink">
+    <div class="row2">
+      <div><span class="cap">Botones y buscador</span>
+        <div class="g" style="margin-bottom:18px"><span class="btn go hard s4">Nueva venta</span><span class="btn hard s4">Exportar</span><span class="btn hard s4">Registrar</span></div>
+        <div class="field hard"><span>Buscar comprador, mail o corista</span><span class="btn go s4" style="padding:9px 14px">Buscar</span></div>
+      </div>
+      <div><span class="cap">Popup</span>
+        <div class="pop hard"><div class="h"><span class="lbl">Corista · Temporada 2026</span><div class="t">Beatriz Coria</div></div><div class="b"><div class="dl" style="border-top:0"><span>Cobró</span><b>$ 161.500</b></div><div class="dl"><span>Ya rindió</span><b>$ 0</b></div><div class="dl"><span>Última rendición</span><b>—</b></div></div><div class="fo"><span class="btn hard s4">Cambiar cupo</span><span class="btn go hard s4">Registrar rendición</span></div></div>
+      </div>
+    </div>
+    <div><span class="cap">Las tarjetas quedan como hoy</span>
+      <div class="row3">
+        <div class="tile"><div class="top"><span class="sq">BC</span><div><div class="n">Beatriz Coria</div><div class="rs">cobró hace 33 días</div></div></div><div class="bar"><i style="width:84%"></i></div><div class="meta"><span class="mono"><b>21</b> de 25 vendidas</span><span class="rs">84%</span></div><div class="f"><span class="st warn">Debe $ 161.500</span><span class="rs">rindió el 26 sept</span></div></div>
+        <div class="tile"><div class="top"><span class="sq">NQ</span><div><div class="n">Norma Quiroga</div><div class="rs">rindió el 25 sept</div></div></div><div class="bar"><i class="ok" style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23 vendidas</span><span class="rs">83%</span></div><div class="f"><span class="st ok">Al día</span></div></div>
+        <div class="tile"><div class="top"><span class="sq">AB</span><div><div class="n">Adriana Bustos</div><div class="rs">cobró hace 35 días</div></div></div><div class="bar"><i style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23 vendidas</span><span class="rs">83%</span></div><div class="f"><span class="st warn">Debe $ 73.000</span><span class="rs">rindió el 14 sept</span></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes"><ul><li><b>Qué suma:</b> todo lo que se puede apretar se ve apretable. Es la regla más clara que puede tener una interfaz.</li><li><b>Costo:</b> una clase en <code>.btn</code>, <code>.search</code>, <code>.modal</code>, <code>.drawer</code> y <code>.menu</code>. Un día.</li></ul><ul><li><b>Riesgo:</b> casi ninguno. En el celular la presión se siente bien con el pulgar.</li></ul></div>
+</section>
+
+<!-- 2 -->
+<section class="opt">
+  <header><h2>2 · También las tarjetas</h2><span class="lbl">las entidades (coristas, funciones) se apoyan sobre el papel; las filas siguen planas</span></header>
+  <div class="app v-ink">
+    <div class="row3">
+      <div class="tile hard"><div class="top"><span class="sq">BC</span><div><div class="n">Beatriz Coria</div><div class="rs">cobró hace 33 días</div></div></div><div class="bar"><i style="width:84%"></i></div><div class="meta"><span class="mono"><b>21</b> de 25 vendidas</span><span class="rs">84%</span></div><div class="f"><span class="st warn">Debe $ 161.500</span><span class="rs">rindió el 26 sept</span></div></div>
+      <div class="tile hard"><div class="top"><span class="sq">NQ</span><div><div class="n">Norma Quiroga</div><div class="rs">rindió el 25 sept</div></div></div><div class="bar"><i class="ok" style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23 vendidas</span><span class="rs">83%</span></div><div class="f"><span class="st ok">Al día</span></div></div>
+      <div class="tile hard"><div class="top"><span class="sq">AB</span><div><div class="n">Adriana Bustos</div><div class="rs">cobró hace 35 días</div></div></div><div class="bar"><i style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23 vendidas</span><span class="rs">83%</span></div><div class="f"><span class="st warn">Debe $ 73.000</span><span class="rs">rindió el 14 sept</span></div></div>
+    </div>
+    <div class="row2">
+      <div><span class="cap">Tarjeta de función</span>
+        <div class="row3" style="grid-template-columns:1fr 1fr">
+          <div class="tile hard"><span class="lbl" style="color:var(--ink3)">Dom 27 sept</span><div style="font:400 28px/1 var(--fd);margin:6px 0 2px">61 / 80</div><div class="rs">recaudó 510.000</div><div class="bar"><i class="ok" style="width:76%"></i></div><div class="meta"><span class="mono">76%</span><span class="st ok">Asistió 25%</span></div></div>
+          <div class="tile hard"><span class="lbl" style="color:var(--ink3)">Jue 15 oct</span><div style="font:400 28px/1 var(--fd);margin:6px 0 2px">16 / 80</div><div class="rs">recaudó 49.500</div><div class="bar"><i style="width:20%;background:var(--ticket)"></i></div><div class="meta"><span class="mono">20%</span><span class="st ok">Asistió 0%</span></div></div>
+        </div>
+      </div>
+      <div><span class="cap">Y los botones, como en 1</span><div class="g"><span class="btn go hard s4">Nueva venta</span><span class="btn hard s4">Exportar</span></div></div>
+    </div>
+  </div>
+  <div class="notes"><ul><li><b>Qué suma:</b> resuelve lo que decías de Equipo: cada corista es un objeto propio, apoyado, separado del de al lado. Mucho más que el borde solo.</li><li><b>Costo:</b> lo mismo que 1 más <code>.tile</code> y <code>.fn</code>. La grilla necesita 8px más de aire para la sombra.</li></ul><ul><li><b>Riesgo:</b> doce tarjetas con sombra en Equipo es mucho sello junto. En claro pesa más que en oscuro.</li></ul></div>
+</section>
+
+<!-- 3 -->
+<section class="opt">
+  <header><h2>3 · Sombra naranja en lo primario</h2><span class="lbl">la acción principal y la función elegida llevan la sombra en naranja; el resto en tinta</span></header>
+  <div class="app v-ink">
+    <div class="row2">
+      <div><span class="cap">El botón principal se distingue por la sombra, no sólo por el relleno</span>
+        <div class="g" style="margin-bottom:18px"><span class="btn go hard s4 v-tk" style="--shadow:var(--ink)">Nueva venta</span><span class="btn hard s4 v-tk">Abrir WhatsApp</span><span class="btn hard s4">Exportar</span></div>
+        <div class="field hard"><span>Buscar comprador, mail o corista</span><span class="btn go s4" style="padding:9px 14px">Buscar</span></div>
+      </div>
+      <div><span class="cap">Tarjeta elegida vs. las demás</span>
+        <div class="row3" style="grid-template-columns:1fr 1fr">
+          <div class="tile hard v-tk"><div class="top"><span class="sq" style="background:var(--ticket);color:var(--on-ticket)">BC</span><div><div class="n">Beatriz Coria</div><div class="rs">seleccionada</div></div></div><div class="bar"><i style="width:84%"></i></div><div class="meta"><span class="mono"><b>21</b> de 25</span><span class="st warn">Debe $ 161.500</span></div></div>
+          <div class="tile hard"><div class="top"><span class="sq">NQ</span><div><div class="n">Norma Quiroga</div><div class="rs">rindió el 25 sept</div></div></div><div class="bar"><i class="ok" style="width:83%"></i></div><div class="meta"><span class="mono"><b>19</b> de 23</span><span class="st ok">Al día</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div><span class="cap">En la regla de funciones de Ventas la elegida ya es naranja; acá además se levanta</span>
+      <div class="rule"><div class="c"><span class="d">Vie 11 sept</span><span class="nn">34/45</span><span class="rs">31 entraron</span></div><div class="c"><span class="d">Sáb 19 sept</span><span class="nn">35/50</span><span class="rs">33 entraron</span></div><div class="c on hard v-tk" style="border-left:1.5px solid var(--ink);margin:-1px 0;background:var(--paper)"><span class="d">Jue 15 oct · 21:00</span><span class="nn">16/80</span><span class="rs" style="color:var(--ink2)">$ 49.500 recaudado · 0 entraron</span></div></div>
+    </div>
+  </div>
+  <div class="notes"><ul><li><b>Qué suma:</b> el naranja deja de ser sólo relleno y pasa a ser también sombra: el botón "Abrir WhatsApp" de Fluxara, pero en tu color.</li><li><b>Dónde:</b> acción primaria, función elegida, corista seleccionada. Nada más, para que siga siendo acento.</li></ul><ul><li><b>Riesgo:</b> en claro el naranja de sombra compite con el texto naranja de los links. Se puede usar sólo en oscuro y pasar a tinta en claro.</li></ul></div>
+</section>
+
+</div>
+
+<section class="opt">
+  <header><h2>Mi recomendación</h2></header>
+  <p><b style="color:var(--pg-fg)">1 ahora, 2 en Equipo y Dirección, 3 sólo para el botón primario.</b> Es decir: todo lo que se toca lleva sombra dura en tinta; las tarjetas de entidad también, con 8px de aire extra; y "Nueva venta" lleva la sombra en naranja. Las filas, la regla de cifras y el menú lateral quedan planos: la sombra tiene valor porque no está en todos lados.</p>
+</section>
+</div>
+<script>
+(function(){
+  var f=document.getElementById('frames');
+  document.querySelectorAll('[data-t]').forEach(function(b){b.addEventListener('click',function(){
+    f.classList.toggle('light',b.getAttribute('data-t')==='light');
+    document.querySelectorAll('[data-t]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+  })});
+})();
+</script>

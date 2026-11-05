@@ -1,0 +1,370 @@
+<title>Acapelius Backstage</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: página de presentación oscura (la dirección es oscura siempre), cuatro
+   pantallas de 1280×800 escaladas, menú colapsable en vivo. */
+:root{--pg-bg:#0f0e0c;--pg-fg:#f4f1ea;--pg-mute:#9a9282;--pg-hair:#2a2723;--pg-card:#171512;--pg-acc:#ec6e4c;
+  --fd:'Anton',Impact,sans-serif;--fb:'Inter',system-ui,sans-serif;--fm:'JetBrains Mono',ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg-bg);color:var(--pg-fg);font:400 15px/1.5 var(--fb);padding-block:36px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1{font:400 44px/1 var(--fd);margin:0 0 8px;letter-spacing:.01em;text-wrap:balance}
+h2{font:400 26px/1.1 var(--fd);margin:0;letter-spacing:.01em}
+.lbl{font:500 10px/1 var(--fm);text-transform:uppercase;letter-spacing:.15em;color:var(--pg-mute)}
+.lbl.acc{color:var(--pg-acc)}
+p{margin:0;max-width:68ch;color:var(--pg-mute)}
+.ctl{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--pg-card);border:1px solid var(--pg-hair)}
+.ctl button{font:500 12.5px/1 var(--fb);padding:8px 12px;border:1px solid var(--pg-hair);background:none;color:var(--pg-fg);cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.ctl button:hover{border-color:var(--pg-mute)}
+.ctl button:focus-visible{outline:2px solid var(--pg-acc);outline-offset:2px}
+.ctl kbd{font:500 10px/1 var(--fm);padding:2px 4px;background:var(--pg-hair);color:var(--pg-mute)}
+.ctl .hint{font-size:12.5px;margin-left:auto}
+.scr{display:flex;flex-direction:column;gap:12px}
+.scr header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;border-top:1px solid var(--pg-fg);padding-top:12px}
+.fit{width:100%;position:relative;overflow:hidden;box-shadow:0 0 0 1px var(--pg-hair),0 30px 60px -30px rgba(0,0,0,.8)}
+.frame{width:1280px;height:800px;transform-origin:0 0;position:absolute;left:0;top:0;display:flex;font-family:var(--fb);font-size:13.5px;line-height:1.45;font-variant-numeric:tabular-nums;overflow:hidden}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px 24px;font-size:13.5px}
+.notes ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px}
+.notes li{color:var(--pg-mute)}.notes b{color:var(--pg-fg);font-weight:600}
+.dec{display:flex;flex-direction:column}
+.dec .q{display:grid;grid-template-columns:28px 1fr;gap:12px;padding:14px 0;border-top:1px solid var(--pg-hair)}
+.dec .q:last-child{border-bottom:1px solid var(--pg-hair)}
+.dec .q .n{font:400 20px/1.2 var(--fd);color:var(--pg-acc)}
+.dec .q p{font-size:14px}.dec .q b{color:var(--pg-fg)}
+.plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.plan div{background:var(--pg-card);border:1px solid var(--pg-hair);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.plan h3{font:600 14px/1.3 var(--fb);margin:0}
+.plan p{font-size:13px}
+.plan code{font:500 11.5px/1.4 var(--fm);color:var(--pg-fg)}
+
+/* ===== sistema C ===== */
+.frame{--bg:#141311;--card:#1d1b18;--card2:#201e1a;--ink:#f4f1ea;--mute:#9a9282;--dim:#6e6859;--hair:rgba(244,241,234,.1);--acc:#ec6e4c;--ok:#6dc79a;--warn:#e8a33d;--bad:#e07a7a;--ind:#9da0f2;background:var(--bg);color:var(--ink)}
+.sn{width:200px;flex:0 0 200px;border-right:1px solid var(--hair);padding:22px 14px 16px;display:flex;flex-direction:column;transition:width .22s ease,flex-basis .22s ease,padding .22s ease;overflow:hidden;position:relative}
+.sn .brand{font:400 18px/1 var(--fd);letter-spacing:.08em;padding:0 8px 6px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.sn .brand .m{display:none;width:28px;height:28px;background:var(--acc);color:#141311;place-items:center;font:400 14px/1 var(--fd);flex:0 0 28px}
+.sn .ssn{font:500 10px/1 var(--fm);letter-spacing:.15em;text-transform:uppercase;color:var(--acc);padding:0 8px 26px;white-space:nowrap}
+.sn .it{display:flex;align-items:center;gap:10px;padding:8px 8px;color:var(--mute);font-size:14px;font-weight:500;border-left:2px solid transparent;white-space:nowrap;position:relative;text-decoration:none}
+.sn .it.on{color:var(--ink);border-left-color:var(--acc)}
+.sn .it svg{display:none;width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:0 0 17px}
+.sn .it .b{margin-left:auto;font:500 11px/1.6 var(--fm);color:var(--acc)}
+.sn .sect{font:500 10px/1 var(--fm);letter-spacing:.15em;text-transform:uppercase;color:var(--dim);padding:22px 8px 8px;white-space:nowrap}
+.sn .foot{margin-top:auto;padding:0 8px;color:var(--mute);font-size:12.5px;display:flex;flex-direction:column;gap:2px;white-space:nowrap}
+.sn .foot b{color:var(--ink);font-weight:600}
+.sn .foot .av{display:none;width:28px;height:28px;border:1px solid var(--hair);place-items:center;font-weight:600;color:var(--ink);font-size:12px}
+.sn .tip{display:none}
+.frames.rail .sn{width:60px;flex-basis:60px;padding-left:8px;padding-right:8px}
+.frames.rail .sn .brand span,.frames.rail .sn .ssn,.frames.rail .sn .it .t,.frames.rail .sn .sect,.frames.rail .sn .foot span{display:none}
+.frames.rail .sn .brand{padding:0;justify-content:center}
+.frames.rail .sn .brand .m{display:grid}
+.frames.rail .sn .it{justify-content:center;padding:11px 0;border-left:0}
+.frames.rail .sn .it svg{display:block}
+.frames.rail .sn .it.on{color:var(--acc)}
+.frames.rail .sn .it .b{position:absolute;top:7px;right:12px;width:6px;height:6px;border-radius:50%;background:var(--acc);font-size:0;margin:0}
+.frames.rail .sn .items .sep{height:1px;background:var(--hair);margin:10px 10px}
+.frames.rail .sn .foot{padding:0;align-items:center}
+.frames.rail .sn .foot .av{display:grid}
+.frames.rail .sn .it.on .tip{display:block;position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:var(--ink);color:var(--bg);padding:5px 9px;font-size:11.5px;white-space:nowrap;font-weight:500}
+.sn .items .sep{display:none}
+.frames.rail .sn .items .sep{display:block}
+
+.pg{flex:1;min-width:0;padding:28px 36px 0;display:flex;flex-direction:column;gap:22px;overflow:hidden}
+.ph{display:flex;justify-content:space-between;align-items:flex-end}
+.ph .l{display:flex;align-items:flex-end}
+.sn .top{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-right:2px}
+.sn .tg{width:28px;height:28px;display:grid;place-items:center;color:var(--dim);border:0;background:none;cursor:pointer;flex:0 0 28px}
+.sn .tg:hover{color:var(--ink)}
+.sn .tg svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round}
+.frames.rail .sn .top{flex-direction:column;gap:6px;padding:0 0 16px}
+.frames.rail .sn .brand{padding:0}
+.ph h4{font:400 48px/1 var(--fd);margin:0;letter-spacing:.01em}
+.ph .sub{font:500 11px/1 var(--fm);letter-spacing:.15em;text-transform:uppercase;color:var(--mute);margin-top:10px}
+.acts{display:flex;gap:8px}
+.btn{padding:10px 16px;border:1px solid var(--hair);font-weight:500;font-size:13px;color:var(--ink)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#141311;font-weight:600}
+.rule{display:flex;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.rule .c{flex:1;padding:14px 16px;border-left:1px solid var(--hair);display:flex;flex-direction:column;gap:4px;color:var(--mute)}
+.rule .c:first-child{border-left:0;padding-left:0}
+.rule .c .d{font:500 10px/1 var(--fm);letter-spacing:.12em;text-transform:uppercase}
+.rule .c .n{font:400 30px/1 var(--fd);color:var(--ink);opacity:.55}
+.rule .c.on{color:var(--ink)}
+.rule .c.on .d{color:var(--acc)}
+.rule .c.on .n{opacity:1;font-size:56px;color:var(--acc)}
+.rule .c .s{font-size:12px}
+.rule .c .s a{color:var(--acc);text-decoration:none;font-weight:600}
+.rule.k .c .n{opacity:1;font-size:36px}
+.rule.k .c .n.ok{color:var(--ok)}.rule.k .c .n.warn{color:var(--warn)}
+.tools{display:flex;gap:18px;align-items:center;font-size:13px}
+.q{flex:1;padding:9px 0;border-bottom:1px solid var(--hair);color:var(--mute)}
+.tabs{display:flex;gap:16px;color:var(--mute);font-weight:500}
+.tabs span.on{color:var(--ink);border-bottom:2px solid var(--acc);padding-bottom:4px}
+.dd{color:var(--mute)}.dd b{color:var(--ink);font-weight:500}
+.list{display:flex;flex-direction:column}
+.r{display:grid;grid-template-columns:1fr 160px 110px 180px;gap:16px;padding:13px 0;border-bottom:1px solid var(--hair);align-items:center;font-size:14px}
+.r .n{font-weight:500}.r .n small{display:block;color:var(--mute);font-size:12px;font-weight:400}
+.r .m{color:var(--mute)}.r .a{font-family:var(--fm);font-size:12.5px;text-align:right}
+.st{font-weight:500;font-size:13px;text-align:right}
+.st.debe{color:var(--warn)}.st.pago{color:var(--ok)}.st.cort{color:var(--ind)}.st.anul{color:var(--bad)}
+.st.l{text-align:left}
+.foot-l{color:var(--dim);font-size:12px;padding-top:10px}
+.h5{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.h5 span{font:500 10.5px/1 var(--fm);letter-spacing:.15em;text-transform:uppercase;color:var(--mute)}
+.h5 a{color:var(--acc);text-decoration:none;font-weight:600;font-size:13px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:36px}
+.li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--hair);font-size:13.5px}
+.li small{display:block;color:var(--mute);font-size:12px}
+.li .a{font-family:var(--fm);font-size:12px;color:var(--mute)}
+.li .a.w{color:var(--warn)}
+.two{display:grid;grid-template-columns:1.5fr 1fr;gap:36px;flex:1;min-height:0}
+.fns{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair)}
+.fn{background:var(--bg);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.fn .d{font:500 10px/1 var(--fm);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.fn .n{font:400 28px/1 var(--fd)}
+.fn.past .n{opacity:.55}
+.fn .bar{height:2px;background:var(--hair);position:relative;overflow:hidden;margin-top:4px}
+.fn .bar i{position:absolute;inset:0 auto 0 0;background:var(--ink)}
+.fn.next .bar i{background:var(--acc)}
+.fn .s{font-size:12px;color:var(--mute);display:flex;justify-content:space-between}
+.chart{display:flex;flex-direction:column;gap:8px}
+.chart svg{width:100%;height:140px;display:block}
+.chart .lg{display:flex;gap:16px;font-size:12px;color:var(--mute)}
+.chart .lg i{display:inline-block;width:12px;height:2px;background:var(--ink);vertical-align:middle;margin-right:6px}
+.chart .lg i.c{background:var(--dim)}
+/* puerta */
+.door{flex:1;display:flex;justify-content:center;padding:34px 36px 0}
+.door .col{width:100%;max-width:640px;display:flex;flex-direction:column;gap:24px}
+.door .cnt{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--hair);padding-bottom:18px}
+.door .cnt .big{font:400 96px/.9 var(--fd);color:var(--ok)}
+.door .cnt .big small{font-size:40px;color:var(--mute)}
+.door .cnt .lb{font:500 11px/1 var(--fm);letter-spacing:.15em;text-transform:uppercase;color:var(--mute);margin-top:10px}
+.door .on{font-size:13px;color:var(--ok);font-weight:500;text-align:right}
+.door .on small{display:block;color:var(--mute);font-weight:400;margin-top:4px}
+.door .in{font-size:22px;padding:14px 0;border-bottom:2px solid var(--acc);color:var(--ink)}
+.door .in span{color:var(--dim)}
+.door .res{display:grid;grid-template-columns:1fr 140px 90px 130px;gap:16px;padding:14px 0;border-bottom:1px solid var(--hair);align-items:center;font-size:14px}
+.door .res.sel{background:var(--card);margin:0 -16px;padding-left:16px;padding-right:16px;outline:1px solid var(--hair)}
+.door .res .n{font-weight:500}.door .res .n mark{background:none;color:var(--acc)}
+.door .res .n small{display:block;color:var(--mute);font-size:12px;font-weight:400}
+.door .res .m{color:var(--mute)}
+.door .res .k{font-family:var(--fm);font-size:12.5px;color:var(--mute)}
+.door .res .go{border:1px solid var(--hair);padding:8px 0;text-align:center;font-weight:500;font-size:13px}
+.door .res.sel .go{background:var(--ok);border-color:var(--ok);color:#141311;font-weight:600}
+.door .res .go.dis{color:var(--dim)}
+.door .keys{font:500 10.5px/1 var(--fm);letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+.door .keys kbd{border:1px solid var(--hair);padding:2px 5px;margin-right:3px;font:inherit}
+.door .last .li{font-size:13px}
+@media (max-width:720px){h1{font-size:34px}}
+@media (prefers-reduced-motion:reduce){.sn{transition:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18"/></symbol>
+</svg>
+
+<template id="tpl-sn">
+  <nav class="sn" aria-label="Navegación principal">
+    <div class="top"><div class="brand"><span class="m">A</span><span>ACAPELIUS</span></div><button class="tg" type="button" aria-label="Colapsar el menú" title="⌘B"><svg aria-hidden="true"><use href="#i-panel"/></svg></button></div>
+    <div class="ssn">Temporada 2026</div>
+    <div class="items">
+      <a class="it" data-k="inicio" href="#x"><svg aria-hidden="true"><use href="#i-music"/></svg><span class="t">Inicio</span><span class="tip">Inicio</span></a>
+      <a class="it" data-k="ventas" href="#x"><svg aria-hidden="true"><use href="#i-ticket"/></svg><span class="t">Ventas</span><span class="b">10</span><span class="tip">Ventas</span></a>
+      <a class="it" data-k="puerta" href="#x"><svg aria-hidden="true"><use href="#i-scan"/></svg><span class="t">Puerta</span><span class="tip">Puerta</span></a>
+      <a class="it" data-k="direccion" href="#x"><svg aria-hidden="true"><use href="#i-chart"/></svg><span class="t">Dirección</span><span class="tip">Dirección</span></a>
+      <p class="sect">Administración</p><div class="sep"></div>
+      <a class="it" data-k="rend" href="#x"><svg aria-hidden="true"><use href="#i-card"/></svg><span class="t">Rendiciones</span><span class="b">6</span><span class="tip">Rendiciones</span></a>
+      <a class="it" data-k="asis" href="#x"><svg aria-hidden="true"><use href="#i-users"/></svg><span class="t">Asistencia</span><span class="tip">Asistencia</span></a>
+      <a class="it" data-k="temp" href="#x"><svg aria-hidden="true"><use href="#i-cal"/></svg><span class="t">Temporadas</span><span class="tip">Temporadas</span></a>
+      <a class="it" data-k="equipo" href="#x"><svg aria-hidden="true"><use href="#i-key"/></svg><span class="t">Equipo</span><span class="tip">Equipo</span></a>
+    </div>
+    <div class="foot"><span class="av">E</span><span><b>Eli</b></span><span>Dirección · salir</span></div>
+  </nav>
+</template>
+
+<div class="wrap">
+<header>
+  <p class="lbl acc" style="margin-bottom:14px">Acapelius · dirección C · escritorio 1280×800 · propuesta, sin código todavía</p>
+  <h1>Backstage, completo</h1>
+  <p>Las cuatro pantallas de escritorio en el mismo sistema: negro cálido siempre, Anton para títulos y cifras, naranja como único acento, menú de texto que se colapsa a un riel de íconos desde su propia barra. Nada de tarjetas ni sombras: la jerarquía la hacen el tamaño y las reglas.</p>
+</header>
+
+<div class="ctl">
+  <span class="lbl">Menú</span>
+  <button type="button" id="toggle" aria-pressed="false">Colapsar <kbd>⌘B</kbd></button>
+  <span class="hint">Abierto es texto solo. Colapsado aparecen los íconos, y el activo se marca en naranja. El botón de colapsar vive en la barra del menú, junto a la marca.</span>
+</div>
+
+<div class="frames" id="frames">
+
+<section class="scr">
+  <header><h2>Ventas</h2><span class="lbl">la que elegiste, con el detalle de la función completo</span></header>
+  <div class="fit"><div class="frame" data-active="ventas">
+    <div class="pg">
+      <div class="ph"><div class="l"><div><h4>Ventas</h4><div class="sub">Temporada 2026 · 145 de 315 entradas</div></div></div><div class="acts"><span class="btn">Exportar</span><span class="btn pri">Nueva venta</span></div></div>
+      <div class="rule">
+        <div class="c"><span class="d">Vie 14 ago</span><span class="n">38/45</span><span class="s">31 entraron</span></div>
+        <div class="c"><span class="d">Sáb 22 ago</span><span class="n">32/50</span><span class="s">28 entraron</span></div>
+        <div class="c"><span class="d">Mié 26 ago</span><span class="n">61/80</span><span class="s">29 entraron</span></div>
+        <div class="c"><span class="d">Sáb 12 sept</span><span class="n">0/60</span><span class="s">en 4 días</span></div>
+        <div class="c on"><span class="d">Dom 13 sept · 20:00</span><span class="n">14/80</span><span class="s">$ 36.000 recaudado · $ 90.000 falta cobrar · <a href="#x">repartir 12</a></span></div>
+      </div>
+      <div class="tools"><span class="q">Buscar comprador, mail o corista</span><div class="tabs"><span class="on">Todas</span><span>Debe</span><span>Pagó</span><span>Cortesías</span><span>Anuladas</span></div><span class="dd">Corista <b>todas ▾</b></span></div>
+      <div class="list">
+        <div class="r"><span class="n">Alicia Zabala<small>alicia.zabala@gmail.com</small></span><span class="m">Carolina Vega</span><span class="a">3 · 27.000</span><span class="st debe">Debe $ 27.000</span></div>
+        <div class="r"><span class="n">Federico Nardi<small>fnardi@hotmail.com</small></span><span class="m">Silvia Rey</span><span class="a">2 · 18.000</span><span class="st pago">Pagó (transf.)</span></div>
+        <div class="r"><span class="n">Irene Sandoval<small>irene.s@gmail.com</small></span><span class="m">Norma Quiroga</span><span class="a">4 · 36.000</span><span class="st debe">Debe $ 36.000</span></div>
+        <div class="r"><span class="n">Marcelo Duarte<small>mduarte@yahoo.com.ar</small></span><span class="m">Adriana Bustos</span><span class="a">2 · 18.000</span><span class="st pago">Pagó</span></div>
+        <div class="r"><span class="n">Pilar Escobar<small>pili.escobar@gmail.com</small></span><span class="m">Beatriz Coria</span><span class="a">3 · 27.000</span><span class="st debe">Debe $ 27.000</span></div>
+        <div class="r"><span class="n">Tomás Herrera<small>therrera@gmail.com</small></span><span class="m">Norma Quiroga</span><span class="a">2 · —</span><span class="st cort">Cortesía</span></div>
+      </div>
+      <div class="foot-l">6 de 6 · 14 entradas · $ 36.000</div>
+    </div>
+  </div></div>
+</section>
+
+<section class="scr">
+  <header><h2>Inicio</h2><span class="lbl">lo que hay que mirar hoy</span></header>
+  <div class="fit"><div class="frame" data-active="inicio">
+    <div class="pg">
+      <div class="ph"><div class="l"><div><h4>Hola, Eli</h4><div class="sub">Martes 4 de noviembre · próxima función en 5 días</div></div></div><div class="acts"><span class="btn">Ver funciones</span><span class="btn pri">Nueva venta</span></div></div>
+      <div class="rule">
+        <div class="c on" style="flex:1.6"><span class="d">Dom 13 sept · 20:00 · Auditorio Belgrano</span><span class="n">14/80</span><span class="s">18% vendido · 12 sin asignar · 8 coristas vendiendo</span></div>
+        <div class="c"><span class="d">Recaudado</span><span class="n" style="opacity:1;color:var(--ok)">$ 36.000</span><span class="s">de esta función</span></div>
+        <div class="c"><span class="d">Falta cobrar</span><span class="n" style="opacity:1;color:var(--warn)">$ 90.000</span><span class="s">10 ventas</span></div>
+        <div class="c"><span class="d">Sin rendir</span><span class="n" style="opacity:1;color:var(--warn)">$ 192.000</span><span class="s">6 coristas</span></div>
+      </div>
+      <div class="three">
+        <div><div class="h5"><span>Te falta cobrar</span><a href="#x">Ver las 10</a></div>
+          <div class="li"><span>Alicia Zabala<small>Carolina · 13 sept</small></span><span class="a w">27.000</span></div>
+          <div class="li"><span>Irene Sandoval<small>Norma · 13 sept</small></span><span class="a w">36.000</span></div>
+          <div class="li"><span>Pilar Escobar<small>Beatriz · 13 sept</small></span><span class="a w">27.000</span></div>
+          <div class="li"><span>Lucía Ferreyra<small>Norma · 26 ago · la función ya pasó</small></span><span class="a w">18.000</span></div>
+        </div>
+        <div><div class="h5"><span>Te están esperando</span><a href="#x">Ver las 6</a></div>
+          <div class="li"><span>Norma Quiroga<small>cobró $ 72.000 · rindió $ 0</small></span><span class="a w">72.000</span></div>
+          <div class="li"><span>Beatriz Coria<small>cobró $ 54.000 · rindió $ 27.000</small></span><span class="a w">27.000</span></div>
+          <div class="li"><span>Carolina Vega<small>cobró $ 45.000 · rindió $ 27.000</small></span><span class="a w">18.000</span></div>
+          <div class="li"><span>Silvia Rey<small>cobró $ 36.000 · rindió $ 18.000</small></span><span class="a w">18.000</span></div>
+        </div>
+        <div><div class="h5"><span>Últimas ventas</span><a href="#x">Ir a Ventas</a></div>
+          <div class="li"><span>Tomás Herrera<small>Norma · 2 entradas · cortesía</small></span><span class="a">11:40</span></div>
+          <div class="li"><span>Marcelo Duarte<small>Adriana · 2 entradas · pagó</small></span><span class="a">10:12</span></div>
+          <div class="li"><span>Federico Nardi<small>Silvia · 2 entradas · transf.</small></span><span class="a">09:05</span></div>
+          <div class="li"><span>Irene Sandoval<small>Norma · 4 entradas · debe</small></span><span class="a">ayer</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<section class="scr">
+  <header><h2>Dirección</h2><span class="lbl">la temporada en una pantalla</span></header>
+  <div class="fit"><div class="frame" data-active="direccion">
+    <div class="pg">
+      <div class="ph"><div class="l"><div><h4>Temporada 2026</h4><div class="sub">5 funciones · agosto a septiembre · 8 coristas</div></div></div><div class="acts"><span class="btn">Historial general</span><span class="btn">Exportar</span></div></div>
+      <div class="rule k">
+        <div class="c"><span class="d">Vendido en la temporada</span><span class="n">145 / 315</span><span class="s">46% · 5 funciones</span></div>
+        <div class="c"><span class="d">Recaudado</span><span class="n ok">$ 1.016.000</span><span class="s">$ 824.000 ya rendido</span></div>
+        <div class="c"><span class="d">Sin cobrar</span><span class="n warn">$ 216.000</span><span class="s">10 ventas deben</span></div>
+        <div class="c"><span class="d">Sin rendir</span><span class="n warn">$ 192.000</span><span class="s">6 coristas con saldo</span></div>
+      </div>
+      <div><div class="h5"><span>Las funciones</span><a href="#x">Temporadas</a></div>
+        <div class="fns">
+          <div class="fn past"><span class="d">Vie 14 ago</span><span class="n">38 / 45</span><div class="bar"><i style="width:84%"></i></div><span class="s"><span>84%</span><span>31 entraron</span></span></div>
+          <div class="fn past"><span class="d">Sáb 22 ago</span><span class="n">32 / 50</span><div class="bar"><i style="width:64%"></i></div><span class="s"><span>64%</span><span>28 entraron</span></span></div>
+          <div class="fn past"><span class="d">Mié 26 ago</span><span class="n">61 / 80</span><div class="bar"><i style="width:76%"></i></div><span class="s"><span>76%</span><span>29 entraron</span></span></div>
+          <div class="fn"><span class="d">Sáb 12 sept</span><span class="n">0 / 60</span><div class="bar"><i style="width:0"></i></div><span class="s"><span>0%</span><span>en 4 días</span></span></div>
+          <div class="fn next"><span class="d" style="color:var(--acc)">Dom 13 sept</span><span class="n">14 / 80</span><div class="bar"><i style="width:18%"></i></div><span class="s"><span>18%</span><span>en 5 días</span></span></div>
+        </div>
+      </div>
+      <div class="two">
+        <div><div class="h5"><span>Necesita tu atención</span><a href="#x">Ver las 10</a></div>
+          <div class="li"><span>Norma Quiroga no rindió desde el 26 de agosto<small>cobró $ 72.000 · 3 funciones</small></span><span class="st debe">$ 72.000</span></div>
+          <div class="li"><span>Sáb 12 sept sin ventas a 4 días<small>60 entradas, 48 repartidas</small></span><span class="st anul">0 / 60</span></div>
+          <div class="li"><span>3 ventas del 14 de agosto siguen sin cobrar<small>la función ya pasó</small></span><span class="st debe">$ 54.000</span></div>
+          <div class="li"><span>Dom 13 sept tiene 12 entradas sin asignar<small>repartir entre 8 coristas</small></span><span class="st cort">Repartir</span></div>
+        </div>
+        <div><div class="h5"><span>Ritmo de ventas</span><span>por semana</span></div>
+          <div class="chart">
+            <svg viewBox="0 0 320 140" aria-label="Ventas por semana, 2026 contra 2025">
+              <g stroke="rgba(244,241,234,.1)" stroke-width="1"><line x1="0" y1="35" x2="320" y2="35"/><line x1="0" y1="70" x2="320" y2="70"/><line x1="0" y1="105" x2="320" y2="105"/></g>
+              <polyline fill="none" stroke="#6e6859" stroke-width="1.5" stroke-dasharray="3 3" points="0,118 40,104 80,94 120,78 160,68 200,48 240,36 280,26 320,18"/>
+              <polyline fill="none" stroke="#f4f1ea" stroke-width="2" points="0,122 40,112 80,98 120,92 160,72 200,60 240,52"/>
+              <circle cx="240" cy="52" r="4" fill="#ec6e4c"/>
+              <g fill="#9a9282" font-size="10" font-family="JetBrains Mono, monospace"><text x="0" y="137">jul</text><text x="150" y="137">ago</text><text x="300" y="137">sep</text></g>
+            </svg>
+            <div class="lg"><span><i></i>2026 · 145</span><span><i class="c"></i>2025 · 168 a esta altura</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</section>
+
+<section class="scr">
+  <header><h2>Puerta · mesa de entrada</h2><span class="lbl">donde el oscuro ya era la regla</span></header>
+  <div class="fit"><div class="frame" data-active="puerta">
+    <div class="door"><div class="col">
+      <div class="cnt"><div><div class="big">38 <small>/ 80</small></div><div class="lb">Ingresaron · Dom 13 sept · 20:00</div></div><div class="on">● En línea<small>último ingreso 19:52 · Eli</small></div></div>
+      <div class="in">san<span>|</span></div>
+      <div>
+        <div class="res sel"><span class="n"><mark>San</mark>doval, Irene<small>irene.s@gmail.com</small></span><span class="m">Norma Quiroga</span><span class="k">0 / 4</span><span class="go">Marcar ingreso</span></div>
+        <div class="res"><span class="n">Pérez <mark>San</mark>tos, Julián<small>jps@gmail.com</small></span><span class="m">Beatriz Coria</span><span class="k">2 / 2</span><span class="go dis">Ya ingresó</span></div>
+        <div class="res"><span class="n"><mark>San</mark>tillán, Mora<small>mora.santillan@gmail.com</small></span><span class="m">Adriana Bustos</span><span class="k">0 / 1</span><span class="go">Marcar ingreso</span></div>
+      </div>
+      <div class="keys"><kbd>↑</kbd><kbd>↓</kbd> elegir · <kbd>↵</kbd> marcar ingreso · <kbd>esc</kbd> limpiar</div>
+      <div class="last"><div class="h5"><span>Últimos ingresos</span><span>en vivo</span></div>
+        <div class="li"><span>Pérez Santos, Julián · 2<small>✋ manual · Eli</small></span><span class="a">19:52</span></div>
+        <div class="li"><span>Duarte, Marcelo · 2<small>📷 QR · Caro</small></span><span class="a">19:51</span></div>
+        <div class="li"><span>Nardi, Federico · 2<small>📷 QR · Caro</small></span><span class="a">19:49</span></div>
+      </div>
+    </div></div>
+  </div></div>
+</section>
+
+</div>
+
+<section>
+  <div class="scr"><header><h2>Qué cambia en el código</h2><span class="lbl">para que sepas el tamaño del paso</span></header></div>
+  <div class="plan">
+    <div><h3>Tokens</h3><p>La paleta oscura de <code>styles.css</code> pasa a ser la única: se van los bloques de claro y el atributo <code>data-theme</code>. El naranja se mantiene como acento y gana texto sobre negro.</p></div>
+    <div><h3>Menú</h3><p><code>SideNav.tsx</code> pierde los íconos en estado abierto y los muestra sólo colapsado. Estado en localStorage, ⌘B, botón junto al título. Se va <code>ThemeToggle</code> del menú.</p></div>
+    <div><h3>Ventas</h3><p><code>SalesPage.tsx</code>: se saca <code>QuienVendio</code>, el filtro por corista pasa a la barra, "repartir" a la regla de funciones. Las cinco tarjetas se vuelven la regla de números.</p></div>
+    <div><h3>Primitivos</h3><p>Se cae el radio de 8px y las cards blancas: <code>.card</code> deja de pintar fondo, los grupos se separan con reglas. Botones cuadrados. Esto baja CSS, no lo sube.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="scr"><header><h2>Tres decisiones antes de arrancar</h2></header></div>
+  <div class="dec">
+    <div class="q"><span class="n">1</span><p><b>Oscuro también en el celular.</b> La app tiene un solo sistema de tokens para las dos. Si el escritorio es oscuro siempre, lo más limpio es que las coristas vean lo mismo en el teléfono y el switch de tema desaparezca. La alternativa, escritorio oscuro y celular con switch, mantiene dos paletas vivas.</p></div>
+    <div class="q"><span class="n">2</span><p><b>Menú colapsado con íconos, o sin menú.</b> Lo de arriba colapsa a un riel de íconos para no perder los avisos (el punto naranja). La otra opción es que ⌘B lo esconda del todo, estilo Notion. Más limpio, menos glanceable.</p></div>
+    <div class="q"><span class="n">3</span><p><b>Alcance del primer paso.</b> Propongo tokens + menú + Ventas en un solo cambio, deploy, y después Inicio, Dirección y Puerta con lo aprendido. Si preferís todo junto, es un paso más largo pero una sola migración.</p></div>
+  </div>
+</section>
+
+</div>
+<script>
+(function(){
+  var tpl=document.getElementById('tpl-sn');
+  document.querySelectorAll('.frame[data-active]').forEach(function(f){
+    var nav=tpl.content.cloneNode(true);var a=nav.querySelector('[data-k="'+f.getAttribute('data-active')+'"]');if(a)a.classList.add('on');f.insertBefore(nav,f.firstChild);
+  });
+  var frames=document.getElementById('frames'),b=document.getElementById('toggle');
+  function set(on){frames.classList.toggle('rail',on);b.textContent='';b.appendChild(document.createTextNode(on?'Expandir ':'Colapsar '));var k=document.createElement('kbd');k.textContent='⌘B';b.appendChild(k);b.setAttribute('aria-pressed',on?'true':'false');try{localStorage.setItem('acap-bs-rail',on?'1':'0')}catch(e){}}
+  b.addEventListener('click',function(){set(!frames.classList.contains('rail'))});
+  document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='b'){e.preventDefault();set(!frames.classList.contains('rail'))}});
+  try{if(localStorage.getItem('acap-bs-rail')==='1')set(true)}catch(e){}
+  document.querySelectorAll('a[href="#x"]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault()})});
+  document.querySelectorAll('.sn .tg').forEach(function(t){t.addEventListener('click',function(){set(!frames.classList.contains('rail'))})});
+  function fit(){document.querySelectorAll('.fit').forEach(function(c){var s=c.clientWidth/1280;var f=c.firstElementChild;f.style.transform='scale('+s+')';c.style.height=(800*s)+'px'})}
+  fit();window.addEventListener('resize',fit);if('ResizeObserver' in window){new ResizeObserver(fit).observe(document.body)}
+})();
+</script>

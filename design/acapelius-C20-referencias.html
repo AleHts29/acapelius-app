@@ -1,0 +1,520 @@
+<title>Acapelius Redesign References</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column; mockups are drawn in the app's own tokens so the
+   comparison is honest. Sidebar mockup is live (toggle). */
+:root{
+  --paper:#f2f0e9; --card:#fff; --card2:#faf8f2; --hair:#e8e4da; --sunk:rgba(26,26,24,.045);
+  --ink:#1a1a18; --ink2:#6b665b; --ink3:#736d5f; --black:#141414;
+  --ticket:#c4401e; --ok:#1e6b4a; --warn:#8a5a08; --bad:#a32d2d; --indigo:#3a3fc4;
+  --fd:'Anton',Impact,sans-serif; --fb:'Inter',system-ui,sans-serif; --fm:'JetBrains Mono',ui-monospace,monospace;
+  --r:8px; --rc:5px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#1a1815;--card:#211e1a;--card2:#272420;--hair:rgba(244,241,234,.1);--sunk:rgba(244,241,234,.06);--ink:#f4f1ea;--ink2:#a89f8d;--ink3:#918b7c;--black:#0e0d0b;--ticket:#ec6e4c;--ok:#4bbf8a;--warn:#e0a84a;--bad:#d96b6b;--indigo:#8e92f0;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#1a1815;--card:#211e1a;--card2:#272420;--hair:rgba(244,241,234,.1);--sunk:rgba(244,241,234,.06);--ink:#f4f1ea;--ink2:#a89f8d;--ink3:#918b7c;--black:#0e0d0b;--ticket:#ec6e4c;--ok:#4bbf8a;--warn:#e0a84a;--bad:#d96b6b;--indigo:#8e92f0;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 15px/1.55 var(--fb);padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:64px}
+h1{font:400 44px/1 var(--fd);margin:0 0 10px;letter-spacing:.01em;text-wrap:balance}
+h2{font:400 26px/1.1 var(--fd);margin:0 0 6px;text-wrap:balance}
+h3{font:600 15px/1.3 var(--fb);margin:0 0 4px}
+p{margin:0;max-width:66ch}
+.lbl{font:500 10px/1 var(--fm);text-transform:uppercase;letter-spacing:.15em;color:var(--ink3)}
+.lead{font-size:17px;color:var(--ink2);max-width:62ch}
+.sec-h{display:flex;flex-direction:column;gap:6px;margin-bottom:22px;padding-top:18px;border-top:2px solid var(--ink)}
+.sec-h p{color:var(--ink2)}
+.rule{height:2px;background:var(--ink);margin-bottom:12px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.note{background:var(--card);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.note p{font-size:14px;color:var(--ink2)}
+.note b{color:var(--ink)}
+.tag{display:inline-block;font:500 10px/1 var(--fm);text-transform:uppercase;letter-spacing:.12em;padding:4px 6px;border-radius:3px;background:var(--sunk);color:var(--ink2);width:max-content}
+.tag.keep{color:var(--ok)}.tag.cut{color:var(--bad)}.tag.move{color:var(--warn)}
+ul.plain{margin:0;padding-left:18px;color:var(--ink2);font-size:14px;display:flex;flex-direction:column;gap:4px}
+a{color:var(--ink);text-decoration-color:var(--ink3);text-underline-offset:3px}
+a:hover{text-decoration-color:var(--ticket)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--ticket);outline-offset:2px}
+
+/* ---------- reference sketches ---------- */
+.refs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.ref{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ref .meta{display:flex;flex-direction:column;gap:6px}
+.ref .meta p{font-size:14px;color:var(--ink2)}
+.sk{aspect-ratio:16/10;max-width:100%;border-radius:var(--r);overflow:hidden;display:flex;font-size:9px;line-height:1.3;position:relative;box-shadow:0 0 0 1px var(--hair)}
+.sk .side{display:flex;flex-direction:column;gap:3px;padding:10px 8px;flex:0 0 auto}
+.sk .main{flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:7px;min-width:0}
+.sk .ln{height:6px;border-radius:3px;background:currentColor;opacity:.16}
+.sk .ln.t{height:9px;width:46%;opacity:.7}
+.sk .ln.s{width:34%}.sk .ln.m{width:72%}.sk .ln.l{width:92%}
+.sk .row{display:flex;gap:6px;align-items:center}
+.sk .ico{width:8px;height:8px;border-radius:2px;background:currentColor;opacity:.35;flex:0 0 auto}
+.sk .nav{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px}
+.sk .nav .ln{flex:1;opacity:.3}
+.sk .nav.on{background:rgba(127,127,127,.18)}
+.sk .nav.on .ln{opacity:.8}
+.sk .cap{position:absolute;right:8px;bottom:6px;font:500 8px/1 var(--fm);letter-spacing:.1em;text-transform:uppercase;opacity:.55}
+.sk .kpis{display:flex;gap:10px}
+.sk .kpi{flex:1;display:flex;flex-direction:column;gap:4px}
+.sk .kpi .n{font:500 14px/1 var(--fb);letter-spacing:-.02em}
+.sk .tbl{display:flex;flex-direction:column;gap:0}
+.sk .tbl .row{padding:4px 0;border-top:1px solid currentColor;border-color:rgba(127,127,127,.18)}
+.sk .tbl .row .ln{margin:0}
+.sk .pill{font-size:7px;padding:1px 5px;border-radius:9px;background:rgba(127,127,127,.18)}
+/* per-product palettes */
+.sk.linear{background:#1c1c1f;color:#e6e6ea}.sk.linear .side{background:#1a1a1d;width:30%}
+.sk.notion{background:#fff;color:#37352f}.sk.notion .side{background:#f7f7f5;width:30%}
+.sk.vercel{background:#fff;color:#111}.sk.vercel .top{height:26px;border-bottom:1px solid #eaeaea;display:flex;align-items:center;gap:10px;padding:0 12px;font-size:8px}
+.sk.stripe{background:#fff;color:#30313d}.sk.stripe .side{width:30%;background:#fff;border-right:1px solid #ebeef1}
+.sk.mercury{background:#f6f5f1;color:#1b1b1b}.sk.mercury .side{width:30%}
+.sk.rail{background:#fafaf9;color:#1f1f1e}.sk.rail .side{width:14%;align-items:center;background:#f0efeb}
+.sk.console{background:#f4efe6;color:#2a251e}.sk.console .side{width:28%}
+.sk .col{display:flex;flex-direction:column;flex:1;min-width:0}
+
+/* ---------- live Acapelius shell mockup ---------- */
+.demo{background:var(--paper);border-radius:var(--r);box-shadow:0 0 0 1px var(--hair);overflow:hidden}
+.demo-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--hair);flex-wrap:wrap}
+.demo-bar .lbl{color:var(--ink2)}
+.btn{font:500 12.5px/1 var(--fb);padding:8px 12px;border-radius:var(--rc);border:1px solid var(--hair);background:var(--card);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{background:var(--sunk)}
+.btn kbd{font:500 10px/1 var(--fm);padding:2px 4px;border-radius:3px;background:var(--sunk);color:var(--ink2)}
+.shell{display:flex;height:440px;font-size:12px}
+.sn{display:flex;flex-direction:column;width:208px;flex:0 0 208px;padding:16px 10px 10px;background:var(--paper);border-right:1px solid var(--hair);transition:width .22s ease,flex-basis .22s ease;overflow:hidden}
+.sn .brand{display:flex;align-items:center;gap:8px;padding:0 8px 12px;font:400 15px/1 var(--fd);letter-spacing:.06em;white-space:nowrap}
+.mark{width:22px;height:22px;border-radius:5px;background:var(--black);color:var(--paper);display:grid;place-items:center;flex:0 0 22px;font:400 11px/1 var(--fd)}
+.sn .season{display:flex;align-items:center;gap:6px;margin:0 4px 14px;padding:6px 8px;border-radius:var(--rc);background:var(--sunk);font-weight:500;white-space:nowrap;overflow:hidden}
+.sn .season i{width:6px;height:6px;border-radius:50%;background:var(--ok);margin-left:auto;flex:0 0 6px}
+.sn .items{display:flex;flex-direction:column;gap:1px}
+.sn .it{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--rc);color:var(--ink2);font-weight:500;white-space:nowrap;text-decoration:none;position:relative}
+.sn .it svg{width:16px;height:16px;flex:0 0 16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sn .it:hover{background:var(--sunk);color:var(--ink)}
+.sn .it.on{background:var(--card);color:var(--ink);font-weight:600}
+.sn .it .b{margin-left:auto;font:700 10px/1 var(--fm);color:var(--ticket)}
+.sn .sect{margin:14px 0 5px;padding:0 8px;white-space:nowrap}
+.sn .foot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+.sn .seg{display:flex;background:var(--sunk);border-radius:var(--rc);padding:2px;font-size:11px;white-space:nowrap;overflow:hidden}
+.sn .seg span{flex:1;text-align:center;padding:4px 0;border-radius:3px;color:var(--ink2)}
+.sn .seg span.on{background:var(--card);color:var(--ink);font-weight:600}
+.sn .acct{display:flex;align-items:center;gap:8px;padding:6px 4px 0;white-space:nowrap;overflow:hidden}
+.av{width:28px;height:28px;border-radius:var(--rc);background:var(--sunk);display:grid;place-items:center;font-weight:600;flex:0 0 28px}
+.sn .who{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.sn .who small{color:var(--ink3);font-size:10.5px}
+.sn .tip{display:none}
+/* collapsed = icon rail */
+.shell.rail .sn{width:56px;flex-basis:56px;padding-left:8px;padding-right:8px}
+.shell.rail .sn .brand span,.shell.rail .sn .season span,.shell.rail .sn .it .t,.shell.rail .sn .sect,.shell.rail .sn .who,.shell.rail .sn .seg span:not(.on){display:none}
+.shell.rail .sn .brand{justify-content:center;padding-left:0;padding-right:0}
+.shell.rail .sn .season{justify-content:center;margin-left:0;margin-right:0;padding:6px 0;font:500 10px/1 var(--fm)}
+.shell.rail .sn .season i{margin-left:0}
+.shell.rail .sn .it{justify-content:center;padding:9px 0}
+.shell.rail .sn .it .b{position:absolute;top:5px;right:9px;width:6px;height:6px;border-radius:50%;background:var(--ticket);font-size:0;margin:0}
+.shell.rail .sn .it:hover .tip{display:block;position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:var(--black);color:var(--paper);padding:5px 8px;border-radius:4px;font-size:11px;white-space:nowrap;z-index:2}
+.shell.rail .sn .seg{justify-content:center;padding:4px 0}
+.shell.rail .sn .acct{justify-content:center;padding-left:0}
+.shell.rail .sn .items::before{content:"";display:block;height:1px;background:var(--hair);margin:0 6px 6px}
+/* content side */
+.pg{flex:1;min-width:0;padding:20px 24px;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.pg .ph{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.pg .ph .tg{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:var(--rc);color:var(--ink2);cursor:pointer;border:0;background:none;margin-right:6px}
+.pg .ph .tg:hover{background:var(--sunk);color:var(--ink)}
+.pg .ph .tg svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.pg h4{font:400 24px/1 var(--fd);margin:0}
+.pg .acts{display:flex;gap:8px}
+.pg .acts span{padding:7px 11px;border-radius:var(--rc);font-weight:500;background:var(--card)}
+.pg .acts span.pri{background:var(--ticket);color:#fff}
+.fnstrip{display:flex;gap:4px;padding:3px;background:var(--sunk);border-radius:var(--rc);width:max-content;max-width:100%;overflow:hidden}
+.fnstrip span{padding:6px 10px;border-radius:3px;color:var(--ink2);font-weight:500;white-space:nowrap;display:flex;gap:6px;align-items:baseline}
+.fnstrip span em{font:500 10px/1 var(--fm);font-style:normal}
+.fnstrip span.on{background:var(--card);color:var(--ink);font-weight:600}
+.fnhead{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+.fnhead .big{font:400 30px/1 var(--fd)}
+.fnhead .k{display:flex;flex-direction:column;gap:2px}
+.fnhead .k b{font-size:14px;font-variant-numeric:tabular-nums}
+.fnhead .k small{color:var(--ink3);font-size:10.5px}
+.fnhead .k a{color:var(--ticket);text-decoration:none;font-weight:600}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tools .q{flex:1;min-width:140px;padding:7px 10px;border-radius:var(--rc);background:var(--sunk);color:var(--ink3)}
+.tools .sg{display:flex;background:var(--sunk);border-radius:var(--rc);padding:2px}
+.tools .sg span{padding:5px 9px;border-radius:3px;color:var(--ink2);font-weight:500}
+.tools .sg span.on{background:var(--card);color:var(--ink);font-weight:600}
+.tools .dd{padding:6px 10px;border-radius:var(--rc);background:var(--sunk);font-weight:500;display:flex;gap:6px;align-items:center}
+.tools .dd small{color:var(--ink3);font-weight:400}
+.list{background:var(--card);border-radius:var(--r);overflow:hidden}
+.list .lh{display:flex;justify-content:space-between;padding:8px 12px;background:var(--card2);border-bottom:1px solid var(--hair)}
+.list .r{display:grid;grid-template-columns:1fr auto auto 14px;gap:14px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--hair)}
+.list .r:last-child{border-bottom:0}
+.list .r .n{font-weight:500}.list .r .n small{display:block;color:var(--ink3);font-size:10.5px}
+.list .r .a{font-variant-numeric:tabular-nums;font-family:var(--fm);font-size:11px}
+.list .r .st{font-weight:500;font-size:11px;display:flex;align-items:center;gap:5px}
+.list .r .st::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.st.debe{color:var(--warn)}.st.pago{color:var(--ok)}
+.list .r .ch{color:var(--ink3);text-align:right}
+
+/* ---------- before/after Ventas (static wireframes) ---------- */
+.ba{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.ba figure{margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ba figcaption{display:flex;flex-direction:column;gap:4px}
+.ba figcaption p{font-size:14px;color:var(--ink2)}
+.wf{background:var(--paper);box-shadow:0 0 0 1px var(--hair);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:8px;font-size:9px;aspect-ratio:16/10;overflow:hidden}
+.wf .bx{background:var(--card);border-radius:4px;padding:6px 8px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.wf .bx.dim{opacity:.5}
+.wf .bx.cut{outline:2px dashed var(--bad);outline-offset:-2px}
+.wf .bx.new{outline:2px solid var(--ok);outline-offset:-2px}
+.wf .g5{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.wf .g2{display:grid;grid-template-columns:1.6fr 1fr;gap:8px;flex:1;min-height:0}
+.wf .ttl{font:400 14px/1 var(--fd)}
+.wf .ey{font:500 6.5px/1 var(--fm);text-transform:uppercase;letter-spacing:.12em;color:var(--ink3)}
+.wf .num{font:400 11px/1 var(--fd)}
+.wf .bar{height:3px;border-radius:2px;background:var(--sunk);position:relative;overflow:hidden}
+.wf .bar i{position:absolute;inset:0 auto 0 0;width:60%;background:var(--ok)}
+.wf .li{display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid var(--hair);gap:6px}
+.wf .li:first-of-type{border-top:0}
+.wf .pillrow{display:flex;gap:3px}
+.wf .pillrow span{padding:2px 5px;border-radius:3px;background:var(--sunk)}
+.wf .pillrow span.on{background:var(--card)}
+.wf .tb{display:flex;gap:4px;align-items:center}
+.wf .tb .in{flex:1;background:var(--sunk);border-radius:3px;padding:3px 5px;color:var(--ink3)}
+.wf .tb .sel{background:var(--sunk);border-radius:3px;padding:3px 5px;font-weight:500}
+.wf .head{display:flex;align-items:baseline;gap:10px}
+.wf .head .big{font:400 16px/1 var(--fd)}
+.wf .head small{color:var(--ink3)}
+.wf .head a{color:var(--ticket);font-weight:600;text-decoration:none}
+
+/* ---------- direction cards ---------- */
+.dirs{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.dir{background:var(--card);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.dir .sk{aspect-ratio:16/9;box-shadow:0 0 0 1px var(--hair)}
+.dir .pros{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px;color:var(--ink2)}
+.dir .pros b{font:500 10px/1.6 var(--fm);text-transform:uppercase;letter-spacing:.12em;color:var(--ink3)}
+.dir.pick{box-shadow:0 0 0 2px var(--ink)}
+.dir.pick .tag{background:var(--ink);color:var(--paper)}
+
+/* decisions */
+.dec{display:flex;flex-direction:column}
+.dec .q{display:grid;grid-template-columns:28px 1fr;gap:12px;padding:14px 0;border-top:1px solid var(--hair)}
+.dec .q:last-child{border-bottom:1px solid var(--hair)}
+.dec .q .n{font:400 18px/1.2 var(--fd);color:var(--ink3)}
+.dec .q p{font-size:14px;color:var(--ink2)}
+.dec .q p b{color:var(--ink)}
+.src{font-size:13px;color:var(--ink3)}
+.src a{color:var(--ink2)}
+@media (max-width:720px){h1{font-size:34px}.shell{height:380px}.sn{width:180px;flex-basis:180px}}
+@media (prefers-reduced-motion:reduce){.sn{transition:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+</svg>
+
+<div class="wrap">
+
+<header>
+  <p class="lbl" style="margin-bottom:14px">Acapelius · desktop · antes de tocar código</p>
+  <h1>Redesign references</h1>
+  <p class="lead">What the minimalist apps you'd point to actually do, what Acapelius already does right, and three concrete directions for the sidebar and the Ventas page. Nothing here is implemented yet.</p>
+</header>
+
+<!-- ============ 1. Diagnosis ============ -->
+<section>
+  <div class="sec-h">
+    <h2>What feels off in the current screens</h2>
+    <p>Read against your two screenshots. The palette and the no-border rule are not the problem. The weight is.</p>
+  </div>
+  <div class="cols">
+    <div class="note"><span class="tag">Sidebar</span><h3>Four zones, always open</h3><p>Brand, season selector, two nav levels, theme switch and account take a fixed <b>208px</b> and can never get out of the way. On a 1280px laptop that is a sixth of the screen for nine links.</p></div>
+    <div class="note"><span class="tag">Ventas</span><h3>Twenty numbers before the list</h3><p>Five function cards, each with a count, a progress bar, a percentage and an amount, sit above the thing you came for. The code itself says only one function is visible at a time, so four of those cards are navigation dressed as data.</p></div>
+    <div class="note"><span class="tag">Ventas</span><h3>Two columns with equal weight</h3><p>The sales list and the "Quién vendió" panel share the same card, type and row height. The eye has no reason to land on the list first, although it is the primary content.</p></div>
+    <div class="note"><span class="tag">Type</span><h3>Three voices on one screen</h3><p>Anton titles, uppercase mono eyebrows (three visible at once) and Inter body all ask for attention. Every reference below has one quiet voice for chrome and saves emphasis for figures.</p></div>
+  </div>
+</section>
+
+<!-- ============ 2. References ============ -->
+<section>
+  <div class="sec-h">
+    <h2>Six references, and the one thing to take from each</h2>
+    <p>Sketches drawn from memory of each product, not screenshots. Open the links to see the real thing. The point is the pattern, not the skin.</p>
+  </div>
+  <div class="refs">
+
+    <article class="ref">
+      <div class="sk linear">
+        <div class="side">
+          <div class="row" style="margin-bottom:6px"><span class="ico" style="border-radius:50%"></span><span class="ln" style="width:40%;opacity:.5"></span></div>
+          <div class="nav"><span class="ico"></span><span class="ln"></span></div>
+          <div class="nav on"><span class="ico"></span><span class="ln"></span></div>
+          <div class="nav"><span class="ico"></span><span class="ln"></span></div>
+          <div class="nav"><span class="ico"></span><span class="ln"></span></div>
+          <div class="ln s" style="margin:8px 6px 2px;opacity:.25;height:4px"></div>
+          <div class="nav"><span class="ico"></span><span class="ln"></span></div>
+          <div class="nav"><span class="ico"></span><span class="ln"></span></div>
+        </div>
+        <div class="main">
+          <div class="ln t"></div>
+          <div class="tbl"><div class="row"><span class="ico"></span><span class="ln m"></span><span class="pill">In progress</span></div><div class="row"><span class="ico"></span><span class="ln l"></span><span class="pill">Todo</span></div><div class="row"><span class="ico"></span><span class="ln s"></span><span class="pill">Done</span></div><div class="row"><span class="ico"></span><span class="ln m"></span><span class="pill">Todo</span></div></div>
+        </div>
+        <span class="cap">after Linear</span>
+      </div>
+      <div class="meta"><h3><a href="https://linear.app" target="_blank" rel="noopener">Linear</a></h3><p><b>Dim chrome.</b> The sidebar is a shade darker than the content, nav rows have no card, the active row is a soft fill, and ⌘B hides the whole thing. Lists are rows with one status chip, never cards.</p></div>
+    </article>
+
+    <article class="ref">
+      <div class="sk rail">
+        <div class="side">
+          <span class="ico" style="width:14px;height:14px;border-radius:4px;opacity:.9;margin-bottom:8px"></span>
+          <span class="ico" style="width:12px;height:12px"></span><span class="ico" style="width:12px;height:12px;opacity:.9;outline:2px solid rgba(0,0,0,.08);outline-offset:3px;border-radius:3px"></span><span class="ico" style="width:12px;height:12px"></span><span class="ico" style="width:12px;height:12px"></span>
+          <span class="ico" style="width:12px;height:12px;margin-top:auto;border-radius:50%"></span>
+        </div>
+        <div class="main">
+          <div class="row"><span class="ln t" style="width:30%"></span><span style="margin-left:auto" class="pill">New</span></div>
+          <div class="kpis"><div class="kpi"><span class="ln s"></span><span class="n">$ 1.2M</span></div><div class="kpi"><span class="ln s"></span><span class="n">145</span></div><div class="kpi"><span class="ln s"></span><span class="n">46%</span></div></div>
+          <div class="tbl"><div class="row"><span class="ln m"></span><span class="ln s" style="width:14%"></span></div><div class="row"><span class="ln l"></span><span class="ln s" style="width:14%"></span></div><div class="row"><span class="ln m"></span><span class="ln s" style="width:14%"></span></div></div>
+        </div>
+        <span class="cap">after Attio / macOS</span>
+      </div>
+      <div class="meta"><h3><a href="https://attio.com" target="_blank" rel="noopener">Attio</a>, and macOS Settings</h3><p><b>Icon rail.</b> Collapsed nav is a 56px column of icons with tooltips, the avatar pinned at the bottom. Expands on toggle, not on hover, so the content never jumps. This is the pattern shadcn ships as <code>collapsible="icon"</code>.</p></div>
+    </article>
+
+    <article class="ref">
+      <div class="sk notion">
+        <div class="side">
+          <div class="row" style="margin-bottom:6px"><span class="ico" style="border-radius:50%"></span><span class="ln" style="width:50%;opacity:.5"></span><span class="ico" style="margin-left:auto;opacity:.2;width:6px;height:6px"></span></div>
+          <div class="nav"><span class="ln"></span></div><div class="nav on"><span class="ln"></span></div><div class="nav"><span class="ln" style="margin-left:8px"></span></div><div class="nav"><span class="ln" style="margin-left:8px"></span></div><div class="nav"><span class="ln"></span></div>
+        </div>
+        <div class="main" style="padding-left:12%"><div class="ln t" style="height:12px;width:40%"></div><div class="ln m"></div><div class="ln l"></div><div class="ln s"></div><div class="ln l"></div></div>
+        <span class="cap">after Notion</span>
+      </div>
+      <div class="meta"><h3><a href="https://www.notion.com" target="_blank" rel="noopener">Notion</a></h3><p><b>Off-canvas.</b> One chevron in the sidebar header hides it entirely. Hovering the left screen edge peeks it back as an overlay. Zero chrome when writing. Good for focus, worse for a nav you switch between all day.</p></div>
+    </article>
+
+    <article class="ref">
+      <div class="sk vercel" style="flex-direction:column">
+        <div class="top"><span class="ico" style="border-radius:50%"></span><span class="ln" style="width:14%"></span><span style="opacity:.3">/</span><span class="ln" style="width:18%;opacity:.5"></span><span class="ico" style="margin-left:auto;border-radius:50%"></span></div>
+        <div class="top" style="height:22px;gap:12px"><span style="border-bottom:1.5px solid currentColor;padding:4px 0">Overview</span><span style="opacity:.5">Deployments</span><span style="opacity:.5">Analytics</span><span style="opacity:.5">Settings</span></div>
+        <div class="main"><div class="ln t"></div><div class="tbl"><div class="row"><span class="ln m"></span><span class="pill">Ready</span></div><div class="row"><span class="ln l"></span><span class="pill">Ready</span></div><div class="row"><span class="ln s"></span><span class="pill">Error</span></div></div></div>
+        <span class="cap">after Vercel</span>
+      </div>
+      <div class="meta"><h3><a href="https://vercel.com" target="_blank" rel="noopener">Vercel</a></h3><p><b>No sidebar at all.</b> A 48px top bar with the project switcher, then a row of text tabs. Works because there are six sections, which is also your count. The most radical option, and the biggest break from mobile.</p></div>
+    </article>
+
+    <article class="ref">
+      <div class="sk stripe">
+        <div class="side">
+          <div class="row" style="margin-bottom:6px"><span class="ico" style="border-radius:3px;background:#635bff;opacity:1"></span><span class="ln" style="width:50%;opacity:.5"></span></div>
+          <div class="nav on"><span class="ln"></span></div><div class="nav"><span class="ln"></span></div><div class="nav"><span class="ln"></span></div><div class="nav"><span class="ln"></span></div>
+          <div class="ln s" style="margin:8px 6px 2px;opacity:.25;height:4px"></div><div class="nav"><span class="ln"></span></div><div class="nav"><span class="ln"></span></div>
+        </div>
+        <div class="main">
+          <div class="row"><span class="ln t" style="width:25%"></span><span style="margin-left:auto" class="pill">Today</span></div>
+          <div class="kpis"><div class="kpi"><span class="ln s"></span><span class="n">$ 36.000</span><span class="ln l" style="height:14px;opacity:.08;border-radius:2px"></span></div><div class="kpi"><span class="ln s"></span><span class="n">14</span><span class="ln l" style="height:14px;opacity:.08;border-radius:2px"></span></div></div>
+          <div class="tbl"><div class="row"><span class="ln m"></span><span class="ln s" style="width:12%"></span><span class="pill">Paid</span></div><div class="row"><span class="ln l"></span><span class="ln s" style="width:12%"></span><span class="pill">Open</span></div></div>
+        </div>
+        <span class="cap">after Stripe</span>
+      </div>
+      <div class="meta"><h3><a href="https://stripe.com" target="_blank" rel="noopener">Stripe Dashboard</a></h3><p><b>Figures as type, not tiles.</b> KPIs are a label, a number and a hairline sparkline, laid directly on the page. No card around them. The table below carries the density; the top stays light.</p></div>
+    </article>
+
+    <article class="ref">
+      <div class="sk console">
+        <div class="side">
+          <div class="row" style="margin-bottom:6px"><span class="ico" style="border-radius:50%;background:#c4401e;opacity:1"></span><span class="ln" style="width:50%;opacity:.5"></span></div>
+          <div class="nav"><span class="ico"></span><span class="ln"></span></div><div class="nav on"><span class="ico"></span><span class="ln"></span></div><div class="nav"><span class="ico"></span><span class="ln"></span></div><div class="nav"><span class="ico"></span><span class="ln"></span></div>
+        </div>
+        <div class="main">
+          <div class="ln t"></div>
+          <div class="kpis"><div class="kpi"><span class="ln s"></span><span class="n">$ 256.000</span></div><div class="kpi"><span class="ln s"></span><span class="n">84%</span></div><div class="kpi"><span class="ln s"></span><span class="n">31</span></div></div>
+          <div class="ln l" style="height:40px;opacity:.06;border-radius:4px"></div>
+        </div>
+        <span class="cap">after Anthropic Console</span>
+      </div>
+      <div class="meta"><h3><a href="https://console.anthropic.com" target="_blank" rel="noopener">Anthropic Console</a></h3><p><b>Warm paper is allowed.</b> Beige canvas, white panels, one terracotta accent. It is almost your palette already. Confirmation that the redesign is a reduction pass, not a new skin.</p></div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ 3. Sidebar directions ============ -->
+<section>
+  <div class="sec-h">
+    <h2>Sidebar: three directions</h2>
+    <p>The one I'd pick is the icon rail. Try it below with the real nav items, badges and tokens.</p>
+  </div>
+
+  <div class="demo" style="margin-bottom:24px">
+    <div class="demo-bar">
+      <span class="lbl">Direction A · icon rail · live</span>
+      <button class="btn" id="toggle" type="button" aria-pressed="false">Collapse sidebar <kbd>⌘B</kbd></button>
+    </div>
+    <div class="shell" id="shell">
+      <nav class="sn" aria-label="Navegación principal">
+        <div class="brand"><span class="mark">A</span><span>ACAPELIUS</span></div>
+        <div class="season"><span>Temporada 2026</span><i></i></div>
+        <div class="items">
+          <a class="it" href="#a"><svg aria-hidden="true"><use href="#i-music"/></svg><span class="t">Inicio</span><span class="tip">Inicio</span></a>
+          <a class="it on" href="#a"><svg aria-hidden="true"><use href="#i-ticket"/></svg><span class="t">Ventas</span><span class="b">10</span><span class="tip">Ventas · 10 deben</span></a>
+          <a class="it" href="#a"><svg aria-hidden="true"><use href="#i-scan"/></svg><span class="t">Puerta</span><span class="tip">Puerta</span></a>
+          <a class="it" href="#a"><svg aria-hidden="true"><use href="#i-chart"/></svg><span class="t">Dirección</span><span class="tip">Dirección</span></a>
+          <p class="lbl sect">Administración</p>
+          <a class="it" href="#a"><svg aria-hidden="true"><use href="#i-card"/></svg><span class="t">Rendiciones</span><span class="b">6</span><span class="tip">Rendiciones · 6 pendientes</span></a>
+          <a class="it" href="#a"><svg aria-hidden="true"><use href="#i-users"/></svg><span class="t">Asistencia</span><span class="tip">Asistencia</span></a>
+          <a class="it" href="#a"><svg aria-hidden="true"><use href="#i-cal"/></svg><span class="t">Temporadas</span><span class="tip">Temporadas</span></a>
+          <a class="it" href="#a"><svg aria-hidden="true"><use href="#i-key"/></svg><span class="t">Equipo</span><span class="tip">Equipo</span></a>
+        </div>
+        <div class="foot">
+          <div class="seg"><span class="on">Claro</span><span>Oscuro</span><span>Sistema</span></div>
+          <div class="acct"><span class="av">E</span><span class="who"><b>Eli</b><small>Dirección</small></span></div>
+        </div>
+      </nav>
+      <div class="pg">
+        <div class="ph">
+          <div style="display:flex;align-items:center">
+            <button class="tg" id="toggle2" type="button" aria-label="Mostrar u ocultar navegación"><svg aria-hidden="true"><use href="#i-panel"/></svg></button>
+            <h4>Ventas</h4>
+          </div>
+          <div class="acts"><span>Exportar</span><span class="pri">Nueva venta</span></div>
+        </div>
+        <div class="fnstrip"><span>Vie 14 ago <em>38/45</em></span><span>Sáb 22 ago <em>32/50</em></span><span>Mié 26 ago <em>61/80</em></span><span>Sáb 12 sept <em>0/60</em></span><span class="on">Dom 13 sept <em>14/80</em></span></div>
+        <div class="fnhead">
+          <span class="big">14 / 80</span>
+          <span class="k"><b>$ 36.000</b><small>cobrado + debe</small></span>
+          <span class="k"><b>18%</b><small>vendido</small></span>
+          <span class="k"><b>0</b><small>entraron</small></span>
+          <span class="k"><a href="#a">Repartir 12 sin asignar</a><small>cupo libre</small></span>
+        </div>
+        <div class="tools">
+          <span class="q">Buscar comprador, mail o corista</span>
+          <div class="sg"><span class="on">Todas</span><span>Debe</span><span>Pagó</span><span>Cortesías</span><span>Anuladas</span></div>
+          <span class="dd"><small>Corista</small> Todas ▾</span>
+        </div>
+        <div class="list">
+          <div class="lh"><span class="lbl">14 entradas</span><span class="lbl">$ 36.000</span></div>
+          <div class="r"><span class="n">Alicia Zabala<small>Carolina · 3 entradas</small></span><span class="a">27.000</span><span class="st debe">Debe $ 27.000</span><span class="ch">›</span></div>
+          <div class="r"><span class="n">Federico Nardi<small>Silvia · 2 entradas</small></span><span class="a">18.000</span><span class="st pago">Pagó (transf.)</span><span class="ch">›</span></div>
+          <div class="r"><span class="n">Irene Sandoval<small>Norma · 4 entradas</small></span><span class="a">36.000</span><span class="st debe">Debe $ 36.000</span><span class="ch">›</span></div>
+          <div class="r"><span class="n">Marcelo Duarte<small>Adriana · 2 entradas</small></span><span class="a">18.000</span><span class="st pago">Pagó</span><span class="ch">›</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dirs">
+    <div class="dir pick">
+      <span class="tag">A · recommended</span>
+      <h3>Icon rail, 56px collapsed, 208px open</h3>
+      <div class="pros"><b>Keeps</b><span>Season context (as a "26" chip), badges (as dots), role sections (as a hairline).</span><b>Cost</b><span>One toggle, tooltips, a persisted preference. Roughly a day in the current CSS.</span><b>Risk</b><span>Nine icons must be learnable. Puerta, Ventas and Dirección already have strong icons; Rendiciones and Equipo need a check.</span></div>
+    </div>
+    <div class="dir">
+      <span class="tag">B</span>
+      <h3>Off-canvas, Notion style</h3>
+      <div class="sk notion" style="aspect-ratio:16/9"><div class="main" style="padding-left:10%"><div class="row"><span class="ico"></span><span class="ln t" style="width:30%"></span></div><div class="ln l"></div><div class="ln m"></div><div class="ln l"></div></div></div>
+      <div class="pros"><b>Keeps</b><span>Everything as is when open.</span><b>Cost</b><span>Smallest change. Hide and show, plus a hamburger in the page header.</span><b>Risk</b><span>Two clicks to switch section when hidden. Badges disappear with it, so "10 deben" stops being glanceable.</span></div>
+    </div>
+    <div class="dir">
+      <span class="tag">C</span>
+      <h3>Top bar with tabs, Vercel style</h3>
+      <div class="sk vercel" style="flex-direction:column;aspect-ratio:16/9"><div class="top"><span class="ico"></span><span class="ln" style="width:16%"></span><span class="ico" style="margin-left:auto;border-radius:50%"></span></div><div class="top" style="height:22px;gap:10px"><span style="opacity:.5">Inicio</span><span style="border-bottom:1.5px solid currentColor;padding:4px 0">Ventas</span><span style="opacity:.5">Puerta</span><span style="opacity:.5">Dirección</span><span style="opacity:.5">Admin ▾</span></div><div class="main"><div class="ln t"></div><div class="ln l"></div><div class="ln m"></div></div></div>
+      <div class="pros"><b>Keeps</b><span>Full width for content, always.</span><b>Cost</b><span>New shell. Administración becomes a dropdown. Season selector and theme move to the right of the bar.</span><b>Risk</b><span>Breaks the parity with mobile's tab bar that the desktop spec was built on. Largest rewrite of the three.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. Ventas ============ -->
+<section>
+  <div class="sec-h">
+    <h2>Ventas: drop the second column, keep its three jobs</h2>
+    <p>You're right that the panel reads as a duplicate. It is not quite one, so here is what it does today and where each job goes.</p>
+  </div>
+  <div class="cols" style="margin-bottom:24px">
+    <div class="note"><span class="tag move">Job 1 → filter</span><h3>Filter the list by corista</h3><p>Tapping a name filters the rows. A <b>"Corista" dropdown</b> in the toolbar does the same in one control, and reads as a filter instead of a ranking.</p></div>
+    <div class="note"><span class="tag move">Job 2 → function header</span><h3>Show unassigned quota, open "Repartir"</h3><p>The "Sin repartir · 12 entradas" footer is the only way into the quota split from this page. It moves next to the function figures as <b>"Repartir 12 sin asignar"</b>.</p></div>
+    <div class="note"><span class="tag cut">Job 3 → Equipo</span><h3>Rank sellers by tickets sold</h3><p>This is the part that duplicates. Equipo already shows <b>vendió N de M</b> per corista, and Dirección shows who owes. A ranking per function belongs in Equipo's member popup, if anywhere.</p></div>
+  </div>
+
+  <div class="ba">
+    <figure>
+      <div class="wf">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ttl">Ventas</span><span class="ey">temporada 2026 · 145 de 315</span></div>
+        <div class="g5">
+          <div class="bx dim"><span class="ey">Vie 14 ago</span><span class="num">38 / 45</span><span class="bar"><i style="width:84%"></i></span></div>
+          <div class="bx dim"><span class="ey">Sáb 22 ago</span><span class="num">32 / 50</span><span class="bar"><i style="width:64%"></i></span></div>
+          <div class="bx dim"><span class="ey">Mié 26 ago</span><span class="num">61 / 80</span><span class="bar"><i style="width:76%"></i></span></div>
+          <div class="bx dim"><span class="ey">Sáb 12 sept</span><span class="num">0 / 60</span><span class="bar"><i style="width:0"></i></span></div>
+          <div class="bx" style="background:var(--black);color:var(--paper)"><span class="ey" style="color:inherit;opacity:.7">Dom 13 sept</span><span class="num">14 / 80</span><span class="bar" style="background:rgba(255,255,255,.2)"><i style="width:18%;background:var(--ticket)"></i></span></div>
+        </div>
+        <div class="tb"><span class="in">Buscar…</span><span class="pillrow"><span class="on">Todas</span><span>Debe</span><span>Pagó</span></span></div>
+        <div class="g2">
+          <div class="bx"><span class="ey">ventas · 13 sept</span><div class="li"><span>Alicia Zabala</span><span style="color:var(--warn)">Debe</span></div><div class="li"><span>Federico Nardi</span><span style="color:var(--ok)">Pagó</span></div><div class="li"><span>Irene Sandoval</span><span style="color:var(--warn)">Debe</span></div><div class="li"><span>Marcelo Duarte</span><span style="color:var(--ok)">Pagó</span></div></div>
+          <div class="bx cut"><span class="ey">quién vendió</span><div class="li"><span>Norma Quiroga</span><span>4</span></div><div class="li"><span>Beatriz Coria</span><span>3</span></div><div class="li"><span>Carolina Vega</span><span>3</span></div><div class="li"><span>Adriana Bustos</span><span>2</span></div><div class="li"><span>Silvia Rey</span><span>2</span></div><div class="li"><span>Sin repartir</span><span style="color:var(--ticket)">12 entradas</span></div></div>
+        </div>
+      </div>
+      <figcaption><h3>Today</h3><p>Five cards, two columns, three eyebrows. The list gets 60% of the width and none of the emphasis.</p></figcaption>
+    </figure>
+    <figure>
+      <div class="wf">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="ttl">Ventas</span><span class="pillrow"><span>Exportar</span><span style="background:var(--ticket);color:#fff">Nueva venta</span></span></div>
+        <div class="pillrow new" style="width:max-content;padding:2px;border-radius:4px"><span>Vie 14</span><span>Sáb 22</span><span>Mié 26</span><span>Sáb 12</span><span class="on">Dom 13 sept</span></div>
+        <div class="head"><span class="big">14 / 80</span><span><b>$ 36.000</b> <small>cobrado + debe</small></span><span><b>18%</b> <small>vendido</small></span><a href="#a">Repartir 12 sin asignar</a></div>
+        <div class="tb"><span class="in">Buscar…</span><span class="pillrow"><span class="on">Todas</span><span>Debe</span><span>Pagó</span></span><span class="sel new">Corista ▾</span></div>
+        <div class="bx" style="flex:1"><div class="li" style="color:var(--ink3)"><span>14 entradas</span><span>$ 36.000</span></div><div class="li"><span>Alicia Zabala <span style="color:var(--ink3)">· Carolina · 3</span></span><span style="color:var(--warn)">Debe $ 27.000</span></div><div class="li"><span>Federico Nardi <span style="color:var(--ink3)">· Silvia · 2</span></span><span style="color:var(--ok)">Pagó (transf.)</span></div><div class="li"><span>Irene Sandoval <span style="color:var(--ink3)">· Norma · 4</span></span><span style="color:var(--warn)">Debe $ 36.000</span></div><div class="li"><span>Marcelo Duarte <span style="color:var(--ink3)">· Adriana · 2</span></span><span style="color:var(--ok)">Pagó</span></div><div class="li"><span>Pilar Escobar <span style="color:var(--ink3)">· Beatriz · 3</span></span><span style="color:var(--warn)">Debe $ 27.000</span></div></div>
+      </div>
+      <figcaption><h3>Proposed</h3><p>Functions become a segmented strip. One line of figures for the selected one. The list takes the full width, with the corista filter and the quota link where the panel used to be.</p></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ 5. Keep ============ -->
+<section>
+  <div class="cols">
+    <div class="note"><span class="tag keep">Keep</span><h3>Warm paper, white panels, no borders</h3><p>Every reference with a warm canvas confirms it. The dark theme tokens already exist and hold up.</p></div>
+    <div class="note"><span class="tag keep">Keep</span><h3>Status as colored text with a dot</h3><p>"● Debe $27.000" in warn, "● Pagó" in ok. This is quieter than any pill in the references. Don't trade it for chips.</p></div>
+    <div class="note"><span class="tag keep">Keep</span><h3>Anton for the page title and the one big figure</h3><p>That is the brand. What goes is Anton or uppercase mono anywhere else on the same screen.</p></div>
+    <div class="note"><span class="tag cut">Cut</span><h3>Eyebrows as section titles</h3><p>"VENTAS · 13 SEPT" and "QUIÉN VENDIÓ" are the mono label system doing a heading's job. Headings go sentence case in Inter 600, labels stay for units and column heads only.</p></div>
+  </div>
+</section>
+
+<!-- ============ 6. Decisions ============ -->
+<section>
+  <div class="sec-h">
+    <h2>What I need from you before writing code</h2>
+  </div>
+  <div class="dec">
+    <div class="q"><span class="n">1</span><p><b>Sidebar direction.</b> A icon rail, B off-canvas, or C top bar. My pick is A. Collapsed state persisted per device, ⌘B to toggle, remembers across sessions.</p></div>
+    <div class="q"><span class="n">2</span><p><b>Quién vendió.</b> Confirm the fold: corista filter in the toolbar, "Repartir" link in the function header, ranking dropped from Ventas. Equipo keeps the per-corista totals.</p></div>
+    <div class="q"><span class="n">3</span><p><b>Function cards.</b> Replace the five cards with the segmented strip plus one figures line, or keep the cards and only remove the second column. The strip is the bigger visual win.</p></div>
+    <div class="q"><span class="n">4</span><p><b>Scope.</b> Sidebar and Ventas only, or the same reduction pass over Inicio and Dirección in the same change. I'd do sidebar and Ventas first, ship, then look at Inicio with fresh eyes.</p></div>
+  </div>
+</section>
+
+<p class="src">Pattern sources read for this page: <a href="https://www.saasui.design/blog/saas-sidebar-navigation-ux-patterns" target="_blank" rel="noopener">SaaS sidebar navigation UX (2026)</a>, <a href="https://www.shadcn.io/ui/sidebar" target="_blank" rel="noopener">shadcn sidebar, collapsible icon mode</a>, <a href="https://dev.to/thekitbase/saas-dashboard-design-trends-in-2026-with-examples-121m" target="_blank" rel="noopener">SaaS dashboard trends 2026</a>, <a href="https://saasboat.com/saas-navigation-design-examples/" target="_blank" rel="noopener">25 SaaS navigation examples</a>. Product sketches are interpretations, not screenshots.</p>
+
+</div>
+
+<script>
+(function(){
+  var shell=document.getElementById('shell'),b1=document.getElementById('toggle'),b2=document.getElementById('toggle2');
+  var KEY='acapelius-ref-rail';
+  function set(on){
+    shell.classList.toggle('rail',on);
+    b1.textContent='';
+    b1.appendChild(document.createTextNode(on?'Expand sidebar ':'Collapse sidebar '));
+    var k=document.createElement('kbd');k.textContent='⌘B';b1.appendChild(k);
+    b1.setAttribute('aria-pressed',on?'true':'false');
+    try{localStorage.setItem(KEY,on?'1':'0')}catch(e){}
+  }
+  function flip(){set(!shell.classList.contains('rail'))}
+  b1.addEventListener('click',flip);b2.addEventListener('click',flip);
+  document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='b'){e.preventDefault();flip()}});
+  var saved=null;try{saved=localStorage.getItem(KEY)}catch(e){}
+  if(saved==='1')set(true);
+  document.querySelectorAll('a[href="#a"]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault()})});
+})();
+</script>

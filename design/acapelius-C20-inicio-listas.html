@@ -1,0 +1,207 @@
+<title>Inicio Listas Opciones</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: cuatro variantes del mismo par de listas de Inicio, con los tokens
+   reales de la app (C20). El switch cambia claro/oscuro en todas. */
+:root{--pg-bg:#0f0e0c;--pg-fg:#f4f1ea;--pg-mute:#9a9282;--pg-hair:#2a2723;--pg-card:#171512;--pg-acc:#ec6e4c;
+  --fd:'Anton',Impact,sans-serif;--fb:'Inter',system-ui,sans-serif;--fm:'JetBrains Mono',ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg-bg);color:var(--pg-fg);font:400 15px/1.5 var(--fb);padding-block:36px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:52px}
+h1{font:400 40px/1 var(--fd);margin:0 0 8px;letter-spacing:.01em}
+h2{font:400 24px/1.1 var(--fd);margin:0;letter-spacing:.01em}
+.lbl{font:500 10px/1 var(--fm);text-transform:uppercase;letter-spacing:.15em;color:var(--pg-mute)}
+p{margin:0;max-width:68ch;color:var(--pg-mute)}
+.ctl{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:12px;align-items:center;padding:10px 14px;background:var(--pg-card);border:1px solid var(--pg-hair)}
+.ctl button{font:500 12.5px/1 var(--fb);padding:8px 12px;border:1px solid var(--pg-hair);background:none;color:var(--pg-fg);cursor:pointer}
+.ctl button[aria-pressed="true"]{border-color:var(--pg-acc);color:var(--pg-acc)}
+.opt{display:flex;flex-direction:column;gap:12px}
+.opt header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;border-top:1px solid var(--pg-fg);padding-top:12px}
+.opt header .lbl{max-width:56ch;text-align:right}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:6px 24px;font-size:13.5px}
+.notes ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px}
+.notes li{color:var(--pg-mute)}.notes b{color:var(--pg-fg);font-weight:600}
+.pick header h2::after{content:" · la que recomiendo";font:500 11px/1 var(--fm);letter-spacing:.12em;text-transform:uppercase;color:var(--pg-acc);margin-left:10px;vertical-align:middle}
+
+/* ===== tokens de la app ===== */
+.app{--paper:#141311;--card2:#1a1815;--ink:#f4f1ea;--ink2:#9a9282;--ink3:#8f8878;--hair:rgba(244,241,234,.1);--sunk:rgba(244,241,234,.05);--ticket:#ec6e4c;--ok:#6dc79a;--warn:#e8a33d;--bad:#e07a7a;--ind:#9da0f2;--on-ticket:#141311;
+  background:var(--paper);color:var(--ink);padding:28px 32px 24px;font-size:13.5px;line-height:1.45;font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px var(--pg-hair)}
+.light .app{--paper:#e8e3d7;--card2:#dfd9cb;--ink:#1a1a18;--ink2:#5f5a4f;--ink3:#6a6457;--hair:rgba(26,26,24,.14);--sunk:rgba(26,26,24,.06);--ticket:#ad3518;--ok:#1e6b4a;--warn:#8a5a08;--bad:#a32d2d;--ind:#3a3fc4;--on-ticket:#fff}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+@media (max-width:720px){.cols{grid-template-columns:1fr;gap:24px}}
+.cols>*{min-width:0}
+.ch{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:8px}
+.ch h5{font:600 15px/1.3 var(--fb);margin:0}
+.ch .lblx{font:500 10px/1 var(--fm);text-transform:uppercase;letter-spacing:.15em;color:var(--ink3)}
+.ch .lblx b{color:var(--ink);font-weight:500}
+.ch a{color:var(--ticket);font-weight:600;font-size:13px;text-decoration:none}
+.row{display:grid;grid-template-columns:1fr auto 14px;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--hair)}
+.row.r4{grid-template-columns:1fr 96px 112px 14px}
+.row.r3{grid-template-columns:1fr auto}
+.rt{font-size:14px;font-weight:500}
+.rs{font-size:11.5px;color:var(--ink3)}
+.rn{font-family:var(--fm);font-size:12.5px;font-weight:500;text-align:right;white-space:nowrap}
+.rn s{display:block;text-decoration:none;font-size:10px;color:var(--ink3);font-weight:400;letter-spacing:.02em}
+.rn.w{color:var(--warn)}
+.go{color:var(--ink3);text-align:right;font-size:13px}
+.st{font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.st::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.st.ok{color:var(--ok)}.st.warn{color:var(--warn)}.st.cor{color:var(--ind)}.st.mute{color:var(--ink3)}
+.btn{font:500 12.5px/1 var(--fb);padding:7px 11px;border:1px solid var(--hair);color:var(--ink);white-space:nowrap}
+.btn.go{background:var(--ticket);border-color:var(--ticket);color:var(--on-ticket);font-weight:600}
+.cf{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--hair);font-size:11.5px;color:var(--ink3)}
+.cf a{color:var(--ticket);font-weight:600;text-decoration:none}
+/* feed con hora a la izquierda (el .feed de la app) */
+.feed{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:baseline;padding:9px 0;border-top:1px solid var(--hair)}
+.feed .t{font-family:var(--fm);font-size:12.5px;font-weight:700;color:var(--ok)}
+.feed .t.m{color:var(--ink3);font-weight:500}
+/* cifra chica arriba de una lista */
+.sum{display:flex;gap:28px;align-items:flex-end;padding:0 0 12px}
+.sum b{font:400 28px/1 var(--fd);display:block}
+.sum b.w{color:var(--warn)}
+.sum small{font-size:11.5px;color:var(--ink3)}
+/* tarjetas chicas de corista */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{border:1px solid var(--hair);padding:12px;display:flex;flex-direction:column;gap:8px;position:relative}
+.tile .top{display:flex;gap:10px;align-items:center}
+.sq{width:34px;height:34px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font:400 13px/1 var(--fd);letter-spacing:.04em;flex:none}
+.tile .n{font-size:14px;font-weight:600}
+.tile .s{font-size:11.5px;color:var(--ink3)}
+.tile .d{font:400 22px/1 var(--fd);color:var(--warn)}
+.tile .f{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tile .f small{font-size:11.5px;color:var(--ink3)}
+/* banda de tarea */
+.task{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:10px 12px;border-top:1px solid var(--hair);margin:0 -12px}
+.task:first-of-type{border-top:0}
+.task.warnb{background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.task .rt b{font-family:var(--fm);font-weight:500;color:var(--warn)}
+.task .rt em{font-style:normal;font-weight:600}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="lbl" style="margin-bottom:12px">Acapelius · Inicio · las dos listas de abajo</p>
+  <h1>Cuatro formas de que no se confundan</h1>
+  <p>Izquierda: las tareas de dirección (coristas que deben rendir). Derecha: las últimas ventas. Hoy las dos usan la misma fila. Cada opción cambia la forma de una, de la otra o de las dos.</p>
+</header>
+
+<div class="ctl"><span class="lbl">Tema</span><button type="button" data-t="dark" aria-pressed="true">Oscuro</button><button type="button" data-t="light" aria-pressed="false">Claro</button></div>
+
+<div id="frames">
+
+<!-- A -->
+<section class="opt pick">
+  <header><h2>A · Misma fila, columnas distintas</h2><span class="lbl">la deuda a la columna de números con "debe"; la venta con hora y estado, sin monto</span></header>
+  <div class="app"><div class="cols">
+    <div>
+      <div class="ch"><h5>Te están esperando</h5><a href="#x">Ver las 8</a></div>
+      <div class="row r4"><div><div class="rt">Beatriz Coria</div><div class="rs">cobró 161.500 · rindió 0 · hace 33 días</div></div><span class="rn w">161.500<s>debe</s></span><span class="st warn">Sin rendir</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">Marta Ledesma</div><div class="rs">cobró 106.000 · rindió 0 · hace 41 días</div></div><span class="rn w">106.000<s>debe</s></span><span class="st warn">Sin rendir</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">Adriana Bustos</div><div class="rs">cobró 162.000 · rindió 89.000 · hace 35 días</div></div><span class="rn w">73.000<s>debe</s></span><span class="st warn">Sin rendir</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">12 entradas sin corista</div><div class="rs">Dom 13 sept · Cierre de temporada</div></div><span class="rn">12<s>cupo</s></span><span class="st cor">Repartir</span><span class="go">›</span></div>
+    </div>
+    <div>
+      <div class="ch"><h5>Últimas ventas</h5><a href="#x">Ver todas</a></div>
+      <div class="row r4"><div><div class="rt">Sofía Castro</div><div class="rs">Beatriz · 3 entradas · 15 oct</div></div><span class="rn" style="color:var(--ink3)">hace 35 d</span><span class="st warn">Debe $ 13.500</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">Jorge Álvarez</div><div class="rs">Virginia · 2 entradas · 15 oct</div></div><span class="rn" style="color:var(--ink3)">hace 35 d</span><span class="st ok">Pagó</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">Rubén Casal</div><div class="rs">Norma · 4 entradas · 15 oct</div></div><span class="rn" style="color:var(--ink3)">hace 36 d</span><span class="st warn">Debe $ 36.000</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">Tomás Herrera</div><div class="rs">Norma · 2 entradas · 27 sept</div></div><span class="rn" style="color:var(--ink3)">hace 38 d</span><span class="st cor">Cortesía</span><span class="go">›</span></div>
+    </div>
+  </div></div>
+  <div class="notes"><ul><li><b>Cambio chico.</b> Es la fila que ya existe en Dirección ("Quién todavía debe") y en Ventas: el mismo dato se ve igual en toda la app.</li><li><b>Lo que separa:</b> la izquierda tiene monto ámbar + "debe"; la derecha tiene tiempo + estado de la venta.</li></ul><ul><li><b>Riesgo:</b> siguen siendo dos listas de nombres. Si mirás de lejos, siguen pareciéndose.</li></ul></div>
+</section>
+
+<!-- B -->
+<section class="opt">
+  <header><h2>B · Tareas con botón, ventas como feed</h2><span class="lbl">la izquierda se resuelve ahí mismo; la derecha lleva la hora a la izquierda, como el feed de la puerta</span></header>
+  <div class="app"><div class="cols">
+    <div>
+      <div class="ch"><h5>Te están esperando</h5><span class="lblx"><b>4</b> pendientes</span></div>
+      <div class="row r3"><div><div class="rt">Beatriz Coria <span style="color:var(--warn);font-family:var(--fm);font-size:12.5px"> $ 161.500</span></div><div class="rs">cobró hace 33 días · no rindió nada</div></div><span class="btn">Registrar</span></div>
+      <div class="row r3"><div><div class="rt">Marta Ledesma <span style="color:var(--warn);font-family:var(--fm);font-size:12.5px"> $ 106.000</span></div><div class="rs">cobró hace 41 días · no rindió nada</div></div><span class="btn">Registrar</span></div>
+      <div class="row r3"><div><div class="rt">Adriana Bustos <span style="color:var(--warn);font-family:var(--fm);font-size:12.5px"> $ 73.000</span></div><div class="rs">cobró hace 35 días · rindió 89.000</div></div><span class="btn">Registrar</span></div>
+      <div class="row r3"><div><div class="rt">12 entradas sin corista</div><div class="rs">Dom 13 sept · Cierre de temporada</div></div><span class="btn">Repartir</span></div>
+      <div class="cf"><span>4 de 8</span><a href="#x">Ver las 8</a></div>
+    </div>
+    <div>
+      <div class="ch"><h5>Movimiento</h5><a href="#x">Ir a Ventas</a></div>
+      <div class="feed"><span class="t m">11:40</span><div><div class="rt">Tomás Herrera · 2</div><div class="rs">Norma · cortesía</div></div><span class="st cor">Cortesía</span></div>
+      <div class="feed"><span class="t">10:12</span><div><div class="rt">Marcelo Duarte · 2</div><div class="rs">Adriana · pagó en efectivo</div></div><span class="st ok">Pagó</span></div>
+      <div class="feed"><span class="t">09:05</span><div><div class="rt">Federico Nardi · 2</div><div class="rs">Silvia · transferencia</div></div><span class="st ok">Pagó</span></div>
+      <div class="feed"><span class="t m">ayer</span><div><div class="rt">Irene Sandoval · 4</div><div class="rs">Norma · debe $ 36.000</div></div><span class="st warn">Debe</span></div>
+      <div class="feed"><span class="t m">ayer</span><div><div class="rt">Sofía Castro · 3</div><div class="rs">Beatriz · debe $ 13.500</div></div><span class="st warn">Debe</span></div>
+    </div>
+  </div></div>
+  <div class="notes"><ul><li><b>Lo que separa:</b> una lista tiene botones, la otra tiene horas. Son dos formas, no dos columnas.</li><li><b>El botón ahorra un paso:</b> hoy tocás la fila y se abre la hoja; acá es lo mismo pero se ve que es una acción.</li></ul><ul><li><b>El feed ya existe</b> en la app (los ingresos de la puerta): se reusa la pieza.</li><li><b>Riesgo:</b> cuatro botones "Registrar" iguales pesan. Y con 60 ventas por día el feed se vuelve ruido; conviene limitarlo a hoy.</li></ul></div>
+</section>
+
+<!-- C -->
+<section class="opt">
+  <header><h2>C · Cifra arriba de las tareas, feed compacto</h2><span class="lbl">la izquierda abre con el total sin rendir; la derecha es una línea por venta</span></header>
+  <div class="app"><div class="cols">
+    <div>
+      <div class="ch"><h5>Sin rendir</h5><a href="#x">Rendiciones</a></div>
+      <div class="sum"><div><b class="w">$ 407.500</b><small>4 coristas · la más vieja hace 41 días</small></div></div>
+      <div class="task warnb"><div class="rt"><em>Beatriz Coria</em> · <b>161.500</b><div class="rs">cobró hace 33 días</div></div><span class="btn">Registrar</span></div>
+      <div class="task"><div class="rt"><em>Marta Ledesma</em> · <b>106.000</b><div class="rs">cobró hace 41 días</div></div><span class="btn">Registrar</span></div>
+      <div class="task"><div class="rt"><em>Adriana Bustos</em> · <b>73.000</b><div class="rs">rindió 89.000 de 162.000</div></div><span class="btn">Registrar</span></div>
+      <div class="task"><div class="rt"><em>Silvia Rey</em> · <b>67.000</b><div class="rs">cobró hace 36 días</div></div><span class="btn">Registrar</span></div>
+    </div>
+    <div>
+      <div class="ch"><h5>Últimas ventas</h5><span class="lblx">hoy · <b>3</b> · $ 36.000</span></div>
+      <div class="row r3" style="padding:8px 0"><div class="rt" style="font-weight:400"><span style="font-family:var(--fm);font-size:12px;color:var(--ink3)">11:40</span>&nbsp; <b style="font-weight:600">Tomás Herrera</b> <span style="color:var(--ink3)">· 2 · Norma</span></div><span class="st cor">Cortesía</span></div>
+      <div class="row r3" style="padding:8px 0"><div class="rt" style="font-weight:400"><span style="font-family:var(--fm);font-size:12px;color:var(--ink3)">10:12</span>&nbsp; <b style="font-weight:600">Marcelo Duarte</b> <span style="color:var(--ink3)">· 2 · Adriana</span></div><span class="st ok">Pagó</span></div>
+      <div class="row r3" style="padding:8px 0"><div class="rt" style="font-weight:400"><span style="font-family:var(--fm);font-size:12px;color:var(--ink3)">09:05</span>&nbsp; <b style="font-weight:600">Federico Nardi</b> <span style="color:var(--ink3)">· 2 · Silvia</span></div><span class="st ok">Pagó</span></div>
+      <div class="ch" style="padding:18px 0 8px"><h5>Ayer</h5><span class="lblx"><b>2</b> · $ 63.000</span></div>
+      <div class="row r3" style="padding:8px 0"><div class="rt" style="font-weight:400"><span style="font-family:var(--fm);font-size:12px;color:var(--ink3)">19:20</span>&nbsp; <b style="font-weight:600">Irene Sandoval</b> <span style="color:var(--ink3)">· 4 · Norma</span></div><span class="st warn">Debe</span></div>
+      <div class="row r3" style="padding:8px 0"><div class="rt" style="font-weight:400"><span style="font-family:var(--fm);font-size:12px;color:var(--ink3)">18:02</span>&nbsp; <b style="font-weight:600">Sofía Castro</b> <span style="color:var(--ink3)">· 3 · Beatriz</span></div><span class="st warn">Debe</span></div>
+    </div>
+  </div></div>
+  <div class="notes"><ul><li><b>La izquierda contesta una pregunta</b> antes de listar: cuánto falta que te rindan. La fila más urgente va con banda ámbar.</li><li><b>La derecha agrupa por día</b> en una sola línea por venta: cabe el doble sin pesar más.</li></ul><ul><li><b>Lo que separa:</b> una tiene cifra grande y botones; la otra tiene horas y títulos de día.</li><li><b>Riesgo:</b> la cifra repite "Sin rendir" de la regla de arriba de Inicio. Habría que sacarla de la regla o cambiar la regla por "Falta cobrar / Recaudado / Vendidas" solamente.</li></ul></div>
+</section>
+
+<!-- D -->
+<section class="opt">
+  <header><h2>D · Coristas como tarjetas, ventas como filas</h2><span class="lbl">la regla de C19 llevada al Inicio: entidad en tarjeta, transacción en fila</span></header>
+  <div class="app"><div class="cols">
+    <div>
+      <div class="ch"><h5>Te deben rendir</h5><a href="#x">Ver las 6</a></div>
+      <div class="tiles">
+        <div class="tile"><div class="top"><span class="sq">BC</span><div><div class="n">Beatriz Coria</div><div class="s">cobró hace 33 días</div></div></div><div class="d">$ 161.500</div><div class="f"><small>rindió 0 de 161.500</small><span class="btn">Registrar</span></div></div>
+        <div class="tile"><div class="top"><span class="sq">ML</span><div><div class="n">Marta Ledesma</div><div class="s">cobró hace 41 días</div></div></div><div class="d">$ 106.000</div><div class="f"><small>rindió 0 de 106.000</small><span class="btn">Registrar</span></div></div>
+        <div class="tile"><div class="top"><span class="sq">AB</span><div><div class="n">Adriana Bustos</div><div class="s">cobró hace 35 días</div></div></div><div class="d">$ 73.000</div><div class="f"><small>rindió 89.000 de 162.000</small><span class="btn">Registrar</span></div></div>
+        <div class="tile"><div class="top"><span class="sq">SR</span><div><div class="n">Silvia Rey</div><div class="s">cobró hace 36 días</div></div></div><div class="d">$ 67.000</div><div class="f"><small>rindió 67.000 de 134.000</small><span class="btn">Registrar</span></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="ch"><h5>Últimas ventas</h5><a href="#x">Ver todas</a></div>
+      <div class="row r4"><div><div class="rt">Sofía Castro</div><div class="rs">Beatriz · 3 entradas</div></div><span class="rn">27.000</span><span class="st warn">Debe $ 13.500</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">Jorge Álvarez</div><div class="rs">Virginia · 2 entradas</div></div><span class="rn">18.000</span><span class="st ok">Pagó</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">Rubén Casal</div><div class="rs">Norma · 4 entradas</div></div><span class="rn">36.000</span><span class="st warn">Debe $ 36.000</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">Tomás Herrera</div><div class="rs">Norma · 2 entradas</div></div><span class="rn">—</span><span class="st cor">Cortesía</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">Marcelo Duarte</div><div class="rs">Adriana · 2 entradas</div></div><span class="rn">18.000</span><span class="st ok">Pagó</span><span class="go">›</span></div>
+      <div class="row r4"><div><div class="rt">Federico Nardi</div><div class="rs">Silvia · 2 entradas</div></div><span class="rn">18.000</span><span class="st ok">Pagó</span><span class="go">›</span></div>
+      <div class="cf"><span>6 de 6 hoy</span><a href="#x">Ir a Ventas</a></div>
+    </div>
+  </div></div>
+  <div class="notes"><ul><li><b>Lo que separa:</b> formas distintas de verdad. Tarjetas con cuadrado negro a un lado, filas al otro. Imposible confundirlas.</li><li><b>Coherente con Equipo:</b> la corista se ve igual que en su pantalla, con el mismo cuadrado de iniciales.</li></ul><ul><li><b>Riesgo:</b> es lo que más ocupa. Con 6 coristas que deben son 3 filas de tarjetas; la lista de ventas queda corta al lado.</li><li><b>Las otras alertas</b> (entradas sin corista, gente que nunca entró) no son coristas con deuda: irían en una fila aparte debajo de las tarjetas.</li></ul></div>
+</section>
+
+</div>
+
+<section class="opt">
+  <header><h2>Cómo elegir</h2></header>
+  <div class="notes"><ul><li><b>Si querés el cambio mínimo:</b> A. Misma pieza, mejor usada.</li><li><b>Si querés que Inicio sea una lista de cosas para hacer:</b> B o C. La diferencia es si la cifra total va arriba (C) o no (B).</li></ul><ul><li><b>Si querés el contraste más fuerte:</b> D. Es el que más se aleja de hoy y el que más espacio pide.</li><li><b>Se pueden cruzar:</b> por ejemplo tareas de C con el feed de B.</li></ul></div>
+</section>
+</div>
+<script>
+(function(){
+  var f=document.getElementById('frames');
+  document.querySelectorAll('[data-t]').forEach(function(b){b.addEventListener('click',function(){
+    f.classList.toggle('light',b.getAttribute('data-t')==='light');
+    document.querySelectorAll('[data-t]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+  })});
+  document.querySelectorAll('a[href="#x"]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault()})});
+})();
+</script>
