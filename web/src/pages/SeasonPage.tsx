@@ -300,8 +300,9 @@ function FuncionTile({
   const label = pasada ? dia : `${dia} · ${cuandoFalta(fn.starts_at)}`
   const pctEntro = fn.sold > 0 ? Math.round((fn.entered / fn.sold) * 100) : 0
   // Sólo lo que se puede hacer: el popup de la función explica por qué no.
-  const editable = !congelada(fn)
-  const eliminable = fn.sold === 0
+  // Una función que ya pasó es historia: no se edita ni se borra.
+  const editable = !pasada && !congelada(fn)
+  const eliminable = !pasada && fn.sold === 0
   const conAcciones = editable || eliminable
 
   const estadoReparto = pasada ? (
@@ -448,7 +449,7 @@ function FuncionModal({
 }) {
   const navigate = useNavigate()
   const pasada = yaPaso(fn)
-  const trabada = congelada(fn)
+  const trabada = pasada || congelada(fn)
   const libres = sinAsignar(fn)
 
   const tablero = useQuery({
@@ -474,9 +475,7 @@ function FuncionModal({
       sub={`${fn.name ? `${fn.name} · ` : ''}${fn.venue}${pasada ? '' : ` · ${cuandoFalta(fn.starts_at)}`}`}
       footer={
         <>
-          <Button disabled={trabada} onClick={onEditar}>
-            Editar
-          </Button>
+          {!trabada && <Button onClick={onEditar}>Editar</Button>}
           <Button onClick={() => navigate(`/ventas?fn=${fn.id}`)}>Ver ventas</Button>
           {pasada ? (
             <Button go onClick={() => navigate(`/panel/asistencia?fn=${fn.id}`)}>
@@ -537,7 +536,7 @@ function FuncionModal({
         <div className="mini" style={{ marginTop: 7 }}>
           <Row title="Duplicar" sub="Mismo lugar, cupo y precio, con otra fecha" onClick={onDuplicar} />
           {!pasada && <Row title="Ver asistencia" onClick={() => navigate(`/panel/asistencia?fn=${fn.id}`)} />}
-          {fn.sold > 0 ? (
+          {pasada ? null : fn.sold > 0 ? (
             <Row title="Eliminar función" sub={`Ya vendió ${fn.sold}: primero hay que resolver los reembolsos`} dim />
           ) : (
             <Row title="Eliminar función" sub="Se borra con su cupo repartido" onClick={onCancelar} />
@@ -545,7 +544,9 @@ function FuncionModal({
         </div>
         {trabada && (
           <p className="rs" style={{ whiteSpace: 'normal', margin: 'var(--s1) 0 0' }}>
-            Ya tiene {fn.entered} ingresos en la puerta: la fecha, el lugar y el cupo no se editan.
+            {pasada
+              ? 'Ya pasó: queda como historial, no se edita ni se elimina.'
+              : `Ya tiene ${fn.entered} ingresos en la puerta: la fecha, el lugar y el cupo no se editan.`}
           </p>
         )}
       </div>
