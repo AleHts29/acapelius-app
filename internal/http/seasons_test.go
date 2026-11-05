@@ -454,3 +454,50 @@ func TestIndiceDeTemporadas(t *testing.T) {
 	// Lleva plata: no la puede leer una corista.
 	assertStatus(t, corista.get("/api/reports/seasons"), http.StatusForbidden)
 }
+
+// Una temporada sin uso se puede renombrar y borrar con sus funciones; en cuanto
+// tiene un cupo repartido ya es historia. La que esta en curso no se borra.
+func TestEditarYEliminarTemporada(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	createSellerClient(t, env, admin, "Corista", "corista@acapelius.test") // user 2
+	enCurso := activeSeasonID(t, admin)
+
+	nueva := func(nombre string) (float64, float64) {
+		t.Helper()
+		creada := admin.post("/api/seasons", map[string]any{"name": nombre, "activate": false})
+		assertStatus(t, creada, http.StatusCreated)
+		id := creada.Body["season"].(map[string]any)["id"].(float64)
+		fn := admin.post("/api/functions", map[string]any{
+			"season_id": id, "venue": "Teatro", "starts_at": "2099-12-10T21:00:00-03:00", "capacity": 10, "price_cents": 100000,
+		})
+		assertStatus(t, fn, http.StatusCreated)
+		return id, fn.Body["function"].(map[string]any)["id"].(float64)
+	}
+
+	vacia, _ := nueva("Navidda")
+	path := fmt.Sprintf("/api/seasons/%.0f", vacia)
+
+	renombrada := admin.do(http.MethodPatch, path, map[string]any{"name": "  Navidad  "})
+	assertStatus(t, renombrada, http.StatusOK)
+	if got := renombrada.Body["season"].(map[string]any)["name"]; got != "Navidad" {
+		t.Fatalf("nombre = %v", got)
+	}
+	assertStatus(t, admin.do(http.MethodPatch, path, map[string]any{"name": "   "}), http.StatusBadRequest)
+
+	assertStatus(t, admin.do(http.MethodDelete, path, nil), http.StatusNoContent)
+	assertStatus(t, admin.do(http.MethodDelete, path, nil), http.StatusNotFound)
+
+	// La temporada en curso, aunque este vacia, no se borra.
+	assertErrorCode(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/seasons/%.0f", enCurso), nil), http.StatusConflict, "conflict")
+
+	// Con un cupo repartido, ni renombrar ni borrar.
+	usada, fnID := nueva("Con cupo")
+	assertStatus(t, admin.post(fmt.Sprintf("/api/seasons/%.0f/members", usada), map[string]any{"user_id": 2, "role": "seller"}), http.StatusOK)
+	assertStatus(t, admin.do(http.MethodPut, fmt.Sprintf("/api/functions/%.0f/allocations", fnID), map[string]any{
+		"allocations": []map[string]any{{"user_id": 2, "quantity": 1}},
+	}), http.StatusOK)
+	pathUsada := fmt.Sprintf("/api/seasons/%.0f", usada)
+	assertErrorCode(t, admin.do(http.MethodPatch, pathUsada, map[string]any{"name": "Otro"}), http.StatusConflict, "conflict")
+	assertErrorCode(t, admin.do(http.MethodDelete, pathUsada, nil), http.StatusConflict, "conflict")
+}

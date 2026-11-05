@@ -72,7 +72,7 @@ func seedOrgFixture(t *testing.T, env *testEnv, orgID int64, prefix string) orgF
 
 	fn := f.admin.post("/api/functions", map[string]any{
 		"season_id": f.season, "name": prefix + " Gala", "venue": prefix + " Sala",
-		"starts_at": "2026-12-10T21:00:00-03:00", "capacity": 50, "price_cents": 100000,
+		"starts_at": "2099-12-10T21:00:00-03:00", "capacity": 50, "price_cents": 100000,
 	})
 	assertStatus(t, fn, http.StatusCreated)
 	f.fn = fn.Body["function"].(map[string]any)["id"].(float64)

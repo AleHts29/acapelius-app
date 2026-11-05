@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
@@ -105,13 +106,20 @@ type putAllocationsRequest struct {
 	} `json:"allocations"`
 }
 
+// funcionTerminada: una funcion se da por pasada tres horas despues de empezar,
+// el mismo margen que usan Direccion y Temporadas.
+func funcionTerminada(startsAt, ahora time.Time) bool {
+	return startsAt.Before(ahora.Add(-3 * time.Hour))
+}
+
 // handlePutAllocations: PUT /api/functions/{id}/allocations — upsert batch
 // con los invariantes del modo estricto, validados en transaccion con la
 // funcion lockeada (la misma serializacion que usa el capacity de ventas):
 //  1. SUM(allocations) <= capacity                (allocation_exceeded)
 //  2. cada cupo >= lo ya vendido por esa corista  (allocation_below_sold)
 //
-// Cantidad 0 borra la asignacion.
+// Cantidad 0 borra la asignacion. Una funcion que ya paso no acepta cambios: su
+// reparto es historia.
 func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 	functionID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
@@ -147,6 +155,12 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		httpx.Internal(w, r, err)
+		return
+	}
+
+	if funcionTerminada(function.StartsAt, time.Now()) {
+		httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+			"Esa función ya pasó: no se pueden cambiar sus cupos.")
 		return
 	}
 

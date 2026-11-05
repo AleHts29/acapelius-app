@@ -160,6 +160,108 @@ func (s *Server) handleCreateSeason(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusCreated, seasonResponse{Season: season, Copied: copiadas})
 }
 
+// temporadaSinUso carga la temporada y confirma que todavia no paso nada en
+// ella. Responde el error y devuelve false si no existe o si ya tiene ventas,
+// cupos o rendiciones: eso es historia y no se toca.
+func (s *Server) temporadaSinUso(w http.ResponseWriter, r *http.Request, q *sqlcgen.Queries, id int64) (sqlcgen.Season, bool) {
+	ctx := r.Context()
+	season, err := q.GetSeason(ctx, sqlcgen.GetSeasonParams{ID: id, OrganizationID: s.org(ctx)})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrSeasonNotFound)
+			return season, false
+		}
+		httpx.Internal(w, r, err)
+		return season, false
+	}
+	enUso, err := q.SeasonInUse(ctx, sqlcgen.SeasonInUseParams{SeasonID: id, OrganizationID: s.org(ctx)})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return season, false
+	}
+	if enUso {
+		httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+			"Esta temporada ya tiene cupos, ventas o rendiciones: no se puede cambiar ni eliminar.")
+		return season, false
+	}
+	return season, true
+}
+
+// handleUpdateSeason: PATCH /api/seasons/{id} — cambia el nombre de una
+// temporada en la que todavia no paso nada.
+func (s *Server) handleUpdateSeason(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrSeasonNotFound)
+		return
+	}
+	var req struct {
+		Name string `json:"name"`
+	}
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	if err := domain.ValidateSeasonName(req.Name); err != nil {
+		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, capitalize(err.Error()))
+		return
+	}
+
+	ctx := r.Context()
+	if _, ok := s.temporadaSinUso(w, r, s.queries, id); !ok {
+		return
+	}
+	season, err := s.queries.UpdateSeasonName(ctx, sqlcgen.UpdateSeasonNameParams{Name: req.Name, ID: id, OrganizationID: s.org(ctx)})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, seasonResponse{Season: season})
+}
+
+// handleDeleteSeason: DELETE /api/seasons/{id} — borra una temporada en la que
+// todavia no paso nada, con sus funciones y su equipo. La temporada en curso no
+// se borra: Inicio y Rendiciones se quedarian sin nada que mostrar.
+func (s *Server) handleDeleteSeason(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrSeasonNotFound)
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	q := s.queries.WithTx(tx)
+
+	season, ok := s.temporadaSinUso(w, r, q, id)
+	if !ok {
+		return
+	}
+	if season.IsActive {
+		httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+			"Es la temporada en curso: usá otra antes de eliminarla.")
+		return
+	}
+	if err := q.DeleteSeasonFunctions(ctx, sqlcgen.DeleteSeasonFunctionsParams{SeasonID: id, OrganizationID: s.org(ctx)}); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := q.DeleteSeason(ctx, sqlcgen.DeleteSeasonParams{ID: id, OrganizationID: s.org(ctx)}); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // handleActivateSeason: POST /api/seasons/{id}/activate — elige cual es la
 // temporada en curso. Es la que miran Inicio, Rendiciones y Direccion.
 func (s *Server) handleActivateSeason(w http.ResponseWriter, r *http.Request) {

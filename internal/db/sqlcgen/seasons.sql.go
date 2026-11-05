@@ -85,6 +85,40 @@ func (q *Queries) DeactivateAllSeasons(ctx context.Context, organizationID int64
 	return err
 }
 
+const deleteSeason = `-- name: DeleteSeason :exec
+DELETE FROM seasons
+WHERE id = $1::bigint AND organization_id = $2::bigint
+`
+
+type DeleteSeasonParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// El equipo se va solo: season_members tiene ON DELETE CASCADE.
+func (q *Queries) DeleteSeason(ctx context.Context, arg DeleteSeasonParams) error {
+	_, err := q.db.Exec(ctx, deleteSeason, arg.ID, arg.OrganizationID)
+	return err
+}
+
+const deleteSeasonFunctions = `-- name: DeleteSeasonFunctions :exec
+DELETE FROM functions f
+USING seasons se
+WHERE se.id = f.season_id
+  AND f.season_id = $1::bigint
+  AND se.organization_id = $2::bigint
+`
+
+type DeleteSeasonFunctionsParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) DeleteSeasonFunctions(ctx context.Context, arg DeleteSeasonFunctionsParams) error {
+	_, err := q.db.Exec(ctx, deleteSeasonFunctions, arg.SeasonID, arg.OrganizationID)
+	return err
+}
+
 const getActiveSeason = `-- name: GetActiveSeason :one
 SELECT id, name, is_active, created_at, organization_id FROM seasons
 WHERE is_active AND organization_id = $1::bigint
@@ -229,6 +263,35 @@ func (q *Queries) ListSeasons(ctx context.Context, organizationID int64) ([]Seas
 	return items, nil
 }
 
+const seasonInUse = `-- name: SeasonInUse :one
+SELECT EXISTS (
+  SELECT 1 FROM seasons se
+  WHERE se.id = $1::bigint
+    AND se.organization_id = $2::bigint
+    AND (
+      EXISTS (SELECT 1 FROM sales s JOIN functions f ON f.id = s.function_id WHERE f.season_id = se.id)
+      OR EXISTS (SELECT 1 FROM allocations a JOIN functions f ON f.id = a.function_id WHERE f.season_id = se.id)
+      OR EXISTS (SELECT 1 FROM settlements st WHERE st.season_id = se.id)
+      OR EXISTS (SELECT 1 FROM settlement_reminders r WHERE r.season_id = se.id)
+    )
+) AS in_use
+`
+
+type SeasonInUseParams struct {
+	SeasonID       int64 `json:"season_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// Si ya paso algo en la temporada. Las ventas anuladas cuentan: son historia, y
+// sus entradas y pagos cuelgan de la funcion. Las funciones y el equipo no
+// cuentan: son la preparacion, y se van con ella.
+func (q *Queries) SeasonInUse(ctx context.Context, arg SeasonInUseParams) (bool, error) {
+	row := q.db.QueryRow(ctx, seasonInUse, arg.SeasonID, arg.OrganizationID)
+	var in_use bool
+	err := row.Scan(&in_use)
+	return in_use, err
+}
+
 const setActiveSeason = `-- name: SetActiveSeason :exec
 UPDATE seasons SET is_active = TRUE
 WHERE id = $1::bigint AND organization_id = $2::bigint
@@ -258,4 +321,29 @@ func (q *Queries) SlugExists(ctx context.Context, slug string) (bool, error) {
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const updateSeasonName = `-- name: UpdateSeasonName :one
+UPDATE seasons SET name = $1::text
+WHERE id = $2::bigint AND organization_id = $3::bigint
+RETURNING id, name, is_active, created_at, organization_id
+`
+
+type UpdateSeasonNameParams struct {
+	Name           string `json:"name"`
+	ID             int64  `json:"id"`
+	OrganizationID int64  `json:"organization_id"`
+}
+
+func (q *Queries) UpdateSeasonName(ctx context.Context, arg UpdateSeasonNameParams) (Season, error) {
+	row := q.db.QueryRow(ctx, updateSeasonName, arg.Name, arg.ID, arg.OrganizationID)
+	var i Season
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.OrganizationID,
+	)
+	return i, err
 }

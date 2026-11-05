@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 )
 
 // TestCuposEstrictos cubre la aceptacion de C8: modo estricto de cupos.
@@ -201,4 +202,40 @@ func TestCuposDeQuienYaNoEsCorista(t *testing.T) {
 	assertStatus(t, admin.do(http.MethodPut, path, map[string]any{
 		"allocations": []map[string]any{{"user_id": 2, "quantity": 1}},
 	}), http.StatusConflict)
+}
+
+// Una funcion que ya paso conserva su reparto: se puede leer, no cambiar.
+func TestCuposDeFuncionPasadaNoSeCambian(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	createSellerClient(t, env, admin, "Corista", "corista@acapelius.test") // user 2
+
+	pasada := admin.post("/api/functions", map[string]any{
+		"season_id":   activeSeasonID(t, admin),
+		"venue":       "Teatro Municipal",
+		"starts_at":   time.Now().Add(-4 * time.Hour).Format(time.RFC3339),
+		"capacity":    10,
+		"price_cents": 800000,
+	})
+	assertStatus(t, pasada, http.StatusCreated)
+	path := fmt.Sprintf("/api/functions/%.0f/allocations", pasada.Body["function"].(map[string]any)["id"].(float64))
+
+	assertErrorCode(t, admin.do(http.MethodPut, path, map[string]any{
+		"allocations": []map[string]any{{"user_id": 2, "quantity": 1}},
+	}), http.StatusConflict, "conflict")
+	assertStatus(t, admin.get(path), http.StatusOK)
+
+	// Dentro del margen de tres horas todavia se puede ajustar.
+	reciente := admin.post("/api/functions", map[string]any{
+		"season_id":   activeSeasonID(t, admin),
+		"venue":       "Teatro Municipal",
+		"starts_at":   time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
+		"capacity":    10,
+		"price_cents": 800000,
+	})
+	assertStatus(t, reciente, http.StatusCreated)
+	assertStatus(t, admin.do(http.MethodPut,
+		fmt.Sprintf("/api/functions/%.0f/allocations", reciente.Body["function"].(map[string]any)["id"].(float64)),
+		map[string]any{"allocations": []map[string]any{{"user_id": 2, "quantity": 1}}},
+	), http.StatusOK)
 }

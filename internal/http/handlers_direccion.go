@@ -137,7 +137,7 @@ func (s *Server) handleDireccion(w http.ResponseWriter, r *http.Request) {
 			Assigned:       fn.Assigned,
 			PriceCents:     fn.PriceCents,
 			AttendancePct:  -1,
-			Done:           fn.StartsAt.Before(ahora.Add(-3 * time.Hour)),
+			Done:           funcionTerminada(fn.StartsAt, ahora),
 		}
 		item.OccupancyPct = porcentaje(fn.Sold, int64(fn.Capacity))
 		item.TicketAvgCents = promedio(fn.CollectedCents, fn.Sold)

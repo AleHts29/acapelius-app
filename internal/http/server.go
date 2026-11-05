@@ -185,6 +185,8 @@ func (s *Server) Handler() http.Handler {
 					admin.Get("/functions/{id}/allocations", s.handleFunctionAllocationBoard)
 					admin.Put("/functions/{id}/allocations", s.handlePutAllocations)
 					admin.Post("/seasons", s.handleCreateSeason)
+					admin.Patch("/seasons/{id}", s.handleUpdateSeason)
+					admin.Delete("/seasons/{id}", s.handleDeleteSeason)
 					admin.Post("/seasons/{id}/activate", s.handleActivateSeason)
 					admin.Post("/seasons/{id}/members", s.handleAddMember)
 					admin.Delete("/seasons/{id}/members/{userId}", s.handleRemoveMember)

@@ -44,7 +44,7 @@ func setupCatalog(t *testing.T, admin *testClient, capacity int) float64 {
 	fn := admin.post("/api/functions", map[string]any{
 		"season_id":   seasonID,
 		"venue":       "Teatro Municipal",
-		"starts_at":   "2026-12-10T21:00:00-03:00",
+		"starts_at":   "2099-12-10T21:00:00-03:00",
 		"capacity":    capacity,
 		"price_cents": 800000,
 	})

@@ -169,7 +169,7 @@ func TestCheckinOtraFuncionYAnulados(t *testing.T) {
 	// Segunda funcion en la misma temporada.
 	fn2 := admin.post("/api/functions", map[string]any{
 		"season_id": 1, "venue": "Teatro Municipal",
-		"starts_at": "2026-12-11T21:00:00-03:00", "capacity": 50, "price_cents": 800000,
+		"starts_at": "2099-12-11T21:00:00-03:00", "capacity": 50, "price_cents": 800000,
 	})
 	fn2ID := fn2.Body["function"].(map[string]any)["id"].(float64)
 	assignQuota(t, admin, fnID, 2, 50)

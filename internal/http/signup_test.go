@@ -36,7 +36,7 @@ func TestAltaDeCuenta(t *testing.T) {
 	// Y puede administrar: crear una funcion en su temporada.
 	fn := c.post("/api/functions", map[string]any{
 		"season_id": lista[0].(map[string]any)["id"], "venue": "Sala chica",
-		"starts_at": "2026-11-20T21:00:00-03:00", "capacity": 40, "price_cents": 500000,
+		"starts_at": "2099-11-20T21:00:00-03:00", "capacity": 40, "price_cents": 500000,
 	})
 	assertStatus(t, fn, http.StatusCreated)
 

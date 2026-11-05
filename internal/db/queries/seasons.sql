@@ -41,6 +41,39 @@ SELECT * FROM seasons
 WHERE is_active AND organization_id = sqlc.arg(organization_id)::bigint
 LIMIT 1;
 
+-- name: UpdateSeasonName :one
+UPDATE seasons SET name = sqlc.arg(name)::text
+WHERE id = sqlc.arg(id)::bigint AND organization_id = sqlc.arg(organization_id)::bigint
+RETURNING *;
+
+-- name: SeasonInUse :one
+-- Si ya paso algo en la temporada. Las ventas anuladas cuentan: son historia, y
+-- sus entradas y pagos cuelgan de la funcion. Las funciones y el equipo no
+-- cuentan: son la preparacion, y se van con ella.
+SELECT EXISTS (
+  SELECT 1 FROM seasons se
+  WHERE se.id = sqlc.arg(season_id)::bigint
+    AND se.organization_id = sqlc.arg(organization_id)::bigint
+    AND (
+      EXISTS (SELECT 1 FROM sales s JOIN functions f ON f.id = s.function_id WHERE f.season_id = se.id)
+      OR EXISTS (SELECT 1 FROM allocations a JOIN functions f ON f.id = a.function_id WHERE f.season_id = se.id)
+      OR EXISTS (SELECT 1 FROM settlements st WHERE st.season_id = se.id)
+      OR EXISTS (SELECT 1 FROM settlement_reminders r WHERE r.season_id = se.id)
+    )
+) AS in_use;
+
+-- name: DeleteSeasonFunctions :exec
+DELETE FROM functions f
+USING seasons se
+WHERE se.id = f.season_id
+  AND f.season_id = sqlc.arg(season_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint;
+
+-- name: DeleteSeason :exec
+-- El equipo se va solo: season_members tiene ON DELETE CASCADE.
+DELETE FROM seasons
+WHERE id = sqlc.arg(id)::bigint AND organization_id = sqlc.arg(organization_id)::bigint;
+
 -- ============================================================================
 -- Organizaciones
 -- ============================================================================
