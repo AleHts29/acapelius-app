@@ -162,3 +162,8 @@ export function weekdayLong(iso: string): string {
   const s = weekday.format(new Date(iso))
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
+
+/** Una función se da por pasada tres horas después de empezar (igual que el server). */
+export function funcionTerminada(startsAt: string): boolean {
+  return new Date(startsAt).getTime() < Date.now() - 3 * 60 * 60 * 1000
+}

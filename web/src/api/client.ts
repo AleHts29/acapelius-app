@@ -571,6 +571,8 @@ export const api = {
     /** El equipo elegido en el asistente. Manda sobre copy_members. */
     members?: Array<{ user_id: number; role: Role }>
   }) => request<{ season: Season; copied?: number }>('POST', '/seasons', input),
+  updateSeason: (id: number, name: string) => request<{ season: Season }>('PATCH', `/seasons/${id}`, { name }),
+  deleteSeason: (id: number) => request<void>('DELETE', `/seasons/${id}`),
   activateSeason: (id: number) => request<{ season: Season }>('POST', `/seasons/${id}/activate`),
 
   listFunctions: (seasonId?: number) =>

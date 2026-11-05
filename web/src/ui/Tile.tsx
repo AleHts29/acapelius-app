@@ -45,6 +45,7 @@ function Cascara({
 export function Tile({
   name,
   sub,
+  receipt,
   bar,
   quantity,
   aside,
@@ -55,6 +56,8 @@ export function Tile({
 }: {
   name: string
   sub?: ReactNode
+  /** Las cuentas en columna, como un talón, con el total abajo en Anton. */
+  receipt?: { lines: Array<[string, ReactNode]>; total: [string, ReactNode] }
   bar?: Bar
   /** El dato del cupo: "6 de 12 vendidas". */
   quantity?: ReactNode
@@ -77,6 +80,20 @@ export function Tile({
           {sub && <div className="tile__r">{sub}</div>}
         </div>
       </div>
+      {receipt && (
+        <dl className="rec">
+          {receipt.lines.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+          <div className="rec__tot">
+            <dt>{receipt.total[0]}</dt>
+            <dd>{receipt.total[1]}</dd>
+          </div>
+        </dl>
+      )}
       {bar && <Barra bar={bar} />}
       {(quantity || aside) && (
         <div className="tile__meta">
@@ -90,11 +107,12 @@ export function Tile({
 }
 
 /**
- * La tarjeta de función: la fecha manda, en Anton. `on` es la elegida (el
- * talón marcando dónde estás, en Ventas). Agotada muestra AGOTADA en la fecha
+ * La tarjeta de función: la fecha manda, en Anton. `on` es la destacada (la
+ * temporada en curso). Agotada muestra AGOTADA en la fecha
  * grande: un número que no pide nada no merece ese espacio.
  */
 export function FnTile({
+  franja,
   label,
   date,
   venue,
@@ -107,6 +125,8 @@ export function FnTile({
   flag,
   onClick,
 }: {
+  /** La franja de arriba, de borde a borde: el estado, dicho con palabras y color. */
+  franja?: { texto: ReactNode; tono: 'ok' | 'warn' | 'mute' }
   label: ReactNode
   date: ReactNode
   venue?: ReactNode
@@ -123,6 +143,7 @@ export function FnTile({
   const className = ['fn', on && 'fn--on', off && 'tile--off', flag && 'tile--flag'].filter(Boolean).join(' ')
   return (
     <Cascara className={className} onClick={onClick}>
+      {franja && <span className={`fn__franja fn__franja--${franja.tono}`}>{franja.texto}</span>}
       <span className="lbl">{label}</span>
       <div className="fn__d">{date}</div>
       {venue && <div className="fn__v">{venue}</div>}

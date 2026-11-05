@@ -40,30 +40,38 @@
 
 :root,
 [data-theme='light'] {
-  /* Superficies: la separación la hace el contraste, no el borde. */
-  --paper: #f2f0e9; /* canvas de la app */
-  --card: #ffffff; /* tarjetas y paneles */
-  --card2: #faf8f2; /* sub-superficie: pies de card, listas de datos */
-  --hair: #e8e4da; /* el ÚNICO divisor */
-  --sunk: rgba(26, 26, 24, 0.045); /* inputs, segmented, barras de fondo, hover */
-  /* Excepción 1 de §3.1 como token: en claro la card no lleva contorno. */
+  /* Superficies (C20): papel arena, no blanco. El claro es el programa de
+     mano impreso; el oscuro, el backstage. Mismo carácter, distinta luz. */
+  --paper: #e8e3d7; /* canvas de la app */
+  --sel: #cfe3d4; /* el tinte de la tarjeta elegida */
+  --sel-t: #fff; /* el texto sobre su franja */
+  --card: #e8e3d7; /* igual al papel: la card ya no es una caja */
+  --card2: #dfd9cb; /* sub-superficie: hover de tarjeta, listas de datos */
+  --hair: rgba(26, 26, 24, 0.14); /* el ÚNICO divisor */
+  --sunk: rgba(26, 26, 24, 0.06); /* inputs, barras de fondo, hover */
   --card-edge: none;
+  --floor: #f3efe6; /* superficies que flotan: popup, hoja, drawer, menú */
+  /* Sombra dura (C20, de Fluxara): borde fino en tinta y sombra sólida
+     desplazada, sin desenfoque. En oscuro la tinta es crema y la sombra
+     se vuelve clara sola. Sólo en lo que se toca: botón, buscador, popups. */
+  --hard-edge: 1.5px solid var(--ink);
+  --hard-s: 4px 4px 0 0 var(--ink);
 
   /* Tinta — nunca negro puro, salvo el talón. */
   --ink: #1a1a18;
-  --ink2: #6b665b; /* secundario — 5,0:1 sobre papel */
-  /* DECISION: #736D5F en lugar del #7A7465 del spec, que da 4,1:1 sobre
-     --paper y 4,4:1 sobre --card2 (donde viven .lbl y .dl__k). Este da
-     4,5 / 4,8 / 5,1 sobre papel, card2 y card. Ver DECISIONS (C19). */
-  --ink3: #736d5f; /* metadato */
-  --ink-mark: #97917f; /* SOLO marcas no textuales: da 3,2:1. Nunca texto. */
+  --ink2: #5f5a4f; /* secundario — 5,6:1 sobre el papel arena */
+  --ink3: #6a6457; /* metadato — 4,6:1 sobre el papel arena */
+  --ink-mark: #8d8776; /* SOLO marcas no textuales. Nunca texto. */
   --black: #141414; /* el talón, y nada más */
 
   /* Acento y semánticos (AA sobre --card). */
   --ticket: #c4401e; /* acción primaria y acento · 5,1:1 */
   /* DECISION: el naranja como TEXTO tiene token propio, porque en oscuro el
      #C4401E da 3,2:1 sobre --card. Los rellenos siguen siendo --ticket. */
-  --ticket-text: var(--ticket);
+  /* Sobre el papel arena el naranja de relleno da 4,0:1: como texto va un
+     paso más oscuro. */
+  --ticket-text: #ad3518;
+  --on-ticket: #ffffff; /* texto sobre relleno naranja */
   --ok: #1e6b4a; /* pagó, al día, ingreso válido · 6,5:1 */
   --warn: #8a5a08; /* debe, sin asignar, sin conexión · 5,9:1 */
   --bad: #a32d2d; /* anulada, error, ya usada · 7,1:1 */
@@ -82,8 +90,10 @@
 
   /* Radios — 8 es la posición: empaquetado sin ser iOS. El talón y los
      paneles de veredicto van en 0; son los únicos. */
-  --r: 8px; /* cards, tiles, popup, barras de progreso */
-  --rc: 5px; /* botones, inputs, segmented, cuadrado de iniciales */
+  /* C20 (Backstage): radio 0 en todo. Sólo la hoja del celular conserva
+     esquinas arriba, por gesto, no por estilo. */
+  --r: 0;
+  --rc: 0;
 
   /* Espacio — base 4 */
   --s1: 8px;
@@ -109,27 +119,39 @@
   color-scheme: light;
 }
 
+/* En escritorio el título y la cifra crecen: el afiche se lee de lejos. */
+@media (min-width: 1024px) {
+  :root {
+    --t-page: 40px;
+    --t-figure: 44px;
+  }
+}
+
 /* --- Modo oscuro (§3.1), elegido en la cuenta o el del sistema ------------ */
 [data-theme='dark'] {
-  --paper: #1a1815;
-  --card: #211e1a;
-  --card2: #272420;
+  --sel: #1a3026;
+  --sel-t: #141311;
+  /* C20 Backstage: negro cálido, sin cajas. La jerarquía la hacen el
+     tamaño y las reglas; el naranja es el único acento. */
+  --paper: #141311;
+  --card: #141311;
+  --card2: #1a1815;
+  --floor: #1d1b18;
   --hair: rgba(244, 241, 234, 0.1);
-  --sunk: rgba(244, 241, 234, 0.06);
-  /* Excepción 1: #211E1A sobre #1A1815 no alcanza; la card lleva hairline. */
-  --card-edge: 0 0 0 1px var(--hair);
+  --sunk: rgba(244, 241, 234, 0.05);
+  --card-edge: none;
   --ink: #f4f1ea;
-  --ink2: #a89f8d;
-  /* DECISION: #918B7C en lugar de #8E887A, que da 4,4:1 sobre --card2. */
-  --ink3: #918b7c;
-  --ink-mark: #6e6959;
-  /* Excepción 2: el talón, más hondo que el papel. */
+  --ink2: #9a9282;
+  --ink3: #8f8878;
+  --ink-mark: #6e6859;
   --black: #0e0d0b;
-  --ticket-text: #ec6e4c; /* 5,5:1 sobre --card */
-  --ok: #4bbf8a;
-  --warn: #e0a84a;
-  --bad: #d96b6b;
-  --indigo: #8e92f0;
+  --ticket: #ec6e4c;
+  --ticket-text: #ec6e4c;
+  --on-ticket: #141311;
+  --ok: #6dc79a;
+  --warn: #e8a33d;
+  --bad: #e07a7a;
+  --indigo: #9da0f2;
   --warn-soft: #2e2718;
   --ok-soft: #17291f;
   --bad-soft: #2e1c1c;
@@ -138,22 +160,29 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --paper: #1a1815;
-    --card: #211e1a;
-    --card2: #272420;
+    --sel: #1a3026;
+    --sel-t: #141311;
+    /* C20 Backstage: negro cálido, sin cajas. La jerarquía la hacen el
+       tamaño y las reglas; el naranja es el único acento. */
+    --paper: #141311;
+    --card: #141311;
+    --card2: #1a1815;
+    --floor: #1d1b18;
     --hair: rgba(244, 241, 234, 0.1);
-    --sunk: rgba(244, 241, 234, 0.06);
-    --card-edge: 0 0 0 1px var(--hair);
+    --sunk: rgba(244, 241, 234, 0.05);
+    --card-edge: none;
     --ink: #f4f1ea;
-    --ink2: #a89f8d;
-    --ink3: #918b7c;
-    --ink-mark: #6e6959;
+    --ink2: #9a9282;
+    --ink3: #8f8878;
+    --ink-mark: #6e6859;
     --black: #0e0d0b;
+    --ticket: #ec6e4c;
     --ticket-text: #ec6e4c;
-    --ok: #4bbf8a;
-    --warn: #e0a84a;
-    --bad: #d96b6b;
-    --indigo: #8e92f0;
+    --on-ticket: #141311;
+    --ok: #6dc79a;
+    --warn: #e8a33d;
+    --bad: #e07a7a;
+    --indigo: #9da0f2;
     --warn-soft: #2e2718;
     --ok-soft: #17291f;
     --bad-soft: #2e1c1c;
@@ -220,9 +249,11 @@ button {
 :where(button.row, button.feed, button.tile, button.fn, button.card__a, .seg button, .modal__x, .drawer__x) { border: 0; font: inherit; text-align: left; cursor: pointer }
 
 /* --- Página: título en Anton, contexto en etiqueta, acciones a la derecha - */
-.pgh { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s4) }
+.pgh { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s5) }
 .pgh .lbl { display: block }
-.pgt { font-family: var(--fd); font-size: var(--t-page); line-height: 1 }
+.pgt { font-family: var(--fd); font-size: var(--t-page); line-height: 1; letter-spacing: 0.01em }
+/* La firma de cada pantalla: una raya naranja que se dibuja al entrar. */
+.pgt::after { content: ''; display: block; width: 44px; height: 4px; margin: 10px 0 8px; background: var(--ticket); transform-origin: left; animation: dibuja 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s backwards }
 .pgh .lbl + .pgt, .pgt + .lbl { margin-top: 6px }
 .pgh__a { display: flex; gap: var(--s1); flex-wrap: wrap }
 .grp__h + .tiles { margin-top: var(--s2) }
@@ -233,35 +264,37 @@ button {
   .asym { grid-template-columns: 1fr }
 }
 /* Buscador + segmented arriba de una lista. */
-.bar { display: flex; gap: var(--s1); align-items: center; flex-wrap: wrap; margin-bottom: var(--s3) }
+.bar { display: flex; gap: var(--s4); align-items: center; flex-wrap: wrap; margin-bottom: var(--s3) }
 
 /* --- Etiqueta: el único lugar de la app con mayúsculas -------------------- */
 .lbl { font-family: var(--fm); font-size: var(--t-label); font-weight: 500; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ink3) }
 
-/* --- Card: el panel ------------------------------------------------------- */
-.card { background: var(--card); border-radius: var(--r); overflow: hidden }
-.card__h { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); padding: var(--s2) var(--s3) var(--s1) }
-.card__t { font-size: var(--t-title); font-weight: 600; letter-spacing: -0.01em; line-height: 1.3 }
+/* --- Card: el grupo. C20: sin fondo ni caja; lo que la delimita son las
+   reglas de sus filas y su pie. ------------------------------------------ */
+.card { overflow: hidden }
+.card__h { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); padding: 0 0 var(--s1) }
 .card__a { background: none; font-size: 12px; font-weight: 600; color: var(--ticket-text); text-decoration: none }
-.card__f { display: flex; justify-content: space-between; align-items: center; padding: 9px var(--s3); font-size: var(--t-meta); color: var(--ink3); border-top: 1px solid var(--hair) }
+.card__f { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; font-size: var(--t-meta); color: var(--ink3); border-top: 1px solid var(--hair) }
 .card__f a { color: var(--ticket-text); font-weight: 600; text-decoration: none }
 
-/* Excepción 1 de §3.1: en oscuro la entidad lleva hairline (token). */
-.card, .tile, .fn { box-shadow: var(--card-edge) }
 
 /* --- Grupo: la regla negra que encabeza la lista -------------------------- */
-.grp { margin-bottom: var(--s4) }
-.grp__h { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); padding-bottom: 7px; border-bottom: 1px solid var(--ink) }
+.grp { margin-bottom: var(--s5) }
+/* El título de un grupo no puede confundirse con los nombres de sus filas, que
+   también son Inter 600 chica: va en la letra de los títulos. Igual en .card__t. */
+.grp__h > h2.lbl, .card__t { font-family: var(--fd); font-size: 22px; font-weight: 400; letter-spacing: 0.01em; line-height: 1.15; text-transform: none; color: var(--ink) }
+.grp__h { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); padding-bottom: 8px }
 .grp__n { font-family: var(--fm); font-size: var(--t-meta); color: var(--ink2); font-variant-numeric: tabular-nums }
-.grp .card { border-radius: 0 0 var(--r) var(--r) }
 
 /* --- Fila: dos líneas como máximo, columnas alineadas --------------------- */
 /* DECISION: monto 96 y estado 108 (no 88): "Pagó (transf.)" y "Debe $ 16.000"
    no entran en 88 a 11,5px. El orden es el del mockup: monto, estado. */
-.row { display: grid; grid-template-columns: 1fr 96px 108px 14px; align-items: center; gap: var(--s2); padding: 9px var(--s3); text-decoration: none; color: inherit; position: relative; width: 100% }
+.row { display: grid; grid-template-columns: 1fr 96px 112px 14px; align-items: center; gap: var(--s2); padding: 10px 0; text-decoration: none; color: inherit; position: relative; width: 100%; border-top: 1px solid var(--hair) }
 button.row { background: none }
-.row + .row::before { content: ''; position: absolute; top: 0; left: var(--s3); right: var(--s3); height: 1px; background: var(--hair) }
-a.row:hover, button.row:hover { background: var(--sunk) }
+a.row, button.row { transition: padding 0.15s ease, background 0.15s ease }
+a.row:hover, button.row:hover { background: var(--sunk); padding-left: var(--s1); padding-right: var(--s1) }
+a.row .go, button.row .go { transition: transform 0.15s ease, color 0.15s ease }
+a.row:hover .go, button.row:hover .go { color: var(--ticket-text); transform: translateX(3px) }
 .row--2 { grid-template-columns: 1fr auto 14px }
 .row--3 { grid-template-columns: 1fr auto }
 .row--nav { grid-template-columns: 1fr 14px }
@@ -270,7 +303,7 @@ a.row:hover, button.row:hover { background: var(--sunk) }
 .row--warn, .row--warn .rs { background: var(--warn-soft); color: var(--warn) }
 .row .tile__bar { margin: 5px 0 0 }
 .row > div { min-width: 0 }
-.rt { font-size: var(--t-body); font-weight: 500; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.rt { font-size: 14px; font-weight: 500; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .rt--off { text-decoration: line-through }
 .rs { font-size: var(--t-meta); color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .rn { font-family: var(--fm); font-size: 12.5px; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap }
@@ -278,7 +311,7 @@ a.row:hover, button.row:hover { background: var(--sunk) }
 .go { color: var(--ink-mark); font-size: 13px; text-align: right }
 
 /* --- Estado: punto + palabra. El único sistema de estado de la app -------- */
-.st { font-size: var(--t-meta); font-weight: 500; display: flex; align-items: center; gap: 6px; white-space: nowrap }
+.st { font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 6px; white-space: nowrap }
 .st i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: none }
 .st--ok { color: var(--ok) }
 .st--warn { color: var(--warn) }
@@ -299,15 +332,25 @@ a.row:hover, button.row:hover { background: var(--sunk) }
 .subfig .lbl { display: block; margin-top: 2px }
 
 /* --- Controles ------------------------------------------------------------ */
-.btn { font-size: 12.5px; font-weight: 600; font-family: var(--fb); padding: 8px 15px; border: 0; border-radius: var(--rc); background: var(--sunk); color: var(--ink); text-decoration: none; display: inline-block; cursor: pointer }
-.btn--go { background: var(--ticket); color: #fff }
+.btn { font-size: 13px; font-weight: 500; font-family: var(--fb); padding: 9px 15px; border: var(--hard-edge); box-shadow: var(--hard-s); background: var(--paper); color: var(--ink); text-decoration: none; display: inline-block; cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease }
+/* El gesto: se levanta al pasar, se hunde al apretar. */
+.btn:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 0 var(--ink) }
+.btn:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 1px 1px 0 0 var(--ink) }
+.btn--go, .btn--go:hover:not(:disabled) { background: var(--ticket); color: var(--on-ticket); font-weight: 600 }
 .btn--w { display: block; width: 100%; text-align: center; padding: var(--s2) }
-.btn:disabled { opacity: 0.45; cursor: default }
-.search { flex: 1; background: var(--sunk); border: 0; border-radius: var(--rc); padding: 8px 11px; font: inherit; font-size: 12.5px; color: var(--ink); min-width: 180px }
+.btn:disabled { opacity: 0.45; cursor: default; box-shadow: none; transform: none }
+/* En una tarjeta chica la sombra baja a 2px: acompaña, no compite con la cifra. */
+.tile .btn, .fn .btn { border-width: 1px; box-shadow: 2px 2px 0 0 var(--ink); padding: 7px 12px }
+.tile .btn:hover:not(:disabled), .fn .btn:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 0 var(--ink) }
+.tile .btn:active:not(:disabled), .fn .btn:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: 1px 1px 0 0 var(--ink) }
+.search { flex: 1; background: var(--paper); border: var(--hard-edge); box-shadow: var(--hard-s); border-radius: 0; padding: 9px 12px; font: inherit; font-size: 13px; color: var(--ink); min-width: 180px }
+.search:focus { outline: none; box-shadow: 4px 4px 0 0 var(--ticket) }
 .search::placeholder { color: var(--ink3) }
-.seg { display: flex; gap: 1px; background: var(--sunk); border-radius: var(--rc); padding: 2px }
-.seg button { font-size: var(--t-meta); font-weight: 500; color: var(--ink2); background: none; padding: 5px 11px; border-radius: 4px; white-space: nowrap }
-.seg button.on { background: var(--card); color: var(--ink); font-weight: 600 }
+/* Pestañas de texto: la elegida lleva la raya naranja. */
+.seg { display: flex; gap: var(--s3); flex-wrap: wrap }
+.seg button { font-size: 13px; font-weight: 500; color: var(--ink2); background: none; padding: 7px 0 5px; border-bottom: 2px solid transparent; white-space: nowrap }
+.seg button.on { color: var(--ink); font-weight: 600; border-bottom-color: var(--ticket) }
+.seg button:disabled { opacity: 0.45; cursor: default }
 
 .stepper { display: inline-flex; align-items: center; gap: 1px; background: var(--sunk); border-radius: var(--rc); padding: 2px }
 .stepper button { width: 40px; height: 40px; border: 0; border-radius: 4px; background: none; font: inherit; font-size: 18px; font-weight: 600; color: var(--ink); cursor: pointer }
@@ -316,7 +359,7 @@ a.row:hover, button.row:hover { background: var(--sunk) }
 .stepper b { min-width: 36px; text-align: center; font-family: var(--fm); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums }
 
 /* --- Talón: el afiche. Radio 0, siempre negro ----------------------------- */
-.heel { background: var(--black); color: #f4f1ea; padding: var(--s4); border-radius: 0 }
+.heel { background: var(--black); color: #f4f1ea; padding: var(--s4); border-radius: 0; box-shadow: 0 0 0 1px var(--hair) }
 .heel .lbl { color: rgba(244, 241, 234, 0.5) }
 .heel__t { font-family: var(--fd); font-size: 24px; line-height: 1.05; margin: 7px 0 2px }
 .heel__m { font-size: 12px; color: rgba(244, 241, 234, 0.6) }
@@ -333,31 +376,48 @@ a.row:hover, button.row:hover { background: var(--sunk) }
 .heel__foot b.warn { color: var(--warn-on-black) }
 
 /* --- Feed de ingresos: la hora manda, a la izquierda ---------------------- */
-.feed { display: grid; grid-template-columns: 52px 1fr auto; gap: var(--s2); align-items: baseline; padding: 8px var(--s3); position: relative; width: 100%; background: none; color: inherit }
-.feed + .feed::before { content: ''; position: absolute; top: 0; left: var(--s3); right: var(--s3); height: 1px; background: var(--hair) }
+.feed { display: grid; grid-template-columns: 52px 1fr auto; gap: var(--s2); align-items: baseline; padding: 9px 0; position: relative; width: 100%; background: none; color: inherit; border-top: 1px solid var(--hair) }
 button.feed:hover { background: var(--sunk) }
 .feed > div { min-width: 0 }
 .feed__t { font-family: var(--fm); font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ok) }
 
 /* --- Tarjeta de entidad: corista (.tile) y función (.fn) ------------------ */
+/* Cada tarjeta es una pieza: borde propio y aire entre ellas. Con las
+   reglas compartidas la grilla se leía como una sola tabla y una corista no
+   se distinguía de la de al lado. Sin fondo: un hueco queda vacío y una
+   tarjeta pasada se puede atenuar sin que se le vea nada por detrás. */
 .tiles { display: grid; gap: var(--s2) }
+.tiles--2 { grid-template-columns: repeat(2, 1fr) }
 .tiles--3 { grid-template-columns: repeat(3, 1fr) }
 .tiles--5 { grid-template-columns: repeat(5, 1fr) }
 @media (max-width: 1023px) {
   .tiles--3, .tiles--5 { grid-template-columns: repeat(2, 1fr) }
 }
 @media (max-width: 639px) {
-  .tiles--3 { grid-template-columns: 1fr }
+  .tiles--2, .tiles--3 { grid-template-columns: 1fr }
 }
-.tile, .fn { background: var(--card); border-radius: var(--r); padding: var(--s3); text-decoration: none; color: inherit; display: block; position: relative; width: 100%; min-width: 0 }
-a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(--card2) }
-/* Iniciales en CUADRADO: el círculo es el gesto social de Apple. */
-.mono-sq { width: 34px; height: 34px; border-radius: var(--rc); background: var(--sunk); color: var(--ink2); display: grid; place-items: center; font-family: var(--fm); font-size: var(--t-meta); font-weight: 700; flex: none }
-.tile__top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: var(--s2) }
+.tile, .fn { background: none; padding: var(--s3); text-decoration: none; color: inherit; display: block; position: relative; width: 100%; min-width: 0; border: 1px solid var(--hair) }
+/* Sólo al pasar el mouse la tarjeta se levanta y muestra la sombra dura. */
+a.tile, button.tile, a.fn, button.fn { transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease }
+a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { border-color: var(--ink); transform: translate(-2px, -2px); box-shadow: 4px 4px 0 0 var(--ink) }
+a.tile:active, button.tile:active, a.fn:active, button.fn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 0 var(--ink) }
+/* Iniciales en CUADRADO negro, en Anton: el ancla que hace a cada persona
+   reconocible de un vistazo. El círculo es el gesto social de Apple. */
+.mono-sq { width: 38px; height: 38px; background: var(--ink); color: var(--paper); display: grid; place-items: center; font-family: var(--fd); font-size: 15px; letter-spacing: 0.04em; flex: none }
+.tile__top { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3) }
 .tile__top:last-child { margin-bottom: 0 }
 .tile__top > div { min-width: 0 }
-.tile__n { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.tile__n { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .tile__r { font-size: var(--t-meta); color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+/* El recibo: las cuentas de la corista como un talón, con el total en Anton. */
+.rec { margin: 0 }
+.rec > div { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); padding: 4px 0; font-family: var(--fm); font-size: 12px; font-weight: 500 }
+.rec dt { color: var(--ink3) }
+.rec dd { margin: 0 }
+.rec .rec__tot { margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--ink3) }
+.rec__tot dd { font-family: var(--fd); font-size: 28px; font-weight: 400; line-height: 1; letter-spacing: 0.01em; color: var(--warn) }
+.rec + .tile__f { border-top: 0; padding-top: 0 }
+.tile__f > :only-child { margin-left: auto }
 /* Cuatro píxeles que cuentan la historia de la entidad. */
 .tile__bar { height: 4px; background: var(--sunk); margin: var(--s2) 0 7px; overflow: hidden }
 .tile__bar i { display: block; height: 100%; background: var(--ink) }
@@ -367,20 +427,39 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 .tile__q { font-family: var(--fm); font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums }
 .tile__q em { font-style: normal; color: var(--ink3); font-weight: 400 }
 .tile__f { display: flex; justify-content: space-between; align-items: center; gap: var(--s1); margin-top: var(--s2); padding-top: var(--s2); border-top: 1px solid var(--hair) }
+.tile__f .rs { white-space: normal }
 /* Punto: "esta pide atención". */
+/* Función con acciones: Editar y Eliminar se apoyan en el pie de la tarjeta, que
+   es un botón, y la acompañan cuando se levanta con el hover. */
+.fn-con { position: relative; min-width: 0 }
+.fn-con:has(.fn-con__a) .tile__f { min-height: 42px; padding-right: 150px }
+.fn-con:has(.fn-con__a) .tile__f > :only-child { margin-left: 0 }
+.fn-con__a { position: absolute; right: var(--s3); bottom: var(--s3); display: flex; gap: var(--s1); transition: transform 0.14s ease }
+.fn-con:has(> button.entrada:hover) .fn-con__a { transform: translate(-2px, -2px) }
+.fn-con__a .btn { border-width: 1px; box-shadow: 2px 2px 0 0 var(--ink); padding: 6px 11px; font-size: 12.5px }
+.fn-con__a .btn:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 0 var(--ink) }
+.fn-con__a .btn:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: 1px 1px 0 0 var(--ink) }
 .tile--flag::after { content: ''; position: absolute; top: var(--s3); right: var(--s3); width: 6px; height: 6px; border-radius: 50%; background: var(--warn) }
-.tile--off { opacity: 0.5 }
+/* Pasada: se atenúa, pero se lee. */
+.tile--off { opacity: 0.7 }
 /* Cara "función": la fecha manda, en Anton. */
-.fn__d { font-family: var(--fd); font-size: 25px; line-height: 1; margin: 5px 0 1px }
+.fn__d { font-family: var(--fd); font-size: 28px; line-height: 1; margin: 6px 0 2px }
 .fn__v { font-size: var(--t-meta); color: var(--ink3) }
 /* Función elegida: el talón marcando dónde estás. */
-.fn--on, a.fn--on:hover, button.fn--on:hover { background: var(--black); color: #f4f1ea }
-.fn--on .lbl, .fn--on .fn__v, .fn--on .tile__q em, .fn--on .rs, .fn--on .st--mute { color: rgba(244, 241, 234, 0.55) }
-.fn--on .tile__bar { background: rgba(244, 241, 234, 0.2) }
-.fn--on .tile__bar i { background: var(--ticket) }
-.fn--on .tile__f { border-top-color: rgba(244, 241, 234, 0.18) }
-.fn--on .st--ok, .heel .st--ok { color: var(--ok-on-black) }
-.fn--on .st--warn, .heel .st--warn { color: var(--warn-on-black) }
+.fn--on { background: var(--sel); border-color: var(--sel) }
+.fn--on .lbl, .fn--on .fn__v, .fn--on .tile__q em, .fn--on .rs, .fn--on .st--mute, .fn--on .st--ok, .fn--on .st--warn { color: var(--ink2) }
+.fn--on .tile__bar { background: var(--hair) }
+.fn--on .tile__bar i { background: var(--ok) }
+/* La franja del estado: va de borde a borde, como el talón de una entrada. */
+.fn__franja { display: block; margin: calc(-1 * var(--s3)) calc(-1 * var(--s3)) var(--s2); padding: 7px var(--s3); color: var(--sel-t); font: 700 10px/1.3 var(--fm); text-transform: uppercase; letter-spacing: 0.15em }
+.fn__franja--ok { background: var(--ok) }
+.fn__franja--warn { background: var(--warn) }
+.fn__franja--mute { background: var(--ink3) }
+/* Una temporada cerrada se atenúa, pero su estado se tiene que poder leer. */
+.fn.tile--off:has(> .fn__franja) { opacity: 1 }
+.fn.tile--off:has(> .fn__franja) > :not(.fn__franja) { opacity: 0.7 }
+.heel .st--ok { color: var(--ok-on-black) }
+.heel .st--warn { color: var(--warn-on-black) }
 .heel .st--mute { color: rgba(244, 241, 234, 0.6) }
 
 /* --- Lista de datos (popup, hoja, drawer) --------------------------------- */
@@ -389,7 +468,10 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 .dl__r + .dl__r::before { content: ''; position: absolute; top: 0; left: var(--s3); right: var(--s3); height: 1px; background: var(--hair) }
 .dl__k { color: var(--ink3) }
 .dl__v { margin: 0; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums }
-.mini { background: var(--card2); border-radius: var(--r); overflow: hidden }
+.mini { background: var(--card2); overflow: hidden }
+/* Adentro de una superficie pintada las filas recuperan su margen. */
+.mini > .row, .mini > .feed, .mini > .card__f { padding-left: var(--s3); padding-right: var(--s3) }
+.mini > .row:first-child, .mini > .feed:first-child { border-top: 0 }
 
 /* --- Ritmo de entrada: va dentro del talón -------------------------------- */
 .rhythm { display: flex; align-items: flex-end; gap: 3px; height: 76px; margin: var(--s2) 0 6px }
@@ -402,7 +484,7 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 /* DECISION: z-index 80 (no 50): la tab bar y la lateral viven en 60. */
 .modal-wrap { position: fixed; inset: 0; display: grid; place-items: center; z-index: 80; padding: var(--s4) }
 .modal-scrim { position: absolute; inset: 0; background: rgba(26, 26, 24, 0.3) }
-.modal { position: relative; width: 520px; max-width: 100%; background: var(--card); border-radius: var(--r); box-shadow: 0 20px 60px rgba(20, 20, 20, 0.22); overflow: hidden; max-height: 100%; display: flex; flex-direction: column }
+.modal { position: relative; width: 520px; max-width: 100%; background: var(--floor); border: 1px solid var(--hair); border-radius: var(--r); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); overflow: hidden; max-height: 100%; display: flex; flex-direction: column }
 .modal:focus { outline: none }
 .modal__h { background: var(--black); color: #f4f1ea; padding: var(--s4); position: relative }
 .modal__h .lbl { color: rgba(244, 241, 234, 0.5) }
@@ -413,16 +495,16 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 /* Los hijos no se achican: .dl y .mini llevan overflow hidden, y en una
    columna flex que scrollea eso los dejaba cortados en lugar de scrollear. */
 .modal__b > *, .drawer > :not(.drawer__b) { flex-shrink: 0 }
-.modal__f { display: flex; gap: var(--s1); padding: var(--s3) var(--s4); border-top: 1px solid var(--hair); background: var(--card2) }
+.modal__f { display: flex; gap: var(--s1); padding: var(--s3) var(--s4); border-top: 1px solid var(--hair) }
 .modal__f .btn { flex: 1; text-align: center }
 /* En celular el mismo popup se presenta como hoja. */
 @media (max-width: 639px) {
   .modal-wrap { place-items: end stretch; padding: 0 }
-  .modal { width: 100%; max-height: 88vh; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom) }
+  .modal { width: 100%; max-height: 88vh; border-radius: 12px 12px 0 0; box-shadow: none; border-left: 0; border-right: 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom) }
 }
 
 /* --- Hoja de celular y drawer de escritorio ------------------------------- */
-.sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 16px 16px 0 0; padding: 10px 0 calc(var(--s4) + env(safe-area-inset-bottom)); max-height: 88vh; overflow: auto; box-shadow: 0 -10px 40px rgba(20, 20, 20, 0.16) }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--floor); border-radius: 12px 12px 0 0; outline: 1px solid var(--hair); padding: 10px 0 calc(var(--s4) + env(safe-area-inset-bottom)); max-height: 88vh; overflow: auto; box-shadow: 0 -10px 40px rgba(20, 20, 20, 0.16) }
 .sheet:focus, .drawer:focus { outline: none }
 .grab { width: 36px; height: 4px; border-radius: 999px; background: var(--hair); margin: 0 auto var(--s3) }
 .sheet__h { padding: 0 var(--s3) var(--s3); display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s2) }
@@ -431,7 +513,7 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 .sheet__b { padding: 0 var(--s3) }
 .sheet__acts { display: flex; gap: var(--s1); padding: var(--s3) var(--s3) 0 }
 .sheet__acts .btn, .drawer__acts .btn { flex: 1; text-align: center; padding: 10px }
-.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 360px; max-width: 100%; background: var(--card); padding: var(--s4); box-shadow: -20px 0 50px rgba(20, 20, 20, 0.1); display: flex; flex-direction: column; gap: var(--s3); overflow: hidden }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 360px; max-width: 100%; background: var(--floor); border-left: 1px solid var(--hair); padding: var(--s4); box-shadow: -20px 0 50px rgba(20, 20, 20, 0.1); display: flex; flex-direction: column; gap: var(--s3); overflow: hidden }
 .drawer__x { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; display: grid; place-items: center; background: none; color: var(--ink3); font-size: 16px }
 .drawer__t { font-family: var(--fd); font-size: 23px; line-height: 1.1; margin-top: 6px }
 .drawer__s { font-size: 12px; color: var(--ink3) }
@@ -454,10 +536,10 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 .banner { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); flex-wrap: wrap; margin: 0 0 var(--s4); padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--warn-soft); color: var(--warn); font-size: var(--t-body) }
 /* Texto secundario de párrafo: lo que .rs es en una fila, pero que se corta en líneas. */
 .note { margin: 0; font-size: var(--t-meta); line-height: 1.5; color: var(--ink3) }
-.btn--bad { background: var(--bad); color: #fff }
+.btn--bad, .btn--bad:hover:not(:disabled) { background: var(--bad); color: #fff }
 .check { display: flex; align-items: flex-start; gap: var(--s2); width: 100%; border: 0; border-radius: var(--r); background: var(--card2); padding: var(--s2) var(--s3); font: inherit; color: inherit; text-align: left; cursor: pointer }
 .check__bx { width: 20px; height: 20px; flex: none; border: 0; border-radius: 4px; background: var(--sunk); color: #fff; display: grid; place-items: center; cursor: pointer }
-.check__bx--on { background: var(--ticket) }
+.check__bx--on { background: var(--ticket); color: var(--on-ticket) }
 .check__tx { display: flex; flex-direction: column; gap: 2px }
 .check__tx b { font-size: var(--t-body); font-weight: 600 }
 .check__tx span { font-size: var(--t-meta); color: var(--ink3) }
@@ -473,7 +555,7 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 .menu-btn svg { flex: none; color: var(--ink3) }
 .menu-btn__tx { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .menu-scrim { position: fixed; inset: 0; z-index: 84; border: 0; background: rgba(26, 26, 24, 0.3); cursor: pointer }
-.menu { position: fixed; z-index: 85; left: 0; right: 0; bottom: 0; max-height: 72vh; overflow-y: auto; padding: var(--s1) var(--s1) calc(var(--s2) + env(safe-area-inset-bottom)); background: var(--card); border-radius: 16px 16px 0 0; box-shadow: 0 -10px 40px rgba(20, 20, 20, 0.16) }
+.menu { position: fixed; z-index: 85; left: 0; right: 0; bottom: 0; max-height: 72vh; overflow-y: auto; padding: var(--s1) var(--s1) calc(var(--s2) + env(safe-area-inset-bottom)); background: var(--floor); outline: 1px solid var(--hair); border-radius: 12px 12px 0 0; box-shadow: 0 -10px 40px rgba(20, 20, 20, 0.16) }
 .menu__lbl { margin: 0; padding: var(--s1) var(--s2) 6px }
 .menu__i { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: var(--s1) var(--s2); border: 0; border-radius: var(--rc); background: none; font: inherit; font-size: var(--t-body); color: var(--ink); text-align: left; cursor: pointer }
 .menu__i:hover:not(:disabled), .menu__i:focus-visible { background: var(--sunk); outline: none }
@@ -488,7 +570,7 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 .menu__tx span { display: block; margin-top: 1px; font-size: var(--t-meta); color: var(--ink3) }
 .menu__sep { height: 1px; margin: 6px var(--s2); background: var(--hair) }
 @media (min-width: 1024px) {
-  .menu { right: auto; bottom: auto; min-width: 262px; max-width: 380px; max-height: min(420px, 70vh); padding: 6px; border-radius: var(--r); box-shadow: 0 12px 36px rgba(20, 20, 20, 0.16) }
+  .menu { right: auto; bottom: auto; min-width: 262px; max-width: 380px; max-height: min(420px, 70vh); padding: 6px; border-radius: var(--r); outline: none; border: 1px solid var(--hair); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3) }
 }
 
 /* --- Pantallas sueltas y el aviso flotante ------------------------------- */
@@ -496,7 +578,7 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 .login-logo { display: block; width: min(80%, 260px); margin: 0 auto var(--s4) }
 /* El aviso flotante lo cierra un temporizador, no la animación: con
    prefers-reduced-motion la animación no corre y el aviso quedaba para siempre. */
-.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + var(--s3) + env(safe-area-inset-bottom)); z-index: 70; transform: translateX(-50%); margin: 0; padding: var(--s1) var(--s3); border-radius: var(--rc); background: var(--black); color: #f4f1ea; font-size: var(--t-body); box-shadow: 0 10px 30px rgba(20, 20, 20, 0.2); animation: aviso 5s ease-in-out forwards; max-width: calc(100vw - 2 * var(--s4)) }
+.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + var(--s3) + env(safe-area-inset-bottom)); z-index: 70; transform: translateX(-50%); margin: 0; padding: var(--s1) var(--s3); border-radius: var(--rc); background: var(--black); color: #f4f1ea; font-size: var(--t-body); box-shadow: 4px 4px 0 0 var(--ticket); animation: aviso 5s ease-in-out forwards; max-width: calc(100vw - 2 * var(--s4)) }
 @media (min-width: 1024px) {
   .toast { bottom: var(--s5) }
 }
@@ -520,10 +602,6 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 .verdict { position: absolute; inset: 0; z-index: 3; border: 0; border-radius: 0; font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: var(--s4); text-align: center; color: #f4f1ea }
 .verdict--ok { background: var(--verdict-ok) }
 .verdict--bad { background: var(--verdict-bad) }
-.verdict__i { font-size: 64px; line-height: 1 }
-.verdict__n { font-family: var(--fd); font-size: 30px; line-height: 1.1; margin-top: 6px }
-.verdict__d { font-size: 15px; opacity: 0.9 }
-.verdict__s { font-family: var(--fm); font-size: var(--t-label); text-transform: uppercase; letter-spacing: 0.14em; opacity: 0.75; margin-top: var(--s3) }
 /* La barra de la demo queda arriba: la puerta arranca debajo. */
 .app-shell--demo .door { top: var(--demobar-h) }
 @media (min-width: 1024px) {
@@ -538,14 +616,22 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 .app-header__word { font-family: var(--fd); font-size: 17px; letter-spacing: 0.06em }
 .app-header .seasonsel { margin-left: auto }
 .avatar { width: 34px; height: 34px; border: 0; border-radius: var(--rc); background: var(--sunk); color: var(--ink2); font-family: var(--fm); font-size: var(--t-meta); font-weight: 700; display: grid; place-items: center; cursor: pointer; flex: none }
-.acct-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; background: var(--card); border-radius: var(--r); box-shadow: 0 10px 30px rgba(20, 20, 20, 0.14); padding: var(--s2) var(--s3); min-width: 200px }
-.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--card); box-shadow: 0 -1px 0 var(--hair); padding-bottom: env(safe-area-inset-bottom) }
-.tabbar__inner { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; max-width: 640px; margin: 0 auto }
+.acct-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; background: var(--floor); border: 1px solid var(--hair); border-radius: var(--r); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3); padding: var(--s2) var(--s3); min-width: 200px }
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--paper); box-shadow: 0 -1px 0 var(--hair); padding-bottom: env(safe-area-inset-bottom) }
+.tabbar__inner { display: flex; max-width: 640px; margin: 0 auto }
+.tabbar__lado { flex: 1 1 0; min-width: 0; display: flex }
+.tabbar__lado a { flex: 1 1 0; min-width: 0 }
+.tabbar a.tabbar__centro { flex: none; width: 76px; justify-content: flex-end; padding-bottom: 8px; position: relative }
+.tabbar__disco { position: absolute; top: -24px; left: 50%; width: 60px; height: 60px; margin-left: -30px; border-radius: 50%; display: grid; place-items: center; background: var(--ticket); color: var(--on-ticket); box-shadow: 0 0 0 5px var(--paper); transition: transform 0.12s ease }
+.tabbar__centro:active .tabbar__disco { transform: scale(0.94) }
 .tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: var(--tab-h); text-decoration: none; font-size: 10.5px; font-weight: 500; color: var(--ink3) }
 .tabbar a[aria-current='page'] { color: var(--ticket-text); font-weight: 600 }
-.themesel { display: flex; gap: 1px; background: var(--sunk); border-radius: var(--rc); padding: 2px }
-.themesel button { flex: 1; border: 0; background: none; border-radius: 4px; padding: 6px 4px; font: inherit; font-size: var(--t-meta); color: var(--ink2); cursor: pointer }
-.themesel button[aria-pressed='true'] { background: var(--card); color: var(--ink); font-weight: 600 }
+.themesel { display: flex; gap: var(--s2) }
+.themesel button { border: 0; background: none; padding: 4px 0; font: inherit; font-size: var(--t-meta); color: var(--ink3); cursor: pointer; border-bottom: 1px solid transparent }
+.themesel button[aria-pressed='true'] { color: var(--ink); border-bottom-color: var(--ticket) }
+/* Compacta (riel del menú): un solo botón que va rotando. */
+.themesel--one { width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: none; color: var(--ink3); cursor: pointer }
+.themesel--one:hover { color: var(--ink) }
 .seasonsel { display: flex; align-items: center; gap: var(--s1); min-width: 0 }
 .seasonsel .btn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .seasonsel__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex: none }
@@ -553,37 +639,98 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
 .sidenav { display: none }
 @media (min-width: 1024px) {
   .app-header, .tabbar { display: none }
-  .sidenav { display: flex; flex-direction: column; position: sticky; top: 0; align-self: flex-start; height: 100vh; width: 208px; flex: 0 0 208px; padding: var(--s4) var(--s2) var(--s2); background: var(--paper) }
+  /* C20: columna de texto, sin íconos, separada por una regla. Colapsada
+     (html[data-nav='rail']) es un riel de 60px con los íconos y los avisos
+     como punto; el ítem activo se marca en naranja. */
+  .sidenav { display: flex; flex-direction: column; position: sticky; top: 0; align-self: flex-start; height: 100vh; width: 212px; flex: 0 0 212px; padding: var(--s5) var(--s3) var(--s3); border-right: 1px solid var(--hair); overflow: hidden; transition: width 0.2s ease, flex-basis 0.2s ease, padding 0.2s ease }
   .app-shell--demo .sidenav { top: var(--demobar-h); height: calc(100vh - var(--demobar-h)) }
-  .sidenav__brand { display: flex; align-items: center; gap: var(--s1); padding: 0 var(--s2) var(--s3); color: var(--ink); text-decoration: none; font-family: var(--fd); font-size: 17px; letter-spacing: 0.06em }
-  .sidenav__logo { width: 24px; height: 24px }
-  .sidenav .seasonsel { padding: 0 var(--s1) var(--s3) }
-  .sidenav__items { display: flex; flex-direction: column; gap: 1px }
-  .sidenav__sect { margin: var(--s4) 0 6px; padding: 0 var(--s2) }
-  .sidenav__item { display: flex; align-items: center; gap: 10px; padding: 7px var(--s2); border-radius: var(--rc); font-size: 13px; font-weight: 500; color: var(--ink2); text-decoration: none }
-  .sidenav__item:hover { background: var(--sunk); color: var(--ink) }
-  .sidenav__item--on, .sidenav__item--on:hover { background: var(--card); color: var(--ink); font-weight: 600 }
-  .sidenav__badge { margin-left: auto; font-family: var(--fm); font-size: var(--t-label); font-weight: 700; color: var(--ticket-text) }
+  .sidenav__top { display: flex; align-items: center; justify-content: space-between; gap: var(--s1); margin-bottom: 4px }
+  .sidenav__brand { display: flex; align-items: center; gap: var(--s1); min-width: 0; padding: 0 var(--s1); color: var(--ink); text-decoration: none; font-family: var(--fd); font-size: 18px; letter-spacing: 0.08em; white-space: nowrap }
+  .sidenav__mark { display: none; width: 28px; height: 28px; flex: none; place-items: center; background: var(--ticket); color: var(--on-ticket); font-family: var(--fd); font-size: 14px; letter-spacing: 0 }
+  .sidenav__toggle { width: 32px; height: 32px; flex: none; border: 0; background: none; color: var(--ink-mark); display: grid; place-items: center; cursor: pointer }
+  .sidenav__toggle:hover { color: var(--ink) }
+  .sidenav .seasonsel { padding: 0 var(--s1) var(--s5) }
+  .sidenav .seasonsel .btn, .sidenav .seasonsel .btn:hover { border: 0; box-shadow: none; transform: none; background: none; padding: 0; font-family: var(--fm); font-size: var(--t-label); font-weight: 500; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ticket-text) }
+  .sidenav .seasonsel .menu-btn svg { color: var(--ticket-text) }
+  .sidenav__items { display: flex; flex-direction: column }
+  .sidenav__sect { margin: var(--s4) 0 6px; padding: 0 var(--s1) 0 10px; color: var(--ink-mark) }
+  .sidenav__sep { display: none; height: 1px; background: var(--hair); margin: 10px 6px }
+  .sidenav__item { transition: padding 0.15s ease, color 0.15s ease; display: flex; align-items: center; gap: 10px; padding: 8px var(--s1); border-left: 2px solid transparent; font-size: 14px; font-weight: 500; color: var(--ink2); text-decoration: none; white-space: nowrap; position: relative }
+  .sidenav__item svg { display: none; flex: none }
+  .sidenav__item:hover { color: var(--ink); padding-left: var(--s2) }
+  .sidenav__item--on, .sidenav__item--on:hover { color: var(--ink); border-left-color: var(--ticket) }
+  .sidenav__badge { margin-left: auto; font-family: var(--fm); font-size: 11px; font-weight: 500; color: var(--ticket-text) }
   .sidenav__theme { margin-top: auto; padding: 0 var(--s1) }
   .sidenav__account { display: flex; align-items: center; gap: var(--s1); padding: var(--s3) var(--s1) 0 }
+  .sidenav__account .avatar { display: none }
   .sidenav__who { min-width: 0; flex: 1; display: flex; flex-direction: column; line-height: 1.3 }
   .sidenav__who b { font-size: var(--t-body); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .sidenav__out { width: 36px; height: 36px; border: 0; background: none; color: var(--ink3); display: grid; place-items: center; cursor: pointer }
+  .sidenav__out:hover { color: var(--ink) }
 
-  .sidenav__out { width: 36px; height: 36px; border: 0; background: none; color: var(--ink3); border-radius: var(--rc); display: grid; place-items: center; cursor: pointer }
-  .sidenav__out:hover { background: var(--sunk); color: var(--ink) }
+  /* Riel */
+  html[data-nav='rail'] .sidenav { width: 60px; flex: 0 0 60px; padding-left: var(--s1); padding-right: var(--s1) }
+  html[data-nav='rail'] .sidenav__top { flex-direction: column; gap: 4px; margin-bottom: var(--s3) }
+  html[data-nav='rail'] .sidenav__brand { padding: 0 }
+  html[data-nav='rail'] .sidenav__brand span, html[data-nav='rail'] .sidenav .seasonsel, html[data-nav='rail'] .sidenav__sect, html[data-nav='rail'] .sidenav__item .sidenav__t, html[data-nav='rail'] .sidenav__who, html[data-nav='rail'] .sidenav__out, html[data-nav='rail'] .themesel { display: none }
+  html[data-nav='rail'] .sidenav__mark { display: grid }
+  html[data-nav='rail'] .sidenav__sep { display: block }
+  html[data-nav='rail'] .sidenav__item { justify-content: center; padding: 11px 0; border-left: 0 }
+  html[data-nav='rail'] .sidenav__item svg { display: block }
+  html[data-nav='rail'] .sidenav__item--on { color: var(--ticket-text) }
+  html[data-nav='rail'] .sidenav__badge { position: absolute; top: 7px; right: 12px; width: 6px; height: 6px; margin: 0; border-radius: 50%; background: var(--ticket); font-size: 0 }
+  html[data-nav='rail'] .sidenav__theme { padding: 0; display: flex; justify-content: center }
+  html[data-nav='rail'] .sidenav__account { justify-content: center; padding-left: 0; padding-right: 0 }
+  html[data-nav='rail'] .sidenav__account .avatar { display: grid }
+}
+html:not([data-nav='rail']) .themesel--one { display: none }
+
+/* --- Regla de cifras (C20): la fila de columnas separadas por hairlines.
+   En Ventas son las funciones (la elegida, grande y naranja); en Inicio y
+   Dirección, las cifras de la temporada. -------------------------------- */
+.rule { display: flex; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); margin-bottom: var(--s5) }
+.rule__c { flex: 1 1 0; min-width: 0; padding: var(--s3) var(--s3); border: 0; border-left: 1px solid var(--hair); display: flex; flex-direction: column; gap: 4px; color: var(--ink2); text-align: left; background: none; font: inherit; cursor: default }
+.rule__c:first-child { border-left: 0; padding-left: 0 }
+.rule__c { animation: sube 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) backwards }
+.rule__c:nth-child(2) { animation-delay: 0.05s }
+.rule__c:nth-child(3) { animation-delay: 0.1s }
+.rule__c:nth-child(4) { animation-delay: 0.15s }
+.rule__c:nth-child(5) { animation-delay: 0.2s }
+button.rule__c { cursor: pointer }
+button.rule__c:hover { color: var(--ink) }
+.rule__d { font-family: var(--fm); font-size: var(--t-label); font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.rule__n { font-family: var(--fd); font-size: 30px; line-height: 1; color: var(--ink); opacity: 0.55; white-space: nowrap }
+.rule__n--ok { color: var(--ok); opacity: 1 }
+.rule__n--warn { color: var(--warn); opacity: 1 }
+.rule__s { font-size: var(--t-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.rule__s a, .rule__s button { color: var(--ticket-text); font: inherit; font-weight: 600; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: none }
+/* La columna elegida: más ancha, cifra grande y naranja. */
+/* Cifras: todas al mismo tamaño y sin velo. */
+.rule--k .rule__n { opacity: 1; font-size: var(--t-figure) }
+@media (max-width: 1023px) {
+  .rule { flex-wrap: wrap; border-top: 0 }
+  .rule__c { flex: 1 1 40%; border-left: 0; border-top: 1px solid var(--hair); padding-left: 0 }
+  .rule__c:nth-child(even) { padding-left: var(--s3); border-left: 1px solid var(--hair) }
+}
+/* Columnas iguales de grupos (Inicio, Dirección). */
+.cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s6) }
+.cols--2 { grid-template-columns: repeat(2, 1fr) }
+.cols > * { min-width: 0 }
+@media (max-width: 1023px) {
+  .cols, .cols--2 { grid-template-columns: 1fr; gap: var(--s4) }
 }
 
 /* ==========================================================================
    Shell, cámara y barra de la demo
    ========================================================================== */
 .app-shell { min-height: 100%; display: flex; flex-direction: column }
-.app-main { flex: 1; width: 100%; max-width: 480px; margin: 0 auto; padding: 6px var(--s4) calc(var(--tab-h) + var(--s5) + env(safe-area-inset-bottom)) }
+.app-main { flex: 1; width: 100%; max-width: 480px; margin: 0 auto; padding: 6px var(--s4) calc(var(--tab-h) + var(--s5) + 24px + env(safe-area-inset-bottom)) }
 @media (min-width: 768px) {
   .app-main { max-width: 640px }
 }
 @media (min-width: 1024px) {
   .app-shell { flex-direction: row; align-items: stretch }
-  .app-main { max-width: 1200px; padding: var(--s4) var(--s5) var(--s6) }
+  .app-main { max-width: 1200px; padding: var(--s5) var(--s6) var(--s6) }
 }
 
 /* El !important no es decorativo: al arrancar, html5-qrcode le escribe
@@ -606,7 +753,270 @@ a.tile:hover, button.tile:hover, a.fn:hover, button.fn:hover { background: var(-
    adentro de la app. Empuja la shell hacia abajo sin tapar nada. */
 .app-shell--demo { --demobar-h: 34px; padding-top: var(--demobar-h) }
 .demobar { position: fixed; top: 0; left: 0; right: 0; z-index: 70; height: var(--demobar-h, 34px); display: flex; align-items: center; justify-content: center; gap: var(--s2); padding: 0 var(--s2); background: var(--black); color: #f4f1ea; font-family: var(--fm); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden }
-.demobar a { flex: none; padding: 6px 10px; background: var(--ticket); color: #f4f1ea; font-weight: 700; text-decoration: none }
+.demobar a { flex: none; padding: 6px 10px; background: var(--ticket); color: var(--on-ticket); font-weight: 700; text-decoration: none }
 @media (max-width: 640px) {
   .demobar span { overflow: hidden; text-overflow: ellipsis }
 }
+
+/* ==========================================================================
+   C20 · la sala y el movimiento. Todo el movimiento se apaga solo con
+   prefers-reduced-motion (regla global de arriba).
+   ========================================================================== */
+.page { animation: aparece 0.25s ease backwards }
+/* En el celular sólo opacidad: un transform acá rompería el fixed de la puerta. */
+@media (min-width: 1024px) {
+  .page { animation: sube 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) backwards }
+}
+.tile__bar i, .heel__bar i { transform-origin: left; animation: dibuja 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) 0.1s backwards }
+/* Grupos que tienen que leerse como bloques separados: superficie propia, una
+   franja con el color de su estado y aire entre uno y otro. */
+.bloque { background: var(--floor); border: 1px solid var(--hair); border-top: 4px solid var(--hair); padding: var(--s3) var(--s4) var(--s2); margin-bottom: var(--s6) }
+.bloque--warn { border-top-color: var(--warn) }
+.bloque--ok { border-top-color: var(--ok) }
+.bloque .grp__h { padding-bottom: var(--s2) }
+
+.asist__panel { margin-bottom: var(--s4) }
+.asist__buscar { display: flex; margin-bottom: var(--s5) }
+.asist__top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); gap: var(--s4); align-items: stretch; margin-bottom: var(--s4) }
+.asist__top > .heel { min-width: 0 }
+@media (min-width: 1024px) {
+  /* El panel iguala la altura de la lista de funciones: el gráfico ocupa lo que sobra. */
+  .asist__top > .heel { display: flex; flex-direction: column }
+  .asist__top > .heel > div:has(> .rhythm) { flex: 1; display: flex; flex-direction: column }
+  .asist__top .rhythm { flex: 1; height: auto; min-height: 76px }
+}
+@media (max-width: 1023px) {
+  .asist__top { grid-template-columns: 1fr }
+}
+
+/* El título de la página, editable en el lugar: misma letra y tamaño. La línea
+   punteada dice que se puede escribir; el fondo aparece recién al editar. */
+.pgt-edit { display: block; width: 100%; padding: 0; margin: 0; font: inherit; letter-spacing: inherit; line-height: inherit; color: inherit; background: none; border: 0; border-bottom: 2px dashed var(--ink3); border-radius: 0; outline: none; cursor: text }
+.pgt-edit:hover { border-bottom-color: var(--ink) }
+.pgt-edit:focus { border-bottom: 2px solid var(--ticket); background: var(--floor) }
+.pgh > div:has(.pgt-edit) { flex: 1; min-width: 0 }
+@supports (field-sizing: content) {
+  .pgt-edit { field-sizing: content; width: auto; min-width: 8ch; max-width: 100% }
+}
+.pgt-edit__s:empty { display: none }
+.pgt-edit__s { display: block; margin-top: 4px; font: 400 12px/1.3 var(--fb); letter-spacing: 0; color: var(--ink3) }
+
+/* El botón de repartir por igual y lo que hizo, al lado. */
+.reparto-igual { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap }
+.reparto-igual .rs { flex: 1; min-width: 200px; white-space: normal }
+
+/* Asignaciones: la función a la izquierda y su reparto a la derecha. */
+.asigna { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--s4); align-items: start }
+.asigna__lista { display: flex; flex-direction: column; gap: var(--s4); min-width: 0 }
+.asigna__grupo { display: flex; flex-direction: column; gap: var(--s1) }
+.asigna__fn { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; padding: 10px var(--s2); background: none; border: 1px solid var(--hair); color: inherit; font: inherit; text-align: left; cursor: pointer }
+.asigna__fn:hover { border-color: var(--ink) }
+.asigna__fn:focus-visible { outline: 2px solid var(--ticket); outline-offset: 1px }
+.asigna__fn[aria-pressed='true'] { background: var(--ink); border-color: var(--ink); color: var(--paper) }
+.asigna__fn[aria-pressed='true'] .asigna__fecha, .asigna__fn[aria-pressed='true'] .st { color: inherit; opacity: 0.72 }
+.asigna__nombre { font: 400 17px/1.2 var(--fd); letter-spacing: 0.02em }
+.asigna__fecha { font-size: 12px; color: var(--ink3) }
+.asigna__panel { min-width: 0; padding: var(--s3) var(--s4) var(--s4); background: var(--floor); border: 1px solid var(--hair) }
+.asigna__titulo { margin: 0 0 2px; font: 400 26px/1.15 var(--fd); letter-spacing: 0.01em }
+@media (max-width: 1023px) {
+  .asigna { grid-template-columns: minmax(0, 1fr) }
+  .asigna__panel { padding: var(--s3) }
+}
+
+/* Cobrar en el popup de una venta: cuánto falta y dos botones de verdad. */
+.cobrar { display: flex; flex-direction: column; gap: var(--s2); align-items: flex-start; padding-bottom: var(--s3); border-bottom: 1px solid var(--hair) }
+.cobrar > .mini { align-self: stretch }
+.cobrar__b { align-self: stretch; display: flex; gap: var(--s1) }
+.cobrar__b .btn { flex: 1; text-align: center }
+
+/* Carrusel: la tira encastra en cada tarjeta. El padding deja lugar a la sombra
+   dura del hover; el margen negativo mantiene alineada la primera tarjeta. */
+.carrusel__h { align-items: center }
+.carrusel__f { display: flex; gap: 6px }
+.carrusel__b { width: 34px; height: 34px; display: grid; place-items: center; background: var(--paper); color: var(--ink); border: 1px solid var(--ink); box-shadow: 2px 2px 0 0 var(--ink); cursor: pointer; transition: transform 0.12s, box-shadow 0.12s }
+.carrusel__b:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 0 var(--ink) }
+.carrusel__b:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: 1px 1px 0 0 var(--ink) }
+.carrusel__b:disabled { opacity: 0.35; box-shadow: none; cursor: default }
+.carrusel { display: flex; gap: var(--s2); overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scroll-padding-left: 2px; margin: 0 -6px 0 -2px; padding: 2px 6px 10px 2px; scrollbar-width: thin }
+.carrusel > * { flex: none; scroll-snap-align: start }
+@media (prefers-reduced-motion: reduce) { .carrusel { scroll-behavior: auto } }
+
+/* Los afiches de Dirección. */
+.afiche { width: min(300px, 82vw); display: flex; flex-direction: column; gap: 14px; padding: 18px; background: var(--floor); border: 1px solid var(--hair); color: var(--ink); text-decoration: none; transition: transform 0.14s, box-shadow 0.14s }
+.afiche__t { font: 400 24px/1.05 var(--fd); letter-spacing: 0.01em; margin: 2px 0 0 }
+.afiche__sello { align-self: flex-start; padding: 5px 7px; border: 1px solid currentColor; font: 500 10px/1 var(--fm); text-transform: uppercase; letter-spacing: 0.1em }
+.afiche__sello--venta { color: var(--ticket-text) }
+.afiche__sello--ok { color: var(--ok) }
+.afiche__sello--warn { color: var(--warn) }
+.afiche__sello--no { visibility: hidden }
+.afiche__m, .afiche__p { display: flex; flex-direction: column; gap: 5px }
+.afiche__m > div, .afiche__p > div { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 10px; flex-wrap: wrap }
+.afiche b, .afiche__c b { font: 400 34px/1 var(--fd); letter-spacing: 0.01em }
+.afiche__p { margin-top: auto; padding-top: 12px; border-top: 1px dashed var(--ink3) }
+.afiche__bar { display: block; height: 5px; background: var(--sunk); overflow: hidden }
+.afiche__bar i { display: block; height: 100%; background: var(--ink); transform-origin: left; animation: dibuja 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards }
+.afiche__bar i.warn { background: var(--warn) }
+.afiche__s { font-size: 12px; color: var(--ink3) }
+.afiche--total { background: var(--ink); border-color: var(--ink); color: var(--paper) }
+.afiche--total .lbl, .afiche--total .afiche__s { color: var(--paper); opacity: 0.72 }
+.afiche--total .afiche__bar { background: rgba(128, 128, 128, 0.32) }
+.afiche--total .afiche__bar i { background: var(--paper) }
+.afiche--total .afiche__p { border-color: var(--paper) }
+
+/* El historial de una corista: hechos sobre una línea, el más nuevo arriba.
+   Cuadrados y no círculos: en Backstage no hay radios. */
+.hitos { list-style: none; margin: 10px 0 0; padding: 0 }
+.hito { position: relative; padding: 0 0 var(--s3) 22px }
+.hito:last-child { padding-bottom: 0 }
+.hito::before { content: ""; position: absolute; left: 4px; top: 13px; bottom: -4px; width: 1px; background: var(--hair) }
+.hito:last-child::before { display: none }
+.hito::after { content: ""; position: absolute; left: 0; top: 5px; width: 9px; height: 9px; background: var(--ink3) }
+.hito--settlement::after { background: var(--ok) }
+.hito--reminder::after { background: none; border: 1.5px solid var(--ticket) }
+.hito--failed::after { background: none; border: 1.5px solid var(--ink3) }
+.hito__t { font-weight: 500; font-size: 14px }
+.hito__s { font-size: 12px; color: var(--ink3); margin-top: 1px; overflow-wrap: anywhere }
+
+.modal { animation: emerge 0.18s ease-out backwards }
+.drawer { animation: entra-lado 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) backwards }
+.seg button { transition: color 0.15s ease, border-color 0.15s ease }
+.seg button:hover { color: var(--ink) }
+
+.sala { margin-bottom: var(--s5) }
+.sala__h { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s2) }
+.sala__b { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(190px, 1fr); gap: var(--s5); align-items: center }
+.sala__svg { display: block; width: 100%; max-height: 340px }
+.sala__luz-a { stop-color: var(--ticket); stop-opacity: 0.2 }
+.sala__luz-b { stop-color: var(--ticket); stop-opacity: 0 }
+.sala__tablas { fill: var(--ink) }
+.sala__rotulo { fill: var(--paper); font-family: var(--fm); font-size: 7px; font-weight: 500; letter-spacing: 0.2em }
+.seat { transform-box: fill-box; transform-origin: center; transition: fill 0.3s ease, stroke 0.3s ease, opacity 0.15s ease; animation: butaca 0.32s cubic-bezier(0.2, 1.3, 0.5, 1) backwards; stroke-width: 1 }
+.seat--entro { fill: var(--ok); stroke: var(--ok) }
+.seat--vendida { fill: var(--ticket); stroke: var(--ticket) }
+.seat--repartida { fill: var(--ink-mark); stroke: var(--ink-mark) }
+.seat--libre { fill: transparent; stroke: var(--ink-mark) }
+.sala__svg[data-foco] .seat { opacity: 0.16 }
+.sala__svg[data-foco='entro'] .seat--entro, .sala__svg[data-foco='vendida'] .seat--vendida, .sala__svg[data-foco='repartida'] .seat--repartida, .sala__svg[data-foco='libre'] .seat--libre { opacity: 1 }
+.sala__ley { display: flex; flex-direction: column }
+.sala__tot { padding-bottom: var(--s2); color: var(--ink3) }
+.sala__tot b { font-family: var(--fd); font-size: var(--t-figure); font-weight: 400; line-height: 1; color: var(--ink) }
+.sala__tot .lbl { display: block; margin-top: 4px }
+.sala__dato { display: grid; grid-template-columns: 52px 1fr; align-items: baseline; gap: var(--s1); padding: 8px 0; border: 0; border-top: 1px solid var(--hair); background: none; color: inherit; font: inherit; text-align: left; cursor: default; transition: padding 0.15s ease }
+.sala__dato:hover, .sala__dato:focus-visible { padding-left: var(--s1) }
+.sala__dato b { font-family: var(--fd); font-size: 24px; font-weight: 400; line-height: 1 }
+.sala__m { display: inline-block; width: 9px; height: 9px; margin-right: 6px; vertical-align: -1px }
+.sala__m--entro { background: var(--ok) }
+.sala__m--vendida { background: var(--ticket) }
+.sala__m--repartida { background: var(--ink-mark) }
+.sala__m--libre { box-shadow: inset 0 0 0 1px var(--ink-mark) }
+@media (max-width: 767px) {
+  .sala__b { grid-template-columns: 1fr }
+}
+
+@keyframes aparece { from { opacity: 0 } }
+@keyframes sube { from { opacity: 0; transform: translateY(8px) } }
+@keyframes dibuja { from { transform: scaleX(0) } }
+@keyframes emerge { from { opacity: 0; transform: translateY(6px) scale(0.985) } }
+@keyframes entra-lado { from { transform: translateX(24px); opacity: 0 } }
+@keyframes butaca { from { opacity: 0; transform: scale(0.2) } }
+
+/* --- La entrada (C21): la función es un boleto ----------------------------- */
+.entrada { --hueco: var(--paper); --papel-e: var(--floor); container-type: inline-size; display: block; position: relative; width: 100%; min-width: 0; padding: 0; border: 0; font: inherit; text-align: left; text-decoration: none; transition: transform 0.14s ease, box-shadow 0.14s ease }
+.entrada--ticket { background: var(--ticket); color: var(--on-ticket) }
+.entrada--papel { background: var(--papel-e); color: var(--ink) }
+.entrada--vacia { background: var(--sunk); color: var(--ink2) }
+.entrada--off > .entrada__in > * { opacity: 0.68 }
+a.entrada:hover, button.entrada:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 0 var(--ink) }
+a.entrada:active, button.entrada:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 0 var(--ink) }
+.entrada__in { display: flex; flex-direction: column; height: 100%; position: relative }
+.entrada__cuerpo { display: block; flex: 1; min-width: 0; padding: var(--s3) var(--s3) 14px }
+.entrada__l { display: block; font: 500 var(--t-label)/1.35 var(--fm); letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.86 }
+.entrada--papel .entrada__cuerpo > .entrada__l { color: var(--ticket-text); opacity: 1 }
+.entrada__n { font: 400 32px/1.05 var(--fd); letter-spacing: 0.01em; text-transform: uppercase; margin: 5px 0 7px; overflow-wrap: anywhere }
+.entrada__d { display: block; font-size: 12.5px; font-weight: 500; line-height: 1.4 }
+.entrada__talon { display: block; position: relative; padding: 12px var(--s3) 14px; border-top: 2px dashed var(--hueco) }
+.entrada__talon::before, .entrada__talon::after { content: ""; position: absolute; top: -10px; width: 18px; height: 18px; border-radius: 50%; background: var(--hueco) }
+.entrada__talon::before { left: -9px }
+.entrada__talon::after { right: -9px }
+.entrada__cifra { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2) }
+.entrada__cifra b { font: 400 28px/1 var(--fd); letter-spacing: 0.01em; white-space: nowrap }
+.entrada__bar { height: 4px; margin-top: 8px; background: color-mix(in srgb, currentColor 22%, transparent) }
+.entrada__bar i { display: block; height: 100%; background: currentColor }
+.entrada__nota { font-size: 12px; font-weight: 500; margin-top: 7px }
+.entrada__nota button { color: inherit; font: inherit; font-weight: 700; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px }
+.entrada__sello { position: absolute; top: 14px; right: 14px; padding: 3px 8px; border: 2.5px solid currentColor; font: 400 15px/1.15 var(--fd); letter-spacing: 0.04em; text-transform: uppercase; transform: rotate(-7deg); background: var(--papel-e) }
+.entrada__sello--ok { color: var(--ok) }
+.entrada__sello--warn { color: var(--warn) }
+.entrada__sello--venta { color: var(--ticket-text) }
+/* Lo que va adentro de la naranja no puede traer su color. */
+.entrada--ticket .rs, .entrada--ticket .st, .entrada--ticket .lbl, .entrada--ticket .afiche__s { color: inherit; opacity: 1 }
+.entrada--ticket .btn--go, .entrada--ticket .btn--go:hover:not(:disabled) { background: var(--on-ticket); color: var(--ticket-text); border-color: var(--on-ticket) }
+.entrada--ticket .tile__f, .entrada--ticket .afiche__p { border-color: color-mix(in srgb, currentColor 40%, transparent) }
+.entrada--ticket .afiche__bar { background: color-mix(in srgb, currentColor 22%, transparent) }
+.entrada--ticket .afiche__bar i, .entrada--ticket .afiche__bar i.warn { background: currentColor }
+@container (min-width: 560px) {
+  .entrada__in { flex-direction: row }
+  .entrada__cuerpo { padding: var(--s4) }
+  .entrada__n { font-size: 40px }
+  .entrada__talon { flex: 0 0 38%; display: flex; flex-direction: column; justify-content: center; padding: var(--s4); border-top: 0; border-left: 2px dashed var(--hueco) }
+  .entrada__talon::before { left: -10px; top: -9px }
+  .entrada__talon::after { left: -10px; right: auto; top: auto; bottom: -9px }
+}
+/* La chica: elegir función en una lista. */
+.entrada--chica .entrada__cuerpo { padding: 10px 12px 9px }
+.entrada--chica .entrada__n { font-size: 25px; margin: 3px 0 0 }
+.entrada--chica .entrada__talon { padding: 8px 12px 10px; font-size: 11.5px; font-weight: 500 }
+.entrada--chica .entrada__talon::before, .entrada--chica .entrada__talon::after { width: 12px; height: 12px; top: -7px }
+.entrada--chica .entrada__talon::before { left: -6px }
+.entrada--chica .entrada__talon::after { right: -6px }
+.entrada--chica .entrada__in { flex-direction: column }
+.entradas { display: flex; gap: var(--s2); margin-bottom: var(--s5) }
+.entradas > .entrada { flex: 1 1 0 }
+.entradas > .entrada--ticket { flex-grow: 1.5 }
+.entradas--v { flex-direction: column; margin-bottom: 0 }
+.entradas--v > .entrada { flex: none }
+@media (max-width: 1023px) {
+  .entradas, .entradas--v { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: var(--s4) }
+  .entradas > .entrada--ticket { grid-column: 1 / -1; order: -1 }
+}
+.modal .entrada { --hueco: var(--floor); --papel-e: var(--paper) }
+/* La tira que se desliza. */
+.tira-e { margin-bottom: var(--s4) }
+.tira-e__t { display: flex; gap: var(--s2); overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; padding: 2px 6px 6px 2px; margin: 0 -6px 0 -2px }
+.tira-e__t::-webkit-scrollbar { display: none }
+.tira-e__t > * { flex: none; width: calc(100% - 44px); scroll-snap-align: start; scroll-margin-left: 2px }
+.tira-e__t > :only-child { width: 100% }
+@media (min-width: 1024px) { .tira-e__t > * { width: 400px } }
+@media (prefers-reduced-motion: reduce) { .tira-e__t { scroll-behavior: auto } }
+.tira-e__p { display: flex; gap: 2px; margin-top: 2px }
+.tira-e__p button { width: 22px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center }
+.tira-e__p button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-mark); opacity: 0.55 }
+.tira-e__p button.on::before { background: var(--ticket); opacity: 1 }
+/* Los datos de la puerta, dentro del talón. */
+.entrada__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1) }
+.entrada__stats b { display: block; font: 400 22px/1.1 var(--fd); margin-top: 3px }
+/* El celular: un solo elemento con sombra por pantalla, el que vende. */
+@media (max-width: 1023px) {
+  .btn:not(.btn--go) { box-shadow: none; border-width: 1px }
+  .seasonsel .btn { border-color: transparent; background: var(--sunk); padding: 7px 10px }
+  .app-header:has(.seasonsel) .app-header__word { display: none }
+  .rule--k .rule__d { white-space: normal }
+  .row .rs { white-space: normal }
+}
+/* El veredicto de la puerta: el color se ve de lejos, el sello dice qué pasó. */
+.verdict__e { width: min(320px, 100%); color: var(--ink) }
+.verdict--ok .verdict__e { --hueco: var(--verdict-ok) }
+.verdict--bad .verdict__e { --hueco: var(--verdict-bad) }
+.verdict__e .entrada__sello { position: static; display: inline-block; font-size: 25px; transform: rotate(-5deg); margin-bottom: 8px; background: none }
+.verdict--ok .verdict__e .entrada__sello { color: var(--verdict-ok) }
+.verdict--bad .verdict__e .entrada__sello { color: var(--verdict-bad) }
+.verdict__e .entrada__n { font-size: 30px; margin-top: 0 }
+.verdict__e .entrada__talon { font: 500 10px/1.3 var(--fm); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink2) }
+/* Los afiches de Dirección, como entradas. */
+.afiche-e { width: min(300px, 82vw) }
+.afiche__c { display: flex; flex-direction: column; gap: 14px }
+.afiche-e .afiche__sello { display: inline-block }
+.entrada--ticket .afiche__sello { color: inherit }
+.fn-con > .entrada { height: 100% }
+/* Sobre la entrada naranja el relleno rojo se pierde: va en papel, con el rojo en la letra. */
+.entrada--ticket ~ .fn-con__a .btn--bad, .entrada--ticket ~ .fn-con__a .btn--bad:hover:not(:disabled) { background: var(--paper); color: var(--bad); font-weight: 600 }

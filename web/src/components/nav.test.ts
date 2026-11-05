@@ -32,10 +32,20 @@ describe('activeItem: qué se prende en la navegación', () => {
     expect(prendido('/puerta/4')).toBe('Puerta')
   })
 
-  it('en el celular gana Dirección: el segundo nivel no existe ahí', () => {
+  it('en el celular gana Gestión: el segundo nivel no existe ahí', () => {
     const tabs = tabsFor('admin')
-    expect(activeItem(tabs, '/usuarios')?.label).toBe('Dirección')
-    expect(activeItem(tabs, '/panel/rendiciones')?.label).toBe('Dirección')
+    expect(activeItem(tabs, '/usuarios')?.label).toBe('Gestión')
+    expect(activeItem(tabs, '/panel/asistencia')?.label).toBe('Gestión')
+    expect(activeItem(tabs, '/panel/rendiciones')?.label).toBe('Rendiciones')
+    expect(activeItem(tabs, '/direccion')?.label).toBe('Gestión')
+    expect(activeItem(tabs, '/gestion')?.label).toBe('Gestión')
+  })
+
+  it('escanear queda en el medio, con dos de cada lado para dirección', () => {
+    const tabs = tabsFor('admin')
+    expect(tabs.map((i) => i.label)).toEqual(['Inicio', 'Ventas', 'Escanear', 'Rendiciones', 'Gestión'])
+    expect(tabs[2].centro).toBe(true)
+    expect(activeItem(tabs, '/puerta/4')?.label).toBe('Escanear')
   })
 
   it('una corista no tiene los ítems de dirección', () => {
@@ -44,7 +54,7 @@ describe('activeItem: qué se prende en la navegación', () => {
   })
 
   it('Mi plata es una pestaña de la corista, y sólo de ella', () => {
-    expect(tabsFor('seller').map((i) => i.label)).toEqual(['Inicio', 'Ventas', 'Puerta', 'Mi plata'])
+    expect(tabsFor('seller').map((i) => i.label)).toEqual(['Inicio', 'Ventas', 'Escanear', 'Mi plata'])
     expect(prendido('/mi-plata')).toBeUndefined()
     expect(activeItem(tabsFor('seller'), '/mi-plata')?.label).toBe('Mi plata')
   })

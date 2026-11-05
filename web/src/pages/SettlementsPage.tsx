@@ -16,12 +16,12 @@ import { Menu } from '../ui/Menu'
 import { Modal } from '../ui/Modal'
 import { PageHeader } from '../ui/Page'
 import { Row } from '../ui/Row'
-import { Drawer, Sheet } from '../ui/Sheet'
+import { Sheet } from '../ui/Sheet'
 import { Status } from '../ui/Status'
 
 // Rendiciones (C19 §5.7, design/acapelius-B-referencia.html §03). Son plata y
 // movimientos, no entidades: van en FILA. El detalle de una corista se abre
-// al costado (drawer) o desde abajo (hoja), sin perder la lista de atrás.
+// en popup central (C20) o, en celular, desde abajo (hoja).
 
 const sinCentavos = (cents: number) => formatMoney(cents).replace('$', '').trim()
 const metodo = (m?: PaymentMethod) => (m === 'cash' ? 'efectivo' : 'transferencia')
@@ -36,17 +36,21 @@ function useReport(seasonId: number | undefined) {
 
 /* ========================================================================== *
  * Registrar una rendición: el monto arranca con la deuda, que es el caso
- * normal, así el paso más frecuente es un solo toque en Confirmar.
+ * normal, así el paso más frecuente es un solo toque en Confirmar. Nunca va
+ * encima de otro popup: desde el detalle, lo reemplaza mientras dura.
  * ========================================================================== */
 
 export function RegisterSheet({
   row,
   seasonId,
   onClose,
+  onRegistrada,
 }: {
   row: SettlementReportRow
   seasonId: number
   onClose: () => void
+  /** Avisa cuánto se registró, antes de cerrar. */
+  onRegistrada?: (cents: number) => void
 }) {
   const queryClient = useQueryClient()
   const debt = Math.max(row.balance_cents, 0)
@@ -76,6 +80,7 @@ export function RegisterSheet({
       void queryClient.invalidateQueries({ queryKey: ['attention'] })
       void queryClient.invalidateQueries({ queryKey: ['home'] })
       void queryClient.invalidateQueries({ queryKey: ['direccion'] })
+      onRegistrada?.(cents)
       onClose()
     },
     onError: (err) =>
@@ -181,17 +186,20 @@ function tituloTimeline(item: TimelineItem): string {
 function DetalleCorista({
   sellerId,
   seasonId,
+  avisoInicial,
   onClose,
   onRegistrar,
 }: {
   sellerId: number
   seasonId: number
+  /** Lo que confirma el paso anterior: se vuelve de registrar con esto. */
+  avisoInicial?: string | null
   onClose: () => void
   onRegistrar: (row: SettlementReportRow) => void
 }) {
   const escritorio = useIsDesktop()
   const queryClient = useQueryClient()
-  const [aviso, setAviso] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<string | null>(avisoInicial ?? null)
 
   const detail = useQuery({
     queryKey: ['seller-detail', seasonId, sellerId],
@@ -231,7 +239,10 @@ function DetalleCorista({
       <DataList
         rows={[
           ['Vendió', `${d.tickets_sold} ${d.tickets_sold === 1 ? 'entrada' : 'entradas'}`],
-          ['Cobró', `${formatMoney(d.collected_cents)} · ${d.paid_sales} ${d.paid_sales === 1 ? 'venta' : 'ventas'}`],
+          // Si rindió todo lo que cobró, las dos cifras son la misma: alcanza con una.
+          ...(d.settled_cents > 0 && d.settled_cents === d.collected_cents
+            ? []
+            : ([['Cobró', formatMoney(d.collected_cents)]] as Array<[string, string]>)),
           ['Ya rindió', formatMoney(d.settled_cents)],
           ['Última rendición', ultima ? `${dayAndMonthShort(ultima.at)} · ${metodo(ultima.method)}` : 'Todavía no rindió'],
           ['Sin cobrar a compradores', `${formatMoney(d.uncollected_cents)} · no exigible aún`],
@@ -257,17 +268,18 @@ function DetalleCorista({
       {d.timeline.length > 0 && (
         <div>
           <Label>Su historial</Label>
-          <div className="mini" style={{ marginTop: 7 }}>
+          <ol className="hitos">
             {d.timeline.map((item, i) => (
-              <Row
-                key={`${item.kind}-${item.at}-${i}`}
-                title={tituloTimeline(item)}
-                sub={[`${dayLabel(item.at)}, ${timeShort(item.at)}`, item.method && metodo(item.method), item.notes && `“${item.notes}”`]
-                  .filter(Boolean)
-                  .join(' · ')}
-              />
+              <li key={`${item.kind}-${item.at}-${i}`} className={`hito hito--${item.detail === 'failed' ? 'failed' : item.kind}`}>
+                <div className="hito__t">{tituloTimeline(item)}</div>
+                <div className="hito__s">
+                  {[dayLabel(item.at), item.method && metodo(item.method), item.notes && `“${item.notes}”`]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       )}
     </>
@@ -284,29 +296,26 @@ function DetalleCorista({
       }
     : null
 
-  const acciones = fila ? (
-    <>
-      {debe > 0 && (
+  // Quien está al día no tiene nada para hacer acá: el popup sólo informa.
+  const acciones =
+    fila && debe > 0 ? (
+      <>
         <Button disabled={recordar.isPending} onClick={() => recordar.mutate()}>
           {recordar.isPending ? 'Enviando…' : 'Recordarle'}
         </Button>
-      )}
-      {/* Quien está al día no necesita que la pantalla le pida una rendición;
-          la acción sigue disponible en voz baja, para corregir un monto mal
-          cargado o registrar una entrega adelantada. */}
-      <Button go={debe > 0} onClick={() => onRegistrar(fila)}>
-        {debe > 0 ? 'Registrar rendición' : 'Registrar una igual'}
-      </Button>
-    </>
-  ) : undefined
+        <Button go onClick={() => onRegistrar(fila)}>
+          Registrar rendición
+        </Button>
+      </>
+    ) : undefined
 
   const titulo = d?.seller_name ?? 'Rendición'
   const sub = d ? `${d.email} · corista` : undefined
 
   return escritorio ? (
-    <Drawer open onClose={onClose} label="Rendición" title={titulo} sub={sub} actions={acciones}>
+    <Modal open onClose={onClose} label="Rendición" title={titulo} sub={sub} footer={acciones}>
       {cuerpo}
-    </Drawer>
+    </Modal>
   ) : (
     <Sheet open onClose={onClose} title={titulo} sub={sub} actions={acciones}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>{cuerpo}</div>
@@ -321,6 +330,7 @@ function DetalleCorista({
  * ========================================================================== */
 
 export function SettlementsScreen() {
+  const escritorio = useIsDesktop()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { sellerId: raw } = useParams()
@@ -328,6 +338,7 @@ export function SettlementsScreen() {
   const { season } = useSeason()
   const report = useReport(season?.id)
   const [registrando, setRegistrando] = useState<SettlementReportRow | null>(null)
+  const [registrada, setRegistrada] = useState<string | null>(null)
   const [confirmando, setConfirmando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
 
@@ -412,7 +423,7 @@ export function SettlementsScreen() {
             </p>
           )}
 
-          <section className="grp">
+          <section className="grp bloque bloque--warn">
             <div className="grp__h">
               <h2 className="lbl">Con deuda</h2>
               <span className="grp__n">{formatMoney(totalDebt)}</span>
@@ -428,7 +439,7 @@ export function SettlementsScreen() {
                     sub={`cobró ${sinCentavos(r.collected_cents)} · rindió ${sinCentavos(r.settled_cents)}`}
                     amount={sinCentavos(r.balance_cents)}
                     unit="debe"
-                    status={<Status tone="warn">Debe</Status>}
+                    status={escritorio ? <Status tone="warn">Debe</Status> : undefined}
                     onClick={() => abrir(r.seller_id)}
                   />
                 ))
@@ -469,7 +480,7 @@ export function SettlementsScreen() {
           </section>
 
           {alDia.length > 0 && (
-            <section className="grp">
+            <section className="grp bloque bloque--ok">
               <div className="grp__h">
                 <h2 className="lbl">Al día</h2>
                 <span className="grp__n">
@@ -485,7 +496,7 @@ export function SettlementsScreen() {
                     amount={r.settled_cents > 0 ? sinCentavos(r.settled_cents) : '—'}
                     unit={r.settled_cents > 0 ? 'rindió' : undefined}
                     status={
-                      r.collected_cents > 0 ? <Status tone="ok">Al día</Status> : <Status tone="mute">Sin ventas</Status>
+                      !escritorio ? undefined : r.collected_cents > 0 ? <Status tone="ok">Al día</Status> : <Status tone="mute">Sin ventas</Status>
                     }
                     onClick={() => abrir(r.seller_id)}
                   />
@@ -496,16 +507,30 @@ export function SettlementsScreen() {
         </>
       )}
 
-      {sellerId !== undefined && season && (
+      {/* Un popup por vez: registrar reemplaza al detalle, y al terminar o
+          cancelar se vuelve a él. */}
+      {sellerId !== undefined && season && !registrando && (
         <DetalleCorista
           sellerId={sellerId}
           seasonId={season.id}
-          onClose={() => navigate('/panel/rendiciones')}
-          onRegistrar={setRegistrando}
+          avisoInicial={registrada}
+          onClose={() => {
+            setRegistrada(null)
+            navigate('/panel/rendiciones')
+          }}
+          onRegistrar={(fila) => {
+            setRegistrada(null)
+            setRegistrando(fila)
+          }}
         />
       )}
       {registrando && season && (
-        <RegisterSheet row={registrando} seasonId={season.id} onClose={() => setRegistrando(null)} />
+        <RegisterSheet
+          row={registrando}
+          seasonId={season.id}
+          onClose={() => setRegistrando(null)}
+          onRegistrada={(cents) => setRegistrada(`Rendición registrada: ${formatMoney(cents)}.`)}
+        />
       )}
     </>
   )

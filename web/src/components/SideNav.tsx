@@ -1,9 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { LogOut } from 'lucide-react'
+import { LogOut, PanelLeft } from 'lucide-react'
 
 import { api, roleLabel } from '../api/client'
 import type { User } from '../api/client'
+import { useSideNavRail } from '../lib/sidenav'
 import { SeasonSelector } from '../season/SeasonSelector'
 import { ThemeToggle } from './ThemeToggle'
 import { useSeason } from '../season/SeasonProvider'
@@ -11,17 +12,18 @@ import { activeItem, navFor } from './nav'
 import type { NavItem } from './nav'
 
 /**
- * Navegación de escritorio: columna fija a la izquierda con la marca arriba,
- * las mismas secciones que la barra del celular y la cuenta abajo. Sólo se ve
- * de 1024px para arriba; el CSS decide cuál de las dos navegaciones está en
- * pantalla, así que las dos se renderizan siempre y ninguna necesita saber del
- * tamaño de la ventana.
+ * Navegación de escritorio (C20): columna de texto a la izquierda, separada
+ * del contenido por una regla. Se colapsa a un riel de íconos con el botón de
+ * arriba o con ⌘B; el estado vive en <html data-nav> y lo decide el CSS, así
+ * que acá se renderiza siempre lo mismo: texto e ícono, y cada modo muestra
+ * lo suyo. Sólo se ve de 1024px para arriba.
  *
  * Para dirección tiene dos niveles (C12): lo del día a día arriba y, bajo
  * Administración (C19 §6), lo que se mira de vez en cuando.
  */
 export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }) {
   const location = useLocation()
+  const { rail, toggle } = useSideNavRail()
   const items = navFor(user.role)
   const activo = activeItem(items, location.pathname)
   const initial = user.name.trim().charAt(0).toUpperCase() || 'A'
@@ -45,9 +47,11 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
         to={item.to}
         className={active ? 'sidenav__item sidenav__item--on' : 'sidenav__item'}
         aria-current={active ? 'page' : undefined}
+        // En el riel el nombre no se ve: queda como tooltip nativo.
+        title={rail ? (n > 0 ? `${item.label} · ${n}` : item.label) : undefined}
       >
-        <Icon size={17} strokeWidth={active ? 2.4 : 2} aria-hidden />
-        {item.label}
+        <Icon size={17} strokeWidth={active ? 2.2 : 1.9} aria-hidden />
+        <span className="sidenav__t">{item.label}</span>
         {n > 0 && <span className="sidenav__badge">{n}</span>}
       </Link>
     )
@@ -58,10 +62,24 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
 
   return (
     <nav className="sidenav" aria-label="Navegación principal">
-      <Link className="sidenav__brand" to="/" aria-label="Inicio">
-        <img className="sidenav__logo" src="/app/logo-mark-indigo.png" alt="" />
-        <span>ACAPELIUS</span>
-      </Link>
+      <div className="sidenav__top">
+        <Link className="sidenav__brand" to="/" aria-label="Inicio">
+          <span className="sidenav__mark" aria-hidden>
+            A
+          </span>
+          <span>ACAPELIUS</span>
+        </Link>
+        <button
+          className="sidenav__toggle"
+          type="button"
+          onClick={toggle}
+          aria-label={rail ? 'Expandir el menú' : 'Colapsar el menú'}
+          aria-expanded={!rail}
+          title="⌘B"
+        >
+          <PanelLeft size={16} aria-hidden />
+        </button>
+      </div>
 
       {/* Arriba de la navegación: la temporada es el contexto de todo lo que
           está debajo, no una opción de una pantalla. */}
@@ -72,6 +90,7 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
         {direccion.length > 0 && (
           <>
             <p className="lbl sidenav__sect">Administración</p>
+            <div className="sidenav__sep" aria-hidden />
             {direccion.map(fila)}
           </>
         )}
@@ -79,9 +98,10 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
 
       <div className="sidenav__theme">
         <ThemeToggle />
+        <ThemeToggle compact />
       </div>
       <div className="sidenav__account">
-        <span className="avatar" aria-hidden>
+        <span className="avatar" aria-hidden title={user.name}>
           {initial}
         </span>
         <span className="sidenav__who">

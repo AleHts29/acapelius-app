@@ -7,6 +7,7 @@ import type { EmailStatus, Sale } from '../api/client'
 import { useSession } from '../auth/session'
 import { formatMoney, functionDay, functionTime } from '../lib/format'
 import { Button } from '../ui/Button'
+import { Entrada, TalonCifra } from '../ui/Entrada'
 import { Menu } from '../ui/Menu'
 import { Stepper } from '../ui/Stepper'
 
@@ -182,6 +183,24 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
           {error}
         </p>
       )}
+
+      {/* La entrada se va escribiendo mientras se carga la venta. */}
+      <Entrada
+        tono={selectedFunction ? 'ticket' : 'vacia'}
+        label={
+          selectedFunction
+            ? `${functionDay(selectedFunction.starts_at)} · ${functionTime(selectedFunction.starts_at)}`
+            : 'Entrada'
+        }
+        nombre={selectedFunction ? (selectedFunction.name ?? selectedFunction.venue) : 'Elegí la función'}
+        datos={buyerName.trim() ? `Para ${buyerName.trim()}` : 'Para…'}
+        talon={
+          <TalonCifra
+            label={`${quantity} ${quantity === 1 ? 'entrada' : 'entradas'}`}
+            valor={isComp ? 'Cortesía' : formatMoney(total)}
+          />
+        }
+      />
 
       <div>
         <span className="lbl">Función</span>

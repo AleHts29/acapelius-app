@@ -5,9 +5,8 @@ import { createPortal } from 'react-dom'
 import { useDialog } from './useDialog'
 
 /**
- * El popup (C19 §4.10). UNO solo para toda la app: corista, función, venta e
- * ingreso. Cabecera negra (el talón), cuerpo y pie de acciones. Es para la
- * FICHA de una entidad; para trabajar una lista de corrido va <Drawer>.
+ * El popup (C19 §4.10). UNO solo para toda la app: corista, función, venta,
+ * rendición e ingreso. Cabecera negra (el talón), cuerpo y pie de acciones.
  *
  * Esc y el scrim cierran, el foco queda adentro y vuelve a quien lo abrió.
  * En celular el CSS lo presenta como hoja.

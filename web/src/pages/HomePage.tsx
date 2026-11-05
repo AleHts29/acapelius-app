@@ -3,60 +3,102 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import { api, publicSaleURL } from '../api/client'
-import type { Alert, Home, HomeFunction, HomeToDo, SettlementReportRow } from '../api/client'
+import type { Alert, Direccion, Home, HomeFunction, HomeToDo, SettlementReportRow } from '../api/client'
 import { useSession } from '../auth/session'
 import { calendarDaysUntil, dayLabel, daysAgo, formatMoney, functionTime } from '../lib/format'
 import { useIsDesktop } from '../lib/viewport'
 import { useSeason } from '../season/SeasonProvider'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
-import { Figure, SubFigs } from '../ui/Figure'
-import { Heel } from '../ui/Heel'
+import { Entrada, TalonCifra, TiraEntradas } from '../ui/Entrada'
 import { PageHeader } from '../ui/Page'
 import { Row } from '../ui/Row'
+import { Rule, RuleCell } from '../ui/Rule'
+import { Sala } from '../ui/Sala'
+import { Status } from '../ui/Status'
+import { Tile } from '../ui/Tile'
 import { useNuevaVenta } from '../ui/useNuevaVenta'
 import { RegisterSheet } from './SettlementsPage'
 
-// Inicio (C19 §5.1 y §5.9, design/acapelius-B-referencia.html §01 y §06). Una
-// cifra grande que contesta la pregunta de quien entra —"¿cuánto falta
-// cobrar?" para dirección, "¿cuánto tengo que rendir?" para la corista— y a
-// la derecha lo que está esperando una acción.
+// Inicio (C21). Arriba, las funciones como entradas, paradas en la próxima, y
+// debajo las cifras que contestan la pregunta de quien entra —"¿cuánto falta
+// cobrar?" para dirección, "¿cuánto tengo que rendir?" para la corista—.
+// Debajo, en columnas, lo que está esperando una acción.
 
-/** "Próxima función · en 5 días" / "· hoy" / "Última función". */
-function cuando(startsAt: string): string {
-  const dias = calendarDaysUntil(startsAt)
-  if (dias < 0) return 'Última función'
-  if (dias === 0) return 'Próxima función · hoy'
-  if (dias === 1) return 'Próxima función · mañana'
-  return `Próxima función · en ${dias} días`
+/** "en 5 días" / "hoy" / "mañana". */
+function falta(dias: number): string {
+  if (dias === 0) return 'hoy'
+  if (dias === 1) return 'mañana'
+  return `en ${dias} días`
 }
 
 const sinCentavos = (cents: number) => formatMoney(cents).replace('$', '').trim()
 
 /**
- * El talón con la próxima función. Para dirección cuenta la venta de la
- * función; para la corista, su venta contra su cupo.
+ * Lo que viene primero, de la más cercana a la más lejana, y después lo que ya
+ * pasó, de la última para atrás: así la próxima es siempre la primera que se ve,
+ * sin que la pantalla abra corrida.
  */
-function ProximaFuncion({ fn, esCorista }: { fn: HomeFunction; esCorista: boolean }) {
-  const lugar = fn.name ? `${fn.name} · ${fn.venue}` : fn.venue
-  const titulo = `${dayLabel(fn.starts_at)} · ${functionTime(fn.starts_at)}`
-  if (esCorista && fn.no_allocation) {
-    return <Heel label={cuando(fn.starts_at)} title={titulo} meta={`${lugar} · sin cupo asignado para vos`} />
-  }
+function ordenParaInicio(funciones: HomeFunction[]): HomeFunction[] {
+  const cuando = (fn: HomeFunction) => new Date(fn.starts_at).getTime()
+  const vienen = funciones.filter((fn) => calendarDaysUntil(fn.starts_at) >= 0).sort((a, b) => cuando(a) - cuando(b))
+  const pasaron = funciones.filter((fn) => calendarDaysUntil(fn.starts_at) < 0).sort((a, b) => cuando(b) - cuando(a))
+  return [...vienen, ...pasaron]
+}
+
+/** Una función de la temporada, como entrada. La próxima es la naranja. */
+function EntradaFuncion({
+  fn,
+  proxima,
+  esCorista,
+  seasonId,
+}: {
+  fn: HomeFunction
+  proxima: boolean
+  esCorista: boolean
+  seasonId?: number
+}) {
+  const dias = calendarDaysUntil(fn.starts_at)
+  const pasada = dias < 0
+  const label = proxima ? `Próxima · ${falta(dias)}` : pasada ? 'Ya pasó' : falta(dias)
   const valor = esCorista ? fn.my_sold : fn.sold
   const total = esCorista ? fn.my_assigned : fn.capacity
-  const pct = total > 0 ? Math.round((valor / total) * 100) : 0
+  const libres = Math.max(fn.capacity - fn.assigned, 0)
+  let talon
+  if (esCorista && fn.no_allocation) {
+    talon = <TalonCifra label="Tu cupo" valor="—">Sin cupo asignado para vos</TalonCifra>
+  } else if (pasada && !esCorista) {
+    talon = <TalonCifra label="Entraron" valor={`${fn.entered} de ${fn.sold}`} barra={{ value: fn.entered, max: fn.sold }} />
+  } else {
+    talon = (
+      <TalonCifra
+        label={esCorista ? 'Vendiste' : 'Vendidas'}
+        valor={total > 0 && valor >= total ? 'AGOTADA' : `${valor} de ${total}`}
+        barra={{ value: valor, max: total }}
+      >
+        {!esCorista && !pasada && libres > 0 ? `${libres} sin repartir` : undefined}
+      </TalonCifra>
+    )
+  }
   return (
-    <Heel
-      label={cuando(fn.starts_at)}
-      title={titulo}
-      meta={lugar}
-      progress={{
-        value: valor,
-        max: total,
-        left: esCorista ? `Vendiste ${valor} de tus ${total}` : `${valor} de ${total} vendidas`,
-        right: `${pct}%`,
-      }}
+    <Entrada
+      tono={proxima ? 'ticket' : 'papel'}
+      apagada={pasada}
+      label={label}
+      nombre={fn.name ?? fn.venue}
+      datos={
+        <>
+          {dayLabel(fn.starts_at)} · {functionTime(fn.starts_at)}
+          {fn.name && (
+            <>
+              <br />
+              {fn.venue}
+            </>
+          )}
+        </>
+      }
+      talon={talon}
+      to={esCorista || !seasonId ? `/ventas?fn=${fn.id}` : `/temporadas/${seasonId}?fn=${fn.id}`}
     />
   )
 }
@@ -132,61 +174,47 @@ function filaDeAlerta(alert: Alert): SettlementReportRow {
   }
 }
 
-function CifraDireccion({ data, seasonId }: { data: Home; seasonId?: number }) {
-  // La plata de la temporada sale del mismo reporte que Dirección.
-  const direccion = useQuery({
-    queryKey: ['direccion', seasonId],
-    queryFn: () => api.direccion(seasonId!),
-    enabled: seasonId !== undefined,
-  })
-  const vendidas = data.functions.reduce((acc, fn) => acc + fn.sold, 0)
-  const capacidad = data.functions.reduce((acc, fn) => acc + fn.capacity, 0)
-  const entraron = data.functions.reduce((acc, fn) => acc + fn.entered, 0)
-  const m = direccion.data?.money
+function CifrasDireccion({ money }: { money?: Direccion['money'] }) {
+  if (!money) return null
   return (
-    <div>
-      {m && (
-        <Figure label="Falta cobrar" tone={m.uncollected_cents > 0 ? 'warn' : 'ok'}>
-          {formatMoney(m.uncollected_cents)}
-        </Figure>
-      )}
-      <div style={{ marginTop: 'var(--s4)' }}>
-        <SubFigs
-          items={[
-            ...(m ? [{ label: 'Recaudado', value: formatMoney(m.sold_cents - m.uncollected_cents), tone: 'ok' as const }] : []),
-            { label: 'Vendidas', value: vendidas, unit: `/ ${capacidad}` },
-            { label: 'Ingresaron', value: entraron },
-          ]}
-        />
-      </div>
-    </div>
+    <>
+      <RuleCell
+        label="Falta cobrar"
+        value={formatMoney(money.uncollected_cents)}
+        tone={money.uncollected_cents > 0 ? 'warn' : 'ok'}
+        sub={`${money.sales_uncollected} ${money.sales_uncollected === 1 ? 'venta' : 'ventas'}`}
+      />
+      <RuleCell
+        label="Recaudado"
+        value={formatMoney(money.sold_cents - money.uncollected_cents)}
+        tone="ok"
+        sub={money.unsettled_cents > 0 ? `${formatMoney(money.unsettled_cents)} sin rendir` : 'todo rendido'}
+      />
+    </>
   )
 }
 
-function CifraCorista({ data }: { data: Home }) {
+function CifrasCorista({ data }: { data: Home }) {
   const mio = data.my_settlement
   const fn = data.next_function
   const quedan = fn && !fn.no_allocation ? Math.max(fn.my_assigned - fn.my_sold, 0) : undefined
   if (!mio) return null
   return (
-    <div>
-      <Figure label={mio.balance_cents > 0 ? 'Tenés que rendir' : 'Estás al día'} tone={mio.balance_cents > 0 ? 'warn' : 'ok'}>
-        {formatMoney(Math.max(mio.balance_cents, 0))}
-      </Figure>
-      <div style={{ marginTop: 'var(--s4)' }}>
-        <SubFigs
-          items={[
-            { label: 'Cobraste', value: formatMoney(mio.collected_cents) },
-            { label: 'Ya rendiste', value: formatMoney(mio.settled_cents), tone: 'ok' },
-            ...(quedan !== undefined ? [{ label: 'Te quedan para vender', value: quedan }] : []),
-          ]}
-        />
-      </div>
-    </div>
+    <>
+      <RuleCell
+        label={mio.balance_cents > 0 ? 'Tenés que rendir' : 'Estás al día'}
+        value={formatMoney(Math.max(mio.balance_cents, 0))}
+        tone={mio.balance_cents > 0 ? 'warn' : 'ok'}
+        sub={`cobraste ${formatMoney(mio.collected_cents)}`}
+      />
+      <RuleCell label="Ya rendiste" value={formatMoney(mio.settled_cents)} tone="ok" />
+      {quedan !== undefined && <RuleCell label="Te quedan para vender" value={quedan} />}
+    </>
   )
 }
 
 export function HomePage() {
+  const navigate = useNavigate()
   const { user } = useSession()
   const escritorio = useIsDesktop()
   const { seasonId } = useSeason()
@@ -198,6 +226,13 @@ export function HomePage() {
   // La rendición se resuelve acá mismo: al confirmar la alerta desaparece
   // sola, porque la mutación invalida ['home'].
   const [rindiendo, setRindiendo] = useState<SettlementReportRow | null>(null)
+  // La plata de la temporada sale del mismo reporte que Dirección.
+  const temporadaId = home.data?.season?.id
+  const direccion = useQuery({
+    queryKey: ['direccion', temporadaId],
+    queryFn: () => api.direccion(temporadaId!),
+    enabled: user?.role === 'admin' && temporadaId !== undefined,
+  })
 
   if (!user) return null
   if (home.isPending) return <p className="rs">Cargando…</p>
@@ -205,9 +240,11 @@ export function HomePage() {
 
   const data = home.data
   const esCorista = data.role === 'seller'
+  const deudas = data.alerts.filter((a) => a.kind === 'settlement')
+  const otras = data.alerts.filter((a) => a.kind !== 'settlement')
   const hechas = data.functions.filter((fn) => calendarDaysUntil(fn.starts_at) < 0).length
   const nuevaVentaBtn = (
-    <Button go wide={!escritorio} onClick={nuevaVenta.abrir}>
+    <Button go onClick={nuevaVenta.abrir}>
       Nueva venta
     </Button>
   )
@@ -221,76 +258,122 @@ export function HomePage() {
             ? `${data.season.name} · ${hechas} de ${data.functions.length} ${data.functions.length === 1 ? 'función hecha' : 'funciones hechas'}`
             : undefined
         }
-        // Una sola acción primaria por pantalla: en escritorio en el
-        // encabezado; en el celular, ancha, donde la alcanza el pulgar.
+        // En el celular se vende desde Ventas.
         actions={escritorio ? nuevaVentaBtn : undefined}
       />
 
-      <div className="asym">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
-          {data.next_function ? (
-            <ProximaFuncion fn={data.next_function} esCorista={esCorista} />
-          ) : (
-            <Card title="Todavía no hay funciones cargadas">
-              {!esCorista && (
-                <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', margin: 0 }}>
-                  <Link to="/temporadas">Creá la primera</Link> para empezar a vender.
-                </p>
-              )}
-            </Card>
-          )}
-          {esCorista ? <CifraCorista data={data} /> : <CifraDireccion data={data} seasonId={data.season?.id} />}
-          {!escritorio && nuevaVentaBtn}
-        </div>
+      {data.functions.length > 0 ? (
+        <TiraEntradas label="Las funciones de la temporada">
+          {ordenParaInicio(data.functions).map((fn) => (
+            <EntradaFuncion
+              key={fn.id}
+              fn={fn}
+              proxima={fn.id === data.next_function?.id && calendarDaysUntil(fn.starts_at) >= 0}
+              esCorista={esCorista}
+              seasonId={data.season?.id}
+            />
+          ))}
+        </TiraEntradas>
+      ) : (
+        <Entrada
+          tono="vacia"
+          className="tira-e"
+          label="Sin funciones"
+          nombre="Todavía no hay funciones"
+          datos={esCorista ? 'Dirección las carga en la temporada' : <Link to="/temporadas">Creá la primera</Link>}
+        />
+      )}
+      <Rule kpis>
+        {esCorista ? <CifrasCorista data={data} /> : <CifrasDireccion money={direccion.data?.money} />}
+      </Rule>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
-          {esCorista ? (
-            <Card
-              title="Te falta cobrar"
-              action={data.todo_total > data.todo.length ? { label: `Ver las ${data.todo_total}`, to: '/ventas?filtro=deben' } : undefined}
-            >
-              {data.todo.length === 0 ? (
-                <Row title="Nada pendiente" sub="Todo cobrado y compartido" />
-              ) : (
-                data.todo.map((item) => <PendienteRow key={item.sale_id} item={item} />)
-              )}
-            </Card>
-          ) : (
-            <Card
-              title="Te están esperando"
-              action={data.alert_total > data.alerts.length ? { label: `Ver las ${data.alert_total}`, to: '/direccion' } : undefined}
-            >
-              {data.alerts.length === 0 ? (
-                <Row title="Todo en orden" sub="Sin rendiciones pendientes ni tareas abiertas" />
-              ) : (
-                data.alerts.map((alert, i) => (
-                  <AlertaRow
-                    key={`${alert.kind}-${alert.seller_id ?? alert.function_id ?? alert.user_id ?? i}`}
-                    alert={alert}
-                    seasonId={data.season?.id}
-                    onRendir={() => setRindiendo(filaDeAlerta(alert))}
-                  />
-                ))
-              )}
-            </Card>
-          )}
+      {!esCorista && (
+        <Sala funciones={data.functions.map((fn) => ({ ...fn, label: dayLabel(fn.starts_at) }))} />
+      )}
 
-          <Card title={esCorista ? 'Tus últimas ventas' : 'Últimas ventas'} action={{ label: 'Ver todas', to: '/ventas' }}>
-            {data.last_sales.length === 0 ? (
-              <Row title="Todavía no hay ventas" />
+      <div className="cols cols--2">
+        {esCorista ? (
+          <Card
+            title="Te falta cobrar"
+            action={data.todo_total > data.todo.length ? { label: `Ver las ${data.todo_total}`, to: '/ventas?filtro=deben' } : undefined}
+          >
+            {data.todo.length === 0 ? (
+              <Row title="Nada pendiente" sub="Todo cobrado y compartido" />
             ) : (
-              data.last_sales.map((s) => (
-                <Row
-                  key={s.id}
-                  title={s.buyer_name}
-                  sub={`${esCorista ? s.function_name : s.seller_name.split(' ')[0]} · ${daysAgo(s.created_at)}`}
-                  amount={s.is_comp ? 'cortesía' : sinCentavos(s.amount_cents)}
-                  to="/ventas"
-                />
-              ))
+              data.todo.map((item) => <PendienteRow key={item.sale_id} item={item} />)
             )}
           </Card>
-        </div>
+        ) : (
+          // Opción D (C20): la corista que debe es una ENTIDAD, va en tarjeta
+          // con su cuadrado de iniciales, como en Equipo; el resto de las
+          // alertas (cupo sin repartir, gente que nunca entró) son filas.
+          <Card
+            title="Te deben rendir"
+            action={
+              data.badges.settlements_pending > deudas.length
+                ? { label: `Ver las ${data.badges.settlements_pending}`, to: '/panel/rendiciones' }
+                : undefined
+            }
+          >
+            {deudas.length === 0 && otras.length === 0 && (
+              <Row title="Todo en orden" sub="Sin rendiciones pendientes ni tareas abiertas" />
+            )}
+            {deudas.length > 0 && (
+              <div className="tiles tiles--2">
+                {deudas.map((alert) => (
+                  <Tile
+                    key={`settlement-${alert.seller_id}`}
+                    name={alert.name}
+                    sub={alert.since ? `cobró ${daysAgo(alert.since)}` : undefined}
+                    receipt={{
+                      lines: [
+                        ['Cobró', formatMoney(alert.collected_cents ?? 0)],
+                        ['Rindió', `− ${formatMoney(alert.settled_cents ?? 0)}`],
+                      ],
+                      total: ['Debe', formatMoney(alert.amount_cents ?? 0)],
+                    }}
+                    footer={<Button onClick={() => setRindiendo(filaDeAlerta(alert))}>Registrar</Button>}
+                  />
+                ))}
+              </div>
+            )}
+            {otras.map((alert, i) => (
+              <AlertaRow
+                key={`${alert.kind}-${alert.function_id ?? alert.user_id ?? i}`}
+                alert={alert}
+                seasonId={data.season?.id}
+                onRendir={() => setRindiendo(filaDeAlerta(alert))}
+              />
+            ))}
+          </Card>
+        )}
+
+        <Card title={esCorista ? 'Tus últimas ventas' : 'Últimas ventas'} action={{ label: 'Ver todas', to: '/ventas' }}>
+          {data.last_sales.length === 0 ? (
+            <Row title="Todavía no hay ventas" />
+          ) : (
+            data.last_sales.map((s) => (
+              <Row
+                key={s.id}
+                title={s.buyer_name}
+                sub={`${esCorista ? s.function_name : s.seller_name.split(' ')[0]} · ${s.quantity} ${s.quantity === 1 ? 'entrada' : 'entradas'} · ${daysAgo(s.created_at)}`}
+                amount={s.is_comp ? '—' : sinCentavos(s.amount_cents)}
+                status={
+                  s.is_comp ? (
+                    <Status tone="cor">Cortesía</Status>
+                  ) : s.paid_cents >= s.amount_cents ? (
+                    <Status tone="ok">Pagó</Status>
+                  ) : (
+                    <Status tone="warn">Debe {formatMoney(s.amount_cents - s.paid_cents)}</Status>
+                  )
+                }
+                // Ventas abre el popup de esta venta. Va por el estado de la
+                // navegación: el nombre del comprador no tiene que quedar en la URL.
+                onClick={() => navigate('/ventas', { state: { venta: { id: s.id, comprador: s.buyer_name } } })}
+              />
+            ))
+          )}
+        </Card>
       </div>
 
       {nuevaVenta.panel}

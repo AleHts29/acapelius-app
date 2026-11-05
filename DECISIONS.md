@@ -1583,3 +1583,197 @@ talón, 25px de la fecha, 26px del popup…).
 
 **Pendiente, fuera de C19:** `docs/DESIGN_SYSTEM.md` y `docs/ui-inventory.md`
 describen C18; la referencia vigente es `docs/C19_SPEC.md` más este archivo.
+
+## C20 · Backstage
+
+Pasada de presentación sobre `web/src` (2026-11-04). Nace de una revisión de
+referencias minimalistas: el problema no era la paleta sino el peso (menú
+siempre abierto, veinte cifras antes de la lista de Ventas, dos columnas con
+el mismo peso, tres voces tipográficas). Se eligió la dirección "Backstage"
+entre seis; los mockups canónicos quedan en `design/acapelius-C20-backstage.html`
+(las cuatro pantallas de escritorio), `design/acapelius-C20-direcciones.html`
+(las alternativas descartadas) y `design/acapelius-C20-referencias.html`.
+
+- **Sin cajas.** `.card` dejó de pintar fondo: los grupos se delimitan con las
+  reglas de sus filas (`.row` lleva `border-top: --hair`, al ras del título) y
+  su pie. `--card` sigue existiendo pero igual al papel; las superficies que
+  flotan (popup, hoja, drawer, menú) usan el token nuevo `--floor`.
+- **Radio 0 en todo** (`--r`, `--rc`). Botones cuadrados con borde `--hair`;
+  el único relleno es el naranja (`.btn--go`, texto `--on-ticket`). La hoja del
+  celular conserva 12px arriba por gesto, no por estilo.
+- **Oscuro como lenguaje, claro como opción.** Se mantienen los dos modos y el
+  switch. La paleta oscura es la del mockup (#141311, naranja #EC6E4C también
+  como relleno, texto oscuro sobre él). La clara dejó de ser el blanco tibio
+  de C19 ("muy blanco todo"): papel arena #E8E3D7, divisores al 14% de tinta,
+  y las superficies que flotan (`--floor` #F3EFE6) más claras que el fondo,
+  para que tenga la misma profundidad que el oscuro. El naranja como texto va
+  un paso más oscuro (#AD3518) porque el de relleno da 4,0:1 sobre arena.
+- **`.rule`**: la fila de columnas separadas por hairlines (`ui/Rule.tsx`).
+  Reemplaza a las cinco tarjetas de función en Ventas (la elegida va grande y
+  naranja, con lo recaudado y el cupo sin repartir), al talón + cifras de
+  Inicio y a la cifra + subfigs de Dirección. En el celular se apila de a dos.
+- **Menú lateral de texto, colapsable a riel.** `SideNav` ya no muestra íconos
+  abierto; colapsado (60px) muestra sólo íconos, los avisos como punto y el
+  activo en naranja. Estado en `<html data-nav>` (`lib/sidenav.ts`), guardado
+  por dispositivo, ⌘B / Ctrl+B o el botón junto a la marca. El switch de tema
+  tiene una variante compacta de un botón para el riel.
+- **La sala en Inicio (`ui/Sala.tsx`, `lib/sala.ts`).** Sólo para dirección. Cada
+  entrada es una butaca de un teatro en filas curvas, con cuatro estados:
+  entraron, vendidas sin entrar, repartidas sin vender y sin asignar. Se mira la
+  temporada o una función; la sala se llena al aparecer y pasar por un dato de
+  la leyenda prende sus butacas. Reemplaza a la cifra "Vendidas" de la regla.
+- **Equipo: primero lo urgente, con recibo.** Las coristas que deben van en
+  tarjetas con las cuentas como un talón (`receipt` en `Tile`): vendió, cobró,
+  rindió y debe en Anton, ordenadas por deuda. Las demás van en una línea por
+  grupo: al día, nunca entraron y dejaron el coro. El mail se fue de la tarjeta
+  y queda en el detalle. Inicio usa el mismo recibo.
+- **Movimiento.** La página entra suave (sólo opacidad en el celular: un
+  transform rompería el fixed de la puerta), el título dibuja una raya naranja,
+  la regla entra escalonada, las barras crecen, los popups emergen. Las filas se
+  corren y su chevron se enciende al pasar; las tarjetas sólo muestran la sombra
+  dura al pasar el mouse. Todo se apaga con prefers-reduced-motion.
+- **Inicio, opción D.** La corista que debe rendir es una entidad: va en
+  tarjeta (dos por fila) con su recibo y el botón "Registrar" que abre la hoja ahí mismo. Las otras alertas
+  (cupo sin repartir, gente que nunca entró) siguen como filas debajo. Las
+  últimas ventas son filas con monto y estado. Antes las dos listas usaban la
+  misma fila y no se distinguían (`design/acapelius-C20-inicio-listas.html`).
+- **Ventas a una columna.** `QuienVendio` se fue: filtrar por corista es el menú
+  "Corista" de la barra (las que tienen cupo en la función, con "vendió N de
+  M"); "repartir N" vive en la columna de la función elegida; el ranking por
+  corista queda en Equipo, que ya lo tenía.
+- **Sombra dura en lo que se toca.** De Fluxara (fluxara.com.ar): borde de
+  1,5px en tinta y sombra sólida desplazada en diagonal, sin desenfoque
+  (`--hard-edge`, `--hard-s`). Va en `.btn` (4px, se levanta al pasar y se
+  hunde al apretar), `.search` (4px; naranja con foco) y el aviso flotante
+  (4px en naranja). En tarjetas chicas el botón baja a 2px y borde de 1px. Lo
+  que ya flota (popup, drawer, hoja, menú) NO la lleva en su contorno: en
+  pantalla el borde crema con sombra de 10px se veía raro, así que esas
+  superficies usan hairline con sombra difusa. Los botones de adentro sí
+  conservan su sombra dura de 4px.
+  Tampoco va en filas, tarjetas, regla de cifras ni menú lateral. Se partió de
+  la intensidad 1 de `design/acapelius-C20-sombra-dura.html`.
+- **Pestañas en lugar de segmented**: `.seg` es texto con raya naranja debajo.
+- **Tarjetas de entidad: cada una es una pieza.** `.tile`/`.fn` llevan borde
+  propio en `--hair`, sin fondo, con aire (`--s2`) entre ellas; al pasar el
+  mouse el borde se oscurece. Las iniciales van en un cuadrado negro en Anton
+  (`.mono-sq`): el ancla que distingue a una corista de la de al lado. Se
+  probó y descartó una piel "afiche con tinte" (etiqueta naranja, nombre en
+  Anton, inicial como marca de agua en un color por persona): en pantalla
+  pesaba demasiado; queda en `design/acapelius-C20-tarjetas.html` (opción 5+4).
+  Antes se probaron y descartaron dos grillas: fondo `--hair` en el
+  contenedor con `gap: 1px` (en claro se veía gris detrás de las tarjetas
+  atenuadas y rellenaba los huecos) y reglas compartidas sin aire (se leía
+  como una sola tabla). Dirección muestra las funciones como `FnTile`
+  (entidades, se comparan de un vistazo), no como filas.
+- Título de página 40px y cifra 44px sólo en escritorio (`--t-page`,
+  `--t-figure` dentro del media query); el celular no cambia de escala.
+- `tiles--4` existía implícito en Dirección; ahora tiene regla propia.
+
+- **El detalle de una rendición pasa de drawer a popup central** (pedido tras
+  verlo en pantalla; reemplaza lo de "pantalla con drawer" de arriba sólo en
+  la forma: `/panel/rendiciones/:id` sigue abriendo lo mismo). En celular sigue
+  siendo hoja. Registrar reemplaza al detalle en vez de abrirse encima; al
+  terminar o cancelar se vuelve al detalle. El
+  detalle de una venta y el de un ingreso hicieron el mismo cambio: ninguna
+  pantalla usa ya el drawer (queda sólo en el catálogo `/dev/ui`).
+
+- **El historial de la corista es una línea de tiempo** (opción A de
+  `design/acapelius-C20-historial.html`): cuadrado verde si rindió, naranja
+  hueco si se le recordó, gris si es un cobro o un recordatorio que no salió.
+  Se sacó la hora: no sirve para mirar una deuda.
+
+- **Cobrar una venta no cierra el popup.** Antes "Pagó en efectivo" era una fila
+  con flecha que cerraba sin avisar: parecía que no pasaba nada. Ahora arriba va
+  "Falta cobrar", dos botones de verdad y la confirmación en palabras; el cobro
+  queda en la lista con "Quitar". Cobrar todo usa el mismo alta de cobro que una
+  parte, y la venta se actualiza sin salir.
+- **Las funciones de Dirección son un carrusel de afiches** (opción A de
+  `design/acapelius-C20-carrusel.html`), sin popup de comparación: una tarjeta por
+  función, con un sello si se destaca ("Más recaudó", "Más asistencia",
+  "Asistencia baja") y la temporada al final en negro. Se probó antes una tabla
+  con barras y no gustó.
+- **Una venta tocada en Inicio abre su popup en Ventas.** Va por el estado de la
+  navegación, para no poner el nombre del comprador en la URL.
+
+- **Una función que ya pasó no acepta cambios de cupo.** El server responde 409 y
+  el popup de repartir la muestra de solo lectura. Se usa el mismo margen de tres
+  horas que Dirección y Temporadas. El popup se titula con el nombre de la función.
+
+- **Sale "Registrar una igual" de las coristas al día.** Dejaba saldos a favor que
+  no se ven (el popup muestra $ 0) y no servía para corregir: una rendición no se
+  puede anular ni editar.
+
+- **Una temporada sin uso se puede renombrar o eliminar.** "Sin uso" es sin cupos,
+  ventas (también anuladas), rendiciones ni recordatorios; el server lo revisa y
+  responde 409 si no. Eliminar se lleva sus funciones y su equipo. La temporada en
+  curso no se elimina.
+
+- **Editar y eliminar están en la vista de la temporada, sin modo edición.** Si es
+  un borrador, el nombre se edita en el mismo título y hay un botón "Eliminar
+  temporada" (no en la que está en curso). Cada función muestra los botones Editar y Eliminar
+  en su tarjeta, sólo si se pueden hacer: con ingresos no se edita, con ventas no se
+  elimina; el popup de la función explica por qué.
+
+- **Asignaciones es una pestaña de la temporada**, junto a Funciones
+  (`/temporadas/:id?vista=asignaciones`): elegís la función a la izquierda y repartís a la
+  derecha, con el mismo tablero del popup y guardado explícito. Abre en la próxima función con
+  entradas sin repartir. Cambiar de función con cambios sin guardar pregunta antes; pasar a la
+  pestaña Funciones no los pierde. El popup sigue para repartir desde Equipo, Ventas, Temporadas
+  y Dirección.
+
+- **"Repartir por igual" está en el tablero de reparto**, así que aparece en la pestaña y en
+  el popup. Reparte todo el cupo entre las coristas de la función, pisando lo que hubiera: nadie
+  baja de lo que ya vendió y lo que sobra va de a una a las primeras de la lista. No guarda solo:
+  queda como cambio sin guardar, con Deshacer.
+
+- **La temporada en curso pasa de negro a un tinte verde con una franja que dice "En curso".**
+  Sobre negro no se veía la sombra dura del hover, y el color solo no explicaba por qué esa
+  tarjeta era distinta. Todas las temporadas llevan la franja con su estado: En curso en verde,
+  Preparándose en ámbar y Cerrada en gris.
+
+- **Equipo muestra las fichas del equipo, no sus deudas.** Una ficha por persona, por orden
+  alfabético: mail, cupo y ventas, si entró a la app y cuántas temporadas lleva. Las cuentas y el
+  recordatorio viven en Rendiciones; el popup de la persona dice si debe y lleva ahí. Reemplaza
+  a los recibos de "Te deben rendir" que estaban en Equipo.
+
+Pendiente fuera de C20: Rendiciones, Asistencia, Equipo, Temporadas y el modo
+puerta reciben el sistema por tokens y primitivos, pero no se les revisó la
+composición pantalla por pantalla.
+
+## C21 · La función es una entrada, y la app del celular
+
+De cuatro direcciones mockeadas para el celular (`design/acapelius-C20-app-opciones.html`)
+se eligió "Entrada", y se pidió llevarla también a la web. Una función deja de ser
+una columna de cifras o una tarjeta y pasa a ser un boleto: cuerpo con el nombre,
+línea troquelada y talón con los números (`ui/Entrada.tsx`). La naranja es la que
+importa ahora: la próxima o la elegida.
+
+El talón va abajo o al costado según el ancho de la propia entrada (container
+query), no el de la pantalla: la misma pieza sirve en una tarjeta angosta y en
+una tira ancha. Los huecos del troquel se pintan con `--hueco`, el color de lo que
+hay detrás.
+
+Las temporadas siguen en `FnTile` con su franja de estado: la entrada es de la
+función, y una temporada no se compra. La regla de cifras queda sólo para plata.
+
+Inicio ordena lo que viene primero y lo que pasó después, de la última para atrás:
+así la próxima es siempre la primera que se ve, sin abrir la pantalla corrida.
+
+En la puerta el veredicto conserva el panel de color a pantalla completa, porque se
+lee de lejos, y adentro cae el sello sobre una entrada. Va siempre en papel claro,
+también en modo nocturno, para que el sello se lea igual.
+
+Otros cambios del celular: una sola sombra dura por pantalla (la de la acción
+principal); "Nueva venta" sale de Inicio y queda en Ventas; sin la palabra ACAPELIUS
+cuando está el selector de temporada, que así no se corta. Para dirección, la cuarta
+pestaña es **Gestión** (`/gestion`), que reúne Resumen, Rendiciones, Asignaciones,
+Asistencia, Temporadas y Equipo: varias no tenían entrada desde el celular. En
+Rendiciones se saca el estado de la fila, repetido con el grupo y la unidad, para
+que no se corten los nombres. Equipo en el celular va en filas; las fichas quedan
+para el escritorio.
+
+La barra del celular lleva escanear en un botón redondo al medio, como el QR de una
+billetera. Es la única pieza redonda de la barra: tiene que encontrarse sin mirar. Con
+función hoy abre directo la puerta; sin función, la pantalla de Puerta explica qué hay.
+Para quedar centrado con dos de cada lado, dirección suma Rendiciones como pestaña; una
+corista tiene una pantalla menos y queda Mi plata sola a la derecha.

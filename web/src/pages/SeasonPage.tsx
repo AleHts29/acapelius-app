@@ -6,6 +6,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, api } from '../api/client'
 import type { FunctionSummary } from '../api/client'
 import { RepartirModal } from '../components/RepartirModal'
+import { SeasonAssignments } from '../components/SeasonAssignments'
+import { DEPENDEN_DE_LA_TEMPORADA } from '../season/NuevaTemporada'
 import { useSeason } from '../season/SeasonProvider'
 import {
   calendarDaysUntil,
@@ -18,8 +20,9 @@ import {
   localInputToISO,
   pesosToCents,
   weekdayLong,
+  funcionTerminada,
 } from '../lib/format'
-import { Button } from '../ui/Button'
+import { Button, Seg } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { DataList } from '../ui/DataList'
 import { Figure, SubFigs } from '../ui/Figure'
@@ -29,21 +32,20 @@ import { Modal } from '../ui/Modal'
 import { PageHeader } from '../ui/Page'
 import { Row } from '../ui/Row'
 import { Status } from '../ui/Status'
-import { FnTile } from '../ui/Tile'
+import { Entrada, TalonCifra } from '../ui/Entrada'
 
 // Temporada (C19 §5.5, design/acapelius-B-entidades.html §04). Una función es
 // una ENTIDAD: tarjeta con la fecha en Anton, y el detalle en el popup. El
 // formulario de función (crear, editar, duplicar) no cambia.
 
 /** La misma gracia que usa Inicio: a las 21:00 la función de las 20:00 no "pasó". */
-const GRACIA_MS = 3 * 60 * 60 * 1000
 
 function nombre(fn: FunctionSummary): string {
   return fn.name && fn.name !== '' ? fn.name : fn.venue
 }
 
 function yaPaso(fn: FunctionSummary): boolean {
-  return new Date(fn.starts_at).getTime() < Date.now() - GRACIA_MS
+  return funcionTerminada(fn.starts_at)
 }
 
 /** Con ingresos registrados el server ya no acepta editarla (spec §5.1). */
@@ -277,51 +279,151 @@ function FuncionForm({
 
 // --- La tarjeta de función ------------------------------------------------------
 
-function FuncionTile({ fn, onClick }: { fn: FunctionSummary; onClick: () => void }) {
+function FuncionTile({
+  fn,
+  proxima,
+  onClick,
+  onEditar,
+  onEliminar,
+}: {
+  fn: FunctionSummary
+  /** La que viene: va en naranja. */
+  proxima?: boolean
+  onClick: () => void
+  onEditar: () => void
+  onEliminar: () => void
+}) {
   const pasada = yaPaso(fn)
   const libres = sinAsignar(fn)
   const agotada = fn.sold >= fn.capacity
   const dia = weekdayLong(fn.starts_at)
-  // DECISION: agotada lleva AGOTADA en la fecha grande (§4.9); la fecha pasa
-  // a la etiqueta para no perderla.
-  const label = pasada
-    ? dia
-    : agotada
-      ? `${dia} ${dayAndMonthShort(fn.starts_at)} · ${cuandoFalta(fn.starts_at)}`
-      : `${dia} · ${cuandoFalta(fn.starts_at)}`
-  const lugar = fn.name ? `${fn.name} · ${fn.venue}` : fn.venue
+  const label = pasada ? dia : `${dia} · ${cuandoFalta(fn.starts_at)}`
   const pctEntro = fn.sold > 0 ? Math.round((fn.entered / fn.sold) * 100) : 0
+  // Sólo lo que se puede hacer: el popup de la función explica por qué no.
+  const editable = !congelada(fn)
+  const eliminable = fn.sold === 0
+  const conAcciones = editable || eliminable
+
+  const estadoReparto = pasada ? (
+    <>
+      <Status tone={fn.entered > 0 ? 'ok' : 'mute'}>{fn.entered} entraron</Status>
+      {!conAcciones && <span className="rs">{pctEntro}%</span>}
+    </>
+  ) : fn.assigned === 0 ? (
+    <Status tone="mute">Sin repartir</Status>
+  ) : libres > 0 ? (
+    <Status tone="warn">{libres} sin repartir</Status>
+  ) : (
+    <Status tone="ok">Repartida</Status>
+  )
 
   return (
-    <FnTile
+    <div className="fn-con">
+    <Entrada
+      tono={proxima ? 'ticket' : 'papel'}
+      apagada={pasada}
       label={label}
-      date={!pasada && agotada ? 'AGOTADA' : dayAndMonthShort(fn.starts_at).toUpperCase()}
-      venue={`${functionTime(fn.starts_at)} · ${lugar}`}
-      bar={{ value: fn.sold, max: fn.capacity, tone: pasada ? 'ok' : undefined }}
-      quantity={
+      nombre={fn.name ?? fn.venue}
+      datos={`${dayAndMonthShort(fn.starts_at)} · ${functionTime(fn.starts_at)}${fn.name ? ` · ${fn.venue}` : ''}`}
+      talon={
         <>
-          {fn.sold} <em>de {fn.capacity} vendidas</em>
+          <TalonCifra
+            label={formatMoney(fn.collected_cents)}
+            valor={!pasada && agotada ? 'AGOTADA' : `${fn.sold} de ${fn.capacity}`}
+            barra={{ value: fn.sold, max: fn.capacity }}
+          />
+          <div className="tile__f">{estadoReparto}</div>
         </>
       }
-      aside={<span className="rs">{formatMoney(fn.collected_cents)}</span>}
-      footer={
-        pasada ? (
-          <>
-            <Status tone={fn.entered > 0 ? 'ok' : 'mute'}>{fn.entered} entraron</Status>
-            <span className="rs">{pctEntro}%</span>
-          </>
-        ) : fn.assigned === 0 ? (
-          <Status tone="mute">Sin repartir</Status>
-        ) : libres > 0 ? (
-          <Status tone="warn">{libres} sin repartir</Status>
-        ) : (
-          <Status tone="ok">Repartida</Status>
-        )
-      }
-      flag={!pasada && fn.assigned > 0 && libres > 0}
-      off={pasada}
       onClick={onClick}
     />
+    {/* Van afuera de la tarjeta: es un botón y no puede tener botones adentro. */}
+    {conAcciones && (
+      <div className="fn-con__a">
+        {editable && (
+          <Button aria-label={`Editar ${nombre(fn)}`} onClick={onEditar}>
+            Editar
+          </Button>
+        )}
+        {eliminable && (
+          <Button className="btn--bad" aria-label={`Eliminar ${nombre(fn)}`} onClick={onEliminar}>
+            Eliminar
+          </Button>
+        )}
+      </div>
+    )}
+    </div>
+  )
+}
+
+// --- El nombre de la temporada -------------------------------------------------
+
+/**
+ * El título de la página se edita en el lugar: se escribe encima y se guarda al
+ * salir o con Enter. Esc vuelve al nombre anterior. Sólo se ofrece mientras la
+ * temporada no tiene cupos ni ventas.
+ */
+function TituloEditable({ id, nombre }: { id: number; nombre: string }) {
+  const queryClient = useQueryClient()
+  const [valor, setValor] = useState(nombre)
+  const [error, setError] = useState<string | null>(null)
+  const [guardado, setGuardado] = useState(false)
+  // Esc también dispara el blur: esto evita que guarde lo que se está descartando.
+  const descartar = useRef(false)
+
+  const guardar = useMutation({
+    mutationFn: (nuevo: string) => api.updateSeason(id, nuevo),
+    onSuccess: () => {
+      setError(null)
+      setGuardado(true)
+      for (const key of DEPENDEN_DE_LA_TEMPORADA) {
+        void queryClient.invalidateQueries({ queryKey: key })
+      }
+    },
+    onError: (err) => {
+      setValor(nombre)
+      setError(err instanceof ApiError ? err.message : 'No se pudo cambiar el nombre.')
+    },
+  })
+
+  function alSalir() {
+    const nuevo = valor.trim()
+    if (descartar.current || nuevo === '') {
+      descartar.current = false
+      setValor(nombre)
+      return
+    }
+    setValor(nuevo)
+    if (nuevo !== nombre) guardar.mutate(nuevo)
+  }
+
+  return (
+    <>
+      <input
+        className="pgt-edit"
+        type="text"
+        aria-label="Nombre de la temporada"
+        value={valor}
+        onChange={(e) => {
+          setValor(e.target.value)
+          setGuardado(false)
+          setError(null)
+        }}
+        onBlur={alSalir}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+          if (e.key === 'Escape') {
+            // Esc no cierra nada acá: sólo descarta lo escrito.
+            e.stopPropagation()
+            descartar.current = true
+            e.currentTarget.blur()
+          }
+        }}
+      />
+      <span className="pgt-edit__s" role={error ? 'alert' : 'status'}>
+        {error ?? (guardar.isPending ? 'Guardando…' : guardado ? 'Nombre guardado' : '')}
+      </span>
+    </>
   )
 }
 
@@ -436,9 +538,9 @@ function FuncionModal({
           <Row title="Duplicar" sub="Mismo lugar, cupo y precio, con otra fecha" onClick={onDuplicar} />
           {!pasada && <Row title="Ver asistencia" onClick={() => navigate(`/panel/asistencia?fn=${fn.id}`)} />}
           {fn.sold > 0 ? (
-            <Row title="Cancelar función" sub={`Ya vendió ${fn.sold}: primero hay que resolver los reembolsos`} dim />
+            <Row title="Eliminar función" sub={`Ya vendió ${fn.sold}: primero hay que resolver los reembolsos`} dim />
           ) : (
-            <Row title="Cancelar función" sub="Se borra con su cupo repartido" onClick={onCancelar} />
+            <Row title="Eliminar función" sub="Se borra con su cupo repartido" onClick={onCancelar} />
           )}
         </div>
         {trabada && (
@@ -458,15 +560,26 @@ type Panel =
   | { kind: 'ver'; fn: FunctionSummary }
   | { kind: 'asignar'; fn: FunctionSummary }
   | { kind: 'cancelar'; fn: FunctionSummary }
+  | { kind: 'eliminar-temporada' }
   | null
+
+type Vista = 'funciones' | 'asignaciones'
 
 export function SeasonPage() {
   const { seasonId: rawSeasonId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   // ?fn=N llega de las alertas de Dirección: esa función abre el reparto.
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const focoId = Number(searchParams.get('fn')) || undefined
+  // La pestaña queda en la URL: recargar o compartir no te saca de Asignaciones.
+  const vista: Vista = searchParams.get('vista') === 'asignaciones' ? 'asignaciones' : 'funciones'
+  function cambiarVista(nueva: Vista) {
+    const next = new URLSearchParams(searchParams)
+    if (nueva === 'asignaciones') next.set('vista', nueva)
+    else next.delete('vista')
+    setSearchParams(next, { replace: true })
+  }
   const [panel, setPanel] = useState<Panel>(null)
   // Una sola vez: si no, cerrar el panel que abrió la alerta lo volvería a abrir.
   const foco = useRef(false)
@@ -534,8 +647,22 @@ export function SeasonPage() {
     onError: (err) => {
       setPanel(null)
       setErrorTemporada(
-        err instanceof ApiError ? err.message : 'No se pudo cancelar la función.',
+        err instanceof ApiError ? err.message : 'No se pudo eliminar la función.',
       )
+    },
+  })
+
+  const eliminarTemporada = useMutation({
+    mutationFn: (id: number) => api.deleteSeason(id),
+    onSuccess: () => {
+      for (const key of DEPENDEN_DE_LA_TEMPORADA) {
+        void queryClient.invalidateQueries({ queryKey: key })
+      }
+      navigate('/temporadas')
+    },
+    onError: (err) => {
+      setPanel(null)
+      setErrorTemporada(err instanceof ApiError ? err.message : 'No se pudo eliminar la temporada.')
     },
   })
 
@@ -547,7 +674,7 @@ export function SeasonPage() {
       <>
         <PageHeader title="Temporada" />
         <Card title="Todavía no hay ninguna temporada">
-          <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', whiteSpace: 'normal', margin: 0 }}>
+          <p className="rs" style={{ padding: '0 0 var(--s3)', whiteSpace: 'normal', margin: 0 }}>
             <Link to="/temporadas">Creá la primera</Link> para empezar a cargar funciones.
           </p>
         </Card>
@@ -567,14 +694,28 @@ export function SeasonPage() {
   const precios = [...new Set(funciones.map((fn) => fn.price_cents))].sort((x, y) => x - y)
   const ingresos = pasadas.reduce((acc, fn) => acc + fn.entered, 0)
   const anio = new Date(funciones[0]?.starts_at ?? season.created_at).getFullYear()
+  const repartidas = funciones.reduce((acc, fn) => acc + fn.assigned, 0)
+  // Sin cupos ni ventas todavía es un borrador: se renombra y se elimina. El
+  // server revisa además rendiciones y ventas anuladas, y responde el motivo.
+  const esBorrador = summary.data !== undefined && vendidas === 0 && repartidas === 0
+  const esEnCurso = season.id === enCurso?.id
+  const queSeBorra =
+    funciones.length === 0
+      ? 'su equipo'
+      : funciones.length === 1
+        ? 'su función y su equipo'
+        : `sus ${funciones.length} funciones y su equipo`
 
   return (
     <>
       <PageHeader
         eyebrow={`Temporadas · ${anio}`}
-        title={season.name}
+        title={esBorrador ? <TituloEditable key={season.id} id={season.id} nombre={season.name} /> : season.name}
         actions={
           <>
+            {esBorrador && !esEnCurso && (
+              <Button onClick={() => setPanel({ kind: 'eliminar-temporada' })}>Eliminar temporada</Button>
+            )}
             <Menu
               trigger="btn"
               label="Cambiar temporada"
@@ -605,7 +746,7 @@ export function SeasonPage() {
         }
       />
 
-      {season.id !== enCurso?.id && (
+      {!esEnCurso && (
         <div className="banner">
           <span>
             Estás mirando una temporada que no está en curso. Inicio, Rendiciones y Dirección
@@ -622,6 +763,34 @@ export function SeasonPage() {
         </p>
       )}
 
+      <div style={{ marginBottom: 'var(--s4)' }}>
+        <Seg<Vista>
+          label="Qué mirar de la temporada"
+          options={[
+            { value: 'funciones', label: 'Funciones' },
+            { value: 'asignaciones', label: 'Asignaciones' },
+          ]}
+          value={vista}
+          onChange={cambiarVista}
+        />
+      </div>
+
+      {/* Asignaciones queda montada y oculta: pasar a Funciones no borra un reparto sin guardar. */}
+      <div hidden={vista !== 'asignaciones'}>
+        {funciones.length > 0 ? (
+          <SeasonAssignments key={season.id} funciones={funciones} />
+        ) : (
+          !summary.isPending && (
+            <Card title="Esta temporada todavía no tiene funciones">
+              <p className="rs" style={{ padding: '0 0 var(--s3)', whiteSpace: 'normal', margin: 0 }}>
+                Cuando cargues una función, acá vas a poder repartirle las entradas a las coristas.
+              </p>
+            </Card>
+          )
+        )}
+      </div>
+
+      <div hidden={vista !== 'funciones'}>
       {funciones.length > 0 && (
         <div style={{ marginBottom: 'var(--s5)' }}>
           <SubFigs
@@ -645,7 +814,7 @@ export function SeasonPage() {
         <p className="rs">Cargando funciones…</p>
       ) : funciones.length === 0 ? (
         <Card title="Esta temporada todavía no tiene funciones">
-          <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', whiteSpace: 'normal', margin: 0 }}>
+          <p className="rs" style={{ padding: '0 0 var(--s3)', whiteSpace: 'normal', margin: 0 }}>
             Agregá la primera con fecha, cupo y precio: recién ahí se le puede repartir entradas a
             las coristas.
           </p>
@@ -662,8 +831,15 @@ export function SeasonPage() {
                 </span>
               </div>
               <div className="tiles tiles--3">
-                {proximas.map((fn) => (
-                  <FuncionTile key={fn.id} fn={fn} onClick={() => setPanel({ kind: 'ver', fn })} />
+                {proximas.map((fn, i) => (
+                  <FuncionTile
+                    key={fn.id}
+                    fn={fn}
+                    proxima={i === 0}
+                    onClick={() => setPanel({ kind: 'ver', fn })}
+                    onEditar={() => setPanel({ kind: 'funcion', modo: 'editar', fn })}
+                    onEliminar={() => setPanel({ kind: 'cancelar', fn })}
+                  />
                 ))}
               </div>
             </section>
@@ -678,12 +854,32 @@ export function SeasonPage() {
               </div>
               <div className="tiles tiles--3">
                 {pasadas.map((fn) => (
-                  <FuncionTile key={fn.id} fn={fn} onClick={() => setPanel({ kind: 'ver', fn })} />
+                  <FuncionTile
+                    key={fn.id}
+                    fn={fn}
+                    onClick={() => setPanel({ kind: 'ver', fn })}
+                    onEditar={() => setPanel({ kind: 'funcion', modo: 'editar', fn })}
+                    onEliminar={() => setPanel({ kind: 'cancelar', fn })}
+                  />
                 ))}
               </div>
             </section>
           )}
         </>
+      )}
+
+      </div>
+
+      {summary.data && !esBorrador && vendidas === 0 && (
+        <p className="rs" style={{ whiteSpace: 'normal', margin: 0 }}>
+          Tiene {repartidas} {repartidas === 1 ? 'entrada repartida' : 'entradas repartidas'}: mientras tanto, el
+          nombre no se cambia y la temporada no se puede eliminar.
+        </p>
+      )}
+      {esBorrador && esEnCurso && (
+        <p className="rs" style={{ whiteSpace: 'normal', margin: 0 }}>
+          Es la temporada en curso: para eliminarla, primero usá otra.
+        </p>
       )}
 
       {panel?.kind === 'ver' && (
@@ -706,18 +902,42 @@ export function SeasonPage() {
         <RepartirModal funciones={funciones} inicial={panel.fn} onClose={() => setPanel(null)} />
       )}
 
+      {panel?.kind === 'eliminar-temporada' && (
+        <Modal
+          open
+          onClose={() => setPanel(null)}
+          label="Eliminar temporada"
+          title={`¿Eliminar ${season.name}?`}
+          sub={`También se borra ${queSeBorra}`}
+          footer={
+            <>
+              <Button onClick={() => setPanel(null)}>No, volver</Button>
+              <Button
+                className="btn--bad"
+                disabled={eliminarTemporada.isPending}
+                onClick={() => eliminarTemporada.mutate(season.id)}
+              >
+                {eliminarTemporada.isPending ? 'Eliminando…' : 'Sí, eliminarla'}
+              </Button>
+            </>
+          }
+        >
+          <p className="note">No se puede deshacer, pero como todavía no tiene cupos ni ventas, no hay entradas ni plata en juego.</p>
+        </Modal>
+      )}
+
       {panel?.kind === 'cancelar' && (
         <Modal
           open
           onClose={() => setPanel(null)}
-          label="Cancelar función"
-          title={`¿Cancelar ${nombre(panel.fn)}?`}
+          label="Eliminar función"
+          title={`¿Eliminar ${nombre(panel.fn)}?`}
           sub={`${functionDay(panel.fn.starts_at)} · ${functionTime(panel.fn.starts_at)}`}
           footer={
             <>
               <Button onClick={() => setPanel(null)}>No, volver</Button>
               <Button className="btn--bad" disabled={cancelar.isPending} onClick={() => cancelar.mutate(panel.fn.id)}>
-                {cancelar.isPending ? 'Cancelando…' : 'Sí, cancelarla'}
+                {cancelar.isPending ? 'Eliminando…' : 'Sí, eliminarla'}
               </Button>
             </>
           }

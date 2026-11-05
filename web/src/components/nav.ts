@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, Coins, Mic2, Music, ScanLine, Ticket, Users, Wallet } from 'lucide-react'
+import { BarChart3, CalendarDays, Coins, LayoutGrid, Mic2, Music, ScanLine, Ticket, Users, Wallet } from 'lucide-react'
 
 import type { Role } from '../api/client'
 
@@ -13,6 +13,8 @@ export interface NavItem {
    * NO aparecen en la barra del celular: ahi entran por la pestaña Dirección.
    */
   section?: 'direccion'
+  /** En la barra del celular, el botón redondo del medio (C21). */
+  centro?: boolean
   /** De qué contador de la home sale el número al costado. */
   badge?: 'sales_pending' | 'settlements_pending'
 }
@@ -64,6 +66,7 @@ export const NAV_ITEMS: NavItem[] = [
     // nivel no tienen pestaña propia. En escritorio gana el más específico.
     matches: (p) =>
       p.startsWith('/direccion') ||
+      p.startsWith('/gestion') ||
       p.startsWith('/panel') ||
       p.startsWith('/temporadas') ||
       p.startsWith('/usuarios'),
@@ -114,7 +117,21 @@ export function navFor(role: Role): NavItem[] {
  * para una corista—, nunca una grilla fija con huecos.
  */
 export function tabsFor(role: Role): NavItem[] {
-  return navFor(role).filter((item) => item.section === undefined)
+  // En el celular no hay segundo nivel: Dirección se vuelve Gestión, la pantalla
+  // que lleva a todo lo de dirección (el resumen incluido).
+  const items = navFor(role)
+  const tabs = items
+    .filter((item) => item.section === undefined)
+    .map((item) => {
+      if (item.to === '/direccion') return { ...item, to: '/gestion', label: 'Gestión', icon: LayoutGrid }
+      if (item.to === '/puerta') return { ...item, label: 'Escanear', centro: true }
+      return item
+    })
+  // Dos de cada lado del botón de escanear: Rendiciones es lo que dirección más
+  // usa. Una corista no tiene una cuarta pantalla, y queda Mi plata sola a la derecha.
+  const rendiciones = items.find((item) => item.to === '/panel/rendiciones')
+  if (rendiciones) tabs.splice(tabs.length - 1, 0, rendiciones)
+  return tabs
 }
 
 /**
@@ -140,6 +157,7 @@ export function activeItem(items: NavItem[], path: string): NavItem | undefined 
  */
 const ACCESO: Array<{ prefijo: string; roles: Role[] }> = [
   { prefijo: '/direccion', roles: ['admin'] },
+  { prefijo: '/gestion', roles: ['admin'] },
   { prefijo: '/panel', roles: ['admin'] },
   { prefijo: '/temporadas', roles: ['admin'] },
   { prefijo: '/usuarios', roles: ['admin'] },

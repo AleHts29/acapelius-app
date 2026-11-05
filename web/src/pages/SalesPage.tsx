@@ -1,26 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 import { api } from '../api/client'
 import type { SaleListItem, SaleStatusFilter, ShowFunction } from '../api/client'
 import { useSession } from '../auth/session'
 import { RepartirModal } from '../components/RepartirModal'
-import { calendarDaysUntil, dayAndMonthShort, dayLabel, formatMoney } from '../lib/format'
+import { calendarDaysUntil, dayAndMonthShort, dayLabel, formatMoney, functionTime } from '../lib/format'
 import { useIsDesktop } from '../lib/viewport'
 import { useSeason } from '../season/SeasonProvider'
 import { Button, Search, Seg } from '../ui/Button'
 import { Card } from '../ui/Card'
+import { Entrada } from '../ui/Entrada'
+import { Menu } from '../ui/Menu'
 import { PageHeader } from '../ui/Page'
 import { Row } from '../ui/Row'
 import { SaleStatus } from '../ui/Status'
-import { FnTile } from '../ui/Tile'
 import { useNuevaVenta } from '../ui/useNuevaVenta'
 import { SaleSheet, salesQueryKey } from './SaleSheet'
 
-// Ventas (C19 §5.2, design/acapelius-B-entidades.html §01). Arriba se elige la
-// función —una ENTIDAD, en tarjeta—; abajo, sus ventas —TRANSACCIONES, en
-// fila— y quién vendió. Una sola función visible por vez.
+// Ventas (C21). Arriba, las funciones como entradas: la
+// elegida grande y naranja con sus cifras y el cupo sin repartir. Abajo, sus
+// ventas en filas a todo el ancho. Quién vendió dejó de ser un panel: es el
+// filtro "Corista" de la barra, y el ranking por corista vive en Equipo.
 
 type Filtro = 'todas' | 'deben' | 'pagas' | 'cortesias' | 'anuladas'
 const A_STATUS: Record<Filtro, SaleStatusFilter | undefined> = {
@@ -53,43 +55,9 @@ function primerNombre(nombre: string): string {
   return nombre.trim().split(/\s+/)[0] ?? nombre
 }
 
-// --- La tira de funciones -----------------------------------------------------
-
-function FuncionTile({
-  fn,
-  recaudado,
-  on,
-  onClick,
-}: {
-  fn: ShowFunction
-  recaudado?: number
-  on: boolean
-  onClick: () => void
-}) {
-  const pasada = yaPaso(fn.starts_at)
-  const dias = calendarDaysUntil(fn.starts_at)
-  const falta = dias <= 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`
-  const pct = fn.capacity > 0 ? Math.round((fn.sold / fn.capacity) * 100) : 0
-  return (
-    <FnTile
-      label={pasada ? dayLabel(fn.starts_at) : `${dayLabel(fn.starts_at)} · ${falta}`}
-      // AGOTADA en lugar de "80 / 80": un número que no pide nada no merece
-      // el mismo espacio que uno que sí (§4.9).
-      date={fn.sold >= fn.capacity ? 'AGOTADA' : `${fn.sold} / ${fn.capacity}`}
-      venue={
-        pasada
-          ? `${fn.entered} entraron`
-          : fn.assigned === 0
-            ? 'sin repartir'
-            : `quedan ${Math.max(fn.capacity - fn.sold, 0)}`
-      }
-      bar={{ value: fn.sold, max: fn.capacity, tone: pasada ? 'ok' : undefined }}
-      quantity={`${pct}%`}
-      aside={recaudado !== undefined ? <span className="rs">{formatMoney(recaudado)}</span> : undefined}
-      on={on}
-      onClick={onClick}
-    />
-  )
+function falta(iso: string): string {
+  const dias = calendarDaysUntil(iso)
+  return dias <= 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`
 }
 
 /** La función que se abre si no se eligió ninguna: la próxima, o la última. */
@@ -97,62 +65,65 @@ function porDefecto(funciones: ShowFunction[]): ShowFunction | undefined {
   return funciones.find((fn) => !yaPaso(fn.starts_at)) ?? funciones.at(-1)
 }
 
-// --- Quién vendió -------------------------------------------------------------
+// --- La regla de funciones ----------------------------------------------------
 
-function QuienVendio({
+function FuncionCell({
   fn,
-  sellerId,
-  onSeller,
+  recaudado,
+  on,
+  isAdmin,
+  onClick,
   onRepartir,
 }: {
   fn: ShowFunction
-  sellerId?: number
-  onSeller: (id: number | undefined) => void
+  recaudado?: number
+  on: boolean
+  isAdmin: boolean
+  onClick: () => void
   onRepartir: () => void
 }) {
-  const tablero = useQuery({
-    queryKey: ['function-allocations', fn.id],
-    queryFn: () => api.functionAllocations(fn.id),
-  })
-  const filas = (tablero.data?.allocations ?? [])
-    .filter((a) => a.assigned > 0 || a.sold > 0)
-    .sort((a, b) => b.sold - a.sold)
+  const pasada = yaPaso(fn.starts_at)
   const libres = Math.max(fn.capacity - fn.assigned, 0)
+  const quedan = Math.max(fn.capacity - fn.sold, 0)
+  // AGOTADA en lugar de "80 / 80": un número que no pide nada no merece el
+  // mismo espacio que uno que sí (§4.9).
+  const cifra = fn.sold >= fn.capacity ? 'AGOTADA' : `${fn.sold}/${fn.capacity}`
 
+  if (!on) {
+    return (
+      <Entrada
+        chica
+        label={dayLabel(fn.starts_at)}
+        nombre={cifra}
+        talon={pasada ? `${fn.entered} entraron` : falta(fn.starts_at)}
+        onClick={onClick}
+      />
+    )
+  }
+  const partes = [
+    recaudado !== undefined ? `${formatMoney(recaudado)} recaudado` : null,
+    pasada ? `${fn.entered} entraron` : fn.assigned === 0 ? 'sin repartir' : `quedan ${quedan}`,
+  ].filter(Boolean)
   return (
-    <section className="grp" style={{ margin: 0 }}>
-      <div className="grp__h">
-        <h2 className="lbl">Quién vendió</h2>
-        <span className="grp__n">{dayAndMonthShort(fn.starts_at)}</span>
-      </div>
-      <div className="card">
-        {tablero.isPending && <Row title="Cargando…" />}
-        {!tablero.isPending && filas.length === 0 && <Row title="Todavía no hay cupo repartido" />}
-        {filas.map((a) => (
-          <Row
-            key={a.user_id}
-            title={a.seller_name}
-            sub={
-              <div className="tile__bar" aria-hidden>
-                <i style={{ width: `${a.assigned > 0 ? Math.min(100, (a.sold / a.assigned) * 100) : 0}%` }} />
-              </div>
-            }
-            amount={a.sold}
-            // Tocar una corista filtra la lista por ella; tocarla de nuevo, saca el filtro.
-            onClick={() => onSeller(sellerId === a.user_id ? undefined : a.user_id)}
-            dim={sellerId !== undefined && sellerId !== a.user_id}
-          />
-        ))}
-        {!yaPaso(fn.starts_at) && libres > 0 && (
-          <div className="card__f">
-            <span>Sin repartir</span>
-            <button className="card__a" type="button" onClick={onRepartir}>
-              {libres} {libres === 1 ? 'entrada' : 'entradas'}
-            </button>
-          </div>
-        )}
-      </div>
-    </section>
+    <Entrada
+      chica
+      tono="ticket"
+      label={`${dayLabel(fn.starts_at)} · ${functionTime(fn.starts_at)}${pasada ? '' : ` · ${falta(fn.starts_at)}`}`}
+      nombre={cifra}
+      talon={
+        <span className="entrada__nota" style={{ margin: 0, display: 'block' }}>
+          {partes.join(' · ')}
+          {isAdmin && !pasada && libres > 0 && (
+            <>
+              {' · '}
+              <button type="button" onClick={onRepartir}>
+                repartir {libres}
+              </button>
+            </>
+          )}
+        </span>
+      }
+    />
   )
 }
 
@@ -175,6 +146,28 @@ export function SalesPage() {
   const [abierta, setAbierta] = useState<SaleListItem | null>(null)
   const [repartir, setRepartir] = useState(false)
 
+  // Una venta tocada en Inicio llega en el estado de la navegación. No hay un
+  // endpoint de una sola venta y puede ser de otra función: se busca por toda
+  // la temporada, se abre, y la lista de atrás pasa a la función de esa venta.
+  const location = useLocation()
+  const pedida = (location.state as { venta?: { id: number; comprador: string } } | null)?.venta
+  const pedidaQ = useQuery({
+    queryKey: ['venta-pedida', pedida?.id],
+    queryFn: () => api.listSales({ seasonId, q: pedida!.comprador }),
+    enabled: pedida !== undefined && seasonId !== undefined,
+    gcTime: 0,
+  })
+  useEffect(() => {
+    if (!pedida || (!pedidaQ.data && !pedidaQ.isError)) return
+    const venta = pedidaQ.data?.sales.find((v) => v.id === pedida.id)
+    const next = new URLSearchParams(searchParams)
+    if (venta) {
+      setAbierta(venta)
+      next.set('fn', String(venta.function_id))
+    }
+    setSearchParams(next, { replace: true, state: null })
+  }, [pedida, pedidaQ.data, pedidaQ.isError, searchParams, setSearchParams])
+
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQ(q), 250)
     return () => clearTimeout(id)
@@ -194,6 +187,16 @@ export function SalesPage() {
   const funciones = useMemo(() => funcionesQ.data?.functions ?? [], [funcionesQ.data])
   const elegida = funciones.find((fn) => fn.id === fnDeURL) ?? porDefecto(funciones)
   const recaudado = new Map((resumenQ.data?.functions ?? []).map((f) => [f.id, f.collected_cents]))
+
+  // Quién tiene cupo en la función elegida: las opciones del filtro "Corista".
+  const tablero = useQuery({
+    queryKey: ['function-allocations', elegida?.id],
+    queryFn: () => api.functionAllocations(elegida!.id),
+    enabled: isAdmin && elegida !== undefined,
+  })
+  const coristas = (tablero.data?.allocations ?? [])
+    .filter((a) => a.assigned > 0 || a.sold > 0)
+    .sort((a, b) => b.sold - a.sold)
 
   const elegir = (id: number) => {
     const next = new URLSearchParams(searchParams)
@@ -236,11 +239,39 @@ export function SalesPage() {
 
   const vendidas = funciones.reduce((acc, fn) => acc + fn.sold, 0)
   const capacidad = funciones.reduce((acc, fn) => acc + fn.capacity, 0)
-  const seller = sellerId !== undefined ? sales.find((s) => s.seller_id === sellerId)?.seller_name : undefined
+  const seller =
+    sellerId !== undefined
+      ? (coristas.find((c) => c.user_id === sellerId)?.seller_name ??
+        sales.find((s) => s.seller_id === sellerId)?.seller_name)
+      : undefined
 
   const titulo = buscando
     ? 'Resultados · toda la temporada'
     : `Ventas · ${elegida ? dayAndMonthShort(elegida.starts_at) : ''}${seller ? ` · ${primerNombre(seller)}` : ''}`
+
+  const filtroCorista = isAdmin && (
+    <Menu
+      trigger="btn"
+      ariaLabel="Filtrar por corista"
+      label={seller ? primerNombre(seller) : 'Corista'}
+      value={sellerId !== undefined ? String(sellerId) : 'todas'}
+      align="right"
+      groups={[
+        {
+          options: [{ id: 'todas', label: 'Todas las coristas', onSelect: () => setSellerId(undefined) }],
+        },
+        {
+          label: elegida ? `Con cupo el ${dayAndMonthShort(elegida.starts_at)}` : undefined,
+          options: coristas.map((c) => ({
+            id: String(c.user_id),
+            label: c.seller_name,
+            hint: `vendió ${c.sold} de ${c.assigned}`,
+            onSelect: () => setSellerId(c.user_id),
+          })),
+        },
+      ]}
+    />
+  )
 
   const lista = (
     <section className="grp" style={{ margin: 0 }}>
@@ -345,14 +376,16 @@ export function SalesPage() {
       {nuevaVenta.panel}
 
       {funciones.length > 0 && (
-        <div className="tiles tiles--5" style={{ marginBottom: 'var(--s5)' }}>
+        <div className="entradas">
           {funciones.map((fn) => (
-            <FuncionTile
+            <FuncionCell
               key={fn.id}
               fn={fn}
               recaudado={recaudado.get(fn.id)}
               on={!buscando && fn.id === elegida?.id}
+              isAdmin={isAdmin}
               onClick={() => elegir(fn.id)}
+              onRepartir={() => setRepartir(true)}
             />
           ))}
         </div>
@@ -362,32 +395,23 @@ export function SalesPage() {
         <p className="rs">Cargando…</p>
       ) : funciones.length === 0 ? (
         <Card title="Esta temporada todavía no tiene funciones">
-          <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', whiteSpace: 'normal', margin: 0 }}>
+          <p className="rs" style={{ whiteSpace: 'normal', margin: 0 }}>
             Cuando haya funciones cargadas, las ventas aparecen acá, una función por vez.
           </p>
         </Card>
       ) : (
-        <div className={isAdmin ? 'asym' : undefined}>
-          <div>
-            <div className="bar">
-              <Search
-                aria-label="Buscar venta"
-                placeholder={isAdmin ? 'Buscar comprador, mail o corista' : 'Buscar comprador o mail'}
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
-              <Seg<Filtro> label="Filtrar ventas" value={filtro} onChange={filtrar} options={FILTROS} />
-            </div>
-            {lista}
-          </div>
-          {isAdmin && elegida && (
-            <QuienVendio
-              fn={elegida}
-              sellerId={sellerId}
-              onSeller={setSellerId}
-              onRepartir={() => setRepartir(true)}
+        <div>
+          <div className="bar">
+            <Search
+              aria-label="Buscar venta"
+              placeholder={isAdmin ? 'Buscar comprador, mail o corista' : 'Buscar comprador o mail'}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
             />
-          )}
+            <Seg<Filtro> label="Filtrar ventas" value={filtro} onChange={filtrar} options={FILTROS} />
+            {filtroCorista}
+          </div>
+          {lista}
         </div>
       )}
 

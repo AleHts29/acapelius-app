@@ -7,14 +7,13 @@ import type {
   FormerMember,
   FunctionSummary,
   Role,
-  Settlement,
   TeamMember,
   User,
   UserAccessResponse,
 } from '../api/client'
 import { RepartirModal } from '../components/RepartirModal'
 import { useSession } from '../auth/session'
-import { dayAndMonthShort, dayLabel, daysAgo, formatMoney } from '../lib/format'
+import { dayLabel, daysAgo, formatMoney } from '../lib/format'
 import { useSeason } from '../season/SeasonProvider'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
@@ -24,7 +23,8 @@ import { Label } from '../ui/Label'
 import { Modal } from '../ui/Modal'
 import { PageHeader } from '../ui/Page'
 import { Row } from '../ui/Row'
-import { BalanceStatus, Status } from '../ui/Status'
+import { useIsDesktop } from '../lib/viewport'
+import { Status } from '../ui/Status'
 import { Tile } from '../ui/Tile'
 import { NewUserSheet, UserSheet } from './UserForms'
 
@@ -83,7 +83,7 @@ function AccessCard({ access, onClose }: { access: UserAccessResponse; onClose: 
           </>
         }
       >
-        <div style={{ padding: '0 var(--s3) var(--s3)' }}>
+        <div style={{ padding: '0 0 var(--s3)' }}>
           <DataList rows={[['Contraseña provisoria', <span className="rn">{tempPassword}</span>]]} />
           <p className="rs" style={{ whiteSpace: 'normal', margin: 'var(--s1) 0 0' }}>
             {emailStatus === 'failed'
@@ -98,68 +98,69 @@ function AccessCard({ access, onClose }: { access: UserAccessResponse; onClose: 
 
 // --- Las tarjetas -------------------------------------------------------------
 
-/** El renglón bajo el nombre: el mail, salvo que haya algo más urgente. */
-function subDe(m: TeamMember): string {
-  if (m.left_at !== null) return `Dejó el coro ${daysAgo(m.left_at)}`
-  if (m.last_login_at === null) return 'Nunca entró · invitación pendiente'
-  return m.email
+function cuantasTemporadas(m: TeamMember): string {
+  return m.seasons === 1 ? 'Primera temporada' : `${m.seasons}ª temporada`
 }
 
-function CoristaTile({
-  m,
-  ultimaRendicion,
-  onClick,
-}: {
-  m: TeamMember
-  ultimaRendicion?: string
-  onClick: () => void
-}) {
-  const salio = m.left_at !== null
-  const sinCupo = m.assigned === 0
-  const pct = sinCupo ? 0 : Math.round((m.tickets_sold / m.assigned) * 100)
+/** Si entró a la app: es lo que dice si la invitación le llegó. */
+function EstadoAcceso({ m }: { m: TeamMember }) {
+  if (m.left_at !== null) return <Status tone="mute">Dejó el coro {daysAgo(m.left_at)}</Status>
+  if (m.last_login_at === null) return <Status tone="warn">Nunca entró</Status>
+  return <Status tone="ok">Entró {daysAgo(m.last_login_at)}</Status>
+}
+
+/** La ficha de una persona: quién es y qué hace en esta temporada. La plata está en Rendiciones. */
+function Ficha({ m, onClick }: { m: TeamMember; onClick: () => void }) {
+  const corista = m.role === 'seller'
+  const escritorio = useIsDesktop()
+  // En el celular una ficha por pantalla no deja ver al equipo: va en fila.
+  if (!escritorio) {
+    return (
+      <Row
+        title={m.name}
+        sub={
+          corista
+            ? `${m.assigned > 0 ? `${m.tickets_sold} de ${m.assigned} vendidas` : 'Sin cupo'}${m.last_login_at ? '' : ' · nunca entró'}`
+            : m.role === 'door'
+              ? `${m.checkins} ${m.checkins === 1 ? 'escaneo' : 'escaneos'} · Puerta`
+              : PAPEL_STAFF.admin
+        }
+        onClick={onClick}
+      />
+    )
+  }
   return (
     <Tile
       name={m.name}
-      sub={subDe(m)}
-      bar={{ value: m.tickets_sold, max: m.assigned, tone: m.balance_cents > 0 ? undefined : 'ok' }}
+      sub={m.email}
+      bar={corista && m.assigned > 0 ? { value: m.tickets_sold, max: m.assigned } : undefined}
       quantity={
-        sinCupo ? (
-          <em>Sin cupo asignado</em>
-        ) : (
+        corista ? (
+          m.assigned > 0 ? (
+            <>
+              {m.tickets_sold} <em>de {m.assigned} vendidas</em>
+            </>
+          ) : (
+            <em>Sin cupo</em>
+          )
+        ) : m.role === 'door' ? (
           <>
-            {m.tickets_sold} <em>de {m.assigned} vendidas</em>
+            {m.checkins} <em>{m.checkins === 1 ? 'escaneo' : 'escaneos'} · Puerta</em>
           </>
+        ) : (
+          <em>{PAPEL_STAFF.admin}</em>
         )
       }
-      aside={<span className="rs">{sinCupo ? '—' : pct >= 100 ? 'completo' : `${pct}%`}</span>}
       footer={
         <>
-          {sinCupo && m.tickets_sold === 0 ? (
-            <Status tone="mute">Sin ventas</Status>
-          ) : (
-            <BalanceStatus balanceCents={m.balance_cents} />
-          )}
-          {ultimaRendicion && <span className="rs">rindió el {dayAndMonthShort(ultimaRendicion)}</span>}
+          <EstadoAcceso m={m} />
+          <span className="rs">{cuantasTemporadas(m)}</span>
         </>
       }
-      flag={!salio && (m.balance_cents > 0 || sinCupo)}
-      off={salio}
+      off={m.left_at !== null}
       onClick={onClick}
     />
   )
-}
-
-function StaffTile({ m, onClick }: { m: TeamMember; onClick: () => void }) {
-  const papel = PAPEL_STAFF[m.role as Exclude<Role, 'seller'>]
-  const dato =
-    m.left_at !== null
-      ? `Dejó el coro ${daysAgo(m.left_at)}`
-      : m.last_login_at === null
-        ? 'invitación pendiente'
-        : m.role === 'door'
-          ? `${m.checkins} ${m.checkins === 1 ? 'escaneo' : 'escaneos'}`
-          : m.email
-  return <Tile name={m.name} sub={`${papel} · ${dato}`} off={m.left_at !== null} onClick={onClick} />
 }
 
 // --- El popup de una persona --------------------------------------------------
@@ -238,7 +239,6 @@ function CoristaModal({
   onEditar,
   onSacar,
   onRepartir,
-  onAviso,
 }: {
   m: TeamMember
   seasonId: number
@@ -249,73 +249,56 @@ function CoristaModal({
   onEditar: () => void
   onSacar: () => void
   onRepartir: () => void
-  onAviso: (texto: string) => void
 }) {
   const navigate = useNavigate()
-  const detalle = useQuery({
-    queryKey: ['seller-detail', seasonId, m.id],
-    queryFn: () => api.sellerDetail(m.id, seasonId),
-  })
   const ventas = useQuery({
     queryKey: ['sales', 'comps', seasonId, m.id],
     queryFn: () => api.listSales({ seasonId, sellerId: m.id }),
   })
-  const recordar = useMutation({
-    mutationFn: () => api.remindSeller(m.id, seasonId),
-    onSuccess: (r) =>
-      onAviso(r.email_status === 'failed' ? 'No salió el recordatorio.' : `Le mandamos el recordatorio a ${m.name}.`),
-    onError: (err) => onAviso(err instanceof ApiError ? err.message : 'No se pudo mandar el recordatorio.'),
-  })
-
-  const d = detalle.data
-  const ultima = d?.timeline.filter((t) => t.kind === 'settlement').at(-1)
-  const metodo = (x?: string) => (x === 'transfer' ? 'transferencia' : x === 'cash' ? 'efectivo' : x)
-
   return (
     <Modal
       open
       onClose={onClose}
       label={`Corista · ${seasonName}`}
       title={m.name}
-      sub={`${m.email} · ${m.seasons === 1 ? 'primera temporada' : `${m.seasons}ª temporada`}`}
+      sub={m.email}
       footer={
         <>
-          <Button onClick={onRepartir}>Cambiar cupo</Button>
-          <Button disabled={recordar.isPending || m.balance_cents <= 0} onClick={() => recordar.mutate()}>
-            Recordarle
-          </Button>
-          <Button go onClick={() => navigate(`/panel/rendiciones/${m.id}`)}>
-            Registrar rendición
+          <Button go onClick={onRepartir}>
+            Cambiar cupo
           </Button>
         </>
       }
     >
       <div style={{ display: 'flex', gap: 'var(--s6)', flexWrap: 'wrap' }}>
-        <Figure label={m.balance_cents > 0 ? 'Debe' : 'Al día'} tone={m.balance_cents > 0 ? 'warn' : 'ok'}>
-          {formatMoney(Math.max(m.balance_cents, 0))}
-        </Figure>
         <Figure label="Vendió" unit={m.assigned > 0 ? `/ ${m.assigned}` : undefined}>
           {m.tickets_sold}
         </Figure>
       </div>
 
+      <DataList
+        rows={[
+          ['Rol', roleLabel(m.role)],
+          ['Último ingreso', m.last_login_at === null ? 'Nunca entró' : daysAgo(m.last_login_at)],
+          ['En el coro', m.seasons === 1 ? 'Primera temporada' : `${m.seasons} temporadas`],
+          ...(ventas.data
+            ? ([['Cortesías usadas', String(ventas.data.summary.comp_tickets)]] as Array<[string, string]>)
+            : []),
+        ]}
+      />
+
       <CupoPorFuncion m={m} funciones={funciones} />
 
-      {d && (
-        <DataList
-          rows={[
-            ['Cobró', formatMoney(d.collected_cents)],
-            ['Ya rindió', formatMoney(d.settled_cents)],
-            [
-              'Última rendición',
-              ultima ? `${dayAndMonthShort(ultima.at)} · ${metodo(ultima.method)}` : 'Todavía no rindió',
-            ],
-            ...(ventas.data
-              ? ([['Cortesías usadas', String(ventas.data.summary.comp_tickets)]] as Array<[string, string]>)
-              : []),
-          ]}
-        />
-      )}
+      <div>
+        <Label>Rendiciones</Label>
+        <div className="mini" style={{ marginTop: 7 }}>
+          <Row
+            title={m.balance_cents > 0 ? `Debe ${formatMoney(m.balance_cents)}` : 'Al día'}
+            sub="Ver sus cuentas y registrar una rendición"
+            onClick={() => navigate(`/panel/rendiciones/${m.id}`)}
+          />
+        </div>
+      </div>
 
       <Cuenta m={m} esYo={esYo} onEditar={onEditar} onSacar={onSacar} />
     </Modal>
@@ -339,6 +322,7 @@ function StaffModal({
     <Modal open onClose={onClose} label={roleLabel(m.role)} title={m.name} sub={m.email}>
       <DataList
         rows={[
+          ['Rol', roleLabel(m.role)],
           ['Último ingreso', m.last_login_at === null ? 'Nunca entró' : daysAgo(m.last_login_at)],
           ...(m.role === 'door' ? ([['Escaneos', String(m.checkins)]] as Array<[string, string]>) : []),
           ['En el coro', m.seasons === 1 ? 'Primera temporada' : `${m.seasons} temporadas`],
@@ -391,16 +375,6 @@ function AnteriorModal({
   )
 }
 
-/** La fecha de la última rendición de cada corista, de un solo pedido. */
-function ultimasRendiciones(settlements: Settlement[]): Map<number, string> {
-  const out = new Map<number, string>()
-  for (const s of settlements) {
-    const prev = out.get(s.seller_id)
-    if (prev === undefined || s.created_at > prev) out.set(s.seller_id, s.created_at)
-  }
-  return out
-}
-
 export function UsersPage() {
   const { user: me } = useSession()
   const queryClient = useQueryClient()
@@ -432,17 +406,10 @@ export function UsersPage() {
     queryFn: () => api.functionsSummary(mirando!),
     enabled: mirando !== undefined,
   })
-  const rendicionesQ = useQuery({
-    queryKey: ['settlements-history', mirando, 'all'],
-    queryFn: () => api.listSettlements(mirando!),
-    enabled: mirando !== undefined,
-  })
-
   const members = data?.members ?? []
   const former = data?.former ?? []
   const resumen = data?.summary
   const funciones = funcionesQ.data?.functions ?? []
-  const ultimas = ultimasRendiciones(rendicionesQ.data?.settlements ?? [])
 
   const refrescar = () => {
     void queryClient.invalidateQueries({ queryKey: ['team'] })
@@ -472,13 +439,12 @@ export function UsersPage() {
     }
   }, [focusId, members, setSearchParams])
 
-  const coristas = members.filter((m) => m.role === 'seller')
-  const staff = members.filter((m) => m.role !== 'seller')
-  const capacidad = funciones.reduce((acc, fn) => acc + fn.capacity, 0)
-  const repartidos = funciones.reduce((acc, fn) => acc + fn.assigned, 0)
-  const sinAsignar = Math.max(capacidad - repartidos, 0)
-  const cupoCoristas = coristas.reduce((acc, m) => acc + m.assigned, 0)
-  const vendidasCoristas = coristas.reduce((acc, m) => acc + m.tickets_sold, 0)
+  const porNombre = (a: TeamMember, b: TeamMember) => a.name.localeCompare(b.name, 'es')
+  const siguen = members.filter((m) => m.left_at === null).sort(porNombre)
+  const coristas = siguen.filter((m) => m.role === 'seller')
+  const staff = siguen.filter((m) => m.role !== 'seller')
+  const dejaron = members.filter((m) => m.left_at !== null).sort(porNombre)
+  const nuncaEntraron = siguen.filter((m) => m.last_login_at === null).length
 
   const editar = (m: TeamMember) => {
     setAbierta(null)
@@ -519,17 +485,10 @@ export function UsersPage() {
         <div style={{ marginBottom: 'var(--s5)' }}>
           <SubFigs
             items={[
-              ...(funcionesQ.data
-                ? [
-                    { label: 'Cupos repartidos', value: repartidos, unit: `/ ${capacidad}` },
-                    { label: 'Sin asignar', value: sinAsignar, tone: sinAsignar > 0 ? ('warn' as const) : undefined },
-                  ]
-                : []),
-              {
-                label: 'Sin rendir',
-                value: formatMoney(resumen.balance_cents),
-                tone: resumen.balance_cents > 0 ? ('warn' as const) : undefined,
-              },
+              { label: 'Coristas', value: coristas.length },
+              { label: 'Dirección y puerta', value: staff.length },
+              { label: 'Nunca entraron', value: nuncaEntraron, tone: nuncaEntraron > 0 ? ('warn' as const) : undefined },
+              ...(dejaron.length > 0 ? [{ label: 'Dejaron el coro', value: dejaron.length }] : []),
             ]}
           />
         </div>
@@ -539,40 +498,31 @@ export function UsersPage() {
         <p className="rs">Cargando…</p>
       ) : members.length === 0 ? (
         <Card title="Todavía no hay nadie más">
-          <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', whiteSpace: 'normal', margin: 0 }}>
+          <p className="rs" style={{ padding: '0 0 var(--s3)', whiteSpace: 'normal', margin: 0 }}>
             Sumá a las coristas: a cada una le llega su acceso por email.
           </p>
         </Card>
       ) : (
         <>
-          {coristas.length > 0 && (
-            <section className="grp">
-              <div className="grp__h">
-                <h2 className="lbl">Coristas</h2>
-                <span className="grp__n">
-                  {coristas.length} · {vendidasCoristas} de {cupoCoristas} cupos
-                </span>
-              </div>
-              <div className="tiles tiles--3">
-                {coristas.map((m) => (
-                  <CoristaTile key={m.id} m={m} ultimaRendicion={ultimas.get(m.id)} onClick={() => setAbierta(m)} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {staff.length > 0 && (
-            <section className="grp">
-              <div className="grp__h">
-                <h2 className="lbl">Dirección y puerta</h2>
-                <span className="grp__n">{staff.length}</span>
-              </div>
-              <div className="tiles tiles--3">
-                {staff.map((m) => (
-                  <StaffTile key={m.id} m={m} onClick={() => setAbierta(m)} />
-                ))}
-              </div>
-            </section>
+          {[
+            { label: 'Coristas', gente: coristas },
+            { label: 'Dirección y puerta', gente: staff },
+            { label: 'Dejaron el coro', gente: dejaron },
+          ].map(
+            ({ label, gente }) =>
+              gente.length > 0 && (
+                <section className="grp" key={label}>
+                  <div className="grp__h">
+                    <h2 className="lbl">{label}</h2>
+                    <span className="grp__n">{gente.length}</span>
+                  </div>
+                  <div className="tiles tiles--3">
+                    {gente.map((m) => (
+                      <Ficha key={m.id} m={m} onClick={() => setAbierta(m)} />
+                    ))}
+                  </div>
+                </section>
+              ),
           )}
 
           {former.length > 0 && (
@@ -617,7 +567,6 @@ export function UsersPage() {
             setAbierta(null)
             setRepartir(true)
           }}
-          onAviso={setAviso}
         />
       )}
       {abierta && abierta.role !== 'seller' && (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import { api } from '../api/client'
@@ -9,7 +9,7 @@ import { loadStoredSnapshot, saveStoredSnapshot } from '../door/db'
 import { calendarDaysUntil, dayAndMonthShort, functionDay, functionTime } from '../lib/format'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
-import { Heel } from '../ui/Heel'
+import { Entrada } from '../ui/Entrada'
 import { PageHeader } from '../ui/Page'
 import { Row } from '../ui/Row'
 import { Status } from '../ui/Status'
@@ -107,6 +107,7 @@ function cuando(fn: ShowFunction): string {
 
 export function DoorPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useSession()
   const { data, isPending } = useQuery({
     queryKey: ['functions'],
@@ -135,6 +136,8 @@ export function DoorPage() {
     .replace(',', '')
 
   if (isPending) return <p className="rs">Cargando funciones…</p>
+  // El botón de escanear de la barra: si hay función hoy no hay nada que elegir.
+  if (hoy && searchParams.get('escanear') === '1') return <Navigate to={`/puerta/${hoy.id}`} replace />
 
   return (
     <>
@@ -147,64 +150,71 @@ export function DoorPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
           {funciones.length === 0 ? (
             <Card title="No hay funciones cargadas">
-              <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', margin: 0, whiteSpace: 'normal' }}>
+              <p className="rs" style={{ padding: '0 0 var(--s3)', margin: 0, whiteSpace: 'normal' }}>
                 Cuando dirección cargue la primera función, va a aparecer acá para abrir la puerta.
               </p>
             </Card>
           ) : hoy ? (
             // El caso que importa: un bloque, un botón, cero decisiones.
-            <Heel label={`Hoy · ${faltan(hoy.starts_at)}`} title={nombre(hoy)} meta={`${functionTime(hoy.starts_at)} · ${hoy.venue}`}>
-              <div className="heel__foot">
-                <div>
-                  <span className="lbl">Emitidas</span>
-                  <b>{hoy.sold}</b>
-                </div>
-                <div>
-                  <span className="lbl">Ingresaron</span>
-                  <b>{hoy.entered}</b>
-                </div>
-                <div>
-                  <span className="lbl">Cortesías</span>
-                  <b>{hoy.comp_tickets}</b>
-                </div>
-                <div>
-                  <span className="lbl">Coristas</span>
-                  <b>{hoy.sellers}</b>
-                </div>
-              </div>
-              <div style={{ margin: 'var(--s4) 0 var(--s2)' }}>
-                <Button go wide onClick={() => navigate(`/puerta/${hoy.id}`)}>
-                  Abrir la puerta
-                </Button>
-              </div>
-              <Preparada functionId={hoy.id} />
-            </Heel>
+            <Entrada
+              tono="ticket"
+              label={`Hoy · ${faltan(hoy.starts_at)}`}
+              nombre={nombre(hoy)}
+              datos={`${functionTime(hoy.starts_at)} · ${hoy.venue}`}
+              talon={
+                <>
+                  <div className="entrada__stats">
+                    <div>
+                      <span className="entrada__l">Emitidas</span>
+                      <b>{hoy.sold}</b>
+                    </div>
+                    <div>
+                      <span className="entrada__l">Entraron</span>
+                      <b>{hoy.entered}</b>
+                    </div>
+                    <div>
+                      <span className="entrada__l">Cortesías</span>
+                      <b>{hoy.comp_tickets}</b>
+                    </div>
+                    <div>
+                      <span className="entrada__l">Coristas</span>
+                      <b>{hoy.sellers}</b>
+                    </div>
+                  </div>
+                  <div style={{ margin: 'var(--s3) 0 var(--s2)' }}>
+                    <Button go wide onClick={() => navigate(`/puerta/${hoy.id}`)}>
+                      Abrir la puerta
+                    </Button>
+                  </div>
+                  <Preparada functionId={hoy.id} />
+                </>
+              }
+            />
           ) : proxima ? (
-            <Card title={`Próxima función · ${enCuantosDias(proxima.starts_at)}`}>
-              <div style={{ padding: '0 var(--s3) var(--s3)', display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
-                <div>
-                  <div className="rt">{nombre(proxima)}</div>
-                  <div className="rs">
-                    {functionDay(proxima.starts_at)}, {functionTime(proxima.starts_at)} · {proxima.venue}
+            <Entrada
+              label={`Próxima · ${enCuantosDias(proxima.starts_at)}`}
+              nombre={nombre(proxima)}
+              datos={`${functionDay(proxima.starts_at)}, ${functionTime(proxima.starts_at)} · ${proxima.venue}`}
+              talon={
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
+                  <p className="rs" style={{ margin: 0, whiteSpace: 'normal' }}>
+                    La puerta se usa el día de la función. Si querés probarla antes, podés abrirla igual:
+                    los ingresos que marques quedan registrados.
+                  </p>
+                  <div style={{ display: 'flex', gap: 'var(--s1)', flexWrap: 'wrap' }}>
+                    <Button onClick={() => navigate(`/puerta/${proxima.id}`)}>Abrir igual para probar</Button>
+                    {/* Asistencia es de dirección: a la puerta la mandaría a una
+                        pantalla que no puede abrir. */}
+                    {user?.role === 'admin' && (
+                      <Button to={`/panel/asistencia?fn=${proxima.id}`}>Ver quiénes compraron</Button>
+                    )}
                   </div>
                 </div>
-                <p className="rs" style={{ margin: 0, whiteSpace: 'normal' }}>
-                  La puerta se usa el día de la función. Si querés probarla antes, podés abrirla igual:
-                  los ingresos que marques quedan registrados.
-                </p>
-                <div style={{ display: 'flex', gap: 'var(--s1)', flexWrap: 'wrap' }}>
-                  <Button onClick={() => navigate(`/puerta/${proxima.id}`)}>Abrir igual para probar</Button>
-                  {/* Asistencia es de dirección: a la puerta la mandaría a una
-                      pantalla que no puede abrir. */}
-                  {user?.role === 'admin' && (
-                    <Button to={`/panel/asistencia?fn=${proxima.id}`}>Ver quiénes compraron</Button>
-                  )}
-                </div>
-              </div>
-            </Card>
+              }
+            />
           ) : (
             <Card title="La temporada ya terminó">
-              <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', margin: 0, whiteSpace: 'normal' }}>
+              <p className="rs" style={{ padding: '0 0 var(--s3)', margin: 0, whiteSpace: 'normal' }}>
                 No queda ninguna función por delante. Las que ya pasaron siguen al lado, por si hay que
                 corregir un ingreso.
               </p>
@@ -237,7 +247,7 @@ export function DoorPage() {
             </section>
           )}
           <Card title="Antes de abrir">
-            <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', margin: 0, whiteSpace: 'normal' }}>
+            <p className="rs" style={{ padding: '0 0 var(--s3)', margin: 0, whiteSpace: 'normal' }}>
               En la puerta conviene el celular: escanea los QR con la cámara. Desde la compu podés buscar
               por nombre y marcar ingresos a mano.
             </p>

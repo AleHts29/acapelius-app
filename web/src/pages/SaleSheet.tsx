@@ -8,19 +8,21 @@ import { dayLabel, daysAgo, formatMoney, pesosToCents } from '../lib/format'
 import { useIsDesktop } from '../lib/viewport'
 import { Button, Seg } from '../ui/Button'
 import { DataList } from '../ui/DataList'
+import { Figure } from '../ui/Figure'
 import { Label } from '../ui/Label'
 import { Row } from '../ui/Row'
-import { Drawer, Sheet } from '../ui/Sheet'
+import { Modal } from '../ui/Modal'
+import { Sheet } from '../ui/Sheet'
 import { SaleStatus } from '../ui/Status'
 
 /** La clave del listado: el detalle la invalida cuando cambia algo. */
 export const salesQueryKey = ['sales'] as const
 
 /**
- * El detalle de una venta (C19 §5.2): drawer en escritorio, hoja en celular.
- * Es una TRANSACCIÓN que se trabaja de corrido, así que no tapa la lista. Los
- * flujos son los de siempre: cobrar (todo o una parte), quitar un cobro,
- * volver a pendiente, copiar el link, reenviar el QR y anular.
+ * El detalle de una venta (C19 §5.2): popup en escritorio, hoja en celular.
+ * Si falta cobrar, eso va primero: cuánto falta y dos botones. Cobrar NO cierra
+ * el popup: confirma en palabras, muestra el cobro y deja quitarlo si fue sin
+ * querer. También: copiar el link, reenviar el QR y anular.
  */
 export function SaleSheet({
   sale: saleInicial,
@@ -55,9 +57,17 @@ export function SaleSheet({
   const setPayment = useMutation({
     mutationFn: ({ paid, method }: { paid: boolean; method?: PaymentMethod }) =>
       api.updateSalePayment(sale.id, paid ? 'paid' : 'pending', method),
-    onSuccess: () => {
+    onSuccess: ({ sale: actualizada }) => {
+      setSale((prev) => ({
+        ...prev,
+        paid_cents: actualizada.paid_cents,
+        payment_status: actualizada.payment_status,
+        payment_method: actualizada.payment_method,
+      }))
+      setError(null)
+      setNotice('La venta volvió a pendiente: se quitaron sus cobros.')
+      void queryClient.invalidateQueries({ queryKey: ['sale-payments', sale.id] })
       refresh()
-      onClose()
     },
     onError: (err) => fail(err, 'No se pudo actualizar el pago.'),
   })
@@ -82,9 +92,15 @@ export function SaleSheet({
   }
 
   const addPayment = useMutation({
-    mutationFn: (cents: number) => api.addSalePayment(sale.id, cents, metodo),
-    onSuccess: (data) => {
+    mutationFn: ({ cents, method }: { cents: number; method: PaymentMethod }) =>
+      api.addSalePayment(sale.id, cents, method),
+    onSuccess: (data, { cents, method }) => {
       tomarRespuesta(data)
+      const resta = data.sale.amount_cents - data.sale.paid_cents
+      setNotice(
+        `Cobro registrado: ${formatMoney(cents)} ${method === 'cash' ? 'en efectivo' : 'por transferencia'}. ` +
+          (resta > 0 ? `Falta cobrar ${formatMoney(resta)}.` : 'La venta quedó paga.'),
+      )
       setParcialAbierto(false)
       setMonto('')
     },
@@ -93,7 +109,10 @@ export function SaleSheet({
 
   const delPayment = useMutation({
     mutationFn: (paymentId: number) => api.deleteSalePayment(sale.id, paymentId),
-    onSuccess: tomarRespuesta,
+    onSuccess: (data) => {
+      tomarRespuesta(data)
+      setNotice(`Cobro quitado. Falta cobrar ${formatMoney(data.sale.amount_cents - data.sale.paid_cents)}.`)
+    },
     onError: (err) => fail(err, 'No se pudo quitar el cobro.'),
   })
 
@@ -105,7 +124,7 @@ export function SaleSheet({
       setError('El monto no es válido. Ejemplo: 8000 o 8000,50.')
       return
     }
-    addPayment.mutate(cents)
+    addPayment.mutate({ cents, method: metodo })
   }
 
   const resend = useMutation({
@@ -149,13 +168,7 @@ export function SaleSheet({
     ['Vendió', sale.seller_name],
     ['Función', `${dayLabel(sale.function_starts_at)} · ${sale.function_name ?? sale.function_venue}`],
     ...(sale.is_comp ? [] : ([['Total', formatMoney(sale.amount_cents)]] as Array<[string, ReactNode]>)),
-    ...(cobrable
-      ? ([
-          debe
-            ? ['Cobrado', `${formatMoney(sale.paid_cents)} · debe ${formatMoney(falta)}`]
-            : ['Pagó', metodoDe(sale.payment_method)],
-        ] as Array<[string, ReactNode]>)
-      : []),
+    ...(pago ? ([['Pagó', metodoDe(sale.payment_method)]] as Array<[string, ReactNode]>) : []),
     ['Ingreso', sale.entered === 0 ? 'todavía no' : `${sale.entered} de ${sale.quantity}`],
   ]
 
@@ -172,24 +185,34 @@ export function SaleSheet({
         </p>
       )}
 
-      <DataList rows={datos} />
-
       {debe && (
-        <div>
-          <Label>Cobrar</Label>
-          <div className="mini" style={{ marginTop: 7 }}>
-            <Row
-              title={sale.paid_cents > 0 ? 'Cobré el resto en efectivo' : 'Pagó en efectivo'}
-              onClick={ocupado ? undefined : () => setPayment.mutate({ paid: true, method: 'cash' })}
-            />
-            <Row
-              title={sale.paid_cents > 0 ? 'Cobré el resto por transferencia' : 'Pagó por transferencia'}
-              onClick={ocupado ? undefined : () => setPayment.mutate({ paid: true, method: 'transfer' })}
-            />
-            {!parcialAbierto && <Row title="Cobré una parte…" onClick={() => setParcialAbierto(true)} />}
-          </div>
+        <section className="cobrar" aria-label="Cobrar">
+          <Figure label="Falta cobrar" tone="warn">
+            {formatMoney(falta)}
+          </Figure>
+          <p className="rs" style={{ margin: 0, whiteSpace: 'normal' }}>
+            {sale.paid_cents > 0
+              ? `Ya cobró ${formatMoney(sale.paid_cents)} de ${formatMoney(sale.amount_cents)}.`
+              : 'Todavía no cobró nada de esta venta.'}
+          </p>
+          {!parcialAbierto && (
+            <>
+              <Label>¿Cómo pagó {formatMoney(falta)}?</Label>
+              <div className="cobrar__b">
+                <Button go disabled={ocupado} onClick={() => addPayment.mutate({ cents: falta, method: 'cash' })}>
+                  En efectivo
+                </Button>
+                <Button go disabled={ocupado} onClick={() => addPayment.mutate({ cents: falta, method: 'transfer' })}>
+                  Por transferencia
+                </Button>
+              </div>
+              <button className="card__a" type="button" disabled={ocupado} onClick={() => setParcialAbierto(true)}>
+                Pagó solo una parte
+              </button>
+            </>
+          )}
           {parcialAbierto && (
-            <div className="mini" style={{ marginTop: 'var(--s1)', padding: 'var(--s3)', display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
+            <div className="mini" style={{ padding: 'var(--s3)', display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
               <label className="field" style={{ margin: 0 }}>
                 <span className="field__label">Cuánto cobró ($)</span>
                 <input
@@ -222,8 +245,10 @@ export function SaleSheet({
               </div>
             </div>
           )}
-        </div>
+        </section>
       )}
+
+      <DataList rows={datos} />
 
       {cobrable && cobros.length > 0 && (
         <div>
@@ -277,7 +302,8 @@ export function SaleSheet({
       <Button disabled={!sale.buyer_email || resend.isPending} onClick={() => resend.mutate()}>
         {resend.isPending ? 'Enviando…' : 'Reenviar QR'}
       </Button>
-      <Button go onClick={() => window.open(publicSaleURL(sale.code), '_blank', 'noopener')}>
+      {/* Mientras falte cobrar, lo naranja es cobrar. */}
+      <Button go={!debe} onClick={() => window.open(publicSaleURL(sale.code), '_blank', 'noopener')}>
         Ver entrada
       </Button>
     </>
@@ -288,10 +314,10 @@ export function SaleSheet({
   }`
 
   return escritorio ? (
-    <Drawer open onClose={onClose} label="Venta" title={sale.buyer_name} sub={sub} actions={acciones}>
-      <SaleStatus sale={sale} />
+    <Modal open onClose={onClose} label="Venta" title={sale.buyer_name} sub={sub} footer={acciones}>
+      {!debe && <SaleStatus sale={sale} />}
       {cuerpo}
-    </Drawer>
+    </Modal>
   ) : (
     <Sheet open onClose={onClose} title={sale.buyer_name} sub={sub} status={<SaleStatus sale={sale} />} actions={acciones}>
       {cuerpo}

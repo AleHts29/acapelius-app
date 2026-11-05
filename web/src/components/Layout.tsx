@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Outlet } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 
 import { SeasonSelector } from '../season/SeasonSelector'
 import { useSession } from '../auth/session'
@@ -10,6 +10,8 @@ import { TabBar } from './TabBar'
 export function Layout() {
   const { user, logout } = useSession()
   const [menuOpen, setMenuOpen] = useState(false)
+  // Hasta dos niveles: /panel/rendiciones/5 es la misma pantalla que /panel/rendiciones.
+  const pantalla = useLocation().pathname.split('/').slice(0, 3).join('/')
   if (!user) return null
 
   const initial = user.name.trim().charAt(0).toUpperCase() || 'A'
@@ -58,7 +60,9 @@ export function Layout() {
       </header>
 
       <main className="app-main" onClick={() => menuOpen && setMenuOpen(false)}>
-        <Outlet />
+        <div className="page" key={pantalla}>
+          <Outlet />
+        </div>
       </main>
 
       <TabBar role={user.role} />

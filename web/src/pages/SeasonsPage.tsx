@@ -34,6 +34,12 @@ function estado(s: SeasonOverview): 'en curso' | 'preparándose' | 'cerrada' {
   return s.functions > 0 && !s.next_at ? 'cerrada' : 'preparándose'
 }
 
+const FRANJAS = {
+  'en curso': { texto: 'En curso', tono: 'ok' },
+  preparándose: { texto: 'Preparándose', tono: 'warn' },
+  cerrada: { texto: 'Cerrada', tono: 'mute' },
+} as const
+
 /** El renglón bajo el nombre: qué falta si está en curso, qué pasó si ya no. */
 function contexto(s: SeasonOverview): string {
   const funciones = `${s.functions} ${s.functions === 1 ? 'función' : 'funciones'}`
@@ -56,7 +62,8 @@ function SeasonTile({ s, onClick }: { s: SeasonOverview; onClick: () => void }) 
   const libres = Math.max(s.capacity - s.assigned, 0)
   return (
     <FnTile
-      label={`${anio(s)} · ${estado(s)}`}
+      franja={FRANJAS[estado(s)]}
+      label={anio(s)}
       date={s.name}
       venue={rango(s)}
       bar={{ value: s.sold, max: s.capacity, tone: cerrada ? 'ok' : undefined }}
@@ -201,7 +208,7 @@ export function SeasonsPage() {
         <p className="rs">Cargando…</p>
       ) : temporadas.length === 0 ? (
         <Card title="Todavía no hay ninguna temporada">
-          <p className="rs" style={{ padding: '0 var(--s3) var(--s3)', whiteSpace: 'normal', margin: 0 }}>
+          <p className="rs" style={{ padding: '0 0 var(--s3)', whiteSpace: 'normal', margin: 0 }}>
             Una temporada agrupa las funciones del año y todo lo que se calcula sobre ellas: lo
             vendido, lo cobrado y lo que cada corista tiene que rendir.
           </p>

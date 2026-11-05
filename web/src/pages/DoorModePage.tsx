@@ -11,7 +11,7 @@ import { filterTickets, groupByBuyer } from '../lib/search'
 import { useIsDesktop } from '../lib/viewport'
 import { Button, Search } from '../ui/Button'
 import { Card } from '../ui/Card'
-import { Heel } from '../ui/Heel'
+import { Entrada } from '../ui/Entrada'
 import { Row } from '../ui/Row'
 import { Status } from '../ui/Status'
 
@@ -23,6 +23,8 @@ interface DisplayResult {
   title: string
   detail?: string
   seal?: string
+  /** Lo que dice el sello que cae sobre la entrada. */
+  sello: string
   autoCloseMs: number
 }
 
@@ -35,6 +37,7 @@ function toDisplay(resp: CheckinResponse): DisplayResult {
     case 'ok':
       return {
         ok: true,
+        sello: 'Válida',
         title: resp.buyer_name ?? 'Adelante',
         detail: `Le vendió ${resp.seller_name}`,
         seal: `Sello Acapelius · ${resp.checked_in_at ? timeOf(resp.checked_in_at) : ''}`,
@@ -43,16 +46,17 @@ function toDisplay(resp: CheckinResponse): DisplayResult {
     case 'already_checked_in':
       return {
         ok: false,
-        title: `Ya entró · ${resp.buyer_name ?? 'esta entrada'}`,
+        sello: 'Ya entró',
+        title: resp.buyer_name ?? 'Esta entrada',
         detail: `${resp.checked_in_at ? `A las ${timeOf(resp.checked_in_at)}` : 'Antes'}${resp.by_name ? ` · la escaneó ${resp.by_name}` : ''}`,
         autoCloseMs: 5000,
       }
     case 'void':
-      return { ok: false, title: 'Entrada anulada', detail: resp.buyer_name, autoCloseMs: 5000 }
+      return { ok: false, sello: 'Anulada', title: resp.buyer_name ?? 'Esta entrada', autoCloseMs: 5000 }
     case 'wrong_function':
-      return { ok: false, title: 'Es de otra función', detail: resp.buyer_name, autoCloseMs: 5000 }
+      return { ok: false, sello: 'Otra función', title: resp.buyer_name ?? 'Esta entrada', autoCloseMs: 5000 }
     case 'invalid':
-      return { ok: false, title: 'QR inválido', detail: 'No es una entrada de esta función.', autoCloseMs: 5000 }
+      return { ok: false, sello: 'QR inválido', title: 'No sirve', detail: 'No es una entrada de esta función.', autoCloseMs: 5000 }
   }
 }
 
@@ -541,6 +545,7 @@ export function DoorModePage() {
     const primero = verdicts[0]
     showResult({
       ok: true,
+      sello: 'Válida',
       title: primero.buyer_name ?? 'Adelante',
       detail: `${verdicts.length} entradas · le vendió ${primero.seller_name}`,
       seal: `Sello Acapelius · ${primero.checked_in_at ? timeOf(primero.checked_in_at) : ''}`,
@@ -577,11 +582,12 @@ export function DoorModePage() {
   const fn = snapshot?.function
 
   const talon = (
-    <Heel label={fn ? `${fn.name ?? fn.venue} · ${timeOf(fn.starts_at)}` : 'Puerta'}>
-      <div className="heel__n" style={{ marginTop: 6 }} aria-live="polite">
-        {entered} <span>de {issued} ingresaron</span>
-      </div>
-    </Heel>
+    <Entrada
+      chica
+      label={fn ? `${fn.name ?? fn.venue} · ${timeOf(fn.starts_at)}` : 'Puerta'}
+      nombre={<span aria-live="polite">{entered} de {issued}</span>}
+      datos="ingresaron"
+    />
   )
 
   return (
@@ -627,12 +633,17 @@ export function DoorModePage() {
                 onClick={clearResult}
                 aria-live="assertive"
               >
-                <span className="verdict__i" aria-hidden>
-                  {result.ok ? '✓' : '✕'}
+                {/* Siempre en papel claro: el sello tiene que leerse igual de noche. */}
+                <span className="entrada entrada--papel verdict__e" data-theme="light">
+                  <span className="entrada__in">
+                    <span className="entrada__cuerpo">
+                      <span className="entrada__sello">{result.sello}</span>
+                      <span className="entrada__n" style={{ display: 'block' }}>{result.title}</span>
+                      {result.detail && <span className="entrada__d">{result.detail}</span>}
+                    </span>
+                    {result.seal && <span className="entrada__talon">{result.seal}</span>}
+                  </span>
                 </span>
-                <span className="verdict__n">{result.title}</span>
-                {result.detail && <span className="verdict__d">{result.detail}</span>}
-                {result.seal && <span className="verdict__s">{result.seal}</span>}
               </button>
             )}
             {sheetOpen && !result && (

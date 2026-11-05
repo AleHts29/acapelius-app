@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import type { FunctionSummary } from '../api/client'
-import { dayLabel, functionTime } from '../lib/format'
+import { dayLabel, funcionTerminada, functionTime } from '../lib/format'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 import { Row } from '../ui/Row'
@@ -11,7 +11,8 @@ import { AllocationsEditor } from './AllocationsEditor'
 /**
  * Repartir cupos: elegir la función y, adentro, el tablero de siempre. Lo
  * abren Equipo ("Repartir cupos", "Cambiar cupo") y el popup de una función
- * en Temporadas, que llega con la función ya elegida.
+ * en Temporadas, que llega con la función ya elegida. Una función que ya pasó
+ * se puede mirar pero no cambiar: el server tampoco lo acepta.
  */
 export function RepartirModal({
   funciones,
@@ -30,14 +31,18 @@ export function RepartirModal({
       open
       onClose={onClose}
       label="Repartir cupos"
-      title={elegida ? `${dayLabel(elegida.starts_at)} · ${functionTime(elegida.starts_at)}` : 'Elegí la función'}
-      sub={elegida ? elegida.venue : undefined}
+      title={elegida ? (elegida.name ?? elegida.venue) : 'Elegí la función'}
+      sub={
+        elegida
+          ? `${dayLabel(elegida.starts_at)} · ${functionTime(elegida.starts_at)}${elegida.name ? ` · ${elegida.venue}` : ''}`
+          : undefined
+      }
       footer={
         elegida && funciones.length > 1 ? <Button onClick={() => setElegida(null)}>Otra función</Button> : undefined
       }
     >
       {elegida ? (
-        <AllocationsEditor fn={{ id: elegida.id, capacity: elegida.capacity }} />
+        <AllocationsEditor fn={{ id: elegida.id, capacity: elegida.capacity }} soloLectura={funcionTerminada(elegida.starts_at)} />
       ) : funciones.length === 0 ? (
         <p className="rs">Esta temporada todavía no tiene funciones.</p>
       ) : (
@@ -47,10 +52,16 @@ export function RepartirModal({
             return (
               <Row
                 key={fn.id}
-                title={dayLabel(fn.starts_at)}
-                sub={fn.venue}
+                title={fn.name ?? fn.venue}
+                sub={`${dayLabel(fn.starts_at)}${fn.name ? ` · ${fn.venue}` : ''}`}
                 status={
-                  libres > 0 ? <Status tone="mute">Sin repartir · {libres}</Status> : <Status tone="ok">Repartida</Status>
+                  funcionTerminada(fn.starts_at) ? (
+                    <Status tone="mute">Ya pasó</Status>
+                  ) : libres > 0 ? (
+                    <Status tone="mute">Sin repartir · {libres}</Status>
+                  ) : (
+                    <Status tone="ok">Repartida</Status>
+                  )
                 }
                 onClick={() => setElegida(fn)}
               />

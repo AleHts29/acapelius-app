@@ -11,6 +11,7 @@ import { AttendancePage } from "./pages/AttendancePage";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 import { DireccionPage } from "./pages/DireccionPage";
 import { DoorPage } from "./pages/DoorPage";
+import { GestionPage } from "./pages/GestionPage";
 import { HomePage } from "./pages/HomePage";
 import { MiPlataPage } from "./pages/MiPlataPage";
 import { NewSalePage } from "./pages/NewSalePage";
@@ -110,6 +111,14 @@ function AuthenticatedApp() {
               }
             />
           )}
+          <Route
+            path="/gestion"
+            element={
+              <Acceso>
+                <GestionPage />
+              </Acceso>
+            }
+          />
           <Route
             path="/direccion"
             element={
