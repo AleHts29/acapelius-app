@@ -118,5 +118,10 @@ export function effectiveCheckins(snapshot: DoorSnapshot, pending: QueuedCheckin
  */
 export function nocturnoPorDefecto(startsAt: string | undefined): boolean {
   if (!startsAt) return false
-  return new Date(startsAt).getHours() >= 19
+  // La hora de la sala, no la del teléfono: con getHours() un dispositivo en
+  // otra zona horaria (o la CI, en UTC) leía las 21 como medianoche.
+  const hora = Number(
+    new Date(startsAt).toLocaleString('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Argentina/Buenos_Aires' }),
+  )
+  return hora >= 19
 }

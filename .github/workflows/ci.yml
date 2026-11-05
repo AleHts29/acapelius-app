@@ -63,5 +63,8 @@ jobs:
         run: go vet ./...
       - name: Tests del backend (con Postgres)
         env:
+          # La misma zona que producción: el server fija time.Local desde TZ
+          # al arrancar (cmd/server/main.go), y los tests asumen esa hora.
+          TZ: America/Argentina/Buenos_Aires
           TEST_DATABASE_URL: postgres://acapelius:acapelius@localhost:5432/acapelius_test?sslmode=disable
         run: go test -count=1 ./...
