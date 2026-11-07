@@ -68,7 +68,6 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
           <span className="sello" aria-hidden />
           <span>ACAPELIUS</span>
         </Link>
-        <OjoPlata className="sidenav__toggle" />
         <button
           className="sidenav__toggle"
           type="button"
@@ -83,7 +82,11 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
 
       {/* Arriba de la navegación: la temporada es el contexto de todo lo que
           está debajo, no una opción de una pantalla. */}
-      <SeasonSelector />
+      <div className="sidenav__ctx">
+        <SeasonSelector />
+        {/* El ojito va con la temporada: los dos cambian qué muestra la app. */}
+        <OjoPlata className="sidenav__toggle" />
+      </div>
 
       <div className="sidenav__items">
         {primerNivel.map(fila)}
