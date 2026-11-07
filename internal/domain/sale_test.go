@@ -10,8 +10,8 @@ import (
 func TestValidateNewSale(t *testing.T) {
 	t.Parallel()
 
-	if err := domain.ValidateNewSale("Maria Dutra", "", 3); err != nil {
-		t.Fatalf("venta sin email tendria que ser valida: %v", err)
+	if err := domain.ValidateNewSale("Maria Dutra", "  ", 3); !errors.Is(err, domain.ErrBuyerEmailRequired) {
+		t.Fatalf("sin email no se vende: %v", err)
 	}
 	if err := domain.ValidateNewSale("Maria Dutra", "maria@gmail.com", 1); err != nil {
 		t.Fatalf("venta con email valido: %v", err)
@@ -19,7 +19,7 @@ func TestValidateNewSale(t *testing.T) {
 	if err := domain.ValidateNewSale("  ", "", 1); !errors.Is(err, domain.ErrBuyerNameRequired) {
 		t.Fatalf("sin nombre: %v", err)
 	}
-	if err := domain.ValidateNewSale("Maria", "", 0); !errors.Is(err, domain.ErrQuantityInvalid) {
+	if err := domain.ValidateNewSale("Maria", "m@x.com", 0); !errors.Is(err, domain.ErrQuantityInvalid) {
 		t.Fatalf("cantidad cero: %v", err)
 	}
 	if err := domain.ValidateNewSale("Maria", "no-es-email", 1); !errors.Is(err, domain.ErrEmailInvalid) {

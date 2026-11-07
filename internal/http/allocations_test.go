@@ -20,7 +20,7 @@ func TestCuposEstrictos(t *testing.T) {
 
 	// 1. Sin cupo asignado, la corista no puede vender (ni por API directa).
 	assertErrorCode(t, carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Sin Cupo", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Sin Cupo", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	}), http.StatusConflict, "no_allocation")
 
 	// 2. Batch 20+15+10+15 sobre capacity 80 → quedan 20.
@@ -52,7 +52,7 @@ func TestCuposEstrictos(t *testing.T) {
 
 	// 3. Josefina vende 15 (todo su cupo); bajarla a 14 → allocation_below_sold.
 	assertStatus(t, josefina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Comprador J", "quantity": 15,
+		"function_id": fnID, "buyer_name": "Comprador J", "buyer_email": "comprador@prueba.test", "quantity": 15,
 	}), http.StatusCreated)
 	assertErrorCode(t, admin.do(http.MethodPut, path, map[string]any{
 		"allocations": []map[string]any{{"user_id": 3, "quantity": 14}},
@@ -60,15 +60,15 @@ func TestCuposEstrictos(t *testing.T) {
 
 	// Y vender por encima de su cupo → allocation_exceeded.
 	assertErrorCode(t, josefina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "De Mas", "quantity": 1,
+		"function_id": fnID, "buyer_name": "De Mas", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	}), http.StatusConflict, "allocation_exceeded")
 
 	// 4. Una cortesia de Eli no descuenta cupo de nadie; el admin vende sin cupo.
 	assertStatus(t, admin.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Invitado", "quantity": 2, "is_comp": true,
+		"function_id": fnID, "buyer_name": "Invitado", "buyer_email": "comprador@prueba.test", "quantity": 2, "is_comp": true,
 	}), http.StatusCreated)
 	assertStatus(t, admin.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Venta de Eli", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Venta de Eli", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	}), http.StatusCreated)
 	mine := josefina.get("/api/me/allocations")
 	row := mine.Body["allocations"].([]any)[0].(map[string]any)
@@ -81,12 +81,12 @@ func TestCuposEstrictos(t *testing.T) {
 	saleID := sales.Body["sales"].([]any)[0].(map[string]any)["id"].(float64)
 	assertStatus(t, admin.post(fmt.Sprintf("/api/sales/%.0f/void", saleID), nil), http.StatusOK)
 	assertStatus(t, josefina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "De Nuevo", "quantity": 15,
+		"function_id": fnID, "buyer_name": "De Nuevo", "buyer_email": "comprador@prueba.test", "quantity": 15,
 	}), http.StatusCreated)
 
 	// 6. Carolina ve su cupo y restante.
 	assertStatus(t, carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Con Cupo", "quantity": 4,
+		"function_id": fnID, "buyer_name": "Con Cupo", "buyer_email": "comprador@prueba.test", "quantity": 4,
 	}), http.StatusCreated)
 	caro := carolina.get(fmt.Sprintf("/api/me/allocations?function_id=%.0f", fnID))
 	caroRow := caro.Body["allocations"].([]any)[0].(map[string]any)
@@ -117,7 +117,7 @@ func TestCupoPersonalBajoConcurrencia(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			results[i] = carolina.post("/api/sales", map[string]any{
-				"function_id": fnID, "buyer_name": fmt.Sprintf("C%d", i), "quantity": 3,
+				"function_id": fnID, "buyer_name": fmt.Sprintf("C%d", i), "buyer_email": "comprador@prueba.test", "quantity": 3,
 			})
 		}()
 	}

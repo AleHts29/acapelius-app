@@ -28,24 +28,24 @@ func TestAceptacionFase5(t *testing.T) {
 
 	// Carolina: 3 pagas + 2 pagas + 1 pendiente = 6 vendidas, $40.000 cobrado.
 	sale1 := carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Maria Dutra", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Maria Dutra", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	})
 	markPaid(t, carolina, sale1.Body["sale"].(map[string]any)["id"].(float64), "cash")
 	sale2 := carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Pedro Gomez", "quantity": 2,
+		"function_id": fnID, "buyer_name": "Pedro Gomez", "buyer_email": "comprador@prueba.test", "quantity": 2,
 	})
 	markPaid(t, carolina, sale2.Body["sale"].(map[string]any)["id"].(float64), "transfer")
 	carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Lucia Fernandez", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Lucia Fernandez", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	})
 
 	// Valeria: 2 pagas. Y una cortesia de Eli que no debe sumar deuda.
 	sale4 := valeria.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Jorge Alvarez", "quantity": 2,
+		"function_id": fnID, "buyer_name": "Jorge Alvarez", "buyer_email": "comprador@prueba.test", "quantity": 2,
 	})
 	markPaid(t, valeria, sale4.Body["sale"].(map[string]any)["id"].(float64), "cash")
 	admin.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Invitado", "quantity": 2, "is_comp": true,
+		"function_id": fnID, "buyer_name": "Invitado", "buyer_email": "comprador@prueba.test", "quantity": 2, "is_comp": true,
 	})
 
 	// Anoche entraron: los 3 de Maria y 1 de Jorge.
@@ -139,10 +139,10 @@ func TestAsistenciaPorComprador(t *testing.T) {
 	assignQuota(t, admin, fnID, 2, 10)
 
 	alejandro := carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Alejandro Huertas", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Alejandro Huertas", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	})
 	julia := carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Julia Peralta", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Julia Peralta", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	})
 
 	// Entran 2 de las 3 de Alejandro (escaneo y manual) y despues Julia.
@@ -255,12 +255,12 @@ func TestVentasAnuladasNoCuentan(t *testing.T) {
 	assignQuota(t, admin, fnID, 2, 10)
 
 	keep := carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Queda", "quantity": 2,
+		"function_id": fnID, "buyer_name": "Queda", "buyer_email": "comprador@prueba.test", "quantity": 2,
 	})
 	markPaid(t, carolina, keep.Body["sale"].(map[string]any)["id"].(float64), "cash")
 
 	drop := carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Anulada", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Anulada", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	})
 	dropID := drop.Body["sale"].(map[string]any)["id"].(float64)
 	// Cobrada no se puede anular: se cobra, se quita el cobro y recién ahí se anula.

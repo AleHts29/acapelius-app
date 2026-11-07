@@ -93,6 +93,15 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
       setError('Falta el nombre de quien compra.')
       return
     }
+    // El mail es obligatorio: es por donde le llega el QR.
+    if (buyerEmail.trim() === '') {
+      setError('Falta el mail de quien compra: ahí le llega el QR.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail.trim())) {
+      setError('Ese mail no parece válido. Revisalo: ahí le llega el QR.')
+      return
+    }
     if (!isAdmin && !isComp && !allocationFor(fnID)) {
       setError('No tenés cupo asignado para esta función. Pedile a dirección que te asigne entradas.')
       return
@@ -100,7 +109,7 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
     create.mutate({
       function_id: fnID,
       buyer_name: buyerName.trim(),
-      buyer_email: buyerEmail.trim() || undefined,
+      buyer_email: buyerEmail.trim(),
       buyer_phone: buyerPhone.trim() || undefined,
       quantity,
       is_comp: isComp || undefined,
@@ -177,7 +186,7 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
+    <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s4)' }}>
       {/* En el popup de escritorio el título ya está en la cabecera. */}
       {!onDone && <h1 className="pgt">{isComp ? 'Nueva cortesía' : 'Nueva venta'}</h1>}
       {onDone && isComp && <span className="lbl">Cortesía</span>}
@@ -268,6 +277,8 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
             autoCorrect="off"
             inputMode="email"
             placeholder="Mail"
+            required
+            aria-required="true"
             aria-label="Mail de quien compra"
           />
           <input
@@ -282,7 +293,7 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
           />
         </div>
         <p className="rs" style={{ margin: '6px 0 0', whiteSpace: 'normal' }}>
-          Al mail le llega el QR. Si no tiene, después compartís el link.
+          Al mail le llega el QR. Después también podés compartirle el link por WhatsApp.
         </p>
       </div>
 

@@ -33,7 +33,7 @@ func sellTickets(t *testing.T, seller *testClient, fnID float64, buyer string, q
 	t.Helper()
 
 	created := seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": buyer, "quantity": qty,
+		"function_id": fnID, "buyer_name": buyer, "buyer_email": "comprador@prueba.test", "quantity": qty,
 	})
 	assertStatus(t, created, http.StatusCreated)
 	tickets := created.Body["tickets"].([]any)
@@ -187,7 +187,7 @@ func TestCheckinOtraFuncionYAnulados(t *testing.T) {
 
 	// Venta anulada → rojo void.
 	voidedSale := seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Anulada", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Anulada", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	})
 	voidedSaleID := voidedSale.Body["sale"].(map[string]any)["id"].(float64)
 	voidedCode := voidedSale.Body["tickets"].([]any)[0].(map[string]any)["code"].(string)
@@ -242,7 +242,7 @@ func TestCheckinBloqueaAnulacionYEdicion(t *testing.T) {
 	assignQuota(t, admin, fnID, 2, 50)
 
 	created := seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Maria", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Maria", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	})
 	saleID := created.Body["sale"].(map[string]any)["id"].(float64)
 	code := created.Body["tickets"].([]any)[0].(map[string]any)["code"].(string)

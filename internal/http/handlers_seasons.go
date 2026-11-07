@@ -398,6 +398,7 @@ func mapDomainError(w http.ResponseWriter, err error) bool {
 		errors.Is(err, domain.ErrCapacityInvalid),
 		errors.Is(err, domain.ErrPriceInvalid),
 		errors.Is(err, domain.ErrBuyerNameRequired),
+		errors.Is(err, domain.ErrBuyerEmailRequired),
 		errors.Is(err, domain.ErrQuantityInvalid),
 		errors.Is(err, domain.ErrEmailInvalid),
 		errors.Is(err, domain.ErrEmailRequired),

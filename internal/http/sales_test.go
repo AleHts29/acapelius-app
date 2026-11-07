@@ -127,29 +127,30 @@ func TestAceptacionFase2(t *testing.T) {
 	// 5. Una venta que excede el cupo (quedan 2 de 5) se rechaza.
 	rejected := seller.post("/api/sales", map[string]any{
 		"function_id": fnID,
-		"buyer_name":  "Pedro",
-		"quantity":    3,
+		"buyer_name":  "Pedro", "buyer_email": "comprador@prueba.test",
+		"quantity": 3,
 	})
 	assertErrorCode(t, rejected, http.StatusConflict, "conflict")
 
 	// 6. Una cortesia del admin no suma deuda (monto 0) y ocupa cupo.
 	comp := admin.post("/api/sales", map[string]any{
 		"function_id": fnID,
-		"buyer_name":  "Invitado de Eli",
-		"quantity":    2,
-		"is_comp":     true,
+		"buyer_name":  "Invitado de Eli", "buyer_email": "comprador@prueba.test",
+		"quantity": 2,
+		"is_comp":  true,
 	})
 	assertStatus(t, comp, http.StatusCreated)
 	if comp.Body["sale"].(map[string]any)["amount_cents"].(float64) != 0 {
 		t.Fatalf("una cortesia vale 0: %v", comp.Body)
 	}
-	if comp.Body["email_status"] != "none" {
-		t.Fatalf("sin email no hay envio: %v", comp.Body["email_status"])
-	}
+	// Sin mail no se vende: es por donde le llega el QR.
+	assertErrorCode(t, admin.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Sin Mail", "quantity": 1, "is_comp": true,
+	}), http.StatusBadRequest, "validation_error")
 
 	// El cupo quedo lleno (3 + 2 = 5): ni una entrada mas.
 	full := seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Tarde", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Tarde", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	})
 	assertErrorCode(t, full, http.StatusConflict, "conflict")
 }
@@ -171,8 +172,8 @@ func TestCupoBajoConcurrencia(t *testing.T) {
 			defer wg.Done()
 			resp := seller.post("/api/sales", map[string]any{
 				"function_id": fnID,
-				"buyer_name":  fmt.Sprintf("Comprador %d", i),
-				"quantity":    3,
+				"buyer_name":  fmt.Sprintf("Comprador %d", i), "buyer_email": "comprador@prueba.test",
+				"quantity": 3,
 			})
 			results[i] = resp.Status
 		}()
@@ -201,7 +202,7 @@ func TestPagosDeVenta(t *testing.T) {
 	assignQuota(t, admin, fnID, 2, 10)
 
 	created := seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Maria", "quantity": 2,
+		"function_id": fnID, "buyer_name": "Maria", "buyer_email": "comprador@prueba.test", "quantity": 2,
 	})
 	assertStatus(t, created, http.StatusCreated)
 	saleID := created.Body["sale"].(map[string]any)["id"].(float64)
@@ -230,12 +231,26 @@ func TestPagosDeVenta(t *testing.T) {
 
 	// Una cortesia no admite pagos.
 	comp := admin.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Invitado", "quantity": 1, "is_comp": true,
+		"function_id": fnID, "buyer_name": "Invitado", "buyer_email": "comprador@prueba.test", "quantity": 1, "is_comp": true,
 	})
 	compPath := fmt.Sprintf("/api/sales/%.0f", comp.Body["sale"].(map[string]any)["id"].(float64))
 	assertErrorCode(t, admin.do(http.MethodPatch, compPath, map[string]string{
 		"payment_status": "paid", "payment_method": "cash",
 	}), http.StatusBadRequest, "validation_error")
+}
+
+// ventaSinMail deja una venta como las de antes de que el mail fuera
+// obligatorio: sin mail y sin envios. Siguen existiendo en la base.
+func ventaSinMail(t *testing.T, env *testEnv, saleID float64) {
+	t.Helper()
+	for _, sql := range []string{
+		`DELETE FROM email_sends WHERE sale_id = $1`,
+		`UPDATE sales SET buyer_email = NULL WHERE id = $1`,
+	} {
+		if _, err := env.pool.Exec(t.Context(), sql, int64(saleID)); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 func TestReenvioDeEmail(t *testing.T) {
@@ -247,9 +262,10 @@ func TestReenvioDeEmail(t *testing.T) {
 
 	// Venta sin email: reenviar da 400.
 	noEmail := seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Sin Mail", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Sin Mail", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	})
 	noEmailID := noEmail.Body["sale"].(map[string]any)["id"].(float64)
+	ventaSinMail(t, env, noEmailID)
 	assertErrorCode(t, seller.post(fmt.Sprintf("/api/sales/%.0f/resend-email", noEmailID), nil),
 		http.StatusBadRequest, "validation_error")
 
@@ -283,14 +299,14 @@ func TestAnulaciones(t *testing.T) {
 	assignQuota(t, admin, fnID, 2, 3)
 
 	created := seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Maria", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Maria", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	})
 	assertStatus(t, created, http.StatusCreated)
 	saleID := created.Body["sale"].(map[string]any)["id"].(float64)
 
 	// Cupo lleno.
 	assertErrorCode(t, seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Otro", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Otro", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	}), http.StatusConflict, "conflict")
 
 	// La vendedora no puede anular; el admin si.
@@ -312,7 +328,7 @@ func TestAnulaciones(t *testing.T) {
 
 	// Anular libero el cupo: entran 3 de nuevo.
 	again := seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Nueva", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Nueva", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	})
 	assertStatus(t, again, http.StatusCreated)
 
@@ -328,7 +344,7 @@ func TestAnulaciones(t *testing.T) {
 	assertStatus(t, admin.post(fmt.Sprintf("/api/tickets/%.0f/void", ticketID), nil), http.StatusOK)
 
 	one := seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Ultima", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Ultima", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	})
 	assertStatus(t, one, http.StatusCreated)
 
@@ -351,7 +367,7 @@ func TestAutorizacionDeVentas(t *testing.T) {
 	assignQuota(t, admin, fnID, 2, 5)
 
 	sale := carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Maria", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Maria", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	})
 	saleID := sale.Body["sale"].(map[string]any)["id"].(float64)
 	path := fmt.Sprintf("/api/sales/%.0f", saleID)
@@ -381,7 +397,7 @@ func TestAutorizacionDeVentas(t *testing.T) {
 
 	// Una vendedora no emite cortesias.
 	assertErrorCode(t, carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Cuela", "quantity": 1, "is_comp": true,
+		"function_id": fnID, "buyer_name": "Cuela", "buyer_email": "comprador@prueba.test", "quantity": 1, "is_comp": true,
 	}), http.StatusForbidden, "forbidden")
 
 	// El rol puerta no toca ventas.
@@ -407,7 +423,7 @@ func TestCupoDeFuncionNoBajaDeLoVendido(t *testing.T) {
 	assignQuota(t, admin, fnID, 2, 4)
 
 	assertStatus(t, seller.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Maria", "quantity": 4,
+		"function_id": fnID, "buyer_name": "Maria", "buyer_email": "comprador@prueba.test", "quantity": 4,
 	}), http.StatusCreated)
 
 	// Bajar el cupo a 3 con 4 vendidas → 409.
@@ -430,7 +446,7 @@ func TestCobrosParciales(t *testing.T) {
 		map[string]any{"allocations": []map[string]any{{"user_id": 2, "quantity": 10}}}), http.StatusOK)
 
 	venta := corista.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Fran Sponton", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Fran Sponton", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	})
 	assertStatus(t, venta, http.StatusCreated)
 	saleID := venta.Body["sale"].(map[string]any)["id"].(float64)
@@ -525,7 +541,7 @@ func TestCobrosParciales(t *testing.T) {
 
 	// Una cortesia no admite cobros.
 	comp := admin.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Padre Benítez", "quantity": 1, "is_comp": true,
+		"function_id": fnID, "buyer_name": "Padre Benítez", "buyer_email": "comprador@prueba.test", "quantity": 1, "is_comp": true,
 	})
 	assertStatus(t, comp, http.StatusCreated)
 	compID := comp.Body["sale"].(map[string]any)["id"].(float64)

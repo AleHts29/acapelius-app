@@ -23,10 +23,10 @@ func TestHomePorRol(t *testing.T) {
 
 	// Cada una vende lo suyo.
 	assertStatus(t, corista.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Compra de Carolina", "quantity": 2,
+		"function_id": fnID, "buyer_name": "Compra de Carolina", "buyer_email": "comprador@prueba.test", "quantity": 2,
 	}), http.StatusCreated)
 	assertStatus(t, otra.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Compra de Virginia", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Compra de Virginia", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	}), http.StatusCreated)
 
 	// --- Dirección ve la función entera y las últimas ventas de todas ---
@@ -124,7 +124,7 @@ func TestMiRendicionEnLaHome(t *testing.T) {
 	// Vende 4 entradas a $8.000 y cobra 3 de ellas.
 	for i, cobrar := range []bool{true, true, true, false} {
 		venta := carolina.post("/api/sales", map[string]any{
-			"function_id": fnID, "buyer_name": fmt.Sprintf("Compradora %d", i), "quantity": 1,
+			"function_id": fnID, "buyer_name": fmt.Sprintf("Compradora %d", i), "buyer_email": "comprador@prueba.test", "quantity": 1,
 		})
 		assertStatus(t, venta, http.StatusCreated)
 		if cobrar {

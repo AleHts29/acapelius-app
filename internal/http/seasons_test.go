@@ -379,7 +379,7 @@ func TestCancelarFuncion(t *testing.T) {
 	assertStatus(t, admin.do(http.MethodPut, fmt.Sprintf("/api/functions/%.0f/allocations", conVentas),
 		map[string]any{"allocations": []map[string]any{{"user_id": sellerID(t, corista), "quantity": 5}}}), http.StatusOK)
 	venta := corista.post("/api/sales", map[string]any{
-		"function_id": conVentas, "buyer_name": "Comprador", "quantity": 1,
+		"function_id": conVentas, "buyer_name": "Comprador", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	})
 	assertStatus(t, venta, http.StatusCreated)
 
@@ -408,7 +408,7 @@ func TestIndiceDeTemporadas(t *testing.T) {
 	assertStatus(t, admin.do(http.MethodPut, fmt.Sprintf("/api/functions/%.0f/allocations", fnID),
 		map[string]any{"allocations": []map[string]any{{"user_id": sellerID(t, corista), "quantity": 20}}}), http.StatusOK)
 	venta := corista.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Comprador", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Comprador", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	})
 	assertStatus(t, venta, http.StatusCreated)
 	saleID := venta.Body["sale"].(map[string]any)["id"].(float64)

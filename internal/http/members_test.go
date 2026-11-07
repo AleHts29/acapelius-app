@@ -18,7 +18,7 @@ func TestParticiparPorTemporada(t *testing.T) {
 	normaID := sellerID(t, norma)
 	assignQuota(t, admin, fnID, int(normaID), 20)
 	venta := norma.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Compradora", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Compradora", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	})
 	assertStatus(t, venta, http.StatusCreated)
 	saleID := venta.Body["sale"].(map[string]any)["id"].(float64)
@@ -44,7 +44,7 @@ func TestParticiparPorTemporada(t *testing.T) {
 	}
 	// No vende...
 	assertStatus(t, norma.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Otra", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Otra", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	}), http.StatusForbidden)
 	// ...pero mira lo suyo.
 	assertStatus(t, norma.get("/api/sales"), http.StatusOK)
@@ -106,7 +106,7 @@ func TestEquipoDeLaTemporada(t *testing.T) {
 	caroID := sellerID(t, caro)
 	assignQuota(t, admin, fnID, int(caroID), 20)
 	venta := caro.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Compradora", "quantity": 4,
+		"function_id": fnID, "buyer_name": "Compradora", "buyer_email": "comprador@prueba.test", "quantity": 4,
 	})
 	assertStatus(t, venta, http.StatusCreated)
 	saleID := venta.Body["sale"].(map[string]any)["id"].(float64)

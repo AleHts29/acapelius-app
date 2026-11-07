@@ -233,7 +233,7 @@ func TestAislamientoEntreOrganizaciones(t *testing.T) {
 		noExiste(t, "POST /sales/{B}/void", a.admin.post("/api/sales/"+saleB+"/void", nil))
 		noExiste(t, "POST /tickets/{B}/void", a.admin.post(fmt.Sprintf("/api/tickets/%.0f/void", b.ticket), nil))
 		noExiste(t, "POST /sales con funcion B", a.seller.post("/api/sales", map[string]any{
-			"function_id": b.fn, "buyer_name": "Colado", "quantity": 1,
+			"function_id": b.fn, "buyer_name": "Colado", "buyer_email": "comprador@prueba.test", "quantity": 1,
 		}))
 
 		// Personas y participacion.

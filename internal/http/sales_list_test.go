@@ -21,21 +21,22 @@ func TestListadoEscalable(t *testing.T) {
 	// 55 ventas de Carolina (fuerza una segunda pagina con page size 50)...
 	for i := range 55 {
 		assertStatus(t, carolina.post("/api/sales", map[string]any{
-			"function_id": fnID, "buyer_name": fmt.Sprintf("Compradora %02d", i), "quantity": 1,
+			"function_id": fnID, "buyer_name": fmt.Sprintf("Compradora %02d", i), "buyer_email": "comprador@prueba.test", "quantity": 1,
 		}), http.StatusCreated)
 	}
 	// ...una compradora con acento que matchea la busqueda "caro"...
 	assertStatus(t, carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Cárola Vega", "quantity": 2,
+		"function_id": fnID, "buyer_name": "Cárola Vega", "buyer_email": "comprador@prueba.test", "quantity": 2,
 	}), http.StatusCreated)
 	// ...una paga y una cortesia de Eli.
 	paid := admin.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Pago Total", "quantity": 3,
+		"function_id": fnID, "buyer_name": "Pago Total", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	})
 	markPaid(t, admin, paid.Body["sale"].(map[string]any)["id"].(float64), "cash")
-	admin.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Invitado", "quantity": 1, "is_comp": true,
+	invitado := admin.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Invitado", "buyer_email": "comprador@prueba.test", "quantity": 1, "is_comp": true,
 	})
+	ventaSinMail(t, env, invitado.Body["sale"].(map[string]any)["id"].(float64))
 
 	// 1. Paginacion por cursor: dos paginas que suman todo sin repetir.
 	first := admin.get("/api/sales")
@@ -143,7 +144,7 @@ func TestVenderC15(t *testing.T) {
 
 	venta := func(c *testClient, nombre, email string, cantidad int) float64 {
 		t.Helper()
-		body := map[string]any{"function_id": fnID, "buyer_name": nombre, "quantity": cantidad}
+		body := map[string]any{"function_id": fnID, "buyer_name": nombre, "buyer_email": "comprador@prueba.test", "quantity": cantidad}
 		if email != "" {
 			body["buyer_email"] = email
 		}
@@ -154,6 +155,7 @@ func TestVenderC15(t *testing.T) {
 
 	conEmail := venta(carolina, "Con Email", "conemail@demo.acapelius.local", 2)
 	sinEmail := venta(carolina, "Sin Email", "", 1)
+	ventaSinMail(t, env, sinEmail)
 	deJosefina := venta(josefina, "De Josefina", "", 3)
 	markPaid(t, admin, conEmail, "cash")
 
@@ -266,7 +268,7 @@ func TestVentasPorTemporada(t *testing.T) {
 	caroID := sellerID(t, carolina)
 	assignQuota(t, admin, fn2026, int(caroID), 10)
 	assertStatus(t, carolina.post("/api/sales", map[string]any{
-		"function_id": fn2026, "buyer_name": "De 2026", "quantity": 2,
+		"function_id": fn2026, "buyer_name": "De 2026", "buyer_email": "comprador@prueba.test", "quantity": 2,
 	}), http.StatusCreated)
 
 	// Una temporada nueva, con su propia función y su propia venta.
@@ -283,7 +285,7 @@ func TestVentasPorTemporada(t *testing.T) {
 		map[string]any{"user_id": caroID, "role": "seller"}), http.StatusOK)
 	assignQuota(t, admin, fn2027, int(caroID), 10)
 	assertStatus(t, carolina.post("/api/sales", map[string]any{
-		"function_id": fn2027, "buyer_name": "De 2027", "quantity": 3,
+		"function_id": fn2027, "buyer_name": "De 2027", "buyer_email": "comprador@prueba.test", "quantity": 3,
 	}), http.StatusCreated)
 
 	compradores := func(qs string) []string {

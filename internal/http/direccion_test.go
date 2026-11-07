@@ -30,7 +30,7 @@ func TestPanelDeDireccion(t *testing.T) {
 
 	// Carolina vende 5 entradas y las cobra: queda con saldo a rendir.
 	sale := carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Maria Dutra", "quantity": 5,
+		"function_id": fnID, "buyer_name": "Maria Dutra", "buyer_email": "comprador@prueba.test", "quantity": 5,
 	})
 	assertStatus(t, sale, http.StatusCreated)
 	markPaid(t, carolina, sale.Body["sale"].(map[string]any)["id"].(float64), "cash")
@@ -145,7 +145,7 @@ func TestPanelSinPendientes(t *testing.T) {
 
 	// Una venta sin cobrar no genera deuda de rendicion: todavia no hay plata.
 	assertStatus(t, carolina.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Maria Dutra", "quantity": 2,
+		"function_id": fnID, "buyer_name": "Maria Dutra", "buyer_email": "comprador@prueba.test", "quantity": 2,
 	}), http.StatusCreated)
 
 	attention := admin.get("/api/reports/attention?season_id=1")
@@ -171,14 +171,14 @@ func TestDireccionMinimalista(t *testing.T) {
 
 	// Dos ventas: una cobrada entera y otra sin cobrar.
 	cobrada := corista.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Pagó todo", "quantity": 2,
+		"function_id": fnID, "buyer_name": "Pagó todo", "buyer_email": "comprador@prueba.test", "quantity": 2,
 	})
 	assertStatus(t, cobrada, http.StatusCreated)
 	saleID := cobrada.Body["sale"].(map[string]any)["id"].(float64)
 	assertStatus(t, corista.do(http.MethodPatch, fmt.Sprintf("/api/sales/%.0f", saleID),
 		map[string]any{"payment_status": "paid", "payment_method": "cash"}), http.StatusOK)
 	assertStatus(t, corista.post("/api/sales", map[string]any{
-		"function_id": fnID, "buyer_name": "Debe", "quantity": 1,
+		"function_id": fnID, "buyer_name": "Debe", "buyer_email": "comprador@prueba.test", "quantity": 1,
 	}), http.StatusCreated)
 
 	resp := admin.get("/api/reports/direccion?season_id=1")
@@ -240,7 +240,7 @@ func TestDetalleDeRendicion(t *testing.T) {
 		cobra  bool
 	}{{"Rosa Suárez", 4, true}, {"Hugo Díaz", 3, true}, {"Sin pagar", 2, false}} {
 		venta := corista.post("/api/sales", map[string]any{
-			"function_id": fnID, "buyer_name": v.nombre, "quantity": v.qty,
+			"function_id": fnID, "buyer_name": v.nombre, "buyer_email": "comprador@prueba.test", "quantity": v.qty,
 		})
 		assertStatus(t, venta, http.StatusCreated)
 		if v.cobra {

@@ -33,6 +33,7 @@ const (
 // Errores de ventas y tickets.
 var (
 	ErrBuyerNameRequired    = errors.New("el nombre del comprador es obligatorio")
+	ErrBuyerEmailRequired   = errors.New("falta el mail de quien compra: ahí le llega el QR")
 	ErrQuantityInvalid      = errors.New("la cantidad tiene que ser mayor a cero")
 	ErrCapacityExceeded     = errors.New("no queda cupo suficiente en esta funcion")
 	ErrSaleNotFound         = errors.New("la venta no existe")
@@ -56,12 +57,11 @@ func ValidateNewSale(buyerName, buyerEmail string, quantity int32) error {
 	if quantity <= 0 {
 		return ErrQuantityInvalid
 	}
-	if strings.TrimSpace(buyerEmail) != "" {
-		if err := ValidateEmail(buyerEmail); err != nil {
-			return err
-		}
+	// El mail es obligatorio: es por donde le llega el QR al comprador.
+	if strings.TrimSpace(buyerEmail) == "" {
+		return ErrBuyerEmailRequired
 	}
-	return nil
+	return ValidateEmail(buyerEmail)
 }
 
 // SaleAmount calcula el monto congelado de la venta: precio vigente por
