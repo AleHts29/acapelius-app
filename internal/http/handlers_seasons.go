@@ -242,10 +242,35 @@ func (s *Server) handleDeleteSeason(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// La en curso también se puede borrar si está vacía: pasa a estar en curso
+	// la más nueva de las otras. Si es la única no: el rol de dirección vive en
+	// la temporada, y sin ninguna nadie podría volver a crear otra.
+	var siguiente int64
 	if season.IsActive {
-		httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
-			"Es la temporada en curso: usá otra antes de eliminarla.")
-		return
+		todas, err := q.ListSeasons(ctx, s.org(ctx))
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		for _, otra := range todas {
+			if otra.ID != id {
+				siguiente = otra.ID
+				break
+			}
+		}
+		if siguiente == 0 {
+			httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+				"Es la única temporada: cambiale el nombre en vez de eliminarla.")
+			return
+		}
+		// Quien la borra tiene que seguir siendo dirección en la que queda.
+		if _, err := q.UpsertMembership(ctx, sqlcgen.UpsertMembershipParams{
+			OrganizationID: s.org(ctx),
+			SeasonID:       siguiente, UserID: auth.MustUserFrom(ctx).ID, Role: string(domain.RoleAdmin),
+		}); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
 	}
 	if err := q.DeleteSeasonFunctions(ctx, sqlcgen.DeleteSeasonFunctionsParams{SeasonID: id, OrganizationID: s.org(ctx)}); err != nil {
 		httpx.Internal(w, r, err)
@@ -254,6 +279,12 @@ func (s *Server) handleDeleteSeason(w http.ResponseWriter, r *http.Request) {
 	if err := q.DeleteSeason(ctx, sqlcgen.DeleteSeasonParams{ID: id, OrganizationID: s.org(ctx)}); err != nil {
 		httpx.Internal(w, r, err)
 		return
+	}
+	if siguiente != 0 {
+		if err := q.SetActiveSeason(ctx, sqlcgen.SetActiveSeasonParams{ID: siguiente, OrganizationID: s.org(ctx)}); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		httpx.Internal(w, r, err)

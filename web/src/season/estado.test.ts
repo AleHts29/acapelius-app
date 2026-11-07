@@ -9,6 +9,9 @@ describe('estadoTemporada', () => {
   it('la activa con todas las funciones pasadas está terminada', () => {
     expect(estadoTemporada({ is_active: true, functions: 5, next_at: null })).toBe('terminada')
   })
+  it('la activa sin funciones se está preparando, no está en curso', () => {
+    expect(estadoTemporada({ is_active: true, functions: 0, next_at: null })).toBe('preparándose')
+  })
   it('una no activa sin funciones o con funciones por delante se está preparando', () => {
     expect(estadoTemporada({ is_active: false, functions: 0, next_at: null })).toBe('preparándose')
     expect(estadoTemporada({ is_active: false, functions: 2, next_at: '2027-03-01T21:00:00Z' })).toBe('preparándose')

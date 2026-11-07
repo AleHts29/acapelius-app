@@ -696,12 +696,18 @@ export function SeasonPage() {
   const potencial = funciones.reduce((acc, fn) => acc + fn.capacity * fn.price_cents, 0)
   const precios = [...new Set(funciones.map((fn) => fn.price_cents))].sort((x, y) => x - y)
   const ingresos = pasadas.reduce((acc, fn) => acc + fn.entered, 0)
-  const anio = new Date(funciones[0]?.starts_at ?? season.created_at).getFullYear()
+  const anio = funciones[0]
+    ? new Date(funciones[0].starts_at).getFullYear()
+    : (/\b(20\d\d)\b/.exec(season.name)?.[1] ?? new Date(season.created_at).getFullYear())
   const repartidas = funciones.reduce((acc, fn) => acc + fn.assigned, 0)
   // Sin cupos ni ventas todavía es un borrador: se renombra y se elimina. El
   // server revisa además rendiciones y ventas anuladas, y responde el motivo.
   const esBorrador = summary.data !== undefined && vendidas === 0 && repartidas === 0
   const esEnCurso = season.id === enCurso?.id
+  // Si se borra la en curso, pasa a estar en curso la más nueva de las otras
+  // (el server elige igual). Sin otra no se borra: dirección quedaría sin rol.
+  const queda = esEnCurso ? todas.find((s) => s.id !== season.id) : undefined
+  const eliminable = esBorrador && (!esEnCurso || queda !== undefined)
   const queSeBorra =
     funciones.length === 0
       ? 'su equipo'
@@ -716,7 +722,7 @@ export function SeasonPage() {
         title={esBorrador ? <TituloEditable key={season.id} id={season.id} nombre={season.name} /> : season.name}
         actions={
           <>
-            {esBorrador && !esEnCurso && (
+            {eliminable && (
               <Button onClick={() => setPanel({ kind: 'eliminar-temporada' })}>Eliminar temporada</Button>
             )}
             <Menu
@@ -879,9 +885,9 @@ export function SeasonPage() {
           nombre no se cambia y la temporada no se puede eliminar.
         </p>
       )}
-      {esBorrador && esEnCurso && (
+      {esBorrador && !eliminable && (
         <p className="rs" style={{ whiteSpace: 'normal', margin: 0 }}>
-          Es la temporada en curso: para eliminarla, primero usá otra.
+          Es la única temporada: no se elimina, pero el nombre se cambia tocándolo.
         </p>
       )}
 
@@ -925,7 +931,10 @@ export function SeasonPage() {
             </>
           }
         >
-          <p className="note">No se puede deshacer, pero como todavía no tiene cupos ni ventas, no hay entradas ni plata en juego.</p>
+          <p className="note">
+            No se puede deshacer, pero como todavía no tiene cupos ni ventas, no hay entradas ni plata en juego.
+            {queda && ` ${queda.name} pasa a ser la temporada en curso.`}
+          </p>
         </Modal>
       )}
 

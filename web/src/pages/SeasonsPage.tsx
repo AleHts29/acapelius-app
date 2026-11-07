@@ -21,8 +21,10 @@ function rango(s: SeasonOverview): string {
   return `${dayAndMonthShort(s.first_at)} – ${dayAndMonthShort(s.last_at)}`
 }
 
+/** El año de la primera función; sin funciones, el que diga el nombre ("Temporada 2027"). */
 function anio(s: SeasonOverview): string {
-  return new Date(s.first_at ?? s.created_at).getFullYear().toString()
+  if (s.first_at) return new Date(s.first_at).getFullYear().toString()
+  return /\b(20\d\d)\b/.exec(s.name)?.[1] ?? new Date(s.created_at).getFullYear().toString()
 }
 
 const estado = estadoTemporada

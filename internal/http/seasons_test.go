@@ -456,7 +456,8 @@ func TestIndiceDeTemporadas(t *testing.T) {
 }
 
 // Una temporada sin uso se puede renombrar y borrar con sus funciones; en cuanto
-// tiene un cupo repartido ya es historia. La que esta en curso no se borra.
+// tiene un cupo repartido ya es historia. La en curso vacia se borra si hay
+// otra (pasa a estar en curso la mas nueva); si es la unica, no.
 func TestEditarYEliminarTemporada(t *testing.T) {
 	env := newTestEnv(t)
 	admin := loginAdmin(t, env)
@@ -488,7 +489,8 @@ func TestEditarYEliminarTemporada(t *testing.T) {
 	assertStatus(t, admin.do(http.MethodDelete, path, nil), http.StatusNoContent)
 	assertStatus(t, admin.do(http.MethodDelete, path, nil), http.StatusNotFound)
 
-	// La temporada en curso, aunque este vacia, no se borra.
+	// La unica temporada, aunque este vacia, no se borra: sin ninguna,
+	// direccion se queda sin rol.
 	assertErrorCode(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/seasons/%.0f", enCurso), nil), http.StatusConflict, "conflict")
 
 	// Con un cupo repartido, ni renombrar ni borrar.
@@ -500,4 +502,14 @@ func TestEditarYEliminarTemporada(t *testing.T) {
 	pathUsada := fmt.Sprintf("/api/seasons/%.0f", usada)
 	assertErrorCode(t, admin.do(http.MethodPatch, pathUsada, map[string]any{"name": "Otro"}), http.StatusConflict, "conflict")
 	assertErrorCode(t, admin.do(http.MethodDelete, pathUsada, nil), http.StatusConflict, "conflict")
+
+	// En curso y vacia, con otras al lado: se borra y queda en curso la mas nueva.
+	borrador, _ := nueva("Borrador")
+	assertStatus(t, admin.post(fmt.Sprintf("/api/seasons/%.0f/activate", borrador), nil), http.StatusOK)
+	assertStatus(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/seasons/%.0f", borrador), nil), http.StatusNoContent)
+	if got := activeSeasonID(t, admin); got != usada {
+		t.Fatalf("en curso = %v, tendria que ser la mas nueva de las otras (%v)", got, usada)
+	}
+	// Y quien la borro sigue siendo direccion.
+	assertStatus(t, admin.post("/api/seasons", map[string]any{"name": "Otra", "activate": false}), http.StatusCreated)
 }
