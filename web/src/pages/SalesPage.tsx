@@ -137,7 +137,9 @@ export function SalesPage() {
   const { seasonId, season } = useSeason()
 
   const [searchParams, setSearchParams] = useSearchParams()
-  const filtro = parseFiltro(searchParams.get('filtro'))
+  // Las cortesías las emite sólo dirección: la corista no tiene ese filtro.
+  const filtroPedido = parseFiltro(searchParams.get('filtro'))
+  const filtro = filtroPedido === 'cortesias' && user?.role !== 'admin' ? 'todas' : filtroPedido
   const fnDeURL = Number(searchParams.get('fn')) || undefined
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
@@ -409,7 +411,7 @@ export function SalesPage() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
-            <Seg<Filtro> label="Filtrar ventas" value={filtro} onChange={filtrar} options={FILTROS} />
+            <Seg<Filtro> label="Filtrar ventas" value={filtro} onChange={filtrar} options={isAdmin ? FILTROS : FILTROS.filter((f) => f.value !== 'cortesias')} />
             {filtroCorista}
           </div>
           {lista}
