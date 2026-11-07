@@ -20,11 +20,39 @@ export function formatMoney(cents: number): string {
  * "8000,50". Devuelve null si no es un numero valido o es negativo.
  */
 export function pesosToCents(input: string): number | null {
-  const normalized = input.trim().replace(',', '.')
-  if (normalized === '' || !/^\d+(\.\d{1,2})?$/.test(normalized)) {
+  let t = input.trim()
+  if (t.includes(',')) {
+    // Con coma, la coma es el decimal y los puntos son los miles: "40.000,50".
+    t = t.replace(/\./g, '').replace(',', '.')
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(t)) {
+    // Sólo puntos de a tres cifras: son miles, como los escribe el campo ("40.000").
+    t = t.replace(/\./g, '')
+  }
+  if (t === '' || !/^\d+(\.\d{1,2})?$/.test(t)) {
     return null
   }
-  return Math.round(Number(normalized) * 100)
+  return Math.round(Number(t) * 100)
+}
+
+/**
+ * Un monto mientras se escribe, con los puntos de miles puestos: "40000" se ve
+ * "40.000". La coma es el decimal (hasta dos cifras); los puntos que escriba la
+ * persona se ignoran, porque los pone el campo.
+ */
+export function escribirMonto(input: string): string {
+  const limpio = input.replace(/[^\d,]/g, '')
+  const coma = limpio.indexOf(',')
+  const entero = (coma === -1 ? limpio : limpio.slice(0, coma)).replace(/^0+(?=\d)/, '')
+  const miles = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  if (coma === -1) return miles
+  return `${miles || '0'},${limpio.slice(coma + 1).replace(/,/g, '').slice(0, 2)}`
+}
+
+/** Centavos como valor inicial de un campo de monto: 4000050 → "40.000,50". */
+export function centavosAMonto(cents: number): string {
+  const pesos = Math.floor(cents / 100)
+  const resto = cents % 100
+  return escribirMonto(resto === 0 ? String(pesos) : `${pesos},${String(resto).padStart(2, '0')}`)
 }
 
 const dateTime = new Intl.DateTimeFormat('es-AR', {

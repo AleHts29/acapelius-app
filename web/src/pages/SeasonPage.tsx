@@ -10,6 +10,8 @@ import { SeasonAssignments } from '../components/SeasonAssignments'
 import { DEPENDEN_DE_LA_TEMPORADA } from '../season/NuevaTemporada'
 import { useSeason } from '../season/SeasonProvider'
 import {
+  centavosAMonto,
+  escribirMonto,
   calendarDaysUntil,
   dayAndMonthShort,
   dayLabel,
@@ -86,7 +88,7 @@ function desdeFuncion(fn: FunctionSummary, conFecha: boolean): FormValues {
     // segura de crear dos funciones el mismo día sin darse cuenta.
     startsAtLocal: conFecha ? isoToLocalInput(fn.starts_at) : '',
     capacity: String(fn.capacity),
-    pricePesos: String(fn.price_cents / 100),
+    pricePesos: centavosAMonto(fn.price_cents),
   }
 }
 
@@ -104,7 +106,7 @@ function parsear(
   }
   const priceCents = pesosToCents(values.pricePesos)
   if (priceCents === null) {
-    return { ok: false, message: 'El precio no es válido. Ejemplo: 8000 o 8000,50.' }
+    return { ok: false, message: 'El precio no es válido. Ejemplo: 8.000 o 8.000,50.' }
   }
   return {
     ok: true,
@@ -257,8 +259,8 @@ function FuncionForm({
               inputMode="decimal"
               disabled={precioTrabado}
               value={values.pricePesos}
-              onChange={(e) => set({ pricePesos: e.target.value })}
-              placeholder="8000"
+              onChange={(e) => set({ pricePesos: escribirMonto(e.target.value) })}
+              placeholder="8.000"
             />
           </label>
         </div>

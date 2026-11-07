@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api, publicSaleURL } from '../api/client'
 import type { PaymentMethod, SaleListItem, SalePayments } from '../api/client'
-import { dayLabel, daysAgo, formatMoney, pesosToCents } from '../lib/format'
+import { dayLabel, daysAgo, centavosAMonto, escribirMonto, formatMoney, pesosToCents } from '../lib/format'
 import { useIsDesktop } from '../lib/viewport'
 import { Button, Seg } from '../ui/Button'
 import { DataList } from '../ui/DataList'
@@ -121,7 +121,7 @@ export function SaleSheet({
   function registrarParcial() {
     const cents = pesosToCents(monto)
     if (cents === null || cents <= 0) {
-      setError('El monto no es válido. Ejemplo: 8000 o 8000,50.')
+      setError('El monto no es válido. Ejemplo: 8.000 o 8.000,50.')
       return
     }
     addPayment.mutate({ cents, method: metodo })
@@ -220,8 +220,8 @@ export function SaleSheet({
                   type="text"
                   inputMode="decimal"
                   value={monto}
-                  onChange={(e) => setMonto(e.target.value)}
-                  placeholder={String(Math.floor(falta / 100))}
+                  onChange={(e) => setMonto(escribirMonto(e.target.value))}
+                  placeholder={centavosAMonto(Math.floor(falta / 100) * 100)}
                   autoFocus
                 />
               </label>

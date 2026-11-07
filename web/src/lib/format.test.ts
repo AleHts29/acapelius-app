@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { calendarDaysUntil, dayAndMonth, dayLabel, daysAgo, formatDateTime, formatMoney, functionDay, functionTime, isoToLocalInput, localInputToISO, pesosToCents } from './format'
+import { calendarDaysUntil, dayAndMonth, dayLabel, daysAgo, formatDateTime, formatMoney, functionDay, functionTime, isoToLocalInput, localInputToISO, pesosToCents, escribirMonto, centavosAMonto } from './format'
 
 describe('formatMoney', () => {
   it('muestra centavos como pesos argentinos', () => {
@@ -117,5 +117,27 @@ describe('fecha de una función (fila de Temporadas)', () => {
 
   it('dayAndMonth arma los extremos del rango de la temporada', () => {
     expect(dayAndMonth('2026-08-14T21:00:00-03:00')).toBe('14 de agosto')
+  })
+})
+
+describe('montos con puntos de miles', () => {
+  it('escribirMonto pone los puntos mientras se escribe', () => {
+    expect(escribirMonto('40000')).toBe('40.000')
+    expect(escribirMonto('1234567')).toBe('1.234.567')
+    expect(escribirMonto('40.0000')).toBe('400.000')
+    expect(escribirMonto('8000,5')).toBe('8.000,5')
+    expect(escribirMonto('8000,505')).toBe('8.000,50')
+    expect(escribirMonto(',5')).toBe('0,5')
+    expect(escribirMonto('$ 900')).toBe('900')
+    expect(escribirMonto('')).toBe('')
+  })
+  it('pesosToCents entiende lo que escribe el campo', () => {
+    expect(pesosToCents('40.000')).toBe(4000000)
+    expect(pesosToCents('1.234.567')).toBe(123456700)
+    expect(pesosToCents('8.000,50')).toBe(800050)
+  })
+  it('centavosAMonto arma el valor inicial', () => {
+    expect(centavosAMonto(4000000)).toBe('40.000')
+    expect(centavosAMonto(800050)).toBe('8.000,50')
   })
 })

@@ -7,7 +7,7 @@ import { ApiError, api } from '../api/client'
 import type { PaymentMethod, Settlement, SettlementReportRow, TimelineItem } from '../api/client'
 import { useSeason } from '../season/SeasonProvider'
 import { useIsDesktop } from '../lib/viewport'
-import { dayAndMonthShort, dayLabel, daysAgo, formatMoney, pesosToCents, timeShort } from '../lib/format'
+import { centavosAMonto, dayAndMonthShort, dayLabel, daysAgo, escribirMonto, formatMoney, pesosToCents, timeShort } from '../lib/format'
 import { Button, Seg } from '../ui/Button'
 import { DataList } from '../ui/DataList'
 import { Figure, SubFigs } from '../ui/Figure'
@@ -54,7 +54,7 @@ export function RegisterSheet({
 }) {
   const queryClient = useQueryClient()
   const debt = Math.max(row.balance_cents, 0)
-  const [amount, setAmount] = useState(debt > 0 ? String(debt / 100) : '')
+  const [amount, setAmount] = useState(debt > 0 ? centavosAMonto(debt) : '')
   const [method, setMethod] = useState<PaymentMethod>('transfer')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -115,8 +115,8 @@ export function RegisterSheet({
           type="text"
           inputMode="decimal"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="30000"
+          onChange={(e) => setAmount(escribirMonto(e.target.value))}
+          placeholder="30.000"
           autoFocus
         />
       </label>
