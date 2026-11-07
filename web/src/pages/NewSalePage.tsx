@@ -3,10 +3,10 @@ import type { FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api, publicSaleURL, whatsAppURL } from '../api/client'
-import type { EmailStatus, Sale } from '../api/client'
+import type { EmailStatus, Sale, ShowFunction } from '../api/client'
 import { useSession } from '../auth/session'
 import { useSeason } from '../season/SeasonProvider'
-import { formatMoney, functionDay, functionTime } from '../lib/format'
+import { formatMoney, functionDay, functionTime, mensajeEntradas } from '../lib/format'
 import { Button } from '../ui/Button'
 import { Entrada, TalonCifra } from '../ui/Entrada'
 import { Menu } from '../ui/Menu'
@@ -18,13 +18,13 @@ interface CreatedSale {
   emailStatus: EmailStatus
 }
 
-function ShareLinkButton({ url, buyerName, phone }: { url: string; buyerName: string; phone: string | null }) {
+function ShareLinkButton({ url, buyerName, phone, fn }: { url: string; buyerName: string; phone: string | null; fn?: ShowFunction }) {
   // Un link y no un botón con JS: así el navegador lo abre directo, sin que
   // un bloqueador de pop-ups se interponga.
   return (
     <a
       className="btn btn--go btn--w"
-      href={whatsAppURL(`Hola ${buyerName.split(' ')[0]}! Acá están tus entradas para Acapelius: ${url}`, phone)}
+      href={whatsAppURL(mensajeEntradas(buyerName, url, fn), phone)}
       target="_blank"
       rel="noopener noreferrer"
     >
@@ -151,7 +151,12 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
             `En la demo no se mandan mails: la entrada que le llegaría a ${created.sale.buyer_email} es este link.`}
           {created.emailStatus === 'none' && 'Sin mail: compartile el link, o en la puerta la buscan por nombre.'}
         </p>
-        <ShareLinkButton url={created.publicURL} buyerName={created.sale.buyer_name} phone={created.sale.buyer_phone} />
+        <ShareLinkButton
+          url={created.publicURL}
+          buyerName={created.sale.buyer_name}
+          phone={created.sale.buyer_phone}
+          fn={functions.data?.functions.find((f) => f.id === created.sale.function_id)}
+        />
         <div className="dl">
           <div className="dl__r">
             <span className="dl__k">Link</span>

@@ -198,3 +198,21 @@ export function weekdayLong(iso: string): string {
 export function funcionTerminada(startsAt: string): boolean {
   return new Date(startsAt).getTime() < Date.now() - 3 * 60 * 60 * 1000
 }
+
+/**
+ * El mensaje de WhatsApp con las entradas: quién, qué función, cuándo y dónde,
+ * y el link. "Hola Judy! Acá están tus entradas para Test 01, el sábado 7 de
+ * noviembre a las 19:00 en ABM: https://…"
+ */
+export function mensajeEntradas(
+  comprador: string,
+  url: string,
+  fn?: { name: string | null; venue: string; starts_at: string },
+): string {
+  const nombre = comprador.trim().split(/\s+/)[0] ?? ''
+  const saludo = nombre ? `Hola ${nombre}!` : 'Hola!'
+  if (!fn) return `${saludo} Acá están tus entradas: ${url}`
+  const que = fn.name ? ` para ${fn.name}` : ''
+  const cuando = `el ${weekdayLong(fn.starts_at).toLowerCase()} ${dayAndMonth(fn.starts_at)} a las ${functionTime(fn.starts_at)}`
+  return `${saludo} Acá están tus entradas${que}, ${cuando} en ${fn.venue}: ${url}`
+}

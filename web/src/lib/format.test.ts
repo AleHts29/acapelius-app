@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { calendarDaysUntil, dayAndMonth, dayLabel, daysAgo, formatDateTime, formatMoney, functionDay, functionTime, isoToLocalInput, localInputToISO, pesosToCents, escribirMonto, centavosAMonto } from './format'
+import { calendarDaysUntil, dayAndMonth, dayLabel, daysAgo, formatDateTime, formatMoney, functionDay, functionTime, isoToLocalInput, localInputToISO, pesosToCents, escribirMonto, centavosAMonto, mensajeEntradas } from './format'
 
 describe('formatMoney', () => {
   it('muestra centavos como pesos argentinos', () => {
@@ -149,5 +149,13 @@ describe('ojito de la plata', () => {
     expect(formatMoney(4000000)).toBe('$ •••••')
     setPlataOculta(false)
     expect(formatMoney(4000000).replace(/\s/g, ' ')).toBe('$ 40.000')
+  })
+})
+
+describe('mensajeEntradas', () => {
+  it('dice la función, el día, la hora y el lugar', () => {
+    expect(
+      mensajeEntradas('Judy Rojas', 'https://x/e/1', { name: 'Test 01', venue: 'ABM', starts_at: '2026-11-07T19:00:00-03:00' }),
+    ).toBe('Hola Judy! Acá están tus entradas para Test 01, el sábado 7 de noviembre a las 19:00 en ABM: https://x/e/1')
   })
 })
