@@ -225,6 +225,8 @@ export interface Sale {
   payment_status: PaymentStatus
   payment_method: PaymentMethod | null
   is_comp: boolean
+  /** Vendida con la función agotada (C21). */
+  over_capacity?: boolean
   notes: string | null
   voided_at: string | null
   created_at: string
@@ -251,6 +253,8 @@ export interface SaleListItem {
   payment_status: PaymentStatus
   payment_method: PaymentMethod | null
   is_comp: boolean
+  /** Vendida con la función agotada (C21). */
+  over_capacity?: boolean
   voided_at: string | null
   created_at: string
   function_id: number
@@ -307,6 +311,8 @@ export interface NewSaleInput {
   buyer_phone?: string
   quantity: number
   is_comp?: boolean
+  /** Con la función agotada, sólo dirección (C21). */
+  over_capacity?: boolean
   notes?: string
 }
 

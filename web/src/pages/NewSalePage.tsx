@@ -44,6 +44,8 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
   const [buyerPhone, setBuyerPhone] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [isComp, setIsComp] = useState(false)
+  // Sobre cupo (C21): con la función agotada, dirección vende igual.
+  const [sobreCupo, setSobreCupo] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<CreatedSale | null>(null)
 
@@ -113,6 +115,7 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
       buyer_phone: buyerPhone.trim() || undefined,
       quantity,
       is_comp: isComp || undefined,
+      over_capacity: sobre || undefined,
     })
   }
 
@@ -125,8 +128,13 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
   const remainingCapacity = selectedFunction
     ? Math.max(selectedFunction.capacity - selectedFunction.sold, 0)
     : undefined
+  const agotada = selectedFunction !== undefined && remainingCapacity === 0
+  const sobre = isAdmin && agotada && sobreCupo
   // Tope del stepper: cupo personal (corista, salvo cortesia) y capacity.
-  const maxQty = selectedFunction
+  // Sobre cupo no tiene tope de la función: lo decide dirección.
+  const maxQty = sobre
+    ? 50
+    : selectedFunction
     ? isAdmin || isComp
       ? remainingCapacity
       : Math.min(selectedAllocation?.remaining ?? 0, remainingCapacity ?? 0)
@@ -321,6 +329,17 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
         </div>
       </div>
 
+      {isAdmin && agotada && (
+        <div className={`sobrecupo${sobre ? ' sobrecupo--on' : ''}`}>
+          <p className="rs" style={{ margin: 0, whiteSpace: 'normal' }}>
+            {sobre
+              ? `Va por encima de las ${selectedFunction?.capacity} entradas de la función: queda marcada como sobre cupo.`
+              : `La función está agotada (${selectedFunction?.sold} de ${selectedFunction?.capacity}). Si igual tiene que entrar alguien, vendela sobre cupo.`}
+          </p>
+          <Button onClick={() => setSobreCupo(!sobreCupo)}>{sobre ? 'No vender sobre cupo' : 'Vender sobre cupo'}</Button>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s1)' }}>
         {isAdmin && (
           <Button wide onClick={() => setIsComp(!isComp)}>
@@ -328,7 +347,7 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
           </Button>
         )}
         <Button go wide type="submit" disabled={create.isPending}>
-          {create.isPending ? 'Registrando…' : isComp ? 'Emitir cortesía' : 'Registrar venta'}
+          {create.isPending ? 'Registrando…' : isComp ? 'Emitir cortesía' : sobre ? 'Registrar sobre cupo' : 'Registrar venta'}
         </Button>
       </div>
     </form>

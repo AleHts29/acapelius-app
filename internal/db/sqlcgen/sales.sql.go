@@ -73,7 +73,7 @@ func (q *Queries) CountTicketsBySaleAndStatus(ctx context.Context, arg CountTick
 }
 
 const createSale = `-- name: CreateSale :one
-INSERT INTO sales (function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, is_comp, notes)
+INSERT INTO sales (function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, is_comp, notes, over_capacity)
 SELECT
   f.id,
   $1::bigint,
@@ -84,12 +84,13 @@ SELECT
   $6::integer,
   $7::bigint,
   $8::boolean,
-  $9
+  $9,
+  $10::boolean
 FROM functions f
 JOIN seasons se ON se.id = f.season_id
-WHERE f.id = $10::bigint
-  AND se.organization_id = $11::bigint
-RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents
+WHERE f.id = $11::bigint
+  AND se.organization_id = $12::bigint
+RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents, over_capacity
 `
 
 type CreateSaleParams struct {
@@ -102,6 +103,7 @@ type CreateSaleParams struct {
 	AmountCents    int64   `json:"amount_cents"`
 	IsComp         bool    `json:"is_comp"`
 	Notes          *string `json:"notes"`
+	OverCapacity   bool    `json:"over_capacity"`
 	FunctionID     int64   `json:"function_id"`
 	OrganizationID int64   `json:"organization_id"`
 }
@@ -118,6 +120,7 @@ func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (Sale, e
 		arg.AmountCents,
 		arg.IsComp,
 		arg.Notes,
+		arg.OverCapacity,
 		arg.FunctionID,
 		arg.OrganizationID,
 	)
@@ -139,6 +142,7 @@ func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (Sale, e
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.PaidCents,
+		&i.OverCapacity,
 	)
 	return i, err
 }
@@ -280,7 +284,7 @@ func (q *Queries) GetFunctionForUpdate(ctx context.Context, arg GetFunctionForUp
 
 const getPublicSale = `-- name: GetPublicSale :one
 
-SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents,
+SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity,
   f.name AS function_name,
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
@@ -308,6 +312,7 @@ type GetPublicSaleRow struct {
 	VoidedAt         *time.Time `json:"voided_at"`
 	CreatedAt        time.Time  `json:"created_at"`
 	PaidCents        int64      `json:"paid_cents"`
+	OverCapacity     bool       `json:"over_capacity"`
 	FunctionName     *string    `json:"function_name"`
 	FunctionVenue    string     `json:"function_venue"`
 	FunctionStartsAt time.Time  `json:"function_starts_at"`
@@ -338,6 +343,7 @@ func (q *Queries) GetPublicSale(ctx context.Context, code string) (GetPublicSale
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.PaidCents,
+		&i.OverCapacity,
 		&i.FunctionName,
 		&i.FunctionVenue,
 		&i.FunctionStartsAt,
@@ -364,7 +370,7 @@ func (q *Queries) GetPublicTicketByCode(ctx context.Context, code string) (Ticke
 }
 
 const getSale = `-- name: GetSale :one
-SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents FROM sales s
+SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity FROM sales s
 JOIN functions f ON f.id = s.function_id
 JOIN seasons se ON se.id = f.season_id
 WHERE s.id = $1::bigint
@@ -396,6 +402,7 @@ func (q *Queries) GetSale(ctx context.Context, arg GetSaleParams) (Sale, error) 
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.PaidCents,
+		&i.OverCapacity,
 	)
 	return i, err
 }
@@ -536,7 +543,7 @@ func (q *Queries) ListSalePayments(ctx context.Context, saleID int64) ([]ListSal
 
 const listSalesDetailed = `-- name: ListSalesDetailed :many
 SELECT
-  s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents,
+  s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity,
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
   f.name AS function_name,
@@ -577,6 +584,7 @@ type ListSalesDetailedRow struct {
 	VoidedAt         *time.Time `json:"voided_at"`
 	CreatedAt        time.Time  `json:"created_at"`
 	PaidCents        int64      `json:"paid_cents"`
+	OverCapacity     bool       `json:"over_capacity"`
 	FunctionVenue    string     `json:"function_venue"`
 	FunctionStartsAt time.Time  `json:"function_starts_at"`
 	FunctionName     *string    `json:"function_name"`
@@ -612,6 +620,7 @@ func (q *Queries) ListSalesDetailed(ctx context.Context, arg ListSalesDetailedPa
 			&i.VoidedAt,
 			&i.CreatedAt,
 			&i.PaidCents,
+			&i.OverCapacity,
 			&i.FunctionVenue,
 			&i.FunctionStartsAt,
 			&i.FunctionName,
@@ -674,7 +683,7 @@ FROM (
   FROM sale_payments p WHERE p.sale_id = $1::bigint
 ) c
 WHERE s.id = $1::bigint
-RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity
 `
 
 // Recalcula el cache de la venta desde sus cobros: cuanto lleva cobrado, si
@@ -701,6 +710,7 @@ func (q *Queries) RecalcSalePayment(ctx context.Context, saleID int64) (Sale, er
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.PaidCents,
+		&i.OverCapacity,
 	)
 	return i, err
 }
@@ -752,7 +762,7 @@ JOIN seasons se ON se.id = f.season_id
 WHERE f.id = s.function_id
   AND s.id = $3::bigint
   AND se.organization_id = $4::bigint
-RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity
 `
 
 type UpdateSalePaymentParams struct {
@@ -787,6 +797,7 @@ func (q *Queries) UpdateSalePayment(ctx context.Context, arg UpdateSalePaymentPa
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.PaidCents,
+		&i.OverCapacity,
 	)
 	return i, err
 }
@@ -798,7 +809,7 @@ JOIN seasons se ON se.id = f.season_id
 WHERE f.id = s.function_id
   AND s.id = $1::bigint
   AND se.organization_id = $2::bigint
-RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity
 `
 
 type VoidSaleParams struct {
@@ -826,6 +837,7 @@ func (q *Queries) VoidSale(ctx context.Context, arg VoidSaleParams) (Sale, error
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.PaidCents,
+		&i.OverCapacity,
 	)
 	return i, err
 }

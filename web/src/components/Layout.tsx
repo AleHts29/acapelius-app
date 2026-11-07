@@ -3,7 +3,6 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 
 import { SeasonSelector } from '../season/SeasonSelector'
 import { useSession } from '../auth/session'
-import { OjoPlata } from './OjoPlata'
 import { avatarURL } from '../api/client'
 import { SideNav } from './SideNav'
 import { ThemeToggle } from './ThemeToggle'
@@ -41,7 +40,6 @@ export function Layout() {
         {/* En celular el selector va en el header: es lo único que está en
             todas las pantallas. */}
         <SeasonSelector />
-        <OjoPlata />
         <div style={{ position: 'relative' }}>
           <button
             className={`avatar${user.avatar_at ? ' con-foto' : ''}`}

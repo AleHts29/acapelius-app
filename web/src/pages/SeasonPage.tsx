@@ -500,7 +500,7 @@ function FuncionModal({
         <Figure label="Vendidas" unit={`/ ${fn.capacity}`}>
           {fn.sold}
         </Figure>
-        <Figure label="Recaudado" tone="ok">
+        <Figure ojo label="Recaudado" tone="ok">
           {formatMoney(fn.collected_cents)}
         </Figure>
       </div>

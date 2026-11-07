@@ -404,7 +404,7 @@ export function SettlementsScreen() {
       ) : (
         <>
           <div style={{ marginBottom: 'var(--s5)' }}>
-            <Figure label="Sin rendir" tone={totalDebt > 0 ? 'warn' : 'ok'}>
+            <Figure ojo label="Sin rendir" tone={totalDebt > 0 ? 'warn' : 'ok'}>
               {formatMoney(totalDebt)}
             </Figure>
             <div style={{ marginTop: 'var(--s4)' }}>

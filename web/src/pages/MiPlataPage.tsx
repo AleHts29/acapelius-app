@@ -58,7 +58,7 @@ export function MiPlataPage() {
       <PageHeader title="Mi plata" label={season?.name} />
 
       <div style={{ marginBottom: 'var(--s5)' }}>
-        <Figure label={debe > 0 ? 'Tenés que rendir' : 'Estás al día'} tone={debe > 0 ? 'warn' : 'ok'}>
+        <Figure ojo label={debe > 0 ? 'Tenés que rendir' : 'Estás al día'} tone={debe > 0 ? 'warn' : 'ok'}>
           {formatMoney(debe)}
         </Figure>
         <div style={{ marginTop: 'var(--s4)' }}>

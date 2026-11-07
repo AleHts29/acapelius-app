@@ -548,3 +548,48 @@ func TestCobrosParciales(t *testing.T) {
 	assertStatus(t, admin.post(fmt.Sprintf("/api/sales/%.0f/payments", compID),
 		map[string]any{"amount_cents": 100, "method": "cash"}), http.StatusBadRequest)
 }
+
+// Sobre cupo (C21): con la funcion agotada solo direccion vende igual, y la
+// venta queda marcada. Si todavia entra, no se marca.
+func TestVentaSobreCupo(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	fnID := setupCatalog(t, admin, 2)
+	corista := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	assignQuota(t, admin, fnID, 2, 2)
+
+	venta := func(c *testClient, cantidad int, sobre bool) apiResponse {
+		t.Helper()
+		return c.post("/api/sales", map[string]any{
+			"function_id": fnID, "buyer_name": "Comprador", "buyer_email": "comprador@prueba.test",
+			"quantity": cantidad, "over_capacity": sobre,
+		})
+	}
+
+	// Con lugar, sobre cupo no corresponde.
+	assertErrorCode(t, venta(admin, 1, true), http.StatusConflict, "conflict")
+	assertStatus(t, venta(corista, 2, false), http.StatusCreated)
+
+	// Agotada: normal no entra, la corista no puede sobre cupo, direccion si.
+	assertErrorCode(t, venta(admin, 1, false), http.StatusConflict, "conflict")
+	assertErrorCode(t, venta(corista, 1, true), http.StatusForbidden, "forbidden")
+	sobre := venta(admin, 2, true)
+	assertStatus(t, sobre, http.StatusCreated)
+	if sobre.Body["sale"].(map[string]any)["over_capacity"] != true {
+		t.Fatalf("la venta tendria que quedar marcada sobre cupo: %v", sobre.Body["sale"])
+	}
+	if n := len(sobre.Body["tickets"].([]any)); n != 2 {
+		t.Fatalf("una venta sobre cupo emite sus entradas igual: %d", n)
+	}
+
+	// El listado la marca.
+	var marcada bool
+	for _, raw := range admin.get("/api/sales").Body["sales"].([]any) {
+		if v := raw.(map[string]any); v["over_capacity"] == true {
+			marcada = true
+		}
+	}
+	if !marcada {
+		t.Fatal("el listado tendria que traer over_capacity")
+	}
+}

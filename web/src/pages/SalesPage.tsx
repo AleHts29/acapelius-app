@@ -308,6 +308,7 @@ export function SalesPage() {
                   buscando ? dayAndMonthShort(sale.function_starts_at) : null,
                   isAdmin ? primerNombre(sale.seller_name) : null,
                   cuantas,
+                  sale.over_capacity ? 'sobre cupo' : null,
                   escritorio ? null : monto,
                 ]
                   .filter(Boolean)

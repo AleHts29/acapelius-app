@@ -182,6 +182,7 @@ export function DireccionPage() {
 
       <Rule kpis>
         <RuleCell
+          ojo
           label="Vendido en la temporada"
           value={formatMoney(d.money.sold_cents)}
           sub={`${formatMoney(d.totals.collected_cents)} recaudado`}

@@ -16,7 +16,7 @@ const listSalesPage = `-- name: ListSalesPage :many
 
 SELECT
   s.id, s.code, s.buyer_name, s.buyer_email, s.quantity, s.amount_cents,
-  s.payment_status, s.payment_method, s.paid_cents, s.is_comp, s.voided_at, s.created_at,
+  s.payment_status, s.payment_method, s.paid_cents, s.is_comp, s.over_capacity, s.voided_at, s.created_at,
   s.function_id, s.seller_id,
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
@@ -102,6 +102,7 @@ type ListSalesPageRow struct {
 	PaymentMethod    *string    `json:"payment_method"`
 	PaidCents        int64      `json:"paid_cents"`
 	IsComp           bool       `json:"is_comp"`
+	OverCapacity     bool       `json:"over_capacity"`
 	VoidedAt         *time.Time `json:"voided_at"`
 	CreatedAt        time.Time  `json:"created_at"`
 	FunctionID       int64      `json:"function_id"`
@@ -165,6 +166,7 @@ func (q *Queries) ListSalesPage(ctx context.Context, arg ListSalesPageParams) ([
 			&i.PaymentMethod,
 			&i.PaidCents,
 			&i.IsComp,
+			&i.OverCapacity,
 			&i.VoidedAt,
 			&i.CreatedAt,
 			&i.FunctionID,
@@ -190,7 +192,7 @@ func (q *Queries) ListSalesPage(ctx context.Context, arg ListSalesPageParams) ([
 }
 
 const salesByIDs = `-- name: SalesByIDs :many
-SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, u.name AS seller_name
+SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, u.name AS seller_name
 FROM sales s
 JOIN functions f ON f.id = s.function_id
 JOIN seasons se ON se.id = f.season_id
@@ -221,6 +223,7 @@ type SalesByIDsRow struct {
 	VoidedAt      *time.Time `json:"voided_at"`
 	CreatedAt     time.Time  `json:"created_at"`
 	PaidCents     int64      `json:"paid_cents"`
+	OverCapacity  bool       `json:"over_capacity"`
 	SellerName    string     `json:"seller_name"`
 }
 
@@ -253,6 +256,7 @@ func (q *Queries) SalesByIDs(ctx context.Context, arg SalesByIDsParams) ([]Sales
 			&i.VoidedAt,
 			&i.CreatedAt,
 			&i.PaidCents,
+			&i.OverCapacity,
 			&i.SellerName,
 		); err != nil {
 			return nil, err

@@ -179,6 +179,7 @@ function CifrasDireccion({ money }: { money?: Direccion['money'] }) {
   return (
     <>
       <RuleCell
+        ojo
         label="Falta cobrar"
         value={formatMoney(money.uncollected_cents)}
         tone={money.uncollected_cents > 0 ? 'warn' : 'ok'}
@@ -202,6 +203,7 @@ function CifrasCorista({ data }: { data: Home }) {
   return (
     <>
       <RuleCell
+        ojo
         label={mio.balance_cents > 0 ? 'Tenés que rendir' : 'Estás al día'}
         value={formatMoney(Math.max(mio.balance_cents, 0))}
         tone={mio.balance_cents > 0 ? 'warn' : 'ok'}

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { OjoPlata } from '../components/OjoPlata'
 
 /**
  * La cifra (C19 §4.6). UNA grande por pantalla, la que contesta la pregunta
@@ -9,8 +10,11 @@ export function Figure({
   tone,
   unit,
   children,
+  ojo,
 }: {
   label?: ReactNode
+  /** El ojito para ocultar los montos, al lado del rótulo. */
+  ojo?: boolean
   tone?: 'ok' | 'warn'
   /** Texto chico al lado de la cifra: "/ 12", "de 80". */
   unit?: ReactNode
@@ -18,7 +22,12 @@ export function Figure({
 }) {
   return (
     <div>
-      {label && <span className="lbl">{label}</span>}
+      {label && (
+        <span className="lbl">
+          {label}
+          {ojo && <OjoPlata className="ojo ojo--cifra" />}
+        </span>
+      )}
       <div className={tone ? `fig fig--${tone}` : 'fig'}>
         {children}
         {unit && <span> {unit}</span>}

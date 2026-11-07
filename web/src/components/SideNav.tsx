@@ -5,7 +5,6 @@ import { LogOut, PanelLeft } from 'lucide-react'
 import { api, roleLabel } from '../api/client'
 import type { User } from '../api/client'
 import { useSideNavRail } from '../lib/sidenav'
-import { OjoPlata } from './OjoPlata'
 import { Avatar } from '../ui/Avatar'
 import { SeasonSelector } from '../season/SeasonSelector'
 import { ThemeToggle } from './ThemeToggle'
@@ -84,8 +83,6 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
           está debajo, no una opción de una pantalla. */}
       <div className="sidenav__ctx">
         <SeasonSelector />
-        {/* El ojito va con la temporada: los dos cambian qué muestra la app. */}
-        <OjoPlata className="sidenav__toggle" />
       </div>
 
       <div className="sidenav__items">

@@ -649,7 +649,6 @@ a.tile:active, button.tile:active, a.fn:active, button.fn:active { transform: tr
   .sidenav__brand { display: flex; align-items: center; gap: var(--s1); min-width: 0; padding: 0 var(--s1); color: var(--ink); text-decoration: none; font-family: var(--fd); font-size: 22px; letter-spacing: 0.08em; white-space: nowrap }
   .sidenav__toggle { width: 32px; height: 32px; flex: none; border: 0; background: none; color: var(--ink-mark); display: grid; place-items: center; cursor: pointer }
   .sidenav__toggle:hover { color: var(--ink) }
-  .sidenav__toggle[aria-pressed='true'] { color: var(--ticket-text) }
   .sidenav__ctx { display: flex; align-items: center; justify-content: space-between; gap: var(--s1); padding: 0 0 var(--s5) }
   .sidenav .sidenav__ctx .seasonsel { padding-bottom: 0; min-width: 0 }
   html[data-nav='rail'] .sidenav__ctx { justify-content: center; padding-bottom: var(--s3) }
@@ -1042,8 +1041,6 @@ a.entrada:active, button.entrada:active { transform: translate(1px, 1px); box-sh
 /* El ojito de la plata en el header del celular. */
 .ojo { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border: 0; background: none; color: var(--ink3); cursor: pointer }
 .ojo[aria-pressed='true'] { color: var(--ticket-text) }
-.app-header .ojo { margin-left: auto }
-.app-header .seasonsel + .ojo { margin-left: 0 }
 
 /* Selector de rol con roles propios (C21). */
 .rolepick { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap }
@@ -1082,3 +1079,11 @@ a.entrada:active, button.entrada:active { transform: translate(1px, 1px); box-sh
 /* Equipo: buscador y vista (C21). */
 .equipo__barra { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; margin: 0 0 var(--s4) }
 .equipo__barra .search { flex: 1 1 240px; max-width: 420px }
+
+/* Sobre cupo (C21): aviso con la función agotada, sólo para dirección. */
+.sobrecupo { display: grid; gap: var(--s2); padding: var(--s3); background: var(--warn-soft) }
+.sobrecupo--on { box-shadow: inset 3px 0 0 var(--warn) }
+
+/* El ojito al lado del monto, como en las billeteras virtuales. */
+.ojo--cifra { display: inline-grid; width: 26px; height: 22px; margin-left: 4px; vertical-align: middle; color: var(--ink3) }
+.ojo--cifra svg { width: 15px; height: 15px }

@@ -121,7 +121,7 @@ function SeasonModal({
         <Figure label="Vendidas" unit={`/ ${s.capacity}`}>
           {s.sold}
         </Figure>
-        <Figure label="Recaudado" tone="ok">
+        <Figure ojo label="Recaudado" tone="ok">
           {formatMoney(s.collected_cents)}
         </Figure>
       </div>

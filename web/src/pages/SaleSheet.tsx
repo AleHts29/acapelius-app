@@ -175,6 +175,7 @@ export function SaleSheet({
     ...(sale.is_comp ? [] : ([['Total', formatMoney(sale.amount_cents)]] as Array<[string, ReactNode]>)),
     ...(pago ? ([['Pagó', metodoDe(sale.payment_method)]] as Array<[string, ReactNode]>) : []),
     ['Ingreso', sale.entered === 0 ? 'todavía no' : `${sale.entered} de ${sale.quantity}`],
+    ...(sale.over_capacity ? ([['Cupo', 'Sobre cupo: vendida con la función agotada']] as Array<[string, ReactNode]>) : []),
   ]
 
   const cuerpo = (

@@ -30,6 +30,8 @@ type createSaleRequest struct {
 	Quantity   int32  `json:"quantity"`
 	IsComp     bool   `json:"is_comp"`
 	Notes      string `json:"notes"`
+	// OverCapacity: vender con la funcion agotada (C21). Solo direccion.
+	OverCapacity bool `json:"over_capacity"`
 }
 
 // Estados de envio de email que reporta la API al crear/reenviar.
@@ -75,6 +77,11 @@ func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.OverCapacity && user.Role != domain.RoleAdmin {
+		httpx.Error(w, http.StatusForbidden, httpx.CodeForbidden, "Vender sobre cupo es de la direccion.")
+		return
+	}
+
 	req.BuyerName = strings.TrimSpace(req.BuyerName)
 	req.BuyerEmail = domain.NormalizeEmail(req.BuyerEmail)
 	if err := domain.ValidateNewSale(req.BuyerName, req.BuyerEmail, req.Quantity); err != nil {
@@ -111,7 +118,15 @@ func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
 		httpx.Internal(w, r, err)
 		return
 	}
-	if !domain.FitsCapacity(function.Capacity, active, req.Quantity) {
+	entra := domain.FitsCapacity(function.Capacity, active, req.Quantity)
+	// Sobre cupo es para cuando no entra: si hay lugar, se vende normal y no
+	// queda una venta marcada de mas.
+	if req.OverCapacity && entra {
+		httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+			"Todavía hay cupo para esta venta: hacela normal, sin sobre cupo.")
+		return
+	}
+	if !entra && !req.OverCapacity {
 		remaining := int64(function.Capacity) - active
 		if remaining < 0 {
 			remaining = 0
@@ -173,6 +188,7 @@ func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
 		AmountCents:    domain.SaleAmount(function.PriceCents, req.Quantity, req.IsComp),
 		IsComp:         req.IsComp,
 		Notes:          optionalText(req.Notes),
+		OverCapacity:   req.OverCapacity,
 	})
 	if err != nil {
 		httpx.Internal(w, r, err)

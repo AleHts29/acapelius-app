@@ -19,7 +19,7 @@
 -- name: ListSalesPage :many
 SELECT
   s.id, s.code, s.buyer_name, s.buyer_email, s.quantity, s.amount_cents,
-  s.payment_status, s.payment_method, s.paid_cents, s.is_comp, s.voided_at, s.created_at,
+  s.payment_status, s.payment_method, s.paid_cents, s.is_comp, s.over_capacity, s.voided_at, s.created_at,
   s.function_id, s.seller_id,
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
