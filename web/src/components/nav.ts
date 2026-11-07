@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, Coins, LayoutGrid, Mic2, Music, ScanLine, Ticket, Users, Wallet } from 'lucide-react'
+import { BarChart3, CalendarDays, CirclePlus, Coins, LayoutGrid, Mic2, Music, ScanLine, Ticket, Users, Wallet } from 'lucide-react'
 
 import type { Role } from '../api/client'
 
@@ -107,6 +107,15 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ]
 
+/** Sólo en la barra del celular de la corista: en escritorio vende desde Ventas. */
+const VENDER: NavItem = {
+  to: '/ventas/nueva',
+  label: 'Vender',
+  icon: CirclePlus,
+  matches: (p) => p.startsWith('/ventas/nueva'),
+  roles: ['seller'],
+}
+
 export function navFor(role: Role): NavItem[] {
   return NAV_ITEMS.filter((item) => item.roles.includes(role))
 }
@@ -128,9 +137,17 @@ export function tabsFor(role: Role): NavItem[] {
       return item
     })
   // Dos de cada lado del botón de escanear: Rendiciones es lo que dirección más
-  // usa. Una corista no tiene una cuarta pantalla, y queda Mi plata sola a la derecha.
+  // usa; Vender, lo que más usa una corista.
   const rendiciones = items.find((item) => item.to === '/panel/rendiciones')
   if (rendiciones) tabs.splice(tabs.length - 1, 0, rendiciones)
+  // La corista: vender es lo que más hace, y equilibra la barra (dos y dos).
+  // Ahí /ventas/nueva prende Vender, no Ventas.
+  if (role === 'seller') {
+    tabs.splice(tabs.length - 1, 0, VENDER)
+    return tabs.map((tab) =>
+      tab.to === '/ventas' ? { ...tab, matches: (p: string) => tab.matches(p) && !VENDER.matches(p) } : tab,
+    )
+  }
   return tabs
 }
 

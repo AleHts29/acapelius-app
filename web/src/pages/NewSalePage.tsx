@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, api, publicSaleURL, shareOrCopy } from '../api/client'
 import type { EmailStatus, Sale } from '../api/client'
 import { useSession } from '../auth/session'
+import { useSeason } from '../season/SeasonProvider'
 import { formatMoney, functionDay, functionTime } from '../lib/format'
 import { Button } from '../ui/Button'
 import { Entrada, TalonCifra } from '../ui/Entrada'
@@ -51,7 +52,14 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<CreatedSale | null>(null)
 
-  const functions = useQuery({ queryKey: ['functions'], queryFn: () => api.listFunctions() })
+  // Sólo las funciones de la temporada en la que se está parado: mezclar años
+  // en el selector es venderle a la función equivocada.
+  const { seasonId } = useSeason()
+  const functions = useQuery({
+    queryKey: ['functions', seasonId],
+    queryFn: () => api.listFunctions(seasonId),
+    enabled: seasonId !== undefined,
+  })
   // Cupos asignados por direccion (C8): la corista solo vende lo suyo.
   const myAllocations = useQuery({
     queryKey: ['my-allocations'],

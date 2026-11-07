@@ -157,6 +157,8 @@ function FuncionForm({
     void queryClient.invalidateQueries({ queryKey: ['direccion'] })
     void queryClient.invalidateQueries({ queryKey: ['attention'] })
     void queryClient.invalidateQueries({ queryKey: ['home'] })
+    // El selector y Temporadas cuentan funciones: sin esto decían "0 funciones".
+    void queryClient.invalidateQueries({ queryKey: ['seasons-overview'] })
     onDone()
   }
 

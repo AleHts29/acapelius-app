@@ -217,7 +217,7 @@ export function HomePage() {
   const navigate = useNavigate()
   const { user } = useSession()
   const escritorio = useIsDesktop()
-  const { seasonId } = useSeason()
+  const { seasonId, season, current } = useSeason()
   const home = useQuery({
     queryKey: ['home', seasonId],
     queryFn: () => api.home(seasonId),
@@ -243,6 +243,14 @@ export function HomePage() {
   const deudas = data.alerts.filter((a) => a.kind === 'settlement')
   const otras = data.alerts.filter((a) => a.kind !== 'settlement')
   const hechas = data.functions.filter((fn) => calendarDaysUntil(fn.starts_at) < 0).length
+  // La temporada activa ya terminó (todas sus funciones pasaron): la app no la
+  // cambia sola, pero dirección tiene que enterarse para cargar la próxima.
+  const terminoLaActiva =
+    !esCorista &&
+    season !== undefined &&
+    season.id === current?.id &&
+    data.functions.length > 0 &&
+    hechas === data.functions.length
   const nuevaVentaBtn = (
     <Button go onClick={nuevaVenta.abrir}>
       Nueva venta
@@ -261,6 +269,16 @@ export function HomePage() {
         // En el celular se vende desde Ventas.
         actions={escritorio ? nuevaVentaBtn : undefined}
       />
+
+      {terminoLaActiva && (
+        <div className="banner" role="status">
+          <span>{season.name} terminó: ya pasaron todas sus funciones.</span>
+          <span style={{ display: 'flex', gap: 'var(--s3)' }}>
+            <Link to="/temporadas?nueva=1">Crear la próxima</Link>
+            <Link to="/temporadas">Usar otra</Link>
+          </span>
+        </div>
+      )}
 
       {data.functions.length > 0 ? (
         <TiraEntradas label="Las funciones de la temporada">

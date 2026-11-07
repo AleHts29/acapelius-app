@@ -54,7 +54,9 @@ describe('activeItem: qué se prende en la navegación', () => {
   })
 
   it('Mi plata es una pestaña de la corista, y sólo de ella', () => {
-    expect(tabsFor('seller').map((i) => i.label)).toEqual(['Inicio', 'Ventas', 'Escanear', 'Mi plata'])
+    expect(tabsFor('seller').map((i) => i.label)).toEqual(['Inicio', 'Ventas', 'Escanear', 'Vender', 'Mi plata'])
+    expect(activeItem(tabsFor('seller'), '/ventas/nueva')?.label).toBe('Vender')
+    expect(activeItem(tabsFor('seller'), '/ventas')?.label).toBe('Ventas')
     expect(prendido('/mi-plata')).toBeUndefined()
     expect(activeItem(tabsFor('seller'), '/mi-plata')?.label).toBe('Mi plata')
   })
