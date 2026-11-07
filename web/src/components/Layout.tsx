@@ -3,8 +3,9 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 
 import { SeasonSelector } from '../season/SeasonSelector'
 import { useSession } from '../auth/session'
-import { usePlataOculta } from '../lib/plata'
 import { OjoPlata } from './OjoPlata'
+import { MiFoto } from './MiFoto'
+import { avatarURL } from '../api/client'
 import { SideNav } from './SideNav'
 import { ThemeToggle } from './ThemeToggle'
 import { TabBar } from './TabBar'
@@ -14,9 +15,6 @@ export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
   // Hasta dos niveles: /panel/rendiciones/5 es la misma pantalla que /panel/rendiciones.
   const pantalla = useLocation().pathname.split('/').slice(0, 3).join('/')
-  // Los montos salen de formatMoney: al tocar el ojito, la pantalla se vuelve a
-  // dibujar entera para que ninguno quede a la vista.
-  const plataOculta = usePlataOculta()
   // Cada pantalla arranca arriba. Sin esto, venir scrolleado de una pantalla
   // larga a una corta deja a iOS con el scroll viejo y la barra de abajo flotando.
   useEffect(() => {
@@ -47,13 +45,13 @@ export function Layout() {
         <OjoPlata />
         <div style={{ position: 'relative' }}>
           <button
-            className="avatar"
+            className={`avatar${user.avatar_at ? ' con-foto' : ''}`}
             type="button"
             aria-label={`Cuenta de ${user.name}`}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen(!menuOpen)}
           >
-            {initial}
+            {user.avatar_at ? <img src={avatarURL(user.id, user.avatar_at)} alt="" /> : initial}
           </button>
           {menuOpen && (
             <div className="acct-menu">
@@ -61,6 +59,7 @@ export function Layout() {
               <p className="note" style={{ marginBottom: 'var(--s2)' }}>
                 {user.email}
               </p>
+              {!user.organization_is_demo && <MiFoto tieneFoto={!!user.avatar_at} />}
               <ThemeToggle />
               <button className="btn btn--w" style={{ marginTop: 'var(--s2)' }} type="button" onClick={() => void logout()}>
                 Cerrar sesión
@@ -71,7 +70,7 @@ export function Layout() {
       </header>
 
       <main className="app-main" onClick={() => menuOpen && setMenuOpen(false)}>
-        <div className="page" key={`${pantalla}${plataOculta ? ':oculta' : ''}`}>
+        <div className="page" key={pantalla}>
           <Outlet />
         </div>
       </main>

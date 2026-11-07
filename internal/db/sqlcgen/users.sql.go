@@ -189,6 +189,24 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteAvatar = `-- name: DeleteAvatar :exec
+DELETE FROM user_avatars a
+USING users u
+WHERE u.id = a.user_id
+  AND a.user_id = $1::bigint
+  AND u.organization_id = $2::bigint
+`
+
+type DeleteAvatarParams struct {
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) DeleteAvatar(ctx context.Context, arg DeleteAvatarParams) error {
+	_, err := q.db.Exec(ctx, deleteAvatar, arg.UserID, arg.OrganizationID)
+	return err
+}
+
 const deleteCustomRole = `-- name: DeleteCustomRole :execrows
 DELETE FROM custom_roles
 WHERE id = $1::bigint AND organization_id = $2::bigint
@@ -300,6 +318,50 @@ func (q *Queries) FormerMembers(ctx context.Context, arg FormerMembersParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const getAvatar = `-- name: GetAvatar :one
+SELECT a.image, a.content_type, a.updated_at
+FROM user_avatars a
+JOIN users u ON u.id = a.user_id
+WHERE a.user_id = $1::bigint AND u.organization_id = $2::bigint
+`
+
+type GetAvatarParams struct {
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+type GetAvatarRow struct {
+	Image       []byte    `json:"image"`
+	ContentType string    `json:"content_type"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func (q *Queries) GetAvatar(ctx context.Context, arg GetAvatarParams) (GetAvatarRow, error) {
+	row := q.db.QueryRow(ctx, getAvatar, arg.UserID, arg.OrganizationID)
+	var i GetAvatarRow
+	err := row.Scan(&i.Image, &i.ContentType, &i.UpdatedAt)
+	return i, err
+}
+
+const getAvatarDate = `-- name: GetAvatarDate :one
+SELECT a.updated_at
+FROM user_avatars a
+JOIN users u ON u.id = a.user_id
+WHERE a.user_id = $1::bigint AND u.organization_id = $2::bigint
+`
+
+type GetAvatarDateParams struct {
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) GetAvatarDate(ctx context.Context, arg GetAvatarDateParams) (time.Time, error) {
+	row := q.db.QueryRow(ctx, getAvatarDate, arg.UserID, arg.OrganizationID)
+	var updated_at time.Time
+	err := row.Scan(&updated_at)
+	return updated_at, err
 }
 
 const getCustomRole = `-- name: GetCustomRole :one
@@ -696,6 +758,7 @@ SELECT
   m.role,
   cr.name AS role_name,
   m.custom_role_id,
+  av.updated_at AS avatar_at,
   m.joined_at,
   m.left_at,
   (SELECT count(*) FROM tickets t
@@ -724,6 +787,7 @@ FROM season_members m
 JOIN seasons s ON s.id = m.season_id
 JOIN users u ON u.id = m.user_id
 LEFT JOIN custom_roles cr ON cr.id = m.custom_role_id
+LEFT JOIN user_avatars av ON av.user_id = u.id
 WHERE m.season_id = $1::bigint
   AND s.organization_id = $2::bigint
 ORDER BY m.role, u.name
@@ -743,6 +807,7 @@ type TeamForSeasonRow struct {
 	Role         string     `json:"role"`
 	RoleName     *string    `json:"role_name"`
 	CustomRoleID *int64     `json:"custom_role_id"`
+	AvatarAt     *time.Time `json:"avatar_at"`
 	JoinedAt     time.Time  `json:"joined_at"`
 	LeftAt       *time.Time `json:"left_at"`
 	TicketsSold  int64      `json:"tickets_sold"`
@@ -773,6 +838,7 @@ func (q *Queries) TeamForSeason(ctx context.Context, arg TeamForSeasonParams) ([
 			&i.Role,
 			&i.RoleName,
 			&i.CustomRoleID,
+			&i.AvatarAt,
 			&i.JoinedAt,
 			&i.LeftAt,
 			&i.TicketsSold,
@@ -835,6 +901,40 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.OrganizationID,
 	)
 	return i, err
+}
+
+const upsertAvatar = `-- name: UpsertAvatar :one
+
+INSERT INTO user_avatars (user_id, image, content_type, updated_at)
+SELECT u.id, $1::bytea, $2::text, now()
+FROM users u
+WHERE u.id = $3::bigint AND u.organization_id = $4::bigint
+ON CONFLICT (user_id) DO UPDATE
+  SET image = EXCLUDED.image, content_type = EXCLUDED.content_type, updated_at = now()
+RETURNING updated_at
+`
+
+type UpsertAvatarParams struct {
+	Image          []byte `json:"image"`
+	ContentType    string `json:"content_type"`
+	UserID         int64  `json:"user_id"`
+	OrganizationID int64  `json:"organization_id"`
+}
+
+// ============================================================================
+// Foto de perfil (C21)
+// ============================================================================
+// Solo si la persona es de la organizacion: si no, no inserta nada (ErrNoRows).
+func (q *Queries) UpsertAvatar(ctx context.Context, arg UpsertAvatarParams) (time.Time, error) {
+	row := q.db.QueryRow(ctx, upsertAvatar,
+		arg.Image,
+		arg.ContentType,
+		arg.UserID,
+		arg.OrganizationID,
+	)
+	var updated_at time.Time
+	err := row.Scan(&updated_at)
+	return updated_at, err
 }
 
 const upsertMembership = `-- name: UpsertMembership :one

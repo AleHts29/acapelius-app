@@ -73,6 +73,9 @@ type User struct {
 	CreatedAt          time.Time `json:"created_at"`
 	// LastLoginAt en nil = nunca entro: la invitacion sigue pendiente (C7).
 	LastLoginAt *time.Time `json:"last_login_at"`
+	// AvatarAt: cuando subio su foto de perfil (nil = sin foto). Solo lo llena
+	// /api/me; sirve de version para la URL de la imagen.
+	AvatarAt *time.Time `json:"avatar_at,omitempty"`
 	// LeftAt con fecha = dejo el coro a mitad de temporada. Sus ventas y su
 	// deuda siguen contando; lo que no puede es vender.
 	LeftAt *time.Time `json:"left_at"`

@@ -44,6 +44,7 @@ function Cascara({
  */
 export function Tile({
   name,
+  foto,
   sub,
   receipt,
   bar,
@@ -54,6 +55,8 @@ export function Tile({
   off,
   onClick,
 }: {
+  /** La URL de la foto de perfil; sin ella, las iniciales. */
+  foto?: string
   name: string
   sub?: ReactNode
   /** Las cuentas en columna, como un talón, con el total abajo en Anton. */
@@ -72,8 +75,8 @@ export function Tile({
   return (
     <Cascara className={className} onClick={onClick}>
       <div className="tile__top">
-        <span className="mono-sq" aria-hidden>
-          {initials(name)}
+        <span className={`mono-sq${foto ? ' con-foto' : ''}`} aria-hidden>
+          {foto ? <img src={foto} alt="" /> : initials(name)}
         </span>
         <div>
           <div className="tile__n">{name}</div>

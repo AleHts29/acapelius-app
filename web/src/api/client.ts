@@ -13,6 +13,8 @@ export interface User {
   role: Role
   /** Rol propio en la temporada en curso (C21), si tiene. */
   custom_role_id?: number | null
+  /** Cuándo subió su foto de perfil (null o ausente: sin foto). */
+  avatar_at?: string | null
   role_name?: string | null
   /** El grupo al que pertenece (C17 §A). Viene en la sesión (`/api/me`,
    *  login); las filas del equipo que se adaptan a `User` no lo traen. */
@@ -44,6 +46,7 @@ export interface TeamMember {
   /** El nombre del rol propio, si tiene uno ("Acomodador"). */
   role_name?: string | null
   custom_role_id?: number | null
+  avatar_at?: string | null
   joined_at: string
   /** Con fecha: dejó el coro a mitad de temporada. */
   left_at: string | null
@@ -569,6 +572,16 @@ export const api = {
     id: number,
     input: { name: string; email: string; role: Role; custom_role_id?: number | null; is_active: boolean },
   ) => request<{ user: User }>('PATCH', `/users/${id}`, input),
+  /** Sube la foto de perfil propia (ya achicada): el cuerpo es la imagen. */
+  uploadAvatar: async (foto: Blob) => {
+    const response = await fetch('/api/me/avatar', { method: 'PUT', credentials: 'same-origin', body: foto })
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null
+      throw new ApiError((body?.error?.code ?? 'bad_request') as ApiErrorCode, body?.error?.message ?? 'No se pudo subir la foto.', response.status)
+    }
+    return (await response.json()) as { avatar_at: string }
+  },
+  deleteAvatar: () => request<void>('DELETE', '/me/avatar'),
   listRoles: () => request<{ roles: CustomRole[] }>('GET', '/roles'),
   createRole: (input: { name: string; base_role: Role }) => request<{ role: CustomRole }>('POST', '/roles', input),
   deleteRole: (id: number) => request<void>('DELETE', `/roles/${id}`),
@@ -981,4 +994,9 @@ export function roleLabel(role: Role): string {
     case 'door':
       return 'Puerta'
   }
+}
+
+/** La URL de la foto de alguien; la fecha hace de versión para el caché. */
+export function avatarURL(userId: number, avatarAt: string): string {
+  return `/api/users/${userId}/avatar?v=${Date.parse(avatarAt)}`
 }

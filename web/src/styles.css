@@ -1051,3 +1051,12 @@ a.entrada:active, button.entrada:active { transform: translate(1px, 1px); box-sh
 .rolepick__borrar { font: inherit; color: var(--bad); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer }
 .rolepick__form { display: grid; gap: var(--s2); margin-top: var(--s2); padding: var(--s3); background: var(--sunk) }
 .rolepick__acciones { display: flex; gap: var(--s2); justify-content: flex-end }
+
+/* Foto de perfil (C21): la foto ocupa el cuadrado de las iniciales. */
+.avatar.con-foto, .mono-sq.con-foto { padding: 0; overflow: hidden; background: var(--sunk) }
+.avatar img, .mono-sq img { width: 100%; height: 100%; object-fit: cover; display: block }
+.mifoto { display: grid; gap: 6px; margin-top: var(--s2) }
+.mifoto__sacar { font: inherit; font-size: var(--t-meta); color: var(--ink3); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; justify-self: start }
+.mifoto--cara { margin: 0; display: block }
+.sidenav__cara { padding: 0; border: 0; background: none; cursor: pointer; display: block }
+.sidenav__cara:hover .avatar { box-shadow: 0 0 0 2px var(--ticket) }

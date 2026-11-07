@@ -7,7 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/ale-hts/acapelius/internal/auth"
+	"github.com/ale-hts/acapelius/internal/db/sqlcgen"
 	"github.com/ale-hts/acapelius/internal/domain"
 	"github.com/ale-hts/acapelius/internal/httpx"
 )
@@ -55,8 +58,16 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
-	user := auth.MustUserFrom(r.Context())
-	httpx.JSON(w, http.StatusOK, userResponse{User: *user})
+	ctx := r.Context()
+	user := *auth.MustUserFrom(ctx)
+	// La fecha de la foto va solo aca: es la version de la URL de la imagen.
+	if at, err := s.queries.GetAvatarDate(ctx, sqlcgen.GetAvatarDateParams{UserID: user.ID, OrganizationID: s.org(ctx)}); err == nil {
+		user.AvatarAt = &at
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, userResponse{User: user})
 }
 
 type changePasswordRequest struct {

@@ -152,3 +152,10 @@ type User struct {
 	LastLoginAt        *time.Time `json:"last_login_at"`
 	OrganizationID     int64      `json:"organization_id"`
 }
+
+type UserAvatar struct {
+	UserID      int64     `json:"user_id"`
+	Image       []byte    `json:"image"`
+	ContentType string    `json:"content_type"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}

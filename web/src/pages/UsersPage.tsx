@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, api, roleLabel } from '../api/client'
+import { ApiError, api, avatarURL, roleLabel } from '../api/client'
 import type {
   FormerMember,
   FunctionSummary,
@@ -132,6 +132,7 @@ function Ficha({ m, onClick }: { m: TeamMember; onClick: () => void }) {
   return (
     <Tile
       name={m.name}
+      foto={m.avatar_at ? avatarURL(m.id, m.avatar_at) : undefined}
       sub={m.role_name && corista ? `${m.role_name} · ${m.email}` : m.email}
       bar={corista && m.assigned > 0 ? { value: m.tickets_sold, max: m.assigned } : undefined}
       quantity={

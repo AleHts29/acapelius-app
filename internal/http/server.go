@@ -134,6 +134,10 @@ func (s *Server) Handler() http.Handler {
 
 			priv.Group(func(ready chi.Router) {
 				ready.Use(auth.RequirePasswordChanged)
+				// La foto de perfil: la propia se cambia, la de cualquiera del grupo se ve.
+				ready.Put("/me/avatar", s.handlePutAvatar)
+				ready.Delete("/me/avatar", s.handleDeleteAvatar)
+				ready.Get("/users/{id}/avatar", s.handleGetAvatar)
 
 				// Lecturas del catalogo, para cualquier rol: la vendedora
 				// elige funcion al vender y la puerta al abrir su modo.

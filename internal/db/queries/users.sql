@@ -204,6 +204,7 @@ SELECT
   m.role,
   cr.name AS role_name,
   m.custom_role_id,
+  av.updated_at AS avatar_at,
   m.joined_at,
   m.left_at,
   (SELECT count(*) FROM tickets t
@@ -232,6 +233,7 @@ FROM season_members m
 JOIN seasons s ON s.id = m.season_id
 JOIN users u ON u.id = m.user_id
 LEFT JOIN custom_roles cr ON cr.id = m.custom_role_id
+LEFT JOIN user_avatars av ON av.user_id = u.id
 WHERE m.season_id = sqlc.arg(season_id)::bigint
   AND s.organization_id = sqlc.arg(organization_id)::bigint
 ORDER BY m.role, u.name;
@@ -310,3 +312,36 @@ WHERE s.id = m.season_id
   AND m.season_id = sqlc.arg(season_id)::bigint
   AND m.user_id = sqlc.arg(user_id)::bigint
   AND s.organization_id = sqlc.arg(organization_id)::bigint;
+
+-- ============================================================================
+-- Foto de perfil (C21)
+-- ============================================================================
+
+-- name: UpsertAvatar :one
+-- Solo si la persona es de la organizacion: si no, no inserta nada (ErrNoRows).
+INSERT INTO user_avatars (user_id, image, content_type, updated_at)
+SELECT u.id, sqlc.arg(image)::bytea, sqlc.arg(content_type)::text, now()
+FROM users u
+WHERE u.id = sqlc.arg(user_id)::bigint AND u.organization_id = sqlc.arg(organization_id)::bigint
+ON CONFLICT (user_id) DO UPDATE
+  SET image = EXCLUDED.image, content_type = EXCLUDED.content_type, updated_at = now()
+RETURNING updated_at;
+
+-- name: DeleteAvatar :exec
+DELETE FROM user_avatars a
+USING users u
+WHERE u.id = a.user_id
+  AND a.user_id = sqlc.arg(user_id)::bigint
+  AND u.organization_id = sqlc.arg(organization_id)::bigint;
+
+-- name: GetAvatar :one
+SELECT a.image, a.content_type, a.updated_at
+FROM user_avatars a
+JOIN users u ON u.id = a.user_id
+WHERE a.user_id = sqlc.arg(user_id)::bigint AND u.organization_id = sqlc.arg(organization_id)::bigint;
+
+-- name: GetAvatarDate :one
+SELECT a.updated_at
+FROM user_avatars a
+JOIN users u ON u.id = a.user_id
+WHERE a.user_id = sqlc.arg(user_id)::bigint AND u.organization_id = sqlc.arg(organization_id)::bigint;

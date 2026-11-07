@@ -6,6 +6,8 @@ import { api, roleLabel } from '../api/client'
 import type { User } from '../api/client'
 import { useSideNavRail } from '../lib/sidenav'
 import { OjoPlata } from './OjoPlata'
+import { MiFoto } from './MiFoto'
+import { Avatar } from '../ui/Avatar'
 import { SeasonSelector } from '../season/SeasonSelector'
 import { ThemeToggle } from './ThemeToggle'
 import { useSeason } from '../season/SeasonProvider'
@@ -27,7 +29,6 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
   const { rail, toggle } = useSideNavRail()
   const items = navFor(user.role)
   const activo = activeItem(items, location.pathname)
-  const initial = user.name.trim().charAt(0).toUpperCase() || 'A'
 
   // Los contadores salen de la home, que ya está en caché cuando se navega
   // desde ahí; si todavía no se pidió, los ítems van sin número.
@@ -104,9 +105,15 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
         <ThemeToggle compact />
       </div>
       <div className="sidenav__account">
-        <span className="avatar" aria-hidden title={user.name}>
-          {initial}
-        </span>
+        {user.organization_is_demo ? (
+          <Avatar userId={user.id} name={user.name} avatarAt={user.avatar_at} />
+        ) : (
+          <MiFoto
+            tieneFoto={!!user.avatar_at}
+            className="sidenav__cara"
+            trigger={<Avatar userId={user.id} name={user.name} avatarAt={user.avatar_at} />}
+          />
+        )}
         <span className="sidenav__who">
           <b>{user.name}</b>
           <span className="rs">{roleLabel(user.role)}</span>

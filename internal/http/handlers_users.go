@@ -203,6 +203,7 @@ type teamMember struct {
 	// RoleName: el nombre del rol propio, si tiene uno (C21).
 	RoleName    *string    `json:"role_name"`
 	RoleID      *int64     `json:"custom_role_id"`
+	AvatarAt    *time.Time `json:"avatar_at"`
 	JoinedAt    time.Time  `json:"joined_at"`
 	LeftAt      *time.Time `json:"left_at"`
 	LastLoginAt *time.Time `json:"last_login_at"`
@@ -302,6 +303,7 @@ func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 			Role:         row.Role,
 			RoleName:     row.RoleName,
 			RoleID:       row.CustomRoleID,
+			AvatarAt:     row.AvatarAt,
 			JoinedAt:     row.JoinedAt,
 			LeftAt:       row.LeftAt,
 			LastLoginAt:  row.LastLoginAt,
