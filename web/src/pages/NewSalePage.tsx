@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, api, publicSaleURL, shareOrCopy } from '../api/client'
+import { ApiError, api, publicSaleURL, whatsAppURL } from '../api/client'
 import type { EmailStatus, Sale } from '../api/client'
 import { useSession } from '../auth/session'
 import { useSeason } from '../season/SeasonProvider'
@@ -18,23 +18,18 @@ interface CreatedSale {
   emailStatus: EmailStatus
 }
 
-function ShareLinkButton({ url, buyerName }: { url: string; buyerName: string }) {
-  const [label, setLabel] = useState<string | null>(null)
-
-  async function share() {
-    const result = await shareOrCopy(`Entradas de ${buyerName} — Acapelius`, url)
-    if (result === 'copied') {
-      setLabel('Link copiado')
-      setTimeout(() => setLabel(null), 2500)
-    } else if (result === 'failed') {
-      setLabel('No se pudo copiar; copiá el link de abajo a mano')
-    }
-  }
-
+function ShareLinkButton({ url, buyerName, phone }: { url: string; buyerName: string; phone: string | null }) {
+  // Un link y no un botón con JS: así el navegador lo abre directo, sin que
+  // un bloqueador de pop-ups se interponga.
   return (
-    <Button go wide onClick={() => void share()}>
-      {label ?? 'Compartir por WhatsApp'}
-    </Button>
+    <a
+      className="btn btn--go btn--w"
+      href={whatsAppURL(`Hola ${buyerName.split(' ')[0]}! Acá están tus entradas para Acapelius: ${url}`, phone)}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Compartir por WhatsApp
+    </a>
   )
 }
 
@@ -146,7 +141,7 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
             `En la demo no se mandan mails: la entrada que le llegaría a ${created.sale.buyer_email} es este link.`}
           {created.emailStatus === 'none' && 'Sin mail: compartile el link, o en la puerta la buscan por nombre.'}
         </p>
-        <ShareLinkButton url={created.publicURL} buyerName={created.sale.buyer_name} />
+        <ShareLinkButton url={created.publicURL} buyerName={created.sale.buyer_name} phone={created.sale.buyer_phone} />
         <div className="dl">
           <div className="dl__r">
             <span className="dl__k">Link</span>

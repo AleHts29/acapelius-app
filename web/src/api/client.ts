@@ -914,6 +914,30 @@ export function publicTicketURL(code: string): string {
 }
 
 /** Compartir con la hoja nativa del celular; si no hay, copia al portapapeles. */
+/**
+ * Link de WhatsApp con el mensaje ya escrito. Con teléfono abre el chat de esa
+ * persona; sin teléfono, WhatsApp pregunta a quién mandarlo. Anda igual en el
+ * celular (abre la app) y en la compu (WhatsApp Web o la app de escritorio):
+ * el menú de compartir del sistema, en cambio, en la Mac no trae WhatsApp.
+ */
+export function whatsAppURL(text: string, phone?: string | null): string {
+  const numero = telefonoWhatsApp(phone)
+  return `https://wa.me/${numero}?text=${encodeURIComponent(text)}`
+}
+
+/** Un teléfono argentino como lo pide wa.me: 549 + característica + número. */
+export function telefonoWhatsApp(phone?: string | null): string {
+  let d = (phone ?? '').replace(/\D/g, '')
+  if (d.length < 8) return ''
+  if (d.startsWith('00')) d = d.slice(2)
+  if (d.startsWith('54')) return d.startsWith('549') ? d : `549${d.slice(2)}`
+  if (d.startsWith('0')) d = d.slice(1)
+  // 11 15 1234-5678: el 15 de celular se saca cuando va con característica.
+  const m = /^(\d{2,4})15(\d{6,8})$/.exec(d)
+  if (m && m[1].length + m[2].length === 10) d = m[1] + m[2]
+  return d.length === 10 ? `549${d}` : d
+}
+
 export async function shareOrCopy(text: string, url: string): Promise<'shared' | 'copied' | 'failed'> {
   if (navigator.share) {
     try {
