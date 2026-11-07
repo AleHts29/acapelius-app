@@ -649,6 +649,8 @@ a.tile:active, button.tile:active, a.fn:active, button.fn:active { transform: tr
   .sidenav__brand { display: flex; align-items: center; gap: var(--s1); min-width: 0; padding: 0 var(--s1); color: var(--ink); text-decoration: none; font-family: var(--fd); font-size: 22px; letter-spacing: 0.08em; white-space: nowrap }
   .sidenav__toggle { width: 32px; height: 32px; flex: none; border: 0; background: none; color: var(--ink-mark); display: grid; place-items: center; cursor: pointer }
   .sidenav__toggle:hover { color: var(--ink) }
+  .sidenav__toggle[aria-pressed='true'] { color: var(--ticket-text) }
+  .sidenav__brand { margin-right: auto }
   .sidenav .seasonsel { padding: 0 var(--s1) var(--s5) }
   .sidenav .seasonsel .btn, .sidenav .seasonsel .btn:hover { border: 0; box-shadow: none; transform: none; background: none; padding: 0; font-family: var(--fm); font-size: var(--t-label); font-weight: 500; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ticket-text) }
   .sidenav .seasonsel .menu-btn svg { color: var(--ticket-text) }
@@ -1033,3 +1035,9 @@ a.entrada:active, button.entrada:active { transform: translate(1px, 1px); box-sh
 .sello { --w: 34px; display: block; flex: none; width: var(--w); height: calc(var(--w) * 174 / 148); background: currentColor; -webkit-mask: url('/app/logo-sello.png') center / contain no-repeat; mask: url('/app/logo-sello.png') center / contain no-repeat }
 .sidenav__brand .sello { --w: 36px }
 .app-header__brand { gap: var(--s2) }
+
+/* El ojito de la plata en el header del celular. */
+.ojo { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border: 0; background: none; color: var(--ink3); cursor: pointer }
+.ojo[aria-pressed='true'] { color: var(--ticket-text) }
+.app-header .ojo { margin-left: auto }
+.app-header .seasonsel + .ojo { margin-left: 0 }

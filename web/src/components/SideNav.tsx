@@ -5,6 +5,7 @@ import { LogOut, PanelLeft } from 'lucide-react'
 import { api, roleLabel } from '../api/client'
 import type { User } from '../api/client'
 import { useSideNavRail } from '../lib/sidenav'
+import { OjoPlata } from './OjoPlata'
 import { SeasonSelector } from '../season/SeasonSelector'
 import { ThemeToggle } from './ThemeToggle'
 import { useSeason } from '../season/SeasonProvider'
@@ -67,6 +68,7 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
           <span className="sello" aria-hidden />
           <span>ACAPELIUS</span>
         </Link>
+        <OjoPlata className="sidenav__toggle" />
         <button
           className="sidenav__toggle"
           type="button"

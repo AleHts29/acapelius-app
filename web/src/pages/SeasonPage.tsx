@@ -727,7 +727,7 @@ export function SeasonPage() {
     <>
       <PageHeader
         eyebrow={`Temporadas · ${anio}`}
-        title={esBorrador ? <TituloEditable key={season.id} id={season.id} nombre={season.name} /> : season.name}
+        title={<TituloEditable key={`${season.id}:${season.name}`} id={season.id} nombre={season.name} />}
         actions={
           <>
             {eliminable && (
@@ -889,13 +889,13 @@ export function SeasonPage() {
 
       {summary.data && !esBorrador && vendidas === 0 && (
         <p className="rs" style={{ whiteSpace: 'normal', margin: 0 }}>
-          Tiene {repartidas} {repartidas === 1 ? 'entrada repartida' : 'entradas repartidas'}: mientras tanto, el
-          nombre no se cambia y la temporada no se puede eliminar.
+          Tiene {repartidas} {repartidas === 1 ? 'entrada repartida' : 'entradas repartidas'}: mientras tanto, la
+          temporada no se puede eliminar.
         </p>
       )}
       {esBorrador && !eliminable && (
         <p className="rs" style={{ whiteSpace: 'normal', margin: 0 }}>
-          Es la única temporada: no se elimina, pero el nombre se cambia tocándolo.
+          Es la única temporada: no se puede eliminar.
         </p>
       )}
 

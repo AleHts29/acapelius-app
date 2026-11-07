@@ -141,3 +141,13 @@ describe('montos con puntos de miles', () => {
     expect(centavosAMonto(800050)).toBe('8.000,50')
   })
 })
+
+describe('ojito de la plata', () => {
+  it('con los montos ocultos, formatMoney no muestra el número', async () => {
+    const { setPlataOculta } = await import('./plata')
+    setPlataOculta(true)
+    expect(formatMoney(4000000)).toBe('$ •••••')
+    setPlataOculta(false)
+    expect(formatMoney(4000000).replace(/\s/g, ' ')).toBe('$ 40.000')
+  })
+})

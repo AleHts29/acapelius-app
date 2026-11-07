@@ -455,8 +455,8 @@ func TestIndiceDeTemporadas(t *testing.T) {
 	assertStatus(t, corista.get("/api/reports/seasons"), http.StatusForbidden)
 }
 
-// Una temporada sin uso se puede renombrar y borrar con sus funciones; en cuanto
-// tiene un cupo repartido ya es historia. La en curso vacia se borra si hay
+// Una temporada se renombra siempre; sin uso se borra con sus funciones, y en
+// cuanto tiene un cupo repartido ya no. La en curso vacia se borra si hay
 // otra (pasa a estar en curso la mas nueva); si es la unica, no.
 func TestEditarYEliminarTemporada(t *testing.T) {
 	env := newTestEnv(t)
@@ -493,14 +493,14 @@ func TestEditarYEliminarTemporada(t *testing.T) {
 	// direccion se queda sin rol.
 	assertErrorCode(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/seasons/%.0f", enCurso), nil), http.StatusConflict, "conflict")
 
-	// Con un cupo repartido, ni renombrar ni borrar.
+	// Con un cupo repartido se renombra, pero no se borra.
 	usada, fnID := nueva("Con cupo")
 	assertStatus(t, admin.post(fmt.Sprintf("/api/seasons/%.0f/members", usada), map[string]any{"user_id": 2, "role": "seller"}), http.StatusOK)
 	assertStatus(t, admin.do(http.MethodPut, fmt.Sprintf("/api/functions/%.0f/allocations", fnID), map[string]any{
 		"allocations": []map[string]any{{"user_id": 2, "quantity": 1}},
 	}), http.StatusOK)
 	pathUsada := fmt.Sprintf("/api/seasons/%.0f", usada)
-	assertErrorCode(t, admin.do(http.MethodPatch, pathUsada, map[string]any{"name": "Otro"}), http.StatusConflict, "conflict")
+	assertStatus(t, admin.do(http.MethodPatch, pathUsada, map[string]any{"name": "Otro"}), http.StatusOK)
 	assertErrorCode(t, admin.do(http.MethodDelete, pathUsada, nil), http.StatusConflict, "conflict")
 
 	// En curso y vacia, con otras al lado: se borra y queda en curso la mas nueva.

@@ -1,3 +1,4 @@
+import { plataOculta } from './plata'
 // Formateo de plata y fechas para es-AR. La plata viaja siempre en centavos
 // (enteros); los pesos con decimales solo existen en la UI.
 
@@ -12,6 +13,8 @@ const money = new Intl.NumberFormat('es-AR', {
 
 /** Centavos → "$ 8.000". Sin decimales cuando son ,00. */
 export function formatMoney(cents: number): string {
+  // Con el ojito cerrado, ningún monto se ve (ver lib/plata.ts).
+  if (plataOculta()) return '$ •••••'
   return money.format(cents / 100)
 }
 

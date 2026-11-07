@@ -207,8 +207,15 @@ func (s *Server) handleUpdateSeason(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// El nombre es sólo una etiqueta: se cambia siempre, tenga o no cupos y
+	// ventas. Lo que no se puede con una temporada en uso es borrarla.
 	ctx := r.Context()
-	if _, ok := s.temporadaSinUso(w, r, s.queries, id); !ok {
+	if _, err := s.queries.GetSeason(ctx, sqlcgen.GetSeasonParams{ID: id, OrganizationID: s.org(ctx)}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrSeasonNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
 		return
 	}
 	season, err := s.queries.UpdateSeasonName(ctx, sqlcgen.UpdateSeasonNameParams{Name: req.Name, ID: id, OrganizationID: s.org(ctx)})

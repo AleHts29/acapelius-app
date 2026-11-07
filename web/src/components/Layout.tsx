@@ -3,6 +3,8 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 
 import { SeasonSelector } from '../season/SeasonSelector'
 import { useSession } from '../auth/session'
+import { usePlataOculta } from '../lib/plata'
+import { OjoPlata } from './OjoPlata'
 import { SideNav } from './SideNav'
 import { ThemeToggle } from './ThemeToggle'
 import { TabBar } from './TabBar'
@@ -12,6 +14,9 @@ export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
   // Hasta dos niveles: /panel/rendiciones/5 es la misma pantalla que /panel/rendiciones.
   const pantalla = useLocation().pathname.split('/').slice(0, 3).join('/')
+  // Los montos salen de formatMoney: al tocar el ojito, la pantalla se vuelve a
+  // dibujar entera para que ninguno quede a la vista.
+  const plataOculta = usePlataOculta()
   // Cada pantalla arranca arriba. Sin esto, venir scrolleado de una pantalla
   // larga a una corta deja a iOS con el scroll viejo y la barra de abajo flotando.
   useEffect(() => {
@@ -39,6 +44,7 @@ export function Layout() {
         {/* En celular el selector va en el header: es lo único que está en
             todas las pantallas. */}
         <SeasonSelector />
+        <OjoPlata />
         <div style={{ position: 'relative' }}>
           <button
             className="avatar"
@@ -65,7 +71,7 @@ export function Layout() {
       </header>
 
       <main className="app-main" onClick={() => menuOpen && setMenuOpen(false)}>
-        <div className="page" key={pantalla}>
+        <div className="page" key={`${pantalla}${plataOculta ? ':oculta' : ''}`}>
           <Outlet />
         </div>
       </main>
