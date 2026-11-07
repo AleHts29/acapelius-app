@@ -33,7 +33,7 @@ export function Layout() {
       <SideNav user={user} onLogout={() => void logout()} />
       <header className="app-header">
         <Link className="app-header__brand" to="/" aria-label="Inicio">
-          <img className="app-header__logo" src="/app/logo-mark-indigo.png" alt="" />
+          <span className="sello" aria-hidden />
           <span className="app-header__word">ACAPELIUS</span>
         </Link>
         {/* En celular el selector va en el header: es lo único que está en

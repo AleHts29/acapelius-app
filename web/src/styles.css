@@ -613,7 +613,6 @@ a.tile:active, button.tile:active, a.fn:active, button.fn:active { transform: tr
    una card. En el celular, la barra de pestañas abajo. -------------------- */
 .app-header { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); padding: max(var(--s2), env(safe-area-inset-top)) var(--s4) var(--s1) }
 .app-header__brand { display: flex; align-items: center; gap: var(--s1); color: var(--ink); text-decoration: none }
-.app-header__logo { width: 28px; height: 28px }
 .app-header__word { font-family: var(--fd); font-size: 17px; letter-spacing: 0.06em }
 .app-header .seasonsel { margin-left: auto }
 .avatar { width: 34px; height: 34px; border: 0; border-radius: var(--rc); background: var(--sunk); color: var(--ink2); font-family: var(--fm); font-size: var(--t-meta); font-weight: 700; display: grid; place-items: center; cursor: pointer; flex: none }
@@ -647,8 +646,7 @@ a.tile:active, button.tile:active, a.fn:active, button.fn:active { transform: tr
   .sidenav { display: flex; flex-direction: column; position: sticky; top: 0; align-self: flex-start; height: 100vh; width: 212px; flex: 0 0 212px; padding: var(--s5) var(--s3) var(--s3); border-right: 1px solid var(--hair); overflow: hidden; transition: width 0.2s ease, flex-basis 0.2s ease, padding 0.2s ease }
   .app-shell--demo .sidenav { top: var(--demobar-h); height: calc(100vh - var(--demobar-h)) }
   .sidenav__top { display: flex; align-items: center; justify-content: space-between; gap: var(--s1); margin-bottom: 4px }
-  .sidenav__brand { display: flex; align-items: center; gap: var(--s1); min-width: 0; padding: 0 var(--s1); color: var(--ink); text-decoration: none; font-family: var(--fd); font-size: 18px; letter-spacing: 0.08em; white-space: nowrap }
-  .sidenav__mark { display: none; width: 28px; height: 28px; flex: none; place-items: center; background: var(--ticket); color: var(--on-ticket); font-family: var(--fd); font-size: 14px; letter-spacing: 0 }
+  .sidenav__brand { display: flex; align-items: center; gap: var(--s1); min-width: 0; padding: 0 var(--s1); color: var(--ink); text-decoration: none; font-family: var(--fd); font-size: 22px; letter-spacing: 0.08em; white-space: nowrap }
   .sidenav__toggle { width: 32px; height: 32px; flex: none; border: 0; background: none; color: var(--ink-mark); display: grid; place-items: center; cursor: pointer }
   .sidenav__toggle:hover { color: var(--ink) }
   .sidenav .seasonsel { padding: 0 var(--s1) var(--s5) }
@@ -674,8 +672,7 @@ a.tile:active, button.tile:active, a.fn:active, button.fn:active { transform: tr
   html[data-nav='rail'] .sidenav { width: 60px; flex: 0 0 60px; padding-left: var(--s1); padding-right: var(--s1) }
   html[data-nav='rail'] .sidenav__top { flex-direction: column; gap: 4px; margin-bottom: var(--s3) }
   html[data-nav='rail'] .sidenav__brand { padding: 0 }
-  html[data-nav='rail'] .sidenav__brand span, html[data-nav='rail'] .sidenav .seasonsel, html[data-nav='rail'] .sidenav__sect, html[data-nav='rail'] .sidenav__item .sidenav__t, html[data-nav='rail'] .sidenav__who, html[data-nav='rail'] .sidenav__out, html[data-nav='rail'] .themesel { display: none }
-  html[data-nav='rail'] .sidenav__mark { display: grid }
+  html[data-nav='rail'] .sidenav__brand span:not(.sello), html[data-nav='rail'] .sidenav .seasonsel, html[data-nav='rail'] .sidenav__sect, html[data-nav='rail'] .sidenav__item .sidenav__t, html[data-nav='rail'] .sidenav__who, html[data-nav='rail'] .sidenav__out, html[data-nav='rail'] .themesel { display: none }
   html[data-nav='rail'] .sidenav__sep { display: block }
   html[data-nav='rail'] .sidenav__item { justify-content: center; padding: 11px 0; border-left: 0 }
   html[data-nav='rail'] .sidenav__item svg { display: block }
@@ -1030,3 +1027,9 @@ a.entrada:active, button.entrada:active { transform: translate(1px, 1px); box-sh
 @keyframes aviso-in { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
 @media (min-width: 1024px) { .aviso-zona { bottom: var(--s6) } }
 @media (prefers-reduced-motion: reduce) { .aviso { animation: none } }
+
+/* El sello del logo (C21 · opción A): el círculo con la A y la nota, del color
+   del texto, así se ve igual de bien en claro y en oscuro. */
+.sello { --w: 34px; display: block; flex: none; width: var(--w); height: calc(var(--w) * 174 / 148); background: currentColor; -webkit-mask: url('/app/logo-sello.png') center / contain no-repeat; mask: url('/app/logo-sello.png') center / contain no-repeat }
+.sidenav__brand .sello { --w: 36px }
+.app-header__brand { gap: var(--s2) }
