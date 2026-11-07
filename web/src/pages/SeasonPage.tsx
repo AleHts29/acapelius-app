@@ -168,11 +168,13 @@ function FuncionForm({
     setError(err instanceof ApiError ? err.message : 'No se pudo guardar la función.')
 
   const crear = useMutation({
+    meta: { exito: 'Función creada' },
     mutationFn: (input: Parameters<typeof api.createFunction>[0]) => api.createFunction(input),
     onSuccess: refrescar,
     onError: fallo,
   })
   const editar = useMutation({
+    meta: { exito: 'Función guardada' },
     mutationFn: (input: Parameters<typeof api.updateFunction>[1]) =>
       api.updateFunction(fn!.id, input),
     onSuccess: refrescar,
@@ -377,6 +379,7 @@ function TituloEditable({ id, nombre }: { id: number; nombre: string }) {
   const descartar = useRef(false)
 
   const guardar = useMutation({
+    meta: { exito: 'Nombre guardado' },
     mutationFn: (nuevo: string) => api.updateSeason(id, nuevo),
     onSuccess: () => {
       setError(null)
@@ -635,6 +638,7 @@ export function SeasonPage() {
   }
 
   const activar = useMutation({
+    meta: { exito: 'Temporada en uso' },
     mutationFn: (id: number) => api.activateSeason(id),
     onSuccess: refrescarTemporadas,
     onError: (err) =>
@@ -644,6 +648,7 @@ export function SeasonPage() {
   })
 
   const cancelar = useMutation({
+    meta: { exito: 'Función eliminada' },
     mutationFn: (id: number) => api.deleteFunction(id),
     onSuccess: () => {
       setPanel(null)
@@ -658,6 +663,7 @@ export function SeasonPage() {
   })
 
   const eliminarTemporada = useMutation({
+    meta: { exito: 'Temporada eliminada' },
     mutationFn: (id: number) => api.deleteSeason(id),
     onSuccess: () => {
       for (const key of DEPENDEN_DE_LA_TEMPORADA) {

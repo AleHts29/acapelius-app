@@ -64,6 +64,7 @@ export function NuevaTemporada({
   const elegidas = siguen ?? new Map(candidatas.filter((m) => m.left_at === null).map((m) => [m.id, m.role]))
 
   const crear = useMutation({
+    meta: { exito: 'Temporada creada' },
     mutationFn: (input: Parameters<typeof api.createSeason>[0]) => api.createSeason(input),
     onSuccess: (res) => {
       for (const key of DEPENDEN_DE_LA_TEMPORADA) {

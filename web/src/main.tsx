@@ -1,15 +1,30 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { App } from './App'
 import { SessionProvider } from './auth/session'
 import { applyNav } from './lib/sidenav'
 import { applyTheme, getTheme } from './lib/theme'
+import { Avisos, avisar } from './ui/Aviso'
 import './styles.css'
 
+declare module '@tanstack/react-query' {
+  interface Register {
+    // El texto del aviso verde cuando sale bien; false para no avisar (entrar,
+    // salir, o pantallas que ya muestran su propio resultado).
+    mutationMeta: { exito?: string | false }
+  }
+}
+
 const queryClient = new QueryClient({
+  mutationCache: new MutationCache({
+    onSuccess: (_data, _vars, _ctx, mutation) => {
+      const exito = mutation.meta?.exito
+      if (exito !== false) avisar(exito ?? 'Cambios guardados')
+    },
+  }),
   defaultOptions: {
     queries: {
       // En la puerta la red va y viene; reintentar una sola vez alcanza y no
@@ -50,6 +65,7 @@ createRoot(container).render(
         <BrowserRouter basename={basename}>
           <App />
         </BrowserRouter>
+        <Avisos />
       </SessionProvider>
     </QueryClientProvider>
   </StrictMode>,

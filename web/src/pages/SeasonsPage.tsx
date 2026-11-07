@@ -164,6 +164,7 @@ export function SeasonsPage() {
   })
 
   const activar = useMutation({
+    meta: { exito: 'Temporada en uso' },
     mutationFn: (id: number) => api.activateSeason(id),
     onSuccess: () => {
       setError(null)

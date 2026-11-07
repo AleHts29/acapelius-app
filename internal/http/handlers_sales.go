@@ -803,6 +803,13 @@ func (s *Server) handleVoidSale(w http.ResponseWriter, r *http.Request) {
 			mapDomainError(w, domain.ErrTicketCheckedIn)
 			return
 		}
+		// Con plata cobrada tampoco: anularla dejaría un cobro sin venta.
+		// Primero se quita el cobro (y se devuelve la plata), después se anula.
+		if sale.PaidCents > 0 {
+			httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+				"Ya tiene cobros: quitalos antes de anular la venta.")
+			return
+		}
 
 		if err := q.VoidTicketsOfSale(ctx, sale.ID); err != nil {
 			httpx.Internal(w, r, err)

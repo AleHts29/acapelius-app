@@ -55,6 +55,7 @@ export function SaleSheet({
     setError(err instanceof ApiError ? err.message : fallback)
 
   const setPayment = useMutation({
+    meta: { exito: 'Cobro guardado' },
     mutationFn: ({ paid, method }: { paid: boolean; method?: PaymentMethod }) =>
       api.updateSalePayment(sale.id, paid ? 'paid' : 'pending', method),
     onSuccess: ({ sale: actualizada }) => {
@@ -92,6 +93,7 @@ export function SaleSheet({
   }
 
   const addPayment = useMutation({
+    meta: { exito: 'Cobro registrado' },
     mutationFn: ({ cents, method }: { cents: number; method: PaymentMethod }) =>
       api.addSalePayment(sale.id, cents, method),
     onSuccess: (data, { cents, method }) => {
@@ -108,6 +110,7 @@ export function SaleSheet({
   })
 
   const delPayment = useMutation({
+    meta: { exito: 'Cobro quitado' },
     mutationFn: (paymentId: number) => api.deleteSalePayment(sale.id, paymentId),
     onSuccess: (data) => {
       tomarRespuesta(data)
@@ -128,6 +131,7 @@ export function SaleSheet({
   }
 
   const resend = useMutation({
+    meta: { exito: false },
     mutationFn: () => api.resendSaleEmail(sale.id),
     onSuccess: ({ email_status }) => {
       refresh()
@@ -139,6 +143,7 @@ export function SaleSheet({
   })
 
   const voidSale = useMutation({
+    meta: { exito: 'Venta anulada' },
     mutationFn: () => api.voidSale(sale.id),
     onSuccess: () => {
       refresh()
@@ -282,7 +287,14 @@ export function SaleSheet({
           <div className="mini" style={{ marginTop: 7 }}>
             <Row title="Copiar link de la entrada" onClick={() => void copyLink()} />
             {pago && <Row title="Volver a pendiente" onClick={ocupado ? undefined : () => setPayment.mutate({ paid: false })} />}
-            {isAdmin && (
+            {isAdmin && (sale.entered > 0 || sale.paid_cents > 0) && (
+              <Row
+                title="Anular venta"
+                sub={sale.entered > 0 ? 'Ya entró: no se puede anular' : 'Ya tiene cobros: quitalos antes de anular'}
+                dim
+              />
+            )}
+            {isAdmin && sale.entered === 0 && sale.paid_cents === 0 && (
               <Row
                 title={confirmVoid ? '¿Seguro? Tocá de nuevo para anular' : 'Anular venta'}
                 sub="Libera el cupo. No se puede deshacer"

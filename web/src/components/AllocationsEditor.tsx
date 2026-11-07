@@ -38,6 +38,7 @@ export function AllocationsEditor({
   })
 
   const save = useMutation({
+    meta: { exito: 'Reparto guardado' },
     mutationFn: (entries: Array<{ user_id: number; quantity: number }>) =>
       api.putAllocations(fn.id, entries),
     onSuccess: () => {

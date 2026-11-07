@@ -64,6 +64,7 @@ export function RegisterSheet({
   const restante = debt - cents
 
   const create = useMutation({
+    meta: { exito: 'Rendición registrada' },
     mutationFn: () =>
       api.createSettlement({
         seller_id: row.seller_id,
@@ -206,6 +207,7 @@ function DetalleCorista({
     queryFn: () => api.sellerDetail(sellerId, seasonId),
   })
   const recordar = useMutation({
+    meta: { exito: 'Recordatorio enviado' },
     mutationFn: () => api.remindSeller(sellerId, seasonId),
     onSuccess: ({ email_status }) => {
       setAviso(
@@ -350,6 +352,7 @@ export function SettlementsScreen() {
   const totalPending = rows.reduce((acc, r) => acc + r.pending_cents, 0)
 
   const recordarTodas = useMutation({
+    meta: { exito: 'Recordatorios enviados' },
     mutationFn: () => api.remindAll(season!.id),
     onSuccess: ({ sent, failed }) => {
       setConfirmando(false)

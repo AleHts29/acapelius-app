@@ -263,7 +263,11 @@ func TestVentasAnuladasNoCuentan(t *testing.T) {
 		"function_id": fnID, "buyer_name": "Anulada", "quantity": 3,
 	})
 	dropID := drop.Body["sale"].(map[string]any)["id"].(float64)
+	// Cobrada no se puede anular: se cobra, se quita el cobro y recién ahí se anula.
 	markPaid(t, carolina, dropID, "cash")
+	assertErrorCode(t, admin.post(fmt.Sprintf("/api/sales/%.0f/void", dropID), nil), http.StatusConflict, "conflict")
+	assertStatus(t, carolina.do(http.MethodPatch, fmt.Sprintf("/api/sales/%.0f", dropID),
+		map[string]string{"payment_status": "pending"}), http.StatusOK)
 	assertStatus(t, admin.post(fmt.Sprintf("/api/sales/%.0f/void", dropID), nil), http.StatusOK)
 
 	// El listado no cuenta la anulada...

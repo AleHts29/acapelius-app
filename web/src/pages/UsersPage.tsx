@@ -345,6 +345,7 @@ function AnteriorModal({
   onCambio: () => void
 }) {
   const reincorporar = useMutation({
+    meta: { exito: 'Sumada a la temporada' },
     mutationFn: () => api.addMember(seasonId!, m.id, m.last_role),
     onSuccess: () => {
       onCambio()
@@ -418,6 +419,7 @@ export function UsersPage() {
   }
 
   const sacar = useMutation({
+    meta: { exito: 'Quitada de la temporada' },
     mutationFn: (id: number) => api.removeMember(mirando!, id),
     onSuccess: () => {
       setAbierta(null)

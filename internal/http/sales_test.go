@@ -296,6 +296,14 @@ func TestAnulaciones(t *testing.T) {
 	// La vendedora no puede anular; el admin si.
 	assertErrorCode(t, seller.post(fmt.Sprintf("/api/sales/%.0f/void", saleID), nil),
 		http.StatusForbidden, "forbidden")
+	// Con un cobro no se anula; quitado el cobro, si.
+	cobro := seller.post(fmt.Sprintf("/api/sales/%.0f/payments", saleID), map[string]any{"amount_cents": 50000, "method": "cash"})
+	assertStatus(t, cobro, http.StatusOK)
+	assertErrorCode(t, admin.post(fmt.Sprintf("/api/sales/%.0f/void", saleID), nil), http.StatusConflict, "conflict")
+	for _, raw := range cobro.Body["payments"].([]any) {
+		pid := raw.(map[string]any)["id"].(float64)
+		assertStatus(t, seller.do(http.MethodDelete, fmt.Sprintf("/api/sales/%.0f/payments/%.0f", saleID, pid), nil), http.StatusOK)
+	}
 	voided := admin.post(fmt.Sprintf("/api/sales/%.0f/void", saleID), nil)
 	assertStatus(t, voided, http.StatusOK)
 	if voided.Body["sale"].(map[string]any)["voided_at"] == nil {

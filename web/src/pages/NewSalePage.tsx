@@ -63,6 +63,7 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
   })
 
   const create = useMutation({
+    meta: { exito: 'Venta registrada' },
     mutationFn: (input: Parameters<typeof api.createSale>[0]) => api.createSale(input),
     onSuccess: (result) => {
       setCreated({

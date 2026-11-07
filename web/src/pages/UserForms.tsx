@@ -42,6 +42,7 @@ export function NewUserSheet({
   const [error, setError] = useState<string | null>(null)
 
   const create = useMutation({
+    meta: { exito: 'Persona agregada' },
     mutationFn: () => api.createUser({ name: name.trim(), email: email.trim(), role }),
     onSuccess: (access) => {
       refrescar()
@@ -125,12 +126,14 @@ export function UserSheet({
   const fail = (err: unknown, fallback: string) => setError(err instanceof ApiError ? err.message : fallback)
 
   const update = useMutation({
+    meta: { exito: 'Cambios guardados' },
     mutationFn: (input: { name: string; email: string; role: Role; is_active: boolean }) => api.updateUser(user.id, input),
     onSuccess: refrescar,
     onError: (err) => fail(err, 'No se pudo guardar.'),
   })
 
   const access = useMutation({
+    meta: { exito: false },
     mutationFn: (kind: 'invite' | 'reset') => (kind === 'invite' ? api.resendInvite(user.id) : api.resetPassword(user.id)),
     onSuccess: (result) => {
       refrescar()

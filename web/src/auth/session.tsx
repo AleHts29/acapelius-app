@@ -57,12 +57,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   )
 
   const loginMutation = useMutation({
+    meta: { exito: false },
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       api.login(email, password),
     onSuccess: ({ user }) => setUser(user),
   })
 
   const logoutMutation = useMutation({
+    meta: { exito: false },
     mutationFn: () => api.logout(),
     onSuccess: () => {
       setUser(null)
@@ -72,6 +74,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   })
 
   const changePasswordMutation = useMutation({
+    meta: { exito: 'Contraseña cambiada' },
     mutationFn: ({ current, next }: { current: string; next: string }) =>
       api.changePassword(current, next),
     onSuccess: ({ user }) => setUser(user),
