@@ -1078,3 +1078,7 @@ a.entrada:active, button.entrada:active { transform: translate(1px, 1px); box-sh
 .perfil__cara .mifoto__sacar { justify-self: center }
 .perfil__sec { display: grid; gap: var(--s3); padding: var(--s4) 0; border-top: 1px solid var(--hair) }
 .perfil__acciones { display: flex; justify-content: flex-end }
+
+/* Equipo: buscador y vista (C21). */
+.equipo__barra { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; margin: 0 0 var(--s4) }
+.equipo__barra .search { flex: 1 1 240px; max-width: 420px }

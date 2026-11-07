@@ -15,7 +15,7 @@ import { RepartirModal } from '../components/RepartirModal'
 import { useSession } from '../auth/session'
 import { dayLabel, daysAgo, formatMoney } from '../lib/format'
 import { useSeason } from '../season/SeasonProvider'
-import { Button } from '../ui/Button'
+import { Button, Seg } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { DataList } from '../ui/DataList'
 import { Figure, SubFigs } from '../ui/Figure'
@@ -24,6 +24,7 @@ import { Modal } from '../ui/Modal'
 import { PageHeader } from '../ui/Page'
 import { Row } from '../ui/Row'
 import { useIsDesktop } from '../lib/viewport'
+import { normalizeText } from '../lib/search'
 import { Status } from '../ui/Status'
 import { Tile } from '../ui/Tile'
 import { NewUserSheet, UserSheet } from './UserForms'
@@ -110,11 +111,12 @@ function EstadoAcceso({ m }: { m: TeamMember }) {
 }
 
 /** La ficha de una persona: quién es y qué hace en esta temporada. La plata está en Rendiciones. */
-function Ficha({ m, onClick }: { m: TeamMember; onClick: () => void }) {
+function Ficha({ m, onClick, lista }: { m: TeamMember; onClick: () => void; lista?: boolean }) {
   const corista = m.role === 'seller'
   const escritorio = useIsDesktop()
   // En el celular una ficha por pantalla no deja ver al equipo: va en fila.
-  if (!escritorio) {
+  // En escritorio, la vista de lista también.
+  if (!escritorio || lista) {
     return (
       <Row
         title={m.name}
@@ -387,6 +389,23 @@ export function UsersPage() {
   const [repartir, setRepartir] = useState(false)
   const [access, setAccess] = useState<UserAccessResponse | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [busqueda, setBusqueda] = useState('')
+  // Fichas o lista: se recuerda en este dispositivo.
+  const [vista, setVista] = useState<'fichas' | 'lista'>(() => {
+    try {
+      return localStorage.getItem('acapelius.equipo-vista') === 'lista' ? 'lista' : 'fichas'
+    } catch {
+      return 'fichas'
+    }
+  })
+  const cambiarVista = (v: 'fichas' | 'lista') => {
+    setVista(v)
+    try {
+      localStorage.setItem('acapelius.equipo-vista', v)
+    } catch {
+      // sin storage: vale hasta recargar
+    }
+  }
   // El aviso se va solo a los 5 segundos.
   useEffect(() => {
     if (aviso === null) return
@@ -443,11 +462,22 @@ export function UsersPage() {
   }, [focusId, members, setSearchParams])
 
   const porNombre = (a: TeamMember, b: TeamMember) => a.name.localeCompare(b.name, 'es')
-  const siguen = members.filter((m) => m.left_at === null).sort(porNombre)
-  const coristas = siguen.filter((m) => m.role === 'seller')
-  const staff = siguen.filter((m) => m.role !== 'seller')
-  const dejaron = members.filter((m) => m.left_at !== null).sort(porNombre)
-  const nuncaEntraron = siguen.filter((m) => m.last_login_at === null).length
+  const siguenTodos = members.filter((m) => m.left_at === null)
+  const nuncaEntraron = siguenTodos.filter((m) => m.last_login_at === null).length
+  // El buscador filtra por nombre, mail o rol, sin importar tildes ni mayúsculas.
+  const q = normalizeText(busqueda.trim())
+  const coincide = (texto: string) => q === '' || normalizeText(texto).includes(q)
+  const encontrada = (m: TeamMember) =>
+    coincide(`${m.name} ${m.email} ${m.role_name ?? ''} ${roleLabel(m.role)}`)
+  const siguen = siguenTodos.filter(encontrada).sort(porNombre)
+  // Los roles propios (C21) tienen su propia sección: "Banda", "Acomodadores"…
+  const coristas = siguen.filter((m) => m.role === 'seller' && !m.role_name)
+  const staff = siguen.filter((m) => m.role !== 'seller' && !m.role_name)
+  const propios = [...new Set(siguen.map((m) => m.role_name).filter((n): n is string => !!n))].sort((a, b) =>
+    a.localeCompare(b, 'es'),
+  )
+  const dejaron = members.filter((m) => m.left_at !== null).filter(encontrada).sort(porNombre)
+  const anteriores = former.filter((m) => coincide(`${m.name} ${m.email}`))
 
   const editar = (m: TeamMember) => {
     setAbierta(null)
@@ -488,8 +518,12 @@ export function UsersPage() {
         <div style={{ marginBottom: 'var(--s5)' }}>
           <SubFigs
             items={[
-              { label: 'Coristas', value: coristas.length },
-              { label: 'Dirección y puerta', value: staff.length },
+              { label: 'Coristas', value: siguenTodos.filter((m) => m.role === 'seller' && !m.role_name).length },
+              ...[...new Set(siguenTodos.map((m) => m.role_name).filter((n): n is string => !!n))].map((n) => ({
+                label: n,
+                value: siguenTodos.filter((m) => m.role_name === n).length,
+              })),
+              { label: 'Dirección y puerta', value: siguenTodos.filter((m) => m.role !== 'seller' && !m.role_name).length },
               { label: 'Nunca entraron', value: nuncaEntraron, tone: nuncaEntraron > 0 ? ('warn' as const) : undefined },
               ...(dejaron.length > 0 ? [{ label: 'Dejaron el coro', value: dejaron.length }] : []),
             ]}
@@ -507,8 +541,33 @@ export function UsersPage() {
         </Card>
       ) : (
         <>
+          <div className="equipo__barra">
+            <input
+              className="search"
+              type="search"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre, mail o rol"
+              aria-label="Buscar personas"
+            />
+            <Seg<'fichas' | 'lista'>
+              label="Vista"
+              value={vista}
+              onChange={cambiarVista}
+              options={[
+                { value: 'fichas', label: 'Fichas' },
+                { value: 'lista', label: 'Lista' },
+              ]}
+            />
+          </div>
+
+          {q !== '' && siguen.length + dejaron.length + anteriores.length === 0 && (
+            <p className="rs">Nadie coincide con “{busqueda.trim()}”.</p>
+          )}
+
           {[
             { label: 'Coristas', gente: coristas },
+            ...propios.map((n) => ({ label: n, gente: siguen.filter((m) => m.role_name === n) })),
             { label: 'Dirección y puerta', gente: staff },
             { label: 'Dejaron el coro', gente: dejaron },
           ].map(
@@ -519,23 +578,31 @@ export function UsersPage() {
                     <h2 className="lbl">{label}</h2>
                     <span className="grp__n">{gente.length}</span>
                   </div>
-                  <div className="tiles tiles--3">
-                    {gente.map((m) => (
-                      <Ficha key={m.id} m={m} onClick={() => setAbierta(m)} />
-                    ))}
-                  </div>
+                  {vista === 'lista' ? (
+                    <div className="card equipo__lista">
+                      {gente.map((m) => (
+                        <Ficha key={m.id} m={m} lista onClick={() => setAbierta(m)} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="tiles tiles--3">
+                      {gente.map((m) => (
+                        <Ficha key={m.id} m={m} onClick={() => setAbierta(m)} />
+                      ))}
+                    </div>
+                  )}
                 </section>
               ),
           )}
 
-          {former.length > 0 && (
+          {anteriores.length > 0 && (
             <section className="grp">
               <div className="grp__h">
                 <h2 className="lbl">Temporadas anteriores</h2>
-                <span className="grp__n">{former.length}</span>
+                <span className="grp__n">{anteriores.length}</span>
               </div>
               <div className="tiles tiles--3">
-                {former.map((m) => (
+                {anteriores.map((m) => (
                   <Tile
                     key={m.id}
                     name={m.name}
