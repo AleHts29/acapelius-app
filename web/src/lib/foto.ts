@@ -2,7 +2,7 @@
  * Achica una foto a un cuadrado de `lado` px (recorte centrado) y la pasa a
  * JPEG. Una foto de celular pesa varios MB; la de perfil, pocos KB.
  */
-export async function achicarFoto(archivo: File, lado = 256): Promise<Blob> {
+export async function achicarFoto(archivo: File, lado = 512): Promise<Blob> {
   const bitmap = await createImageBitmap(archivo, { imageOrientation: 'from-image' })
   const corte = Math.min(bitmap.width, bitmap.height)
   const canvas = document.createElement('canvas')

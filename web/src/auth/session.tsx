@@ -60,7 +60,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     meta: { exito: false },
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       api.login(email, password),
-    onSuccess: ({ user }) => setUser(user),
+    onSuccess: ({ user }) => {
+      setUser(user)
+      // La foto (avatar_at) sólo la trae /me: se vuelve a pedir.
+      void queryClient.invalidateQueries({ queryKey: meQueryKey })
+    },
   })
 
   const logoutMutation = useMutation({
@@ -77,7 +81,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     meta: { exito: 'Contraseña cambiada' },
     mutationFn: ({ current, next }: { current: string; next: string }) =>
       api.changePassword(current, next),
-    onSuccess: ({ user }) => setUser(user),
+    onSuccess: ({ user }) => {
+      setUser(user)
+      // La foto (avatar_at) sólo la trae /me: se vuelve a pedir.
+      void queryClient.invalidateQueries({ queryKey: meQueryKey })
+    },
   })
 
   const value = useMemo<Session>(

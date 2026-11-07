@@ -9,6 +9,7 @@ import { Layout } from "./components/Layout";
 import { puedeEntrar } from "./components/nav";
 import { AttendancePage } from "./pages/AttendancePage";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { DireccionPage } from "./pages/DireccionPage";
 import { DoorPage } from "./pages/DoorPage";
 import { GestionPage } from "./pages/GestionPage";
@@ -129,6 +130,7 @@ function AuthenticatedApp() {
           />
           {/* El modo puerta lo usan door, seller (puede estar en la puerta) y
             admin; el backend aplica la misma regla. */}
+          <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/puerta" element={<DoorPage />} />
           <Route
             path="/mi-plata"

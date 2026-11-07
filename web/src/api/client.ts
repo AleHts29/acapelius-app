@@ -551,6 +551,7 @@ export const api = {
   login: (email: string, password: string) =>
     request<{ user: User }>('POST', '/auth/login', { email, password }),
   logout: () => request<void>('POST', '/auth/logout'),
+  updateMe: (input: { name: string; email: string }) => request<void>('PATCH', '/me', input),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<{ user: User }>('POST', '/auth/change-password', {
       current_password: currentPassword,

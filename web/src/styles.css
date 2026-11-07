@@ -666,7 +666,8 @@ a.tile:active, button.tile:active, a.fn:active, button.fn:active { transform: tr
   .sidenav__badge { margin-left: auto; font-family: var(--fm); font-size: 11px; font-weight: 500; color: var(--ticket-text) }
   .sidenav__theme { margin-top: auto; padding: 0 var(--s1) }
   .sidenav__account { display: flex; align-items: center; gap: var(--s1); padding: var(--s3) var(--s1) 0 }
-  .sidenav__account .avatar { display: none }
+  .sidenav__perfil { display: flex; align-items: center; gap: var(--s2); min-width: 0; flex: 1; color: inherit; text-decoration: none; border-radius: var(--rc) }
+  .sidenav__perfil:hover b { text-decoration: underline }
   .sidenav__who { min-width: 0; flex: 1; display: flex; flex-direction: column; line-height: 1.3 }
   .sidenav__who b { font-size: var(--t-body); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
   .sidenav__out { width: 36px; height: 36px; border: 0; background: none; color: var(--ink3); display: grid; place-items: center; cursor: pointer }
@@ -1057,6 +1058,23 @@ a.entrada:active, button.entrada:active { transform: translate(1px, 1px); box-sh
 .avatar img, .mono-sq img { width: 100%; height: 100%; object-fit: cover; display: block }
 .mifoto { display: grid; gap: 6px; margin-top: var(--s2) }
 .mifoto__sacar { font: inherit; font-size: var(--t-meta); color: var(--ink3); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; justify-self: start }
-.mifoto--cara { margin: 0; display: block }
-.sidenav__cara { padding: 0; border: 0; background: none; cursor: pointer; display: block }
-.sidenav__cara:hover .avatar { box-shadow: 0 0 0 2px var(--ticket) }
+
+/* Las caras son redondas (C21), con foto o con iniciales. */
+.avatar, .tile .mono-sq { border-radius: 50% }
+
+/* La foto en grande, como en WhatsApp: fondo oscuro, la foto al centro. */
+.foto-grande { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); background: rgba(10, 10, 9, 0.92); animation: aviso-in 0.15s ease-out }
+.foto-grande img { width: min(92vw, 520px); aspect-ratio: 1; object-fit: cover; display: block }
+.foto-grande__x { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: #f4f1ea; cursor: pointer }
+.foto-grande__n { position: absolute; top: max(22px, env(safe-area-inset-top)); left: 18px; color: #f4f1ea; font-weight: 600 }
+
+/* Mi perfil (C21). */
+.perfil__cara { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s3) 0 var(--s4) }
+.perfil__foto { width: 132px; height: 132px; border-radius: 50%; border: 0; padding: 0; background: var(--sunk); color: var(--ink2); font-family: var(--fd); font-size: 44px; display: grid; place-items: center; overflow: hidden; cursor: default }
+.perfil__foto img { width: 100%; height: 100%; object-fit: cover; display: block }
+.perfil__foto--ver { cursor: zoom-in }
+.perfil__cara .mifoto { margin: 0; justify-items: center }
+.perfil__cara .mifoto .btn { width: auto; padding-inline: var(--s4) }
+.perfil__cara .mifoto__sacar { justify-self: center }
+.perfil__sec { display: grid; gap: var(--s3); padding: var(--s4) 0; border-top: 1px solid var(--hair) }
+.perfil__acciones { display: flex; justify-content: flex-end }

@@ -66,3 +66,20 @@ func TestFotoDePerfil(t *testing.T) {
 		t.Fatalf("sin foto tendria que dar 404, dio %d", s)
 	}
 }
+
+// Cada persona edita su nombre y su mail; no puede pisar el mail de otra.
+func TestEditarMiPerfil(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	corista := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test")
+	createSellerClient(t, env, admin, "Valeria", "vale@acapelius.test")
+
+	assertStatus(t, corista.do(http.MethodPatch, "/api/me", map[string]any{"name": "  Carolina Vega ", "email": "Caro.Vega@Acapelius.test"}), http.StatusNoContent)
+	me := corista.get("/api/me").Body["user"].(map[string]any)
+	if me["name"] != "Carolina Vega" || me["email"] != "caro.vega@acapelius.test" {
+		t.Fatalf("no se guardaron los datos: %v", me)
+	}
+	assertErrorCode(t, corista.do(http.MethodPatch, "/api/me", map[string]any{"name": "", "email": "x@y.com"}), http.StatusBadRequest, "validation_error")
+	assertErrorCode(t, corista.do(http.MethodPatch, "/api/me", map[string]any{"name": "C", "email": "no-es-mail"}), http.StatusBadRequest, "validation_error")
+	assertErrorCode(t, corista.do(http.MethodPatch, "/api/me", map[string]any{"name": "C", "email": "vale@acapelius.test"}), http.StatusConflict, "conflict")
+}

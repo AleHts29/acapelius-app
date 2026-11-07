@@ -4,7 +4,6 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { SeasonSelector } from '../season/SeasonSelector'
 import { useSession } from '../auth/session'
 import { OjoPlata } from './OjoPlata'
-import { MiFoto } from './MiFoto'
 import { avatarURL } from '../api/client'
 import { SideNav } from './SideNav'
 import { ThemeToggle } from './ThemeToggle'
@@ -59,7 +58,9 @@ export function Layout() {
               <p className="note" style={{ marginBottom: 'var(--s2)' }}>
                 {user.email}
               </p>
-              {!user.organization_is_demo && <MiFoto tieneFoto={!!user.avatar_at} />}
+              <Link className="btn btn--w" to="/perfil" onClick={() => setMenuOpen(false)} style={{ marginBottom: 'var(--s2)' }}>
+                Mi perfil
+              </Link>
               <ThemeToggle />
               <button className="btn btn--w" style={{ marginTop: 'var(--s2)' }} type="button" onClick={() => void logout()}>
                 Cerrar sesión

@@ -129,3 +129,41 @@ func capitalize(s string) string {
 func timeoutContext(r *http.Request, d time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(r.Context(), d)
 }
+
+// handleUpdateMe: PATCH /api/me {name, email} — cada persona edita sus datos
+// (C21). El rol no: eso lo decide direccion.
+func (s *Server) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user := auth.MustUserFrom(ctx)
+	if user.OrganizationIsDemo {
+		httpx.Error(w, http.StatusForbidden, httpx.CodeForbidden, "En la demo no se cambian los datos.")
+		return
+	}
+	var req struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+	}
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, capitalize(domain.ErrNameRequired.Error()))
+		return
+	}
+	if err := domain.ValidateEmail(req.Email); err != nil {
+		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, capitalize(err.Error()))
+		return
+	}
+	if _, err := s.queries.UpdateUser(ctx, sqlcgen.UpdateUserParams{
+		Name: req.Name, Email: domain.NormalizeEmail(req.Email), ID: user.ID, OrganizationID: s.org(ctx),
+	}); err != nil {
+		if isUniqueViolation(err) {
+			httpx.Error(w, http.StatusConflict, httpx.CodeConflict, "Ya hay alguien del grupo con ese mail.")
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

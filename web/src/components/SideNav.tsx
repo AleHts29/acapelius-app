@@ -6,7 +6,6 @@ import { api, roleLabel } from '../api/client'
 import type { User } from '../api/client'
 import { useSideNavRail } from '../lib/sidenav'
 import { OjoPlata } from './OjoPlata'
-import { MiFoto } from './MiFoto'
 import { Avatar } from '../ui/Avatar'
 import { SeasonSelector } from '../season/SeasonSelector'
 import { ThemeToggle } from './ThemeToggle'
@@ -105,19 +104,13 @@ export function SideNav({ user, onLogout }: { user: User; onLogout: () => void }
         <ThemeToggle compact />
       </div>
       <div className="sidenav__account">
-        {user.organization_is_demo ? (
+        <Link className="sidenav__perfil" to="/perfil" title="Mi perfil">
           <Avatar userId={user.id} name={user.name} avatarAt={user.avatar_at} />
-        ) : (
-          <MiFoto
-            tieneFoto={!!user.avatar_at}
-            className="sidenav__cara"
-            trigger={<Avatar userId={user.id} name={user.name} avatarAt={user.avatar_at} />}
-          />
-        )}
-        <span className="sidenav__who">
-          <b>{user.name}</b>
-          <span className="rs">{roleLabel(user.role)}</span>
-        </span>
+          <span className="sidenav__who">
+            <b>{user.name}</b>
+            <span className="rs">{roleLabel(user.role)}</span>
+          </span>
+        </Link>
         <button className="sidenav__out" type="button" onClick={onLogout} aria-label="Cerrar sesión">
           <LogOut size={16} aria-hidden />
         </button>
