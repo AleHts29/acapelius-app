@@ -22,6 +22,8 @@ type updateUserRequest struct {
 	Email    string `json:"email"`
 	Role     string `json:"role"`
 	IsActive bool   `json:"is_active"`
+	// CustomRoleID: rol propio (C21); sin el, queda el nombre del rol de base.
+	CustomRoleID *int64 `json:"custom_role_id"`
 }
 
 // handleUpdateUser: el CRUD de coristas del admin — nombre, email, rol y
@@ -39,9 +41,13 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	role := domain.Role(strings.TrimSpace(req.Role))
+	if !s.rolPropio(w, r, req.CustomRoleID, &role) {
+		return
+	}
 	actor := auth.MustUserFrom(r.Context())
 	updated, err := s.auth.UpdateUser(r.Context(), actor.OrganizationID, actor.ID, id,
-		strings.TrimSpace(req.Name), req.Email, domain.Role(strings.TrimSpace(req.Role)), req.IsActive)
+		strings.TrimSpace(req.Name), req.Email, role, req.IsActive)
 	switch {
 	case err == nil:
 	case errors.Is(err, auth.ErrEmailTaken):
@@ -55,6 +61,12 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 			httpx.Internal(w, r, err)
 		}
 		return
+	}
+	if req.IsActive {
+		if err := s.ponerRolPropioEnCurso(r, id, req.CustomRoleID); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]domain.User{"user": *updated})
 }

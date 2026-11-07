@@ -120,10 +120,10 @@ function Ficha({ m, onClick }: { m: TeamMember; onClick: () => void }) {
         title={m.name}
         sub={
           corista
-            ? `${m.assigned > 0 ? `${m.tickets_sold} de ${m.assigned} vendidas` : 'Sin cupo'}${m.last_login_at ? '' : ' · nunca entró'}`
+            ? `${m.role_name ? `${m.role_name} · ` : ''}${m.assigned > 0 ? `${m.tickets_sold} de ${m.assigned} vendidas` : 'Sin cupo'}${m.last_login_at ? '' : ' · nunca entró'}`
             : m.role === 'door'
-              ? `${m.checkins} ${m.checkins === 1 ? 'escaneo' : 'escaneos'} · Puerta`
-              : PAPEL_STAFF.admin
+              ? `${m.checkins} ${m.checkins === 1 ? 'escaneo' : 'escaneos'} · ${m.role_name ?? 'Puerta'}`
+              : (m.role_name ?? PAPEL_STAFF.admin)
         }
         onClick={onClick}
       />
@@ -132,7 +132,7 @@ function Ficha({ m, onClick }: { m: TeamMember; onClick: () => void }) {
   return (
     <Tile
       name={m.name}
-      sub={m.email}
+      sub={m.role_name && corista ? `${m.role_name} · ${m.email}` : m.email}
       bar={corista && m.assigned > 0 ? { value: m.tickets_sold, max: m.assigned } : undefined}
       quantity={
         corista ? (
@@ -145,10 +145,10 @@ function Ficha({ m, onClick }: { m: TeamMember; onClick: () => void }) {
           )
         ) : m.role === 'door' ? (
           <>
-            {m.checkins} <em>{m.checkins === 1 ? 'escaneo' : 'escaneos'} · Puerta</em>
+            {m.checkins} <em>{m.checkins === 1 ? 'escaneo' : 'escaneos'} · {m.role_name ?? 'Puerta'}</em>
           </>
         ) : (
-          <em>{PAPEL_STAFF.admin}</em>
+          <em>{m.role_name ?? PAPEL_STAFF.admin}</em>
         )
       }
       footer={
@@ -278,7 +278,7 @@ function CoristaModal({
 
       <DataList
         rows={[
-          ['Rol', roleLabel(m.role)],
+          ['Rol', m.role_name ?? roleLabel(m.role)],
           ['Último ingreso', m.last_login_at === null ? 'Nunca entró' : daysAgo(m.last_login_at)],
           ['En el coro', m.seasons === 1 ? 'Primera temporada' : `${m.seasons} temporadas`],
           ...(ventas.data
@@ -319,10 +319,10 @@ function StaffModal({
   onSacar: () => void
 }) {
   return (
-    <Modal open onClose={onClose} label={roleLabel(m.role)} title={m.name} sub={m.email}>
+    <Modal open onClose={onClose} label={m.role_name ?? roleLabel(m.role)} title={m.name} sub={m.email}>
       <DataList
         rows={[
-          ['Rol', roleLabel(m.role)],
+          ['Rol', m.role_name ?? roleLabel(m.role)],
           ['Último ingreso', m.last_login_at === null ? 'Nunca entró' : daysAgo(m.last_login_at)],
           ...(m.role === 'door' ? ([['Escaneos', String(m.checkins)]] as Array<[string, string]>) : []),
           ['En el coro', m.seasons === 1 ? 'Primera temporada' : `${m.seasons} temporadas`],
@@ -617,6 +617,8 @@ function comoUser(m: TeamMember): User {
     name: m.name,
     email: m.email,
     role: m.role,
+    custom_role_id: m.custom_role_id ?? null,
+    role_name: m.role_name ?? null,
     must_change_password: false,
     is_active: m.left_at === null,
     created_at: m.joined_at,

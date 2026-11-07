@@ -25,6 +25,14 @@ type Checkin struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type CustomRole struct {
+	ID             int64     `json:"id"`
+	OrganizationID int64     `json:"organization_id"`
+	Name           string    `json:"name"`
+	BaseRole       string    `json:"base_role"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
 type EmailSend struct {
 	ID        int64     `json:"id"`
 	SaleID    int64     `json:"sale_id"`
@@ -91,12 +99,13 @@ type Season struct {
 }
 
 type SeasonMember struct {
-	ID       int64      `json:"id"`
-	SeasonID int64      `json:"season_id"`
-	UserID   int64      `json:"user_id"`
-	Role     string     `json:"role"`
-	JoinedAt time.Time  `json:"joined_at"`
-	LeftAt   *time.Time `json:"left_at"`
+	ID           int64      `json:"id"`
+	SeasonID     int64      `json:"season_id"`
+	UserID       int64      `json:"user_id"`
+	Role         string     `json:"role"`
+	JoinedAt     time.Time  `json:"joined_at"`
+	LeftAt       *time.Time `json:"left_at"`
+	CustomRoleID *int64     `json:"custom_role_id"`
 }
 
 type Session struct {

@@ -11,6 +11,9 @@ export interface User {
   name: string
   email: string
   role: Role
+  /** Rol propio en la temporada en curso (C21), si tiene. */
+  custom_role_id?: number | null
+  role_name?: string | null
   /** El grupo al que pertenece (C17 §A). Viene en la sesión (`/api/me`,
    *  login); las filas del equipo que se adaptan a `User` no lo traen. */
   organization_id?: number
@@ -26,11 +29,21 @@ export interface User {
 
 /** Una persona en una temporada: quién es, qué rol tiene ESTA temporada y qué
  *  hizo en ella. */
+/** Un rol propio de la organización: un nombre con los permisos de uno de base (C21). */
+export interface CustomRole {
+  id: number
+  name: string
+  base_role: Role
+}
+
 export interface TeamMember {
   id: number
   name: string
   email: string
   role: Role
+  /** El nombre del rol propio, si tiene uno ("Acomodador"). */
+  role_name?: string | null
+  custom_role_id?: number | null
   joined_at: string
   /** Con fecha: dejó el coro a mitad de temporada. */
   left_at: string | null
@@ -550,12 +563,15 @@ export const api = {
     }),
   removeMember: (seasonId: number, userId: number) =>
     request<void>('DELETE', `/seasons/${seasonId}/members/${userId}`),
-  createUser: (input: { name: string; email: string; role: Role; password?: string }) =>
+  createUser: (input: { name: string; email: string; role: Role; custom_role_id?: number | null; password?: string }) =>
     request<UserAccessResponse>('POST', '/users', input),
   updateUser: (
     id: number,
-    input: { name: string; email: string; role: Role; is_active: boolean },
+    input: { name: string; email: string; role: Role; custom_role_id?: number | null; is_active: boolean },
   ) => request<{ user: User }>('PATCH', `/users/${id}`, input),
+  listRoles: () => request<{ roles: CustomRole[] }>('GET', '/roles'),
+  createRole: (input: { name: string; base_role: Role }) => request<{ role: CustomRole }>('POST', '/roles', input),
+  deleteRole: (id: number) => request<void>('DELETE', `/roles/${id}`),
   resendInvite: (id: number) => request<UserAccessResponse>('POST', `/users/${id}/resend-invite`),
   resetPassword: (id: number) => request<UserAccessResponse>('POST', `/users/${id}/reset-password`),
 

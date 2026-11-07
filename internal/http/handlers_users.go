@@ -24,6 +24,8 @@ type createUserRequest struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 	Role  string `json:"role"`
+	// CustomRoleID: un rol propio de la organizacion; el rol de base sale de el.
+	CustomRoleID *int64 `json:"custom_role_id"`
 	// Password es opcional: si no viene, el server genera una provisoria y la
 	// devuelve una unica vez para que el admin se la pase a la persona.
 	Password string `json:"password"`
@@ -84,6 +86,9 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	req.Name = strings.TrimSpace(req.Name)
 	role := domain.Role(strings.TrimSpace(req.Role))
+	if !s.rolPropio(w, r, req.CustomRoleID, &role) {
+		return
+	}
 
 	password := req.Password
 	generated := false
@@ -113,6 +118,13 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	default:
 		httpx.Internal(w, r, err)
 		return
+	}
+
+	if req.CustomRoleID != nil {
+		if err := s.ponerRolPropioEnCurso(r, user.ID, req.CustomRoleID); err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
 	}
 
 	// El alta dispara la invitacion (C7). Se manda siempre que el server haya
@@ -184,10 +196,13 @@ func (s *Server) resetUserPassword(w http.ResponseWriter, r *http.Request) (*dom
 // teamMember es una fila de Equipo: quien es, que rol tiene ESTA temporada y
 // que hizo en ella.
 type teamMember struct {
-	ID          int64      `json:"id"`
-	Name        string     `json:"name"`
-	Email       string     `json:"email"`
-	Role        string     `json:"role"`
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
+	// RoleName: el nombre del rol propio, si tiene uno (C21).
+	RoleName    *string    `json:"role_name"`
+	RoleID      *int64     `json:"custom_role_id"`
 	JoinedAt    time.Time  `json:"joined_at"`
 	LeftAt      *time.Time `json:"left_at"`
 	LastLoginAt *time.Time `json:"last_login_at"`
@@ -285,6 +300,8 @@ func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 			Name:         row.Name,
 			Email:        row.Email,
 			Role:         row.Role,
+			RoleName:     row.RoleName,
+			RoleID:       row.CustomRoleID,
 			JoinedAt:     row.JoinedAt,
 			LeftAt:       row.LeftAt,
 			LastLoginAt:  row.LastLoginAt,
@@ -321,8 +338,9 @@ func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 // --- Membresias -------------------------------------------------------------
 
 type membershipRequest struct {
-	UserID int64  `json:"user_id"`
-	Role   string `json:"role"`
+	UserID       int64  `json:"user_id"`
+	Role         string `json:"role"`
+	CustomRoleID *int64 `json:"custom_role_id"`
 }
 
 // handleAddMember: POST /api/seasons/{id}/members — suma (o reincorpora) a una
@@ -338,6 +356,9 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	role := domain.Role(req.Role)
+	if !s.rolPropio(w, r, req.CustomRoleID, &role) {
+		return
+	}
 	if !role.IsValid() {
 		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "El rol no es valido.")
 		return
@@ -363,6 +384,10 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 			mapDomainError(w, domain.ErrSeasonNotFound)
 			return
 		}
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := s.ponerRolPropio(r, seasonID, req.UserID, req.CustomRoleID); err != nil {
 		httpx.Internal(w, r, err)
 		return
 	}

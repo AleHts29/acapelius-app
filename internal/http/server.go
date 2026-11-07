@@ -177,6 +177,9 @@ func (s *Server) Handler() http.Handler {
 
 				ready.Group(func(admin chi.Router) {
 					admin.Use(auth.RequireRole(domain.RoleAdmin))
+					admin.Get("/roles", s.handleListRoles)
+					admin.Post("/roles", s.handleCreateRole)
+					admin.Delete("/roles/{id}", s.handleDeleteRole)
 					admin.Post("/users", s.handleCreateUser)
 					admin.Get("/users", s.handleListUsers)
 					admin.Patch("/users/{id}", s.handleUpdateUser)

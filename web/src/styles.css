@@ -1043,3 +1043,11 @@ a.entrada:active, button.entrada:active { transform: translate(1px, 1px); box-sh
 .ojo[aria-pressed='true'] { color: var(--ticket-text) }
 .app-header .ojo { margin-left: auto }
 .app-header .seasonsel + .ojo { margin-left: 0 }
+
+/* Selector de rol con roles propios (C21). */
+.rolepick { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap }
+.rolepick__nuevo { font: inherit; font-size: 13px; font-weight: 600; color: var(--ticket-text); background: none; border: 0; padding: 7px 0 5px; cursor: pointer }
+.rolepick__nota { margin: 6px 0 0; white-space: normal }
+.rolepick__borrar { font: inherit; color: var(--bad); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer }
+.rolepick__form { display: grid; gap: var(--s2); margin-top: var(--s2); padding: var(--s3); background: var(--sunk) }
+.rolepick__acciones { display: flex; gap: var(--s2); justify-content: flex-end }

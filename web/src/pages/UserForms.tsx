@@ -4,7 +4,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError, api, roleLabel } from '../api/client'
 import type { Role, User, UserAccessResponse } from '../api/client'
 import { daysAgo } from '../lib/format'
-import { Button, Seg } from '../ui/Button'
+import { Button } from '../ui/Button'
+import { RolePicker } from '../components/RolePicker'
+import type { RolElegido } from '../components/RolePicker'
 import { Label } from '../ui/Label'
 import { Modal } from '../ui/Modal'
 import { Row } from '../ui/Row'
@@ -12,10 +14,6 @@ import { Row } from '../ui/Row'
 // Los formularios de Equipo: sumar una persona y editar sus datos y su acceso.
 // Mismos flujos de siempre, en el popup del sistema B (C19).
 
-const ROLES: Array<{ value: Role; label: string }> = (['seller', 'door', 'admin'] as Role[]).map((r) => ({
-  value: r,
-  label: roleLabel(r),
-}))
 
 function useRefrescar() {
   const queryClient = useQueryClient()
@@ -38,12 +36,12 @@ export function NewUserSheet({
   const refrescar = useRefrescar()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<Role>('seller')
+  const [rol, setRol] = useState<RolElegido>({ role: 'seller', custom_role_id: null })
   const [error, setError] = useState<string | null>(null)
 
   const create = useMutation({
     meta: { exito: 'Persona agregada' },
-    mutationFn: () => api.createUser({ name: name.trim(), email: email.trim(), role }),
+    mutationFn: () => api.createUser({ name: name.trim(), email: email.trim(), role: rol.role, custom_role_id: rol.custom_role_id }),
     onSuccess: (access) => {
       refrescar()
       onCreated(access)
@@ -92,10 +90,7 @@ export function NewUserSheet({
           inputMode="email"
         />
       </label>
-      <div className="field">
-        <Label>Rol</Label>
-        <Seg<Role> label="Rol" value={role} onChange={setRole} options={ROLES} />
-      </div>
+      <RolePicker value={rol} onChange={setRol} />
     </Modal>
   )
 }
@@ -119,7 +114,7 @@ export function UserSheet({
   const refrescar = useRefrescar()
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
-  const [role, setRole] = useState<Role>(user.role)
+  const [rol, setRol] = useState<RolElegido>({ role: user.role, custom_role_id: user.custom_role_id ?? null })
   const [error, setError] = useState<string | null>(null)
   const [confirmOff, setConfirmOff] = useState(false)
 
@@ -127,7 +122,8 @@ export function UserSheet({
 
   const update = useMutation({
     meta: { exito: 'Cambios guardados' },
-    mutationFn: (input: { name: string; email: string; role: Role; is_active: boolean }) => api.updateUser(user.id, input),
+    mutationFn: (input: { name: string; email: string; role: Role; custom_role_id: number | null; is_active: boolean }) =>
+      api.updateUser(user.id, input),
     onSuccess: refrescar,
     onError: (err) => fail(err, 'No se pudo guardar.'),
   })
@@ -144,7 +140,7 @@ export function UserSheet({
   })
 
   const pending = user.last_login_at === null
-  const dirty = name.trim() !== user.name || email.trim() !== user.email || role !== user.role
+  const dirty = name.trim() !== user.name || email.trim() !== user.email || rol.role !== user.role || rol.custom_role_id !== (user.custom_role_id ?? null)
   const busy = update.isPending || access.isPending
 
   /**
@@ -156,7 +152,7 @@ export function UserSheet({
     setError(null)
     if (dirty) {
       try {
-        await update.mutateAsync({ name: name.trim(), email: email.trim(), role, is_active: user.is_active })
+        await update.mutateAsync({ name: name.trim(), email: email.trim(), role: rol.role, custom_role_id: rol.custom_role_id, is_active: user.is_active })
       } catch {
         return // el error ya quedó a la vista
       }
@@ -168,7 +164,7 @@ export function UserSheet({
     <Modal
       open
       onClose={onClose}
-      label={roleLabel(user.role)}
+      label={user.role_name ?? roleLabel(user.role)}
       title={user.name}
       sub={pending ? 'Invitación pendiente · nunca entró' : `Último ingreso ${daysAgo(user.last_login_at!)}`}
       footer={
@@ -201,9 +197,8 @@ export function UserSheet({
           inputMode="email"
         />
       </label>
-      <div className="field">
-        <Label>Rol</Label>
-        <Seg<Role> label="Rol" value={role} onChange={setRole} options={ROLES} disabled={isSelf} />
+      <div>
+        <RolePicker value={rol} onChange={setRol} disabled={isSelf} />
         {isSelf && <p className="note">No podés cambiarte el rol a vos misma: quedarías afuera de dirección.</p>}
       </div>
 
@@ -239,7 +234,7 @@ export function UserSheet({
                       // Guarda también lo editado: la baja no es excusa para
                       // perder un cambio de nombre o de rol ya escrito.
                       update.mutate(
-                        { name: name.trim(), email: email.trim(), role, is_active: !user.is_active },
+                        { name: name.trim(), email: email.trim(), role: rol.role, custom_role_id: rol.custom_role_id, is_active: !user.is_active },
                         { onSuccess: onClose },
                       )
                     }

@@ -122,6 +122,31 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const createCustomRole = `-- name: CreateCustomRole :one
+INSERT INTO custom_roles (organization_id, name, base_role)
+VALUES ($1::bigint, $2::text, $3::text)
+RETURNING id, organization_id, name, base_role, created_at
+`
+
+type CreateCustomRoleParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	Name           string `json:"name"`
+	BaseRole       string `json:"base_role"`
+}
+
+func (q *Queries) CreateCustomRole(ctx context.Context, arg CreateCustomRoleParams) (CustomRole, error) {
+	row := q.db.QueryRow(ctx, createCustomRole, arg.OrganizationID, arg.Name, arg.BaseRole)
+	var i CustomRole
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.BaseRole,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (name, email, password_hash, must_change_password, organization_id)
 VALUES (
@@ -162,6 +187,24 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.OrganizationID,
 	)
 	return i, err
+}
+
+const deleteCustomRole = `-- name: DeleteCustomRole :execrows
+DELETE FROM custom_roles
+WHERE id = $1::bigint AND organization_id = $2::bigint
+`
+
+type DeleteCustomRoleParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) DeleteCustomRole(ctx context.Context, arg DeleteCustomRoleParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteCustomRole, arg.ID, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const deleteMembership = `-- name: DeleteMembership :exec
@@ -259,8 +302,31 @@ func (q *Queries) FormerMembers(ctx context.Context, arg FormerMembersParams) ([
 	return items, nil
 }
 
+const getCustomRole = `-- name: GetCustomRole :one
+SELECT id, organization_id, name, base_role, created_at FROM custom_roles
+WHERE id = $1::bigint AND organization_id = $2::bigint
+`
+
+type GetCustomRoleParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) GetCustomRole(ctx context.Context, arg GetCustomRoleParams) (CustomRole, error) {
+	row := q.db.QueryRow(ctx, getCustomRole, arg.ID, arg.OrganizationID)
+	var i CustomRole
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.BaseRole,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getMembership = `-- name: GetMembership :one
-SELECT m.id, m.season_id, m.user_id, m.role, m.joined_at, m.left_at FROM season_members m
+SELECT m.id, m.season_id, m.user_id, m.role, m.joined_at, m.left_at, m.custom_role_id FROM season_members m
 JOIN seasons s ON s.id = m.season_id
 WHERE m.season_id = $1::bigint
   AND m.user_id = $2::bigint
@@ -283,6 +349,7 @@ func (q *Queries) GetMembership(ctx context.Context, arg GetMembershipParams) (S
 		&i.Role,
 		&i.JoinedAt,
 		&i.LeftAt,
+		&i.CustomRoleID,
 	)
 	return i, err
 }
@@ -415,6 +482,42 @@ func (q *Queries) LeaveMembership(ctx context.Context, arg LeaveMembershipParams
 	return err
 }
 
+const listCustomRoles = `-- name: ListCustomRoles :many
+
+SELECT id, organization_id, name, base_role, created_at FROM custom_roles
+WHERE organization_id = $1::bigint
+ORDER BY lower(name)
+`
+
+// ============================================================================
+// Roles propios (C21)
+// ============================================================================
+func (q *Queries) ListCustomRoles(ctx context.Context, organizationID int64) ([]CustomRole, error) {
+	rows, err := q.db.Query(ctx, listCustomRoles, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CustomRole{}
+	for rows.Next() {
+		var i CustomRole
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Name,
+			&i.BaseRole,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsersWithMembershipByEmail = `-- name: ListUsersWithMembershipByEmail :many
 SELECT
   u.id, u.name, u.email, u.password_hash, u.must_change_password, u.created_at, u.last_login_at, u.organization_id,
@@ -532,6 +635,33 @@ func (q *Queries) SeasonTeamSummary(ctx context.Context, arg SeasonTeamSummaryPa
 	return i, err
 }
 
+const setMembershipCustomRole = `-- name: SetMembershipCustomRole :exec
+UPDATE season_members m SET custom_role_id = $1::bigint
+FROM seasons s
+WHERE s.id = m.season_id
+  AND m.season_id = $2::bigint
+  AND m.user_id = $3::bigint
+  AND s.organization_id = $4::bigint
+`
+
+type SetMembershipCustomRoleParams struct {
+	CustomRoleID   *int64 `json:"custom_role_id"`
+	SeasonID       int64  `json:"season_id"`
+	UserID         int64  `json:"user_id"`
+	OrganizationID int64  `json:"organization_id"`
+}
+
+// El nombre propio de una persona en una temporada; NULL lo saca.
+func (q *Queries) SetMembershipCustomRole(ctx context.Context, arg SetMembershipCustomRoleParams) error {
+	_, err := q.db.Exec(ctx, setMembershipCustomRole,
+		arg.CustomRoleID,
+		arg.SeasonID,
+		arg.UserID,
+		arg.OrganizationID,
+	)
+	return err
+}
+
 const setUserPassword = `-- name: SetUserPassword :exec
 UPDATE users
 SET password_hash = $1::text,
@@ -564,6 +694,8 @@ SELECT
   u.created_at,
   u.last_login_at,
   m.role,
+  cr.name AS role_name,
+  m.custom_role_id,
   m.joined_at,
   m.left_at,
   (SELECT count(*) FROM tickets t
@@ -591,6 +723,7 @@ SELECT
 FROM season_members m
 JOIN seasons s ON s.id = m.season_id
 JOIN users u ON u.id = m.user_id
+LEFT JOIN custom_roles cr ON cr.id = m.custom_role_id
 WHERE m.season_id = $1::bigint
   AND s.organization_id = $2::bigint
 ORDER BY m.role, u.name
@@ -608,6 +741,8 @@ type TeamForSeasonRow struct {
 	CreatedAt    time.Time  `json:"created_at"`
 	LastLoginAt  *time.Time `json:"last_login_at"`
 	Role         string     `json:"role"`
+	RoleName     *string    `json:"role_name"`
+	CustomRoleID *int64     `json:"custom_role_id"`
 	JoinedAt     time.Time  `json:"joined_at"`
 	LeftAt       *time.Time `json:"left_at"`
 	TicketsSold  int64      `json:"tickets_sold"`
@@ -636,6 +771,8 @@ func (q *Queries) TeamForSeason(ctx context.Context, arg TeamForSeasonParams) ([
 			&i.CreatedAt,
 			&i.LastLoginAt,
 			&i.Role,
+			&i.RoleName,
+			&i.CustomRoleID,
 			&i.JoinedAt,
 			&i.LeftAt,
 			&i.TicketsSold,
@@ -709,8 +846,11 @@ WHERE s.id = $2::bigint
   AND s.organization_id = $4::bigint
   AND u.organization_id = $4::bigint
 ON CONFLICT (season_id, user_id) DO UPDATE
-  SET role = EXCLUDED.role, left_at = NULL
-RETURNING id, season_id, user_id, role, joined_at, left_at
+  -- Cambiar el rol borra el nombre propio: si corresponde, el caller lo vuelve
+  -- a poner con SetMembershipCustomRole.
+  SET role = EXCLUDED.role, left_at = NULL,
+      custom_role_id = CASE WHEN season_members.role = EXCLUDED.role THEN season_members.custom_role_id END
+RETURNING id, season_id, user_id, role, joined_at, left_at, custom_role_id
 `
 
 type UpsertMembershipParams struct {
@@ -737,6 +877,7 @@ func (q *Queries) UpsertMembership(ctx context.Context, arg UpsertMembershipPara
 		&i.Role,
 		&i.JoinedAt,
 		&i.LeftAt,
+		&i.CustomRoleID,
 	)
 	return i, err
 }

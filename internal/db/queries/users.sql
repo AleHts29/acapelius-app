@@ -137,7 +137,10 @@ WHERE s.id = sqlc.arg(season_id)::bigint
   AND s.organization_id = sqlc.arg(organization_id)::bigint
   AND u.organization_id = sqlc.arg(organization_id)::bigint
 ON CONFLICT (season_id, user_id) DO UPDATE
-  SET role = EXCLUDED.role, left_at = NULL
+  -- Cambiar el rol borra el nombre propio: si corresponde, el caller lo vuelve
+  -- a poner con SetMembershipCustomRole.
+  SET role = EXCLUDED.role, left_at = NULL,
+      custom_role_id = CASE WHEN season_members.role = EXCLUDED.role THEN season_members.custom_role_id END
 RETURNING *;
 
 -- name: LeaveMembership :exec
@@ -199,6 +202,8 @@ SELECT
   u.created_at,
   u.last_login_at,
   m.role,
+  cr.name AS role_name,
+  m.custom_role_id,
   m.joined_at,
   m.left_at,
   (SELECT count(*) FROM tickets t
@@ -226,6 +231,7 @@ SELECT
 FROM season_members m
 JOIN seasons s ON s.id = m.season_id
 JOIN users u ON u.id = m.user_id
+LEFT JOIN custom_roles cr ON cr.id = m.custom_role_id
 WHERE m.season_id = sqlc.arg(season_id)::bigint
   AND s.organization_id = sqlc.arg(organization_id)::bigint
 ORDER BY m.role, u.name;
@@ -272,4 +278,35 @@ FROM season_members m
 JOIN seasons s ON s.id = m.season_id
 JOIN users u ON u.id = m.user_id
 WHERE m.season_id = sqlc.arg(season_id)::bigint
+  AND s.organization_id = sqlc.arg(organization_id)::bigint;
+
+-- ============================================================================
+-- Roles propios (C21)
+-- ============================================================================
+
+-- name: ListCustomRoles :many
+SELECT * FROM custom_roles
+WHERE organization_id = sqlc.arg(organization_id)::bigint
+ORDER BY lower(name);
+
+-- name: GetCustomRole :one
+SELECT * FROM custom_roles
+WHERE id = sqlc.arg(id)::bigint AND organization_id = sqlc.arg(organization_id)::bigint;
+
+-- name: CreateCustomRole :one
+INSERT INTO custom_roles (organization_id, name, base_role)
+VALUES (sqlc.arg(organization_id)::bigint, sqlc.arg(name)::text, sqlc.arg(base_role)::text)
+RETURNING *;
+
+-- name: DeleteCustomRole :execrows
+DELETE FROM custom_roles
+WHERE id = sqlc.arg(id)::bigint AND organization_id = sqlc.arg(organization_id)::bigint;
+
+-- name: SetMembershipCustomRole :exec
+-- El nombre propio de una persona en una temporada; NULL lo saca.
+UPDATE season_members m SET custom_role_id = sqlc.narg(custom_role_id)::bigint
+FROM seasons s
+WHERE s.id = m.season_id
+  AND m.season_id = sqlc.arg(season_id)::bigint
+  AND m.user_id = sqlc.arg(user_id)::bigint
   AND s.organization_id = sqlc.arg(organization_id)::bigint;

@@ -47,7 +47,8 @@ var sinOrganizacion = map[string]string{
 
 // escalarEsLaOrganizacion: consultas cuyo unico parametro es organization_id.
 var escalarEsLaOrganizacion = map[string]bool{
-	"ListSeasons": true, "DeactivateAllSeasons": true, "GetActiveSeason": true, "SeasonsOverview": true,
+	"ListCustomRoles": true,
+	"ListSeasons":     true, "DeactivateAllSeasons": true, "GetActiveSeason": true, "SeasonsOverview": true,
 }
 
 func TestTodaConsultaLlevaOrganizacion(t *testing.T) {
