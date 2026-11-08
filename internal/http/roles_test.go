@@ -76,3 +76,37 @@ func TestRolesPropios(t *testing.T) {
 	}
 	assertErrorCode(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/roles/%.0f", rolID), nil), http.StatusNotFound, "not_found")
 }
+
+// Direccion elimina un perfil que nunca hizo nada; con historial, no.
+func TestEliminarPerfil(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	fnID := setupCatalog(t, admin, 10)
+
+	alta := admin.post("/api/users", map[string]any{"name": "Sin Nada", "email": "nada@acapelius.test", "role": "seller"})
+	assertStatus(t, alta, http.StatusCreated)
+	sinNada := alta.Body["user"].(map[string]any)["id"].(float64)
+	assignQuota(t, admin, fnID, int(sinNada), 2) // un cupo no es historial
+
+	vendio := createSellerClient(t, env, admin, "Vendedora", "vende@acapelius.test")
+	me := vendio.get("/api/me").Body["user"].(map[string]any)["id"].(float64)
+	assignQuota(t, admin, fnID, int(me), 2)
+	assertStatus(t, vendio.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Ana", "buyer_email": "ana@x.com", "quantity": 1,
+	}), http.StatusCreated)
+
+	// La corista no borra a nadie; direccion no se borra a si misma.
+	assertErrorCode(t, vendio.do(http.MethodDelete, fmt.Sprintf("/api/users/%.0f", sinNada), nil), http.StatusForbidden, "forbidden")
+	adminID := admin.get("/api/me").Body["user"].(map[string]any)["id"].(float64)
+	assertErrorCode(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/users/%.0f", adminID), nil), http.StatusConflict, "conflict")
+
+	// Con ventas no se borra; sin nada, si, y desaparece del equipo.
+	assertErrorCode(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/users/%.0f", me), nil), http.StatusConflict, "conflict")
+	assertStatus(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/users/%.0f", sinNada), nil), http.StatusNoContent)
+	for _, raw := range admin.get("/api/users").Body["members"].([]any) {
+		if raw.(map[string]any)["id"].(float64) == sinNada {
+			t.Fatal("el perfil eliminado sigue en el equipo")
+		}
+	}
+	assertErrorCode(t, admin.do(http.MethodDelete, fmt.Sprintf("/api/users/%.0f", sinNada), nil), http.StatusNotFound, "not_found")
+}

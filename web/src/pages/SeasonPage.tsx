@@ -589,6 +589,15 @@ export function SeasonPage() {
     setSearchParams(next, { replace: true })
   }
   const [panel, setPanel] = useState<Panel>(null)
+  // ?nuevaFuncion=1 llega del botón de Inicio sin funciones: abre el alta.
+  const pedidaFuncion = searchParams.get('nuevaFuncion') === '1'
+  useEffect(() => {
+    if (!pedidaFuncion) return
+    setPanel({ kind: 'funcion', modo: 'nueva' })
+    const next = new URLSearchParams(searchParams)
+    next.delete('nuevaFuncion')
+    setSearchParams(next, { replace: true })
+  }, [pedidaFuncion, searchParams, setSearchParams])
   // Una sola vez: si no, cerrar el panel que abrió la alerta lo volvería a abrir.
   const foco = useRef(false)
   const [errorTemporada, setErrorTemporada] = useState<string | null>(null)
@@ -685,9 +694,9 @@ export function SeasonPage() {
       <>
         <PageHeader title="Temporada" />
         <Card title="Todavía no hay ninguna temporada">
-          <p className="rs" style={{ padding: '0 0 var(--s3)', whiteSpace: 'normal', margin: 0 }}>
-            <Link to="/temporadas">Creá la primera</Link> para empezar a cargar funciones.
-          </p>
+          <Link className="btn btn--go" to="/temporadas?nueva=1">
+            Crear la primera temporada
+          </Link>
         </Card>
       </>
     )

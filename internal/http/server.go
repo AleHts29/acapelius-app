@@ -188,6 +188,7 @@ func (s *Server) Handler() http.Handler {
 					admin.Post("/users", s.handleCreateUser)
 					admin.Get("/users", s.handleListUsers)
 					admin.Patch("/users/{id}", s.handleUpdateUser)
+					admin.Delete("/users/{id}", s.handleDeleteUser)
 					admin.Post("/users/{id}/resend-invite", s.handleResendInvite)
 					admin.Post("/users/{id}/reset-password", s.handleResetPassword)
 					admin.Get("/functions/{id}/allocations", s.handleFunctionAllocationBoard)

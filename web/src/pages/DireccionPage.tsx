@@ -156,9 +156,9 @@ export function DireccionPage() {
       <>
         <PageHeader title="Dirección" />
         <Card title="Todavía no hay temporadas">
-          <p className="rs" style={{ padding: '0 0 var(--s3)', margin: 0 }}>
-            <Link to="/temporadas">Creá la primera</Link> para empezar.
-          </p>
+          <Link className="btn btn--go" to="/temporadas?nueva=1">
+            Crear la primera temporada
+          </Link>
         </Card>
       </>
     )

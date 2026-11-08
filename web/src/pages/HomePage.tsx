@@ -300,7 +300,15 @@ export function HomePage() {
           className="tira-e"
           label="Sin funciones"
           nombre="Todavía no hay funciones"
-          datos={esCorista ? 'Dirección las carga en la temporada' : <Link to="/temporadas">Creá la primera</Link>}
+          datos={
+            esCorista ? (
+              'Dirección las carga en la temporada'
+            ) : (
+              <Link className="btn btn--go vacia__btn" to={data.season ? `/temporadas/${data.season.id}?nuevaFuncion=1` : '/temporadas?nueva=1'}>
+                Crear la primera función
+              </Link>
+            )
+          }
         />
       )}
       <Rule kpis>

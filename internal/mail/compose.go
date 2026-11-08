@@ -10,7 +10,7 @@ import (
 
 // Paleta de marca de Acapelius (ver Logos Final / paleta de color).
 const (
-	brandBlue  = "#415DA7"
+	brandBordo = "#4E1200"
 	brandCream = "#F8ECDE"
 	brandInk   = "#1D1D1B"
 )
@@ -48,7 +48,7 @@ func formatStartsAt(t time.Time) string {
 }
 
 // ComposeTicketEmail arma el mensaje de la entrada (spec §7) con la identidad
-// de Acapelius: cabecera azul con el logo, tarjetas crema, una tarjeta por
+// de Acapelius: cabecera bordó con el logo, tarjetas crema, una tarjeta por
 // entrada con su QR y su link individual (para reenviarle a cada persona la
 // suya), y el boton a la pagina publica como respaldo universal. Los QR van
 // como imagen hosteada + adjuntos PNG.
@@ -91,9 +91,9 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 	fmt.Fprintf(&b, `<div style="margin:0;padding:24px 12px;background:%s;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">`, brandCream)
 	fmt.Fprintf(&b, `<div style="max-width:520px;margin:0 auto">`)
 
-	// Cabecera azul con el logo.
-	fmt.Fprintf(&b, `<div style="background:%s;border-radius:16px 16px 0 0;padding:22px 24px;text-align:center">`, brandBlue)
-	fmt.Fprintf(&b, `<img src="%s/email-logo.png" alt="Acapelius" width="200" style="max-width:60%%;height:auto">`, data.BaseURL)
+	// Cabecera bordó con el logo.
+	fmt.Fprintf(&b, `<div style="background:%s;border-radius:16px 16px 0 0;padding:22px 24px;text-align:center">`, brandBordo)
+	fmt.Fprintf(&b, `<img src="%s/email-logo.png?v=bordo" alt="Acapelius" width="200" style="max-width:60%%;height:auto">`, data.BaseURL)
 	fmt.Fprintf(&b, `</div>`)
 
 	// Cuerpo.
@@ -111,18 +111,18 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 
 	// Una tarjeta por entrada, con su QR y su link individual.
 	for i, code := range data.TicketCodes {
-		fmt.Fprintf(&b, `<div style="border:2px solid %s;border-radius:14px;padding:18px 16px;margin:0 0 14px;text-align:center;background:%s">`, brandBlue, brandCream)
-		fmt.Fprintf(&b, `<p style="margin:0 0 10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:%s">Entrada %d de %d</p>`, brandBlue, i+1, data.Quantity)
+		fmt.Fprintf(&b, `<div style="border:2px solid %s;border-radius:14px;padding:18px 16px;margin:0 0 14px;text-align:center;background:%s">`, brandBordo, brandCream)
+		fmt.Fprintf(&b, `<p style="margin:0 0 10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:%s">Entrada %d de %d</p>`, brandBordo, i+1, data.Quantity)
 		fmt.Fprintf(&b, `<img src="%s/api/public/tickets/%s.png" width="220" height="220" alt="QR de la entrada %d" style="background:#fff;border-radius:10px">`, data.BaseURL, esc(code), i+1)
 		if data.Quantity > 1 {
-			fmt.Fprintf(&b, `<p style="margin:12px 0 0;font-size:13px"><a href="%s/t/%s" style="color:%s">Reenviar solo esta entrada →</a></p>`, data.BaseURL, esc(code), brandBlue)
+			fmt.Fprintf(&b, `<p style="margin:12px 0 0;font-size:13px"><a href="%s/t/%s" style="color:%s">Reenviar solo esta entrada →</a></p>`, data.BaseURL, esc(code), brandBordo)
 		}
 		fmt.Fprintf(&b, `</div>`)
 	}
 
 	// Boton principal.
 	fmt.Fprintf(&b, `<div style="text-align:center;margin:22px 0 8px">`)
-	fmt.Fprintf(&b, `<a href="%s" style="display:inline-block;background:%s;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:12px">Ver mis entradas online</a>`, data.PublicURL, brandBlue)
+	fmt.Fprintf(&b, `<a href="%s" style="display:inline-block;background:%s;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:12px">Ver mis entradas online</a>`, data.PublicURL, brandBordo)
 	fmt.Fprintf(&b, `</div>`)
 	fmt.Fprintf(&b, `<p style="margin:0;text-align:center;color:#888;font-size:12px">Guarda este email: el boton sirve para mostrar o reenviar las entradas.<br>Entrada general, sin numerar. Un QR por persona en la puerta.</p>`)
 
@@ -191,8 +191,8 @@ func ComposeInviteEmail(data InviteEmailData) Message {
 	fmt.Fprintf(&b, `<div style="margin:0;padding:24px 12px;background:%s;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">`, brandCream)
 	fmt.Fprintf(&b, `<div style="max-width:520px;margin:0 auto">`)
 
-	fmt.Fprintf(&b, `<div style="background:%s;border-radius:16px 16px 0 0;padding:22px 24px;text-align:center">`, brandBlue)
-	fmt.Fprintf(&b, `<img src="%s/email-logo.png" alt="Acapelius" width="200" style="max-width:60%%;height:auto">`, data.BaseURL)
+	fmt.Fprintf(&b, `<div style="background:%s;border-radius:16px 16px 0 0;padding:22px 24px;text-align:center">`, brandBordo)
+	fmt.Fprintf(&b, `<img src="%s/email-logo.png?v=bordo" alt="Acapelius" width="200" style="max-width:60%%;height:auto">`, data.BaseURL)
 	fmt.Fprintf(&b, `</div>`)
 
 	fmt.Fprintf(&b, `<div style="background:#ffffff;border-radius:0 0 16px 16px;padding:28px 24px;color:%s">`, brandInk)
@@ -200,14 +200,14 @@ func ComposeInviteEmail(data InviteEmailData) Message {
 	fmt.Fprintf(&b, `<p style="margin:0 0 18px">%s</p>`, lead)
 
 	// Tarjeta con las credenciales, en monoespaciada para que se lean bien.
-	fmt.Fprintf(&b, `<div style="border:2px solid %s;border-radius:14px;padding:18px 16px;margin:0 0 18px;background:%s">`, brandBlue, brandCream)
-	fmt.Fprintf(&b, `<p style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:%s">Tus datos de acceso</p>`, brandBlue)
+	fmt.Fprintf(&b, `<div style="border:2px solid %s;border-radius:14px;padding:18px 16px;margin:0 0 18px;background:%s">`, brandBordo, brandCream)
+	fmt.Fprintf(&b, `<p style="margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:%s">Tus datos de acceso</p>`, brandBordo)
 	fmt.Fprintf(&b, `<p style="margin:0 0 6px;font-size:14px">Email<br><strong style="font-family:ui-monospace,Menlo,Consolas,monospace">%s</strong></p>`, esc(data.Email))
 	fmt.Fprintf(&b, `<p style="margin:0;font-size:14px">Contrasena provisoria<br><strong style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:18px;letter-spacing:.04em">%s</strong></p>`, esc(data.TempPassword))
 	fmt.Fprintf(&b, `</div>`)
 
 	fmt.Fprintf(&b, `<div style="text-align:center;margin:22px 0 8px">`)
-	fmt.Fprintf(&b, `<a href="%s/entrar" style="display:inline-block;background:%s;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:12px">Entrar a Acapelius</a>`, data.BaseURL, brandBlue)
+	fmt.Fprintf(&b, `<a href="%s/entrar" style="display:inline-block;background:%s;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:12px">Entrar a Acapelius</a>`, data.BaseURL, brandBordo)
 	fmt.Fprintf(&b, `</div>`)
 	fmt.Fprintf(&b, `<p style="margin:0;text-align:center;color:#888;font-size:12px">Apenas entres te va a pedir elegir tu propia contrasena.<br>Esta clave es provisoria: no se la pases a nadie.</p>`)
 
@@ -271,8 +271,8 @@ func ComposeReminderEmail(data ReminderEmailData) Message {
 	var b strings.Builder
 	fmt.Fprintf(&b, `<div style="margin:0;padding:24px 12px;background:%s;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">`, brandCream)
 	fmt.Fprintf(&b, `<div style="max-width:520px;margin:0 auto">`)
-	fmt.Fprintf(&b, `<div style="background:%s;border-radius:16px 16px 0 0;padding:22px 24px;text-align:center">`, brandBlue)
-	fmt.Fprintf(&b, `<img src="%s/email-logo.png" alt="Acapelius" width="200" style="max-width:60%%;height:auto">`, data.BaseURL)
+	fmt.Fprintf(&b, `<div style="background:%s;border-radius:16px 16px 0 0;padding:22px 24px;text-align:center">`, brandBordo)
+	fmt.Fprintf(&b, `<img src="%s/email-logo.png?v=bordo" alt="Acapelius" width="200" style="max-width:60%%;height:auto">`, data.BaseURL)
 	fmt.Fprintf(&b, `</div>`)
 
 	fmt.Fprintf(&b, `<div style="background:#ffffff;border-radius:0 0 16px 16px;padding:28px 24px;color:%s">`, brandInk)

@@ -591,6 +591,7 @@ export const api = {
   deleteAvatar: () => request<void>('DELETE', '/me/avatar'),
   listRoles: () => request<{ roles: CustomRole[] }>('GET', '/roles'),
   createRole: (input: { name: string; base_role: Role }) => request<{ role: CustomRole }>('POST', '/roles', input),
+  deleteUser: (id: number) => request<void>('DELETE', `/users/${id}`),
   deleteRole: (id: number) => request<void>('DELETE', `/roles/${id}`),
   resendInvite: (id: number) => request<UserAccessResponse>('POST', `/users/${id}/resend-invite`),
   resetPassword: (id: number) => request<UserAccessResponse>('POST', `/users/${id}/reset-password`),

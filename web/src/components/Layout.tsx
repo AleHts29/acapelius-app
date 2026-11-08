@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { SeasonSelector } from '../season/SeasonSelector'
 import { useSession } from '../auth/session'
 import { avatarURL } from '../api/client'
+import { PullToRefresh } from './PullToRefresh'
 import { SideNav } from './SideNav'
 import { ThemeToggle } from './ThemeToggle'
 import { TabBar } from './TabBar'
@@ -75,6 +76,7 @@ export function Layout() {
       </main>
 
       <TabBar role={user.role} />
+      <PullToRefresh />
     </div>
   )
 }

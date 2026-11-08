@@ -345,3 +345,32 @@ SELECT a.updated_at
 FROM user_avatars a
 JOIN users u ON u.id = a.user_id
 WHERE a.user_id = sqlc.arg(user_id)::bigint AND u.organization_id = sqlc.arg(organization_id)::bigint;
+
+-- ============================================================================
+-- Eliminar un perfil (C21)
+-- ============================================================================
+
+-- name: UserHasHistory :one
+-- Si hizo algo que cuenta plata o entradas: ventas, cobros, rendiciones,
+-- recordatorios o ingresos en la puerta. Con historial no se borra.
+SELECT (
+  EXISTS (SELECT 1 FROM sales WHERE seller_id = u.id)
+  OR EXISTS (SELECT 1 FROM sale_payments WHERE user_id = u.id)
+  OR EXISTS (SELECT 1 FROM settlements WHERE seller_id = u.id)
+  OR EXISTS (SELECT 1 FROM settlement_reminders WHERE seller_id = u.id OR sent_by = u.id)
+  OR EXISTS (SELECT 1 FROM checkins WHERE user_id = u.id)
+)::boolean AS has_history
+FROM users u
+WHERE u.id = sqlc.arg(id)::bigint AND u.organization_id = sqlc.arg(organization_id)::bigint;
+
+-- name: DeleteUserAllocations :exec
+DELETE FROM allocations a USING users u
+WHERE u.id = a.user_id AND a.user_id = sqlc.arg(user_id)::bigint AND u.organization_id = sqlc.arg(organization_id)::bigint;
+
+-- name: DeleteUserMemberships :exec
+DELETE FROM season_members m USING users u
+WHERE u.id = m.user_id AND m.user_id = sqlc.arg(user_id)::bigint AND u.organization_id = sqlc.arg(organization_id)::bigint;
+
+-- name: DeleteUser :execrows
+-- La foto se va sola (ON DELETE CASCADE).
+DELETE FROM users WHERE id = sqlc.arg(id)::bigint AND organization_id = sqlc.arg(organization_id)::bigint;

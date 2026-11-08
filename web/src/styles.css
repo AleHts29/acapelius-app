@@ -1087,3 +1087,17 @@ a.entrada:active, button.entrada:active { transform: translate(1px, 1px); box-sh
 /* El ojito al lado del monto, como en las billeteras virtuales. */
 .ojo--cifra { display: inline-grid; width: 26px; height: 22px; margin-left: 4px; vertical-align: middle; color: var(--ink3) }
 .ojo--cifra svg { width: 15px; height: 15px }
+
+/* La cara arriba de la ficha de una persona (C21). */
+.cara-persona { display: flex; justify-content: center; padding: 2px 0 var(--s1) }
+.cara-persona__foto { width: 96px; height: 96px; font-size: 34px }
+
+/* Deslizar para actualizar (C21). */
+.ptr { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) - 40px); z-index: 120; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none }
+.ptr__bola { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--floor); color: var(--ticket-text); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) }
+.ptr__bola--gira svg { animation: ptr-gira 0.8s linear infinite }
+.ptr__t { font-size: var(--t-meta); font-weight: 600; color: var(--ink2) }
+@keyframes ptr-gira { to { transform: rotate(360deg) } }
+@media (prefers-reduced-motion: reduce) { .ptr__bola--gira svg { animation: none } }
+
+.vacia__btn { display: inline-flex; margin-top: var(--s2); width: auto }

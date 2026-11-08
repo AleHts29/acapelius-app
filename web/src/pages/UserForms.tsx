@@ -8,6 +8,7 @@ import { Button } from '../ui/Button'
 import { RolePicker } from '../components/RolePicker'
 import type { RolElegido } from '../components/RolePicker'
 import { Label } from '../ui/Label'
+import { CaraPersona } from '../ui/CaraPersona'
 import { Modal } from '../ui/Modal'
 import { Row } from '../ui/Row'
 
@@ -176,6 +177,7 @@ export function UserSheet({
         </>
       }
     >
+      <CaraPersona userId={user.id} name={user.name} avatarAt={user.avatar_at} />
       {error && (
         <p className="alert" role="alert">
           {error}

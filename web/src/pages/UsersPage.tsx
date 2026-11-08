@@ -27,6 +27,7 @@ import { useIsDesktop } from '../lib/viewport'
 import { normalizeText } from '../lib/search'
 import { Status } from '../ui/Status'
 import { Tile } from '../ui/Tile'
+import { CaraPersona } from '../ui/CaraPersona'
 import { NewUserSheet, UserSheet } from './UserForms'
 
 // Equipo (C19 §5.4, design/acapelius-B-entidades.html §03). Una persona es
@@ -174,13 +175,19 @@ function Cuenta({
   esYo,
   onEditar,
   onSacar,
+  onEliminar,
 }: {
   m: TeamMember
   esYo: boolean
   onEditar: () => void
   onSacar: () => void
+  onEliminar: () => void
 }) {
   const [confirmar, setConfirmar] = useState(false)
+  const [confirmarBorrar, setConfirmarBorrar] = useState(false)
+  // Sólo quien nunca vendió, cobró ni registró ingresos se puede borrar: lo
+  // confirma el server. Con historial, se saca de la temporada.
+  const sinHistorial = m.tickets_sold === 0 && m.checkins === 0 && m.balance_cents === 0
   return (
     <div>
       <Label>Cuenta</Label>
@@ -195,6 +202,18 @@ function Cuenta({
             title={confirmar ? '¿Seguro? Tocá de nuevo para sacarla' : 'Sacar de la temporada'}
             sub="Sus ventas quedan; se puede reincorporar"
             onClick={() => (confirmar ? onSacar() : setConfirmar(true))}
+          />
+        )}
+        {!esYo && (
+          <Row
+            title={confirmarBorrar ? '¿Seguro? Tocá de nuevo para eliminarla' : 'Eliminar perfil'}
+            sub={
+              sinHistorial
+                ? 'Se borra para siempre. No se puede deshacer'
+                : 'Tiene ventas o cobros: sacala de la temporada en vez de eliminarla'
+            }
+            dim={!sinHistorial}
+            onClick={sinHistorial ? () => (confirmarBorrar ? onEliminar() : setConfirmarBorrar(true)) : undefined}
           />
         )}
       </div>
@@ -241,6 +260,7 @@ function CoristaModal({
   onClose,
   onEditar,
   onSacar,
+  onEliminar,
   onRepartir,
 }: {
   m: TeamMember
@@ -251,6 +271,7 @@ function CoristaModal({
   onClose: () => void
   onEditar: () => void
   onSacar: () => void
+  onEliminar: () => void
   onRepartir: () => void
 }) {
   const navigate = useNavigate()
@@ -273,6 +294,7 @@ function CoristaModal({
         </>
       }
     >
+      <CaraPersona userId={m.id} name={m.name} avatarAt={m.avatar_at} />
       <div style={{ display: 'flex', gap: 'var(--s6)', flexWrap: 'wrap' }}>
         <Figure label="Vendió" unit={m.assigned > 0 ? `/ ${m.assigned}` : undefined}>
           {m.tickets_sold}
@@ -281,6 +303,7 @@ function CoristaModal({
 
       <DataList
         rows={[
+          ['Mail', m.email],
           ['Rol', m.role_name ?? roleLabel(m.role)],
           ['Último ingreso', m.last_login_at === null ? 'Nunca entró' : daysAgo(m.last_login_at)],
           ['En el coro', m.seasons === 1 ? 'Primera temporada' : `${m.seasons} temporadas`],
@@ -303,7 +326,7 @@ function CoristaModal({
         </div>
       </div>
 
-      <Cuenta m={m} esYo={esYo} onEditar={onEditar} onSacar={onSacar} />
+      <Cuenta m={m} esYo={esYo} onEditar={onEditar} onSacar={onSacar} onEliminar={onEliminar} />
     </Modal>
   )
 }
@@ -314,24 +337,28 @@ function StaffModal({
   onClose,
   onEditar,
   onSacar,
+  onEliminar,
 }: {
   m: TeamMember
   esYo: boolean
   onClose: () => void
   onEditar: () => void
   onSacar: () => void
+  onEliminar: () => void
 }) {
   return (
     <Modal open onClose={onClose} label={m.role_name ?? roleLabel(m.role)} title={m.name} sub={m.email}>
+      <CaraPersona userId={m.id} name={m.name} avatarAt={m.avatar_at} />
       <DataList
         rows={[
+          ['Mail', m.email],
           ['Rol', m.role_name ?? roleLabel(m.role)],
           ['Último ingreso', m.last_login_at === null ? 'Nunca entró' : daysAgo(m.last_login_at)],
           ...(m.role === 'door' ? ([['Escaneos', String(m.checkins)]] as Array<[string, string]>) : []),
           ['En el coro', m.seasons === 1 ? 'Primera temporada' : `${m.seasons} temporadas`],
         ]}
       />
-      <Cuenta m={m} esYo={esYo} onEditar={onEditar} onSacar={onSacar} />
+      <Cuenta m={m} esYo={esYo} onEditar={onEditar} onSacar={onSacar} onEliminar={onEliminar} />
     </Modal>
   )
 }
@@ -447,6 +474,19 @@ export function UsersPage() {
       setAviso('Listo: ya no participa de esta temporada.')
     },
     onError: (err) => setAviso(err instanceof ApiError ? err.message : 'No se pudo sacar.'),
+  })
+
+  const eliminar = useMutation({
+    meta: { exito: 'Perfil eliminado' },
+    mutationFn: (id: number) => api.deleteUser(id),
+    onSuccess: () => {
+      setAbierta(null)
+      refrescar()
+    },
+    onError: (err) => {
+      setAbierta(null)
+      setAviso(err instanceof ApiError ? err.message : 'No se pudo eliminar.')
+    },
   })
 
   // ?u=N llega de una alerta de Dirección: abre el detalle de esa persona.
@@ -633,6 +673,7 @@ export function UsersPage() {
           onClose={() => setAbierta(null)}
           onEditar={() => editar(abierta)}
           onSacar={() => sacar.mutate(abierta.id)}
+          onEliminar={() => eliminar.mutate(abierta.id)}
           onRepartir={() => {
             setAbierta(null)
             setRepartir(true)
@@ -646,6 +687,7 @@ export function UsersPage() {
           onClose={() => setAbierta(null)}
           onEditar={() => editar(abierta)}
           onSacar={() => sacar.mutate(abierta.id)}
+          onEliminar={() => eliminar.mutate(abierta.id)}
         />
       )}
       {anterior && (
@@ -687,6 +729,7 @@ function comoUser(m: TeamMember): User {
     role: m.role,
     custom_role_id: m.custom_role_id ?? null,
     role_name: m.role_name ?? null,
+    avatar_at: m.avatar_at ?? null,
     must_change_password: false,
     is_active: m.left_at === null,
     created_at: m.joined_at,

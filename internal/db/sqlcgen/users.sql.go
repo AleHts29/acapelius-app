@@ -245,6 +245,54 @@ func (q *Queries) DeleteMembership(ctx context.Context, arg DeleteMembershipPara
 	return err
 }
 
+const deleteUser = `-- name: DeleteUser :execrows
+DELETE FROM users WHERE id = $1::bigint AND organization_id = $2::bigint
+`
+
+type DeleteUserParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// La foto se va sola (ON DELETE CASCADE).
+func (q *Queries) DeleteUser(ctx context.Context, arg DeleteUserParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteUser, arg.ID, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteUserAllocations = `-- name: DeleteUserAllocations :exec
+DELETE FROM allocations a USING users u
+WHERE u.id = a.user_id AND a.user_id = $1::bigint AND u.organization_id = $2::bigint
+`
+
+type DeleteUserAllocationsParams struct {
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) DeleteUserAllocations(ctx context.Context, arg DeleteUserAllocationsParams) error {
+	_, err := q.db.Exec(ctx, deleteUserAllocations, arg.UserID, arg.OrganizationID)
+	return err
+}
+
+const deleteUserMemberships = `-- name: DeleteUserMemberships :exec
+DELETE FROM season_members m USING users u
+WHERE u.id = m.user_id AND m.user_id = $1::bigint AND u.organization_id = $2::bigint
+`
+
+type DeleteUserMembershipsParams struct {
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) DeleteUserMemberships(ctx context.Context, arg DeleteUserMembershipsParams) error {
+	_, err := q.db.Exec(ctx, deleteUserMemberships, arg.UserID, arg.OrganizationID)
+	return err
+}
+
 const formerMembers = `-- name: FormerMembers :many
 SELECT
   u.id,
@@ -980,4 +1028,34 @@ func (q *Queries) UpsertMembership(ctx context.Context, arg UpsertMembershipPara
 		&i.CustomRoleID,
 	)
 	return i, err
+}
+
+const userHasHistory = `-- name: UserHasHistory :one
+
+SELECT (
+  EXISTS (SELECT 1 FROM sales WHERE seller_id = u.id)
+  OR EXISTS (SELECT 1 FROM sale_payments WHERE user_id = u.id)
+  OR EXISTS (SELECT 1 FROM settlements WHERE seller_id = u.id)
+  OR EXISTS (SELECT 1 FROM settlement_reminders WHERE seller_id = u.id OR sent_by = u.id)
+  OR EXISTS (SELECT 1 FROM checkins WHERE user_id = u.id)
+)::boolean AS has_history
+FROM users u
+WHERE u.id = $1::bigint AND u.organization_id = $2::bigint
+`
+
+type UserHasHistoryParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// ============================================================================
+// Eliminar un perfil (C21)
+// ============================================================================
+// Si hizo algo que cuenta plata o entradas: ventas, cobros, rendiciones,
+// recordatorios o ingresos en la puerta. Con historial no se borra.
+func (q *Queries) UserHasHistory(ctx context.Context, arg UserHasHistoryParams) (bool, error) {
+	row := q.db.QueryRow(ctx, userHasHistory, arg.ID, arg.OrganizationID)
+	var has_history bool
+	err := row.Scan(&has_history)
+	return has_history, err
 }
