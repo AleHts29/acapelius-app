@@ -33,7 +33,8 @@ SELECT
   -- Cupo repartido entre coristas que siguen en la temporada de esta funcion.
   (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
    JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
-   WHERE a.function_id = f.id AND m.role = 'seller' AND m.left_at IS NULL)::bigint AS assigned,
+   WHERE a.function_id = f.id AND m.left_at IS NULL
+     AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id))::bigint AS assigned,
   -- Cortesias emitidas. Es un conteo, no plata: en la puerta importa saber
   -- cuantos de los que vienen no pagaron entrada.
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id

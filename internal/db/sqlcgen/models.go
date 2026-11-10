@@ -43,14 +43,15 @@ type EmailSend struct {
 }
 
 type Function struct {
-	ID         int64     `json:"id"`
-	SeasonID   int64     `json:"season_id"`
-	Name       *string   `json:"name"`
-	Venue      string    `json:"venue"`
-	StartsAt   time.Time `json:"starts_at"`
-	Capacity   int32     `json:"capacity"`
-	PriceCents int64     `json:"price_cents"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID              int64     `json:"id"`
+	SeasonID        int64     `json:"season_id"`
+	Name            *string   `json:"name"`
+	Venue           string    `json:"venue"`
+	StartsAt        time.Time `json:"starts_at"`
+	Capacity        int32     `json:"capacity"`
+	PriceCents      int64     `json:"price_cents"`
+	CreatedAt       time.Time `json:"created_at"`
+	AllocationRoles []string  `json:"allocation_roles"`
 }
 
 type Organization struct {

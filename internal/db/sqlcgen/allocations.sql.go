@@ -50,6 +50,36 @@ func (q *Queries) DeleteAllocationsForUser(ctx context.Context, arg DeleteAlloca
 	return err
 }
 
+const deleteIneligibleAllocations = `-- name: DeleteIneligibleAllocations :exec
+DELETE FROM allocations a
+USING functions f, seasons se
+WHERE f.id = a.function_id AND se.id = f.season_id
+  AND se.organization_id = $1::bigint
+  AND ($2::bigint IS NULL OR a.user_id = $2::bigint)
+  AND ($3::bigint IS NULL OR a.function_id = $3::bigint)
+  AND NOT EXISTS (
+    SELECT 1 FROM season_members m
+    WHERE m.user_id = a.user_id AND m.season_id = f.season_id
+      AND m.left_at IS NULL
+      AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id)
+  )
+`
+
+type DeleteIneligibleAllocationsParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	UserID         *int64 `json:"user_id"`
+	FunctionID     *int64 `json:"function_id"`
+}
+
+// Suelta los cupos de quien ya no entra en el reparto (cambio de rol, rol
+// sacado del reparto, rol propio borrado). Si quedaran, volverian a aparecer
+// al reincluir el rol y podrian sumar mas que la capacidad. Con user_id o
+// function_id en NULL abarca a todas o a todas las funciones.
+func (q *Queries) DeleteIneligibleAllocations(ctx context.Context, arg DeleteIneligibleAllocationsParams) error {
+	_, err := q.db.Exec(ctx, deleteIneligibleAllocations, arg.OrganizationID, arg.UserID, arg.FunctionID)
+	return err
+}
+
 const functionAllocationBoard = `-- name: FunctionAllocationBoard :many
 SELECT
   u.id AS user_id,
@@ -63,7 +93,8 @@ JOIN functions f ON f.id = $1::bigint
 JOIN seasons se ON se.id = f.season_id
 JOIN season_members m ON m.user_id = u.id AND m.season_id = f.season_id
 LEFT JOIN allocations a ON a.user_id = u.id AND a.function_id = $1::bigint
-WHERE m.role = 'seller' AND m.left_at IS NULL
+WHERE m.left_at IS NULL
+  AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id)
   AND se.organization_id = $2::bigint
 ORDER BY u.name
 `
@@ -112,7 +143,10 @@ const getAllocationQty = `-- name: GetAllocationQty :one
 SELECT a.quantity FROM allocations a
 JOIN functions f ON f.id = a.function_id
 JOIN seasons se ON se.id = f.season_id
-WHERE a.user_id = $1::bigint
+JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
+WHERE m.left_at IS NULL
+  AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id)
+  AND a.user_id = $1::bigint
   AND a.function_id = $2::bigint
   AND se.organization_id = $3::bigint
 `
@@ -123,6 +157,8 @@ type GetAllocationQtyParams struct {
 	OrganizationID int64 `json:"organization_id"`
 }
 
+// Solo cuenta si la persona entra en el reparto de esa funcion: un cupo de
+// un rol que se saco del reparto no habilita a vender.
 func (q *Queries) GetAllocationQty(ctx context.Context, arg GetAllocationQtyParams) (int32, error) {
 	row := q.db.QueryRow(ctx, getAllocationQty, arg.UserID, arg.FunctionID, arg.OrganizationID)
 	var quantity int32
@@ -186,6 +222,86 @@ func (q *Queries) GetPublicTicket(ctx context.Context, code string) (GetPublicTi
 	return i, err
 }
 
+const ineligibleAllocationsWithSales = `-- name: IneligibleAllocationsWithSales :many
+SELECT u.name, sold.n AS sold
+FROM allocations a
+JOIN users u ON u.id = a.user_id
+JOIN functions f ON f.id = a.function_id
+JOIN seasons se ON se.id = f.season_id
+LEFT JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
+CROSS JOIN LATERAL (
+  SELECT COUNT(*)::bigint AS n FROM tickets t JOIN sales s ON t.sale_id = s.id
+  WHERE s.seller_id = a.user_id AND s.function_id = f.id
+    AND NOT s.is_comp AND t.status <> 'void'
+) sold
+WHERE a.function_id = $1::bigint
+  AND se.organization_id = $2::bigint
+  AND NOT (m.id IS NOT NULL AND m.left_at IS NULL
+           AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id))
+  AND sold.n > 0
+ORDER BY u.name
+`
+
+type IneligibleAllocationsWithSalesParams struct {
+	FunctionID     int64 `json:"function_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+type IneligibleAllocationsWithSalesRow struct {
+	Name string `json:"name"`
+	Sold int64  `json:"sold"`
+}
+
+// Quienes tienen cupo en la funcion, ya vendieron, y quedarian fuera del
+// reparto: a esas no se les puede sacar el cupo.
+func (q *Queries) IneligibleAllocationsWithSales(ctx context.Context, arg IneligibleAllocationsWithSalesParams) ([]IneligibleAllocationsWithSalesRow, error) {
+	rows, err := q.db.Query(ctx, ineligibleAllocationsWithSales, arg.FunctionID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []IneligibleAllocationsWithSalesRow{}
+	for rows.Next() {
+		var i IneligibleAllocationsWithSalesRow
+		if err := rows.Scan(&i.Name, &i.Sold); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const isAllocationEligible = `-- name: IsAllocationEligible :one
+SELECT EXISTS (
+  SELECT 1 FROM season_members m
+  JOIN functions f ON f.season_id = m.season_id
+  JOIN seasons se ON se.id = f.season_id
+  WHERE f.id = $1::bigint
+    AND m.user_id = $2::bigint
+    AND se.organization_id = $3::bigint
+    AND m.left_at IS NULL
+    AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id)
+)::boolean
+`
+
+type IsAllocationEligibleParams struct {
+	FunctionID     int64 `json:"function_id"`
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// Si a esta persona se le puede asignar cupo en esta funcion: sigue en la
+// temporada y su rol esta en el reparto.
+func (q *Queries) IsAllocationEligible(ctx context.Context, arg IsAllocationEligibleParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isAllocationEligible, arg.FunctionID, arg.UserID, arg.OrganizationID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const myAllocations = `-- name: MyAllocations :many
 SELECT
   a.function_id,
@@ -199,8 +315,11 @@ SELECT
 FROM allocations a
 JOIN functions f ON a.function_id = f.id
 JOIN seasons se ON se.id = f.season_id
+JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
 WHERE a.user_id = $1::bigint
   AND se.organization_id = $2::bigint
+  AND m.left_at IS NULL
+  AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id)
 ORDER BY f.starts_at
 `
 
@@ -246,6 +365,25 @@ func (q *Queries) MyAllocations(ctx context.Context, arg MyAllocationsParams) ([
 	return items, nil
 }
 
+const setFunctionAllocationRoles = `-- name: SetFunctionAllocationRoles :exec
+UPDATE functions f SET allocation_roles = $1::text[]
+FROM seasons se
+WHERE se.id = f.season_id
+  AND f.id = $2::bigint
+  AND se.organization_id = $3::bigint
+`
+
+type SetFunctionAllocationRolesParams struct {
+	Roles          []string `json:"roles"`
+	FunctionID     int64    `json:"function_id"`
+	OrganizationID int64    `json:"organization_id"`
+}
+
+func (q *Queries) SetFunctionAllocationRoles(ctx context.Context, arg SetFunctionAllocationRolesParams) error {
+	_, err := q.db.Exec(ctx, setFunctionAllocationRoles, arg.Roles, arg.FunctionID, arg.OrganizationID)
+	return err
+}
+
 const soldBySellerInFunction = `-- name: SoldBySellerInFunction :one
 SELECT COUNT(*) FROM tickets t
 JOIN sales s ON t.sale_id = s.id
@@ -280,7 +418,8 @@ JOIN seasons se ON se.id = f.season_id
 JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
 WHERE a.function_id = $1::bigint
   AND se.organization_id = $2::bigint
-  AND m.role = 'seller' AND m.left_at IS NULL
+  AND m.left_at IS NULL
+  AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id)
 `
 
 type SumAllocationsParams struct {

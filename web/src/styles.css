@@ -809,6 +809,18 @@ button.rule__c:hover { color: var(--ink) }
 .reparto-igual { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap }
 .reparto-igual .rs { flex: 1; min-width: 200px; white-space: normal }
 
+/* A quién se le reparte (C22): botones que se prenden y apagan, varios a la vez. */
+.reparto-roles { display: flex; flex-direction: column; gap: var(--s1) }
+.reparto-roles__t { font-size: 12px; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.08em }
+.reparto-roles__ops { display: flex; flex-wrap: wrap; gap: var(--s1) }
+.reparto-roles__ops button { padding: 7px 12px; background: none; border: 1px solid var(--hair); color: inherit; font: inherit; font-size: 14px; cursor: pointer }
+.reparto-roles__ops button:hover:not(:disabled) { border-color: var(--ink) }
+.reparto-roles__ops button:focus-visible { outline: 2px solid var(--ticket); outline-offset: 1px }
+.reparto-roles__ops button[aria-pressed='true'] { background: var(--ink); border-color: var(--ink); color: var(--paper) }
+.reparto-roles__ops button[aria-pressed='true']::before { content: '✓ ' }
+.reparto-roles__ops button:disabled { cursor: default }
+.reparto-roles__ops button[aria-pressed='false']:disabled { opacity: 0.5 }
+
 /* Asignaciones: la función a la izquierda y su reparto a la derecha. */
 .asigna { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--s4); align-items: start }
 .asigna__lista { display: flex; flex-direction: column; gap: var(--s4); min-width: 0 }

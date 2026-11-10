@@ -11,7 +11,9 @@ import { Status } from '../ui/Status'
 
 /**
  * Tablero de asignacion de cupos de una funcion (C8; sistema B en C19):
- * cuánto se repartió del cupo, una fila por corista activa con stepper, y
+ * a qué roles se les reparte (C22: coristas por defecto; se puede sumar
+ * dirección o un rol propio), cuánto se repartió del cupo, una fila por
+ * persona con stepper, y
  * guardado en batch. El "−" se frena en lo ya vendido. Con `soloLectura` (la
  * función ya pasó) muestra el reparto como quedó, sin nada que tocar.
  * `onCambios` avisa si hay cambios sin guardar.
@@ -35,6 +37,23 @@ export function AllocationsEditor({
   const board = useQuery({
     queryKey: ['function-allocations', fn.id],
     queryFn: () => api.functionAllocations(fn.id),
+  })
+
+  const roles = useMutation({
+    meta: { exito: 'Listo: cambió a quién se le reparte' },
+    mutationFn: (keys: string[]) => api.putAllocationRoles(fn.id, keys),
+    onSuccess: () => {
+      setError(null)
+      void queryClient.invalidateQueries({ queryKey: ['function-allocations', fn.id] })
+      void queryClient.invalidateQueries({ queryKey: ['my-allocations'] })
+      void queryClient.invalidateQueries({ queryKey: ['functions-summary'] })
+      void queryClient.invalidateQueries({ queryKey: ['home'] })
+      void queryClient.invalidateQueries({ queryKey: ['direccion'] })
+      void queryClient.invalidateQueries({ queryKey: ['team'] })
+      void queryClient.invalidateQueries({ queryKey: ['seasons-overview'] })
+    },
+    onError: (err) =>
+      setError(err instanceof ApiError ? err.message : 'No se pudo cambiar a quién se le reparte.'),
   })
 
   const save = useMutation({
@@ -61,17 +80,66 @@ export function AllocationsEditor({
       setError(err instanceof ApiError ? err.message : 'No se pudieron guardar las asignaciones.'),
   })
 
-  const dirty = Object.entries(drafts).some(
-    ([userId, qty]) => board.data?.allocations.find((r) => r.user_id === Number(userId))?.assigned !== qty,
-  )
+  // Solo cuentan los cambios de quien sigue en el tablero: si se sacó su rol
+  // del reparto, su borrador ya no aplica.
+  const pendientes = Object.entries(drafts).filter(([userId, qty]) => {
+    const fila = board.data?.allocations.find((r) => r.user_id === Number(userId))
+    return fila !== undefined && fila.assigned !== qty
+  })
+  const dirty = pendientes.length > 0
   useEffect(() => onCambios?.(dirty), [dirty, onCambios])
 
-  if (board.isPending) return <p className="rs">Cargando coristas…</p>
+  if (board.isPending) return <p className="rs">Cargando el reparto…</p>
   if (!board.data) return <p className="st st--bad">No se pudo cargar el tablero.</p>
 
   const rows = board.data.allocations
+  const elegidos = board.data.roles
+  const opciones = board.data.role_options
+
+  // A quién se le reparte: un botón por rol que vende. Se guarda al tocarlo;
+  // quien queda afuera pierde su cupo (el server frena si ya vendió).
+  function alternarRol(key: string) {
+    const siguiente = elegidos.includes(key) ? elegidos.filter((k) => k !== key) : [...elegidos, key]
+    if (siguiente.length === 0) return
+    setAntesDeIgualar(null)
+    roles.mutate(siguiente)
+  }
+  const selectorDeRoles = (
+    <div className="reparto-roles">
+      <span className="reparto-roles__t">Se reparte a</span>
+      <div className="reparto-roles__ops" role="group" aria-label="Roles que reciben entradas">
+        {opciones.map((o) => {
+          const activo = elegidos.includes(o.key)
+          const ultimo = activo && elegidos.length === 1
+          return (
+            <button
+              key={o.key}
+              type="button"
+              aria-pressed={activo}
+              disabled={soloLectura || roles.isPending || ultimo}
+              title={ultimo ? 'Tiene que quedar al menos un rol' : undefined}
+              onClick={() => alternarRol(o.key)}
+            >
+              {o.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+
   if (rows.length === 0) {
-    return <p className="rs">No hay coristas activas para asignar.</p>
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>
+        {selectorDeRoles}
+        {error && (
+          <p className="st st--bad" role="alert">
+            {error}
+          </p>
+        )}
+        <p className="rs">Nadie activo en esta temporada tiene esos roles.</p>
+      </div>
+    )
   }
 
   const value = (userId: number, assigned: number) => drafts[userId] ?? assigned
@@ -91,13 +159,14 @@ export function AllocationsEditor({
   const mas = Math.max(...iguales)
   const resultadoIgual =
     menos === mas
-      ? `${menos} para cada una`
+      ? `${menos} para cada persona`
       : mas - menos === 1
-        ? `Entre ${menos} y ${mas} para cada una`
-        : `Entre ${menos} y ${mas} para cada una, porque nadie baja de lo que ya vendió`
+        ? `Entre ${menos} y ${mas} para cada persona`
+        : `Entre ${menos} y ${mas} para cada persona, porque nadie baja de lo que ya vendió`
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s3)' }}>
+      {selectorDeRoles}
       <div>
         <div className="tile__meta">
           <span className="tile__q">
@@ -201,7 +270,7 @@ export function AllocationsEditor({
             disabled={!dirty || overCapacity || save.isPending}
             onClick={() =>
               save.mutate(
-                Object.entries(drafts).map(([userId, qty]) => ({
+                pendientes.map(([userId, qty]) => ({
                   user_id: Number(userId),
                   quantity: qty,
                 })),

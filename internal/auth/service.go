@@ -203,12 +203,13 @@ func (s *Service) UpdateUser(ctx context.Context, orgID, actorID, userID int64, 
 		}
 	}
 
-	// Si deja de ser corista de esta temporada se le sueltan los cupos: si no,
-	// quedan reservando lugares que ya no aparecen en el tablero y que nadie
-	// puede vender. Un fallo aca no invalida el cambio, pero queda registrado.
-	if role != domain.RoleSeller || !participa {
-		if err := s.queries.DeleteAllocationsForUser(ctx, sqlcgen.DeleteAllocationsForUserParams{
-			UserID: userID, OrganizationID: orgID,
+	// Si deja de entrar en el reparto de alguna funcion (cambio de rol, baja)
+	// se le sueltan esos cupos: si no, quedan reservando lugares que ya no
+	// aparecen en el tablero y que nadie puede vender. Un fallo aca no
+	// invalida el cambio, pero queda registrado.
+	{
+		if err := s.queries.DeleteIneligibleAllocations(ctx, sqlcgen.DeleteIneligibleAllocationsParams{
+			UserID: &userID, OrganizationID: orgID,
 		}); err != nil {
 			slog.Error("no se pudieron soltar los cupos del usuario", "user_id", userID, "error", err)
 		}

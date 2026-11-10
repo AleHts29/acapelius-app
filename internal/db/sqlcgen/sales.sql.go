@@ -248,7 +248,7 @@ func (q *Queries) DeleteSalePayments(ctx context.Context, saleID int64) error {
 
 const getFunctionForUpdate = `-- name: GetFunctionForUpdate :one
 
-SELECT f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at FROM functions f
+SELECT f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles FROM functions f
 JOIN seasons se ON se.id = f.season_id
 WHERE f.id = $1::bigint
   AND se.organization_id = $2::bigint
@@ -278,6 +278,7 @@ func (q *Queries) GetFunctionForUpdate(ctx context.Context, arg GetFunctionForUp
 		&i.Capacity,
 		&i.PriceCents,
 		&i.CreatedAt,
+		&i.AllocationRoles,
 	)
 	return i, err
 }

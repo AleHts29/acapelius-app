@@ -111,7 +111,8 @@ SELECT
    WHERE s.function_id = f.id AND NOT s.is_comp AND s.voided_at IS NULL)::bigint AS collected_cents,
   (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
    JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
-   WHERE a.function_id = f.id AND m.role = 'seller' AND m.left_at IS NULL)::bigint AS assigned,
+   WHERE a.function_id = f.id AND m.left_at IS NULL
+     AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id))::bigint AS assigned,
   -- Cortesias emitidas: no son plata, pero ocupan butaca.
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
    WHERE s.function_id = f.id AND s.is_comp AND t.status <> 'void')::bigint AS comp_tickets,
@@ -197,7 +198,7 @@ FROM functions f
 JOIN seasons se ON se.id = f.season_id
 LEFT JOIN allocations a ON a.function_id = f.id
 LEFT JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
-  AND m.role = 'seller' AND m.left_at IS NULL
+  AND m.left_at IS NULL AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id)
 WHERE f.season_id = sqlc.arg(season_id)::bigint
   AND se.organization_id = sqlc.arg(organization_id)::bigint
   AND f.starts_at > now()
@@ -405,7 +406,8 @@ SELECT
   (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
      JOIN functions f ON a.function_id = f.id
      JOIN season_members m ON m.user_id = a.user_id AND m.season_id = s.id
-   WHERE f.season_id = s.id AND m.role = 'seller' AND m.left_at IS NULL)::bigint AS assigned,
+   WHERE f.season_id = s.id AND m.left_at IS NULL
+     AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id))::bigint AS assigned,
   -- Coristas que efectivamente vendieron algo en la temporada.
   (SELECT count(DISTINCT sa.seller_id) FROM sales sa
      JOIN functions f ON sa.function_id = f.id

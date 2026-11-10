@@ -239,3 +239,89 @@ func TestCuposDeFuncionPasadaNoSeCambian(t *testing.T) {
 		map[string]any{"allocations": []map[string]any{{"user_id": 2, "quantity": 1}}},
 	), http.StatusOK)
 }
+
+// TestRepartoPorRoles (C22): cada funcion elige a que roles se les reparten
+// entradas. Por defecto, coristas; se puede sumar direccion o un rol propio,
+// o dejar a alguno afuera.
+func TestRepartoPorRoles(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env) // user 1
+	fnID := setupCatalog(t, admin, 20)
+	carolina := createSellerClient(t, env, admin, "Carolina", "caro@acapelius.test") // user 2
+	path := fmt.Sprintf("/api/functions/%.0f/allocations", fnID)
+	rolesPath := fmt.Sprintf("/api/functions/%.0f/allocation-roles", fnID)
+
+	soprano := admin.post("/api/roles", map[string]any{"name": "Sopranos", "base_role": "seller"})
+	assertStatus(t, soprano, http.StatusCreated)
+	sopranoKey := fmt.Sprintf("custom:%.0f", soprano.Body["role"].(map[string]any)["id"].(float64))
+	assertStatus(t, admin.post("/api/users", map[string]any{
+		"name": "Sofia", "email": "sofi@acapelius.test", "role": "seller",
+		"custom_role_id": soprano.Body["role"].(map[string]any)["id"],
+	}), http.StatusCreated) // user 3
+
+	nombres := func() map[string]bool {
+		t.Helper()
+		resp := admin.get(path)
+		assertStatus(t, resp, http.StatusOK)
+		out := map[string]bool{}
+		for _, raw := range resp.Body["allocations"].([]any) {
+			out[raw.(map[string]any)["seller_name"].(string)] = true
+		}
+		return out
+	}
+
+	// Por defecto: coristas, con sus roles propios; direccion afuera.
+	board := admin.get(path)
+	if roles := board.Body["roles"].([]any); len(roles) != 2 || roles[0] != "seller" || roles[1] != sopranoKey {
+		t.Fatalf("por defecto el reparto es de coristas: %v", roles)
+	}
+	if n := nombres(); !n["Carolina"] || !n["Sofia"] || n["Eli"] {
+		t.Fatalf("tablero por defecto: %v", n)
+	}
+	if len(board.Body["role_options"].([]any)) != 3 {
+		t.Fatalf("opciones: coristas, direccion y Sopranos: %v", board.Body["role_options"])
+	}
+
+	// Sumar direccion: Eli aparece y se le puede asignar.
+	assertStatus(t, admin.do(http.MethodPut, rolesPath, map[string]any{"roles": []string{"seller", "admin", sopranoKey}}), http.StatusOK)
+	if n := nombres(); !n["Eli"] {
+		t.Fatalf("con direccion en el reparto, Eli tendria que estar: %v", n)
+	}
+	assertStatus(t, admin.do(http.MethodPut, path, map[string]any{
+		"allocations": []map[string]any{{"user_id": 1, "quantity": 5}, {"user_id": 2, "quantity": 5}, {"user_id": 3, "quantity": 5}},
+	}), http.StatusOK)
+
+	// Solo direccion: las coristas salen y sus cupos se sueltan.
+	assertStatus(t, admin.do(http.MethodPut, rolesPath, map[string]any{"roles": []string{"admin"}}), http.StatusOK)
+	if n := nombres(); len(n) != 1 || !n["Eli"] {
+		t.Fatalf("solo direccion: %v", n)
+	}
+	assertErrorCode(t, carolina.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Fuera", "buyer_email": "comprador@prueba.test", "quantity": 1,
+	}), http.StatusConflict, "no_allocation")
+	assertErrorCode(t, admin.do(http.MethodPut, path, map[string]any{
+		"allocations": []map[string]any{{"user_id": 2, "quantity": 1}},
+	}), http.StatusConflict, "conflict")
+
+	// Al volver a sumarlas, no reaparece el cupo viejo: el total queda en 5.
+	assertStatus(t, admin.do(http.MethodPut, rolesPath, map[string]any{"roles": []string{"seller", "admin"}}), http.StatusOK)
+	if total := admin.get(path).Body["total_assigned"].(float64); total != 5 {
+		t.Fatalf("total repartido = %v, se esperaba 5 (solo el de Eli)", total)
+	}
+	if n := nombres(); n["Sofia"] {
+		t.Fatalf("Sopranos no se eligio: Sofia no tendria que estar: %v", n)
+	}
+
+	// Quien ya vendio con su cupo no puede quedar afuera.
+	assignQuota(t, admin, fnID, 2, 3)
+	assertStatus(t, carolina.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Con Cupo", "buyer_email": "comprador@prueba.test", "quantity": 1,
+	}), http.StatusCreated)
+	assertErrorCode(t, admin.do(http.MethodPut, rolesPath, map[string]any{"roles": []string{"admin"}}),
+		http.StatusConflict, "allocation_below_sold")
+
+	// Validaciones: al menos un rol, y solo roles que venden.
+	assertErrorCode(t, admin.do(http.MethodPut, rolesPath, map[string]any{"roles": []string{}}), http.StatusBadRequest, "validation_error")
+	assertErrorCode(t, admin.do(http.MethodPut, rolesPath, map[string]any{"roles": []string{"door"}}), http.StatusBadRequest, "validation_error")
+	assertErrorCode(t, carolina.do(http.MethodPut, rolesPath, map[string]any{"roles": []string{"seller"}}), http.StatusForbidden, "forbidden")
+}

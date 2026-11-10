@@ -420,6 +420,13 @@ export interface AllocationBoardRow {
   sold: number
 }
 
+/** Un rol que puede recibir entradas en el reparto (C22): 'seller', 'admin' o 'custom:<id>'. */
+export interface AllocationRoleOption {
+  key: string
+  label: string
+  base_role: 'seller' | 'admin'
+}
+
 export type CheckinInput =
   | { function_id: number; method: 'scan'; payload: string; device_id?: string }
   | { function_id: number; method: 'manual'; code: string; device_id?: string }
@@ -690,10 +697,18 @@ export const api = {
 
   myAllocations: () => request<{ allocations: MyAllocation[] }>('GET', '/me/allocations'),
   functionAllocations: (functionId: number) =>
-    request<{ capacity: number; total_assigned: number; allocations: AllocationBoardRow[] }>(
+    request<{
+      capacity: number
+      total_assigned: number
+      allocations: AllocationBoardRow[]
+      roles: string[]
+      role_options: AllocationRoleOption[]
+    }>(
       'GET',
       `/functions/${functionId}/allocations`,
     ),
+  putAllocationRoles: (functionId: number, roles: string[]) =>
+    request<{ roles: string[] }>('PUT', `/functions/${functionId}/allocation-roles`, { roles }),
   putAllocations: (functionId: number, entries: Array<{ user_id: number; quantity: number }>) =>
     request<{ total_assigned: number; remaining: number }>(
       'PUT',

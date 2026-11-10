@@ -393,6 +393,7 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 		httpx.Internal(w, r, err)
 		return
 	}
+	s.soltarCuposAjenos(r, req.UserID)
 	httpx.JSON(w, http.StatusOK, map[string]any{"member": member})
 }
 

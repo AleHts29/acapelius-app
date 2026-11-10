@@ -193,6 +193,7 @@ func (s *Server) Handler() http.Handler {
 					admin.Post("/users/{id}/reset-password", s.handleResetPassword)
 					admin.Get("/functions/{id}/allocations", s.handleFunctionAllocationBoard)
 					admin.Put("/functions/{id}/allocations", s.handlePutAllocations)
+					admin.Put("/functions/{id}/allocation-roles", s.handlePutAllocationRoles)
 					admin.Post("/seasons", s.handleCreateSeason)
 					admin.Patch("/seasons/{id}", s.handleUpdateSeason)
 					admin.Delete("/seasons/{id}", s.handleDeleteSeason)

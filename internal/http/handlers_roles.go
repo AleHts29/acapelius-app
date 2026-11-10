@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -93,6 +94,11 @@ func (s *Server) handleDeleteRole(w http.ResponseWriter, r *http.Request) {
 	if n == 0 {
 		httpx.Error(w, http.StatusNotFound, httpx.CodeNotFound, "Ese rol no existe.")
 		return
+	}
+	// Quien tenia ese rol vuelve al de base: si su rol de base no esta en el
+	// reparto de alguna funcion, se le suelta el cupo ahi.
+	if err := s.queries.DeleteIneligibleAllocations(ctx, sqlcgen.DeleteIneligibleAllocationsParams{OrganizationID: s.org(ctx)}); err != nil {
+		slog.ErrorContext(ctx, "no se pudieron soltar los cupos", "error", err)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

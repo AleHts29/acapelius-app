@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -68,6 +69,7 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	s.soltarCuposAjenos(r, id)
 	httpx.JSON(w, http.StatusOK, map[string]domain.User{"user": *updated})
 }
 
@@ -104,11 +106,182 @@ func (s *Server) handleFunctionAllocationBoard(w http.ResponseWriter, r *http.Re
 		totalAssigned += int64(row.Assigned)
 	}
 
+	opciones, err := s.opcionesDeReparto(r)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"capacity":       function.Capacity,
 		"total_assigned": totalAssigned,
 		"allocations":    rows,
+		"roles":          rolesDelReparto(function.AllocationRoles, opciones),
+		"role_options":   opciones,
 	})
+}
+
+// opcionDeReparto: un rol que puede recibir entradas. Puerta no vende, asi
+// que no aparece; los roles propios se ofrecen por su nombre.
+type opcionDeReparto struct {
+	Key      string `json:"key"`
+	Label    string `json:"label"`
+	BaseRole string `json:"base_role"`
+}
+
+func (s *Server) opcionesDeReparto(r *http.Request) ([]opcionDeReparto, error) {
+	propios, err := s.queries.ListCustomRoles(r.Context(), s.org(r.Context()))
+	if err != nil {
+		return nil, err
+	}
+	out := []opcionDeReparto{
+		{Key: string(domain.RoleSeller), Label: "Coristas", BaseRole: string(domain.RoleSeller)},
+		{Key: string(domain.RoleAdmin), Label: "Dirección", BaseRole: string(domain.RoleAdmin)},
+	}
+	for _, cr := range propios {
+		if cr.BaseRole == string(domain.RoleDoor) {
+			continue
+		}
+		out = append(out, opcionDeReparto{Key: fmt.Sprintf("custom:%d", cr.ID), Label: cr.Name, BaseRole: cr.BaseRole})
+	}
+	return out, nil
+}
+
+// rolesDelReparto: las claves que entran hoy. Sin eleccion guardada (NULL)
+// es lo de siempre: coristas, con sus roles propios. Las claves de roles
+// propios ya borrados no se devuelven.
+func rolesDelReparto(guardados []string, opciones []opcionDeReparto) []string {
+	out := []string{}
+	if guardados == nil {
+		for _, o := range opciones {
+			if o.BaseRole == string(domain.RoleSeller) {
+				out = append(out, o.Key)
+			}
+		}
+		return out
+	}
+	validas := make(map[string]bool, len(opciones))
+	for _, o := range opciones {
+		validas[o.Key] = true
+	}
+	for _, k := range guardados {
+		if validas[k] {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+type putAllocationRolesRequest struct {
+	Roles []string `json:"roles"`
+}
+
+// handlePutAllocationRoles: PUT /api/functions/{id}/allocation-roles — a que
+// roles se les reparten entradas en esta funcion. Quien queda afuera pierde
+// su cupo (si no, reapareceria al volver a sumar el rol y podria pasarse de
+// la capacidad), salvo que ya haya vendido: eso no se le puede sacar.
+func (s *Server) handlePutAllocationRoles(w http.ResponseWriter, r *http.Request) {
+	functionID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrFunctionNotFound)
+		return
+	}
+	var req putAllocationRolesRequest
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+
+	opciones, err := s.opcionesDeReparto(r)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	validas := make(map[string]bool, len(opciones))
+	for _, o := range opciones {
+		validas[o.Key] = true
+	}
+	roles := []string{}
+	vistos := map[string]bool{}
+	for _, k := range req.Roles {
+		k = strings.TrimSpace(k)
+		if !validas[k] {
+			httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "Ese rol no puede recibir entradas.")
+			return
+		}
+		if !vistos[k] {
+			vistos[k] = true
+			roles = append(roles, k)
+		}
+	}
+	if len(roles) == 0 {
+		httpx.Error(w, http.StatusBadRequest, httpx.CodeValidation, "Elegí al menos un rol para repartir.")
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	q := s.queries.WithTx(tx)
+
+	function, err := q.GetFunctionForUpdate(ctx, sqlcgen.GetFunctionForUpdateParams{ID: functionID, OrganizationID: s.org(ctx)})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrFunctionNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+	if funcionTerminada(function.StartsAt, time.Now()) {
+		httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+			"Esa función ya pasó: no se puede cambiar a quién se le reparte.")
+		return
+	}
+
+	if err := q.SetFunctionAllocationRoles(ctx, sqlcgen.SetFunctionAllocationRolesParams{
+		Roles: roles, FunctionID: functionID, OrganizationID: s.org(ctx),
+	}); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	trabadas, err := q.IneligibleAllocationsWithSales(ctx, sqlcgen.IneligibleAllocationsWithSalesParams{
+		FunctionID: functionID, OrganizationID: s.org(ctx),
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if len(trabadas) > 0 {
+		httpx.Error(w, http.StatusConflict, httpx.CodeAllocationBelowSold,
+			fmt.Sprintf("%s ya vendió %d con su cupo: no podés sacar su rol del reparto.", trabadas[0].Name, trabadas[0].Sold))
+		return
+	}
+	if err := q.DeleteIneligibleAllocations(ctx, sqlcgen.DeleteIneligibleAllocationsParams{
+		OrganizationID: s.org(ctx), FunctionID: &functionID,
+	}); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"roles": roles})
+}
+
+// soltarCuposAjenos: despues de cambiarle el rol a alguien, se sueltan los
+// cupos de las funciones en cuyo reparto ya no entra.
+func (s *Server) soltarCuposAjenos(r *http.Request, userID int64) {
+	ctx := r.Context()
+	if err := s.queries.DeleteIneligibleAllocations(ctx, sqlcgen.DeleteIneligibleAllocationsParams{
+		OrganizationID: s.org(ctx), UserID: &userID,
+	}); err != nil {
+		slog.ErrorContext(ctx, "no se pudieron soltar los cupos", "user_id", userID, "error", err)
+	}
 }
 
 type putAllocationsRequest struct {
@@ -187,21 +360,21 @@ func (s *Server) handlePutAllocations(w http.ResponseWriter, r *http.Request) {
 			httpx.Internal(w, r, err)
 			return
 		}
-		// Solo coristas de la temporada de esta funcion: el tablero muestra
-		// esas y solo esas se cuentan al validar. Un cupo para otra persona
+		// Solo quien entra en el reparto de esta funcion: el tablero muestra
+		// esas personas y solo esas se cuentan al validar. Un cupo para otra
 		// quedaria invisible en pantalla.
-		miembro, err := q.GetMembership(ctx, sqlcgen.GetMembershipParams{
-			OrganizationID: s.org(ctx),
-			SeasonID:       function.SeasonID,
+		habilitada, err := q.IsAllocationEligible(ctx, sqlcgen.IsAllocationEligibleParams{
+			FunctionID:     functionID,
 			UserID:         entry.UserID,
+			OrganizationID: s.org(ctx),
 		})
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		if err != nil {
 			httpx.Internal(w, r, err)
 			return
 		}
-		if errors.Is(err, pgx.ErrNoRows) || miembro.Role != string(domain.RoleSeller) || miembro.LeftAt != nil {
+		if !habilitada {
 			httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
-				fmt.Sprintf("%s no es una corista de esta temporada: no se le puede asignar cupo.", seller.Name))
+				fmt.Sprintf("%s no entra en el reparto de esta función: no se le puede asignar cupo.", seller.Name))
 			return
 		}
 		sold, err := q.SoldBySellerInFunction(ctx, sqlcgen.SoldBySellerInFunctionParams{

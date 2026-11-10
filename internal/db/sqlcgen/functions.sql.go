@@ -21,7 +21,7 @@ WHERE f.season_id = $2::bigint
   AND de.organization_id = $3::bigint
   AND a.organization_id  = $3::bigint
 ORDER BY f.starts_at
-RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at
+RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at, allocation_roles
 `
 
 type CopySeasonFunctionsParams struct {
@@ -53,6 +53,7 @@ func (q *Queries) CopySeasonFunctions(ctx context.Context, arg CopySeasonFunctio
 			&i.Capacity,
 			&i.PriceCents,
 			&i.CreatedAt,
+			&i.AllocationRoles,
 		); err != nil {
 			return nil, err
 		}
@@ -98,7 +99,7 @@ SELECT s.id,
 FROM seasons s
 WHERE s.id = $6::bigint
   AND s.organization_id = $7::bigint
-RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at
+RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at, allocation_roles
 `
 
 type CreateFunctionParams struct {
@@ -136,6 +137,7 @@ func (q *Queries) CreateFunction(ctx context.Context, arg CreateFunctionParams) 
 		&i.Capacity,
 		&i.PriceCents,
 		&i.CreatedAt,
+		&i.AllocationRoles,
 	)
 	return i, err
 }
@@ -177,7 +179,7 @@ func (q *Queries) DeleteFunction(ctx context.Context, arg DeleteFunctionParams) 
 }
 
 const getFunction = `-- name: GetFunction :one
-SELECT f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at FROM functions f
+SELECT f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles FROM functions f
 JOIN seasons se ON se.id = f.season_id
 WHERE f.id = $1::bigint
   AND se.organization_id = $2::bigint
@@ -200,13 +202,14 @@ func (q *Queries) GetFunction(ctx context.Context, arg GetFunctionParams) (Funct
 		&i.Capacity,
 		&i.PriceCents,
 		&i.CreatedAt,
+		&i.AllocationRoles,
 	)
 	return i, err
 }
 
 const listFunctions = `-- name: ListFunctions :many
 SELECT
-  f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at,
+  f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles,
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
    WHERE s.function_id = f.id AND t.status <> 'void')::bigint AS sold,
   (SELECT count(*) FROM checkins c
@@ -216,7 +219,8 @@ SELECT
   -- Cupo repartido entre coristas que siguen en la temporada de esta funcion.
   (SELECT COALESCE(SUM(a.quantity), 0) FROM allocations a
    JOIN season_members m ON m.user_id = a.user_id AND m.season_id = f.season_id
-   WHERE a.function_id = f.id AND m.role = 'seller' AND m.left_at IS NULL)::bigint AS assigned,
+   WHERE a.function_id = f.id AND m.left_at IS NULL
+     AND cupo_habilitado(f.allocation_roles, m.role, m.custom_role_id))::bigint AS assigned,
   -- Cortesias emitidas. Es un conteo, no plata: en la puerta importa saber
   -- cuantos de los que vienen no pagaron entrada.
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
@@ -237,19 +241,20 @@ type ListFunctionsParams struct {
 }
 
 type ListFunctionsRow struct {
-	ID          int64     `json:"id"`
-	SeasonID    int64     `json:"season_id"`
-	Name        *string   `json:"name"`
-	Venue       string    `json:"venue"`
-	StartsAt    time.Time `json:"starts_at"`
-	Capacity    int32     `json:"capacity"`
-	PriceCents  int64     `json:"price_cents"`
-	CreatedAt   time.Time `json:"created_at"`
-	Sold        int64     `json:"sold"`
-	Entered     int64     `json:"entered"`
-	Assigned    int64     `json:"assigned"`
-	CompTickets int64     `json:"comp_tickets"`
-	Sellers     int64     `json:"sellers"`
+	ID              int64     `json:"id"`
+	SeasonID        int64     `json:"season_id"`
+	Name            *string   `json:"name"`
+	Venue           string    `json:"venue"`
+	StartsAt        time.Time `json:"starts_at"`
+	Capacity        int32     `json:"capacity"`
+	PriceCents      int64     `json:"price_cents"`
+	CreatedAt       time.Time `json:"created_at"`
+	AllocationRoles []string  `json:"allocation_roles"`
+	Sold            int64     `json:"sold"`
+	Entered         int64     `json:"entered"`
+	Assigned        int64     `json:"assigned"`
+	CompTickets     int64     `json:"comp_tickets"`
+	Sellers         int64     `json:"sellers"`
 }
 
 // Incluye cuantas entradas vivas tiene cada funcion (para barras de progreso
@@ -274,6 +279,7 @@ func (q *Queries) ListFunctions(ctx context.Context, arg ListFunctionsParams) ([
 			&i.Capacity,
 			&i.PriceCents,
 			&i.CreatedAt,
+			&i.AllocationRoles,
 			&i.Sold,
 			&i.Entered,
 			&i.Assigned,
@@ -301,7 +307,7 @@ FROM seasons se
 WHERE se.id = f.season_id
   AND f.id = $6::bigint
   AND se.organization_id = $7::bigint
-RETURNING f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at
+RETURNING f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles
 `
 
 type UpdateFunctionParams struct {
@@ -334,6 +340,7 @@ func (q *Queries) UpdateFunction(ctx context.Context, arg UpdateFunctionParams) 
 		&i.Capacity,
 		&i.PriceCents,
 		&i.CreatedAt,
+		&i.AllocationRoles,
 	)
 	return i, err
 }
