@@ -244,3 +244,8 @@ WHERE s.code = sqlc.arg(code)::text;
 
 -- name: GetPublicTicketByCode :one
 SELECT * FROM tickets WHERE code = sqlc.arg(code)::text;
+
+-- name: GetSaleCodeByShort :one
+-- El link corto /k/{short}: los ultimos 8 caracteres del codigo de la venta.
+-- Publica como /e/{code}: el codigo identifica la venta.
+SELECT code FROM sales WHERE right(code, 8) = upper(sqlc.arg(short)::text);

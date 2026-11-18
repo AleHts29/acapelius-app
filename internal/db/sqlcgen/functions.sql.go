@@ -21,7 +21,7 @@ WHERE f.season_id = $2::bigint
   AND de.organization_id = $3::bigint
   AND a.organization_id  = $3::bigint
 ORDER BY f.starts_at
-RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at, allocation_roles
+RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at, allocation_roles, address, maps_url
 `
 
 type CopySeasonFunctionsParams struct {
@@ -54,6 +54,8 @@ func (q *Queries) CopySeasonFunctions(ctx context.Context, arg CopySeasonFunctio
 			&i.PriceCents,
 			&i.CreatedAt,
 			&i.AllocationRoles,
+			&i.Address,
+			&i.MapsUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -89,22 +91,26 @@ func (q *Queries) CountSalesForFunction(ctx context.Context, arg CountSalesForFu
 
 const createFunction = `-- name: CreateFunction :one
 
-INSERT INTO functions (season_id, name, venue, starts_at, capacity, price_cents)
+INSERT INTO functions (season_id, name, venue, address, maps_url, starts_at, capacity, price_cents)
 SELECT s.id,
   $1,
   $2::text,
-  $3::timestamptz,
-  $4::integer,
-  $5::bigint
+  $3,
+  $4,
+  $5::timestamptz,
+  $6::integer,
+  $7::bigint
 FROM seasons s
-WHERE s.id = $6::bigint
-  AND s.organization_id = $7::bigint
-RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at, allocation_roles
+WHERE s.id = $8::bigint
+  AND s.organization_id = $9::bigint
+RETURNING id, season_id, name, venue, starts_at, capacity, price_cents, created_at, allocation_roles, address, maps_url
 `
 
 type CreateFunctionParams struct {
 	Name           *string   `json:"name"`
 	Venue          string    `json:"venue"`
+	Address        *string   `json:"address"`
+	MapsUrl        *string   `json:"maps_url"`
 	StartsAt       time.Time `json:"starts_at"`
 	Capacity       int32     `json:"capacity"`
 	PriceCents     int64     `json:"price_cents"`
@@ -121,6 +127,8 @@ func (q *Queries) CreateFunction(ctx context.Context, arg CreateFunctionParams) 
 	row := q.db.QueryRow(ctx, createFunction,
 		arg.Name,
 		arg.Venue,
+		arg.Address,
+		arg.MapsUrl,
 		arg.StartsAt,
 		arg.Capacity,
 		arg.PriceCents,
@@ -138,6 +146,8 @@ func (q *Queries) CreateFunction(ctx context.Context, arg CreateFunctionParams) 
 		&i.PriceCents,
 		&i.CreatedAt,
 		&i.AllocationRoles,
+		&i.Address,
+		&i.MapsUrl,
 	)
 	return i, err
 }
@@ -179,7 +189,7 @@ func (q *Queries) DeleteFunction(ctx context.Context, arg DeleteFunctionParams) 
 }
 
 const getFunction = `-- name: GetFunction :one
-SELECT f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles FROM functions f
+SELECT f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles, f.address, f.maps_url FROM functions f
 JOIN seasons se ON se.id = f.season_id
 WHERE f.id = $1::bigint
   AND se.organization_id = $2::bigint
@@ -203,13 +213,15 @@ func (q *Queries) GetFunction(ctx context.Context, arg GetFunctionParams) (Funct
 		&i.PriceCents,
 		&i.CreatedAt,
 		&i.AllocationRoles,
+		&i.Address,
+		&i.MapsUrl,
 	)
 	return i, err
 }
 
 const listFunctions = `-- name: ListFunctions :many
 SELECT
-  f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles,
+  f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles, f.address, f.maps_url,
   (SELECT count(*) FROM tickets t JOIN sales s ON t.sale_id = s.id
    WHERE s.function_id = f.id AND t.status <> 'void')::bigint AS sold,
   (SELECT count(*) FROM checkins c
@@ -250,6 +262,8 @@ type ListFunctionsRow struct {
 	PriceCents      int64     `json:"price_cents"`
 	CreatedAt       time.Time `json:"created_at"`
 	AllocationRoles []string  `json:"allocation_roles"`
+	Address         *string   `json:"address"`
+	MapsUrl         *string   `json:"maps_url"`
 	Sold            int64     `json:"sold"`
 	Entered         int64     `json:"entered"`
 	Assigned        int64     `json:"assigned"`
@@ -280,6 +294,8 @@ func (q *Queries) ListFunctions(ctx context.Context, arg ListFunctionsParams) ([
 			&i.PriceCents,
 			&i.CreatedAt,
 			&i.AllocationRoles,
+			&i.Address,
+			&i.MapsUrl,
 			&i.Sold,
 			&i.Entered,
 			&i.Assigned,
@@ -300,19 +316,23 @@ const updateFunction = `-- name: UpdateFunction :one
 UPDATE functions f
 SET name        = $1,
     venue       = $2::text,
-    starts_at   = $3::timestamptz,
-    capacity    = $4::integer,
-    price_cents = $5::bigint
+    address     = $3,
+    maps_url    = $4,
+    starts_at   = $5::timestamptz,
+    capacity    = $6::integer,
+    price_cents = $7::bigint
 FROM seasons se
 WHERE se.id = f.season_id
-  AND f.id = $6::bigint
-  AND se.organization_id = $7::bigint
-RETURNING f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles
+  AND f.id = $8::bigint
+  AND se.organization_id = $9::bigint
+RETURNING f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles, f.address, f.maps_url
 `
 
 type UpdateFunctionParams struct {
 	Name           *string   `json:"name"`
 	Venue          string    `json:"venue"`
+	Address        *string   `json:"address"`
+	MapsUrl        *string   `json:"maps_url"`
 	StartsAt       time.Time `json:"starts_at"`
 	Capacity       int32     `json:"capacity"`
 	PriceCents     int64     `json:"price_cents"`
@@ -324,6 +344,8 @@ func (q *Queries) UpdateFunction(ctx context.Context, arg UpdateFunctionParams) 
 	row := q.db.QueryRow(ctx, updateFunction,
 		arg.Name,
 		arg.Venue,
+		arg.Address,
+		arg.MapsUrl,
 		arg.StartsAt,
 		arg.Capacity,
 		arg.PriceCents,
@@ -341,6 +363,8 @@ func (q *Queries) UpdateFunction(ctx context.Context, arg UpdateFunctionParams) 
 		&i.PriceCents,
 		&i.CreatedAt,
 		&i.AllocationRoles,
+		&i.Address,
+		&i.MapsUrl,
 	)
 	return i, err
 }

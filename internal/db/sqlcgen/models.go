@@ -59,6 +59,8 @@ type Function struct {
 	PriceCents      int64     `json:"price_cents"`
 	CreatedAt       time.Time `json:"created_at"`
 	AllocationRoles []string  `json:"allocation_roles"`
+	Address         *string   `json:"address"`
+	MapsUrl         *string   `json:"maps_url"`
 }
 
 type Organization struct {

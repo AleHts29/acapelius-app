@@ -21,6 +21,8 @@ SELECT
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
   f.name AS function_name,
+  f.address AS function_address,
+  f.maps_url AS function_maps_url,
   u.name AS seller_name,
   -- COALESCE al año 1 = "nunca se envio"; el handler lo convierte a null.
   COALESCE((SELECT max(e.created_at) FROM email_sends e
@@ -111,6 +113,8 @@ type ListSalesPageRow struct {
 	FunctionVenue    string     `json:"function_venue"`
 	FunctionStartsAt time.Time  `json:"function_starts_at"`
 	FunctionName     *string    `json:"function_name"`
+	FunctionAddress  *string    `json:"function_address"`
+	FunctionMapsUrl  *string    `json:"function_maps_url"`
 	SellerName       string     `json:"seller_name"`
 	LastEmailAt      time.Time  `json:"last_email_at"`
 	LastEmailStatus  string     `json:"last_email_status"`
@@ -176,6 +180,8 @@ func (q *Queries) ListSalesPage(ctx context.Context, arg ListSalesPageParams) ([
 			&i.FunctionVenue,
 			&i.FunctionStartsAt,
 			&i.FunctionName,
+			&i.FunctionAddress,
+			&i.FunctionMapsUrl,
 			&i.SellerName,
 			&i.LastEmailAt,
 			&i.LastEmailStatus,

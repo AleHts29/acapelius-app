@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, api, publicSaleURL, whatsAppURL } from '../api/client'
+import { ApiError, api, publicSaleURL, shortSaleURL, whatsAppURL } from '../api/client'
 import type { EmailStatus, Sale, ShowFunction } from '../api/client'
 import { useSession } from '../auth/session'
 import { useSeason } from '../season/SeasonProvider'
@@ -18,13 +18,16 @@ interface CreatedSale {
   emailStatus: EmailStatus
 }
 
-function ShareLinkButton({ url, buyerName, phone, fn }: { url: string; buyerName: string; phone: string | null; fn?: ShowFunction }) {
+function ShareLinkButton({ sale, que, fn }: { sale: Sale; que?: string; fn?: ShowFunction }) {
   // Un link y no un botón con JS: así el navegador lo abre directo, sin que
   // un bloqueador de pop-ups se interponga.
   return (
     <a
       className="btn btn--go btn--w"
-      href={whatsAppURL(mensajeEntradas(buyerName, url, fn), phone)}
+      href={whatsAppURL(
+        mensajeEntradas(sale.buyer_name, shortSaleURL(sale.code), fn, { que, cantidad: sale.quantity, cortesia: sale.is_comp }),
+        sale.buyer_phone,
+      )}
       target="_blank"
       rel="noopener noreferrer"
     >
@@ -160,9 +163,8 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
           {created.emailStatus === 'none' && 'Sin mail: compartile el link, o en la puerta la buscan por nombre.'}
         </p>
         <ShareLinkButton
-          url={created.publicURL}
-          buyerName={created.sale.buyer_name}
-          phone={created.sale.buyer_phone}
+          sale={created.sale}
+          que={user?.organization_name}
           fn={functions.data?.functions.find((f) => f.id === created.sale.function_id)}
         />
         <div className="dl">

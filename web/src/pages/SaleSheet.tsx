@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, api, publicSaleURL, telefonoWhatsApp, whatsAppURL } from '../api/client'
+import { ApiError, api, publicSaleURL, shortSaleURL, telefonoWhatsApp, whatsAppURL } from '../api/client'
 import type { PaymentMethod, SaleListItem, SalePayments } from '../api/client'
 import {
   dayLabel,
@@ -16,6 +16,7 @@ import {
   pesosToCents,
 } from '../lib/format'
 import { useIsDesktop } from '../lib/viewport'
+import { useSession } from '../auth/session'
 import { useSeason } from '../season/SeasonProvider'
 import { Menu } from '../ui/Menu'
 import { Button, Seg } from '../ui/Button'
@@ -46,6 +47,7 @@ export function SaleSheet({
   onClose: () => void
 }) {
   const escritorio = useIsDesktop()
+  const { user } = useSession()
   const queryClient = useQueryClient()
   // El detalle se queda con su propia copia de la venta: registrar o quitar un
   // cobro devuelve la venta ya recalculada, así que los números de acá se
@@ -171,11 +173,17 @@ export function SaleSheet({
   // El mismo mensaje que al vender, al número que quedó en la ficha. Sin
   // teléfono (o uno que no sirve), WhatsApp pregunta a quién mandarlo.
   const whatsapp = whatsAppURL(
-    mensajeEntradas(sale.buyer_name, publicSaleURL(sale.code), {
-      name: sale.function_name,
-      venue: sale.function_venue,
-      starts_at: sale.function_starts_at,
-    }),
+    mensajeEntradas(
+      sale.buyer_name,
+      shortSaleURL(sale.code),
+      {
+        venue: sale.function_venue,
+        starts_at: sale.function_starts_at,
+        address: sale.function_address,
+        maps_url: sale.function_maps_url,
+      },
+      { que: user?.organization_name, cantidad: sale.quantity, cortesia: sale.is_comp },
+    ),
     sale.buyer_phone,
   )
   const conNumero = telefonoWhatsApp(sale.buyer_phone) !== ''
@@ -409,6 +417,8 @@ type CambiosVenta = Pick<
   | 'function_name'
   | 'function_venue'
   | 'function_starts_at'
+  | 'function_address'
+  | 'function_maps_url'
   | 'over_capacity'
 >
 
@@ -481,6 +491,8 @@ function EditarVenta({
           function_name: fn?.name ?? sale.function_name,
           function_venue: fn?.venue ?? sale.function_venue,
           function_starts_at: fn?.starts_at ?? sale.function_starts_at,
+          function_address: fn ? fn.address : sale.function_address,
+          function_maps_url: fn ? fn.maps_url : sale.function_maps_url,
           over_capacity: s.over_capacity,
         },
         'Datos guardados.' + mailAviso,

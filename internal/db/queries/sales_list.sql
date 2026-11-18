@@ -24,6 +24,8 @@ SELECT
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
   f.name AS function_name,
+  f.address AS function_address,
+  f.maps_url AS function_maps_url,
   u.name AS seller_name,
   -- COALESCE al año 1 = "nunca se envio"; el handler lo convierte a null.
   COALESCE((SELECT max(e.created_at) FROM email_sends e

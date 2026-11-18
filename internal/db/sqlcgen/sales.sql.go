@@ -248,7 +248,7 @@ func (q *Queries) DeleteSalePayments(ctx context.Context, saleID int64) error {
 
 const getFunctionForUpdate = `-- name: GetFunctionForUpdate :one
 
-SELECT f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles FROM functions f
+SELECT f.id, f.season_id, f.name, f.venue, f.starts_at, f.capacity, f.price_cents, f.created_at, f.allocation_roles, f.address, f.maps_url FROM functions f
 JOIN seasons se ON se.id = f.season_id
 WHERE f.id = $1::bigint
   AND se.organization_id = $2::bigint
@@ -279,6 +279,8 @@ func (q *Queries) GetFunctionForUpdate(ctx context.Context, arg GetFunctionForUp
 		&i.PriceCents,
 		&i.CreatedAt,
 		&i.AllocationRoles,
+		&i.Address,
+		&i.MapsUrl,
 	)
 	return i, err
 }
@@ -406,6 +408,19 @@ func (q *Queries) GetSale(ctx context.Context, arg GetSaleParams) (Sale, error) 
 		&i.OverCapacity,
 	)
 	return i, err
+}
+
+const getSaleCodeByShort = `-- name: GetSaleCodeByShort :one
+SELECT code FROM sales WHERE right(code, 8) = upper($1::text)
+`
+
+// El link corto /k/{short}: los ultimos 8 caracteres del codigo de la venta.
+// Publica como /e/{code}: el codigo identifica la venta.
+func (q *Queries) GetSaleCodeByShort(ctx context.Context, short string) (string, error) {
+	row := q.db.QueryRow(ctx, getSaleCodeByShort, short)
+	var code string
+	err := row.Scan(&code)
+	return code, err
 }
 
 const getTicket = `-- name: GetTicket :one

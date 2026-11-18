@@ -72,17 +72,21 @@ function cuandoFalta(iso: string): string {
 interface FormValues {
   name: string
   venue: string
+  address: string
+  mapsUrl: string
   startsAtLocal: string
   capacity: string
   pricePesos: string
 }
 
-const vacio: FormValues = { name: '', venue: '', startsAtLocal: '', capacity: '', pricePesos: '' }
+const vacio: FormValues = { name: '', venue: '', address: '', mapsUrl: '', startsAtLocal: '', capacity: '', pricePesos: '' }
 
 function desdeFuncion(fn: FunctionSummary, conFecha: boolean): FormValues {
   return {
     name: fn.name ?? '',
     venue: fn.venue,
+    address: fn.address ?? '',
+    mapsUrl: fn.maps_url ?? '',
     // Duplicar deja la fecha en blanco a propósito: es el único dato que
     // seguro cambia, y prellenarlo con el de la función vieja es la forma
     // segura de crear dos funciones el mismo día sin darse cuenta.
@@ -95,10 +99,14 @@ function desdeFuncion(fn: FunctionSummary, conFecha: boolean): FormValues {
 function parsear(
   values: FormValues,
 ):
-  | { ok: true; venue: string; name: string; startsAt: string; capacity: number; priceCents: number }
+  | { ok: true; venue: string; name: string; address: string; mapsUrl: string; startsAt: string; capacity: number; priceCents: number }
   | { ok: false; message: string } {
   if (values.venue.trim() === '') return { ok: false, message: 'Falta el lugar.' }
   if (values.startsAtLocal === '') return { ok: false, message: 'Falta la fecha y hora.' }
+  const mapsUrl = values.mapsUrl.trim()
+  if (mapsUrl !== '' && !/^https?:\/\/\S+$/.test(mapsUrl)) {
+    return { ok: false, message: 'El link de Google Maps tiene que ser el link completo, que empieza con https://' }
+  }
 
   const capacity = Number(values.capacity)
   if (!Number.isInteger(capacity) || capacity <= 0) {
@@ -112,6 +120,8 @@ function parsear(
     ok: true,
     venue: values.venue.trim(),
     name: values.name,
+    address: values.address.trim(),
+    mapsUrl,
     startsAt: localInputToISO(values.startsAtLocal),
     capacity,
     priceCents,
@@ -192,6 +202,8 @@ function FuncionForm({
     const campos = {
       name: p.name,
       venue: p.venue,
+      address: p.address,
+      maps_url: p.mapsUrl,
       starts_at: p.startsAt,
       capacity: p.capacity,
       price_cents: p.priceCents,
@@ -235,6 +247,34 @@ function FuncionForm({
         <label className="field">
           <span className="lbl">Lugar</span>
           <input className="field__input" type="text" value={values.venue} onChange={(e) => set({ venue: e.target.value })} placeholder="Teatro Municipal" />
+        </label>
+        <label className="field">
+          <span className="lbl">Dirección (opcional)</span>
+          <input
+            id="funcion-direccion"
+            className="field__input"
+            type="text"
+            value={values.address}
+            onChange={(e) => set({ address: e.target.value })}
+            placeholder="Marcelo T. de Alvear 1155, CABA"
+          />
+        </label>
+        <label className="field">
+          <span className="lbl">Link de Google Maps (opcional)</span>
+          <input
+            id="funcion-maps"
+            className="field__input"
+            type="url"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            value={values.mapsUrl}
+            onChange={(e) => set({ mapsUrl: e.target.value })}
+            placeholder="https://maps.app.goo.gl/…"
+          />
+          <span className="rs" style={{ whiteSpace: 'normal' }}>
+            En Google Maps: buscá el teatro, tocá Compartir y pegá el link acá. Va al mail y al WhatsApp como "Cómo llegar".
+          </span>
         </label>
         <label className="field">
           <span className="lbl">Fecha y hora</span>
@@ -529,6 +569,7 @@ function FuncionModal({
         rows={[
           ['Capacidad', `${fn.capacity} lugares`],
           ['Precio', formatMoney(fn.price_cents)],
+          ['Dirección', fn.address ?? 'Sin dirección: cargala en Editar'],
           ...(ventas.data
             ? ([['Cortesías', `${ventas.data.summary.comp_tickets} usadas`]] as Array<[string, string]>)
             : []),

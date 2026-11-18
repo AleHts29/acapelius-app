@@ -199,20 +199,55 @@ export function funcionTerminada(startsAt: string): boolean {
   return new Date(startsAt).getTime() < Date.now() - 3 * 60 * 60 * 1000
 }
 
+/** Lo que el mensaje de WhatsApp necesita saber de la función. */
+export interface FuncionMensaje {
+  venue: string
+  starts_at: string
+  address?: string | null
+  maps_url?: string | null
+}
+
 /**
- * El mensaje de WhatsApp con las entradas: quién, qué función, cuándo y dónde,
- * y el link. "Hola Judy! Acá están tus entradas para Test 01, el sábado 7 de
- * noviembre a las 19:00 en ABM: https://…"
+ * El mensaje de WhatsApp con las entradas. WhatsApp no deja ponerle nombre a
+ * un link, así que cada link va en su renglón con una etiqueta en negrita
+ * adelante (*Cómo llegar:*, *Tus entradas:*). `que` es lo que va en negrita
+ * en "tus entradas para *…*": el nombre del grupo.
+ *
+ *   Hola Ezequiel!
+ *
+ *   🎫 Acá están tus 2 entradas para *Acapelius*
+ *
+ *   📅 Viernes 11 de diciembre a las 20:00 en el Salón del Teatro del Globo
+ *
+ *   📍 Marcelo T. de Alvear 1155, CABA
+ *   🗺️ *Cómo llegar:* https://maps.app.goo.gl/…
+ *
+ *   🎟️ Para ingresar presentá el QR en la entrada al salón
+ *   👉 *Tus entradas:* https://…/k/K7QX9F3A
  */
 export function mensajeEntradas(
   comprador: string,
   url: string,
-  fn?: { name: string | null; venue: string; starts_at: string },
+  fn?: FuncionMensaje,
+  opts: { que?: string; cantidad?: number; cortesia?: boolean } = {},
 ): string {
   const nombre = comprador.trim().split(/\s+/)[0] ?? ''
   const saludo = nombre ? `Hola ${nombre}!` : 'Hola!'
-  if (!fn) return `${saludo} Acá están tus entradas: ${url}`
-  const que = fn.name ? ` para ${fn.name}` : ''
-  const cuando = `el ${weekdayLong(fn.starts_at).toLowerCase()} ${dayAndMonth(fn.starts_at)} a las ${functionTime(fn.starts_at)}`
-  return `${saludo} Acá están tus entradas${que}, ${cuando} en ${fn.venue}: ${url}`
+  const cuantas =
+    opts.cantidad && opts.cantidad > 1 ? `tus ${opts.cantidad} entradas` : opts.cantidad === 1 ? 'tu entrada' : 'tus entradas'
+  const cortesia = opts.cortesia ? ' de cortesía' : ''
+  const verbo = opts.cantidad === 1 ? 'Acá está' : 'Acá están'
+  const para = opts.que ? ` para *${opts.que}*` : ''
+
+  const lineas = [saludo, '', `🎫 ${verbo} ${cuantas}${cortesia}${para}`]
+  if (fn) {
+    lineas.push('', `📅 ${weekdayLong(fn.starts_at)} ${dayAndMonth(fn.starts_at)} a las ${functionTime(fn.starts_at)} en ${fn.venue}`)
+    const donde = [
+      fn.address ? `📍 ${fn.address}` : null,
+      fn.maps_url ? `🗺️ *Cómo llegar:* ${fn.maps_url}` : null,
+    ].filter((l): l is string => l !== null)
+    if (donde.length > 0) lineas.push('', ...donde)
+  }
+  lineas.push('', '🎟️ Para ingresar presentá el QR en la entrada al salón', `👉 *Tus entradas:* ${url}`)
+  return lineas.join('\n')
 }

@@ -272,6 +272,8 @@ func (s *Server) sendTicketEmailCambio(ctx context.Context, sale sqlcgen.Sale, f
 		SellerName:       sellerName,
 		BuyerPhone:       phone,
 		PreviousStartsAt: previous,
+		Address:          deref(function.Address),
+		MapsURL:          deref(function.MapsUrl),
 		BuyerName:        sale.BuyerName,
 		BuyerEmail:       *sale.BuyerEmail,
 		FunctionName:     functionName,
@@ -1109,4 +1111,11 @@ func (s *Server) handleUpdateSaleDetails(w http.ResponseWriter, r *http.Request)
 		status = s.sendTicketEmailCambio(ctx, updated, function, tickets, previous)
 	}
 	httpx.JSON(w, http.StatusOK, updateSaleDetailsResponse{Sale: updated, EmailStatus: status, ChangedAt: changedAt})
+}
+
+func deref(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
 }

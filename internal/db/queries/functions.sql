@@ -5,10 +5,12 @@
 -- name: CreateFunction :one
 -- Solo si la temporada es de la organizacion; si no, no inserta y devuelve
 -- ErrNoRows.
-INSERT INTO functions (season_id, name, venue, starts_at, capacity, price_cents)
+INSERT INTO functions (season_id, name, venue, address, maps_url, starts_at, capacity, price_cents)
 SELECT s.id,
   sqlc.narg(name),
   sqlc.arg(venue)::text,
+  sqlc.narg(address),
+  sqlc.narg(maps_url),
   sqlc.arg(starts_at)::timestamptz,
   sqlc.arg(capacity)::integer,
   sqlc.arg(price_cents)::bigint
@@ -58,6 +60,8 @@ WHERE f.id = sqlc.arg(id)::bigint
 UPDATE functions f
 SET name        = sqlc.narg(name),
     venue       = sqlc.arg(venue)::text,
+    address     = sqlc.narg(address),
+    maps_url    = sqlc.narg(maps_url),
     starts_at   = sqlc.arg(starts_at)::timestamptz,
     capacity    = sqlc.arg(capacity)::integer,
     price_cents = sqlc.arg(price_cents)::bigint

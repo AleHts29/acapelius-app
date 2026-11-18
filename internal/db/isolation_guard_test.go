@@ -20,6 +20,7 @@ var sinOrganizacion = map[string]string{
 	"GetPublicSale":         "pagina publica /e/{code}",
 	"GetPublicTicket":       "pagina publica /t/{code}",
 	"GetPublicTicketByCode": "QR publico /t/{code}.png",
+	"GetSaleCodeByShort":    "link corto publico /k/{short}",
 	// Antes de la sesion, o para armarla.
 	"ListUsersWithMembershipByEmail": "login: el email es unico por organizacion, se prueban todas",
 	"GetUserWithMembership":          "carga de la sesion: la organizacion sale de la fila",

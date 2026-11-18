@@ -20,6 +20,8 @@ type createFunctionRequest struct {
 	SeasonID   int64     `json:"season_id"`
 	Name       string    `json:"name"`
 	Venue      string    `json:"venue"`
+	Address    string    `json:"address"`
+	MapsURL    string    `json:"maps_url"`
 	StartsAt   time.Time `json:"starts_at"` // RFC 3339
 	Capacity   int32     `json:"capacity"`
 	PriceCents int64     `json:"price_cents"`
@@ -44,6 +46,11 @@ func (s *Server) handleCreateFunction(w http.ResponseWriter, r *http.Request) {
 		mapDomainError(w, err)
 		return
 	}
+	mapsURL, err := domain.NormalizeMapsURL(req.MapsURL)
+	if err != nil {
+		mapDomainError(w, err)
+		return
+	}
 
 	// Se chequea que la temporada exista para responder un 404 claro en vez
 	// de dejar que reviente la foreign key.
@@ -61,6 +68,8 @@ func (s *Server) handleCreateFunction(w http.ResponseWriter, r *http.Request) {
 		SeasonID:       req.SeasonID,
 		Name:           domain.NormalizeFunctionName(req.Name),
 		Venue:          req.Venue,
+		Address:        domain.NormalizeAddress(req.Address),
+		MapsUrl:        mapsURL,
 		StartsAt:       req.StartsAt,
 		Capacity:       req.Capacity,
 		PriceCents:     req.PriceCents,
@@ -99,6 +108,8 @@ func (s *Server) handleListFunctions(w http.ResponseWriter, r *http.Request) {
 type updateFunctionRequest struct {
 	Name       *string    `json:"name"`
 	Venue      *string    `json:"venue"`
+	Address    *string    `json:"address"`
+	MapsURL    *string    `json:"maps_url"`
 	StartsAt   *time.Time `json:"starts_at"`
 	Capacity   *int32     `json:"capacity"`
 	PriceCents *int64     `json:"price_cents"`
@@ -147,6 +158,17 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 	if req.Venue != nil {
 		venue = strings.TrimSpace(*req.Venue)
 	}
+	address := current.Address
+	if req.Address != nil {
+		address = domain.NormalizeAddress(*req.Address)
+	}
+	mapsURL := current.MapsUrl
+	if req.MapsURL != nil {
+		if mapsURL, err = domain.NormalizeMapsURL(*req.MapsURL); err != nil {
+			mapDomainError(w, err)
+			return
+		}
+	}
 	startsAt := current.StartsAt
 	if req.StartsAt != nil {
 		startsAt = *req.StartsAt
@@ -194,6 +216,8 @@ func (s *Server) handleUpdateFunction(w http.ResponseWriter, r *http.Request) {
 		OrganizationID: s.org(r.Context()),
 		Name:           name,
 		Venue:          venue,
+		Address:        address,
+		MapsUrl:        mapsURL,
 		StartsAt:       startsAt,
 		Capacity:       capacity,
 		PriceCents:     priceCents,

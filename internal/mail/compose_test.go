@@ -161,7 +161,7 @@ func TestComposeDetalleDeLaCompra(t *testing.T) {
 		t.Fatalf("ComposeTicketEmail: %v", err)
 	}
 	for _, body := range []string{msg.HTML, msg.Text} {
-		for _, want := range []string{"Detalle de tu compra", "QX9F3", "3 × $12.000", "$36.000", "efectivo", "Falta pagar", "$24.000", "Eli", "11 5555-1234"} {
+		for _, want := range []string{"Detalle de tu compra", "AK7QX9F3", "3 × $12.000", "$36.000", "efectivo", "Falta pagar", "$24.000", "Eli", "11 5555-1234"} {
 			if !strings.Contains(body, want) {
 				t.Fatalf("falta %q en el detalle:\n%s", want, body)
 			}
@@ -210,5 +210,34 @@ func TestComposeCambioDeFuncion(t *testing.T) {
 				t.Fatalf("falta %q:\n%s", want, body)
 			}
 		}
+	}
+}
+
+func TestComposeUbicacion(t *testing.T) {
+	t.Parallel()
+
+	data := sampleData()
+	data.Address = "Marcelo T. de Alvear 1155, CABA"
+	data.MapsURL = "https://maps.app.goo.gl/2hCqy1V3H1bd9j8r8"
+	msg, err := mail.ComposeTicketEmail(data, fakePNG)
+	if err != nil {
+		t.Fatalf("ComposeTicketEmail: %v", err)
+	}
+	for _, body := range []string{msg.HTML, msg.Text} {
+		for _, want := range []string{"Marcelo T. de Alvear 1155, CABA", "https://maps.app.goo.gl/2hCqy1V3H1bd9j8r8"} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("falta %q:\n%s", want, body)
+			}
+		}
+	}
+	if !strings.Contains(msg.HTML, "Cómo llegar") {
+		t.Fatal("el HTML tendria que tener el boton Como llegar")
+	}
+
+	// Sin link de Maps no hay boton.
+	data.MapsURL = ""
+	msg, _ = mail.ComposeTicketEmail(data, fakePNG)
+	if strings.Contains(msg.HTML, "Cómo llegar") || strings.Contains(msg.HTML, "Google Maps") {
+		t.Fatal("sin link no se muestra Como llegar")
 	}
 }

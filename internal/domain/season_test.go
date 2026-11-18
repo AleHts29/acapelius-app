@@ -66,3 +66,20 @@ func TestNormalizeFunctionName(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizeMapsURL(t *testing.T) {
+	t.Parallel()
+
+	got, err := domain.NormalizeMapsURL("  https://maps.app.goo.gl/2hCqy1V3H1bd9j8r8?g_st=ic ")
+	if err != nil || got == nil || *got != "https://maps.app.goo.gl/2hCqy1V3H1bd9j8r8" {
+		t.Fatalf("tendria que sacar el g_st: %v %v", got, err)
+	}
+	if got, err := domain.NormalizeMapsURL(""); got != nil || err != nil {
+		t.Fatalf("vacio es opcional: %v %v", got, err)
+	}
+	for _, malo := range []string{"maps.app.goo.gl/x", "javascript:alert(1)", "Marcelo T de Alvear 1155"} {
+		if _, err := domain.NormalizeMapsURL(malo); err == nil {
+			t.Fatalf("%q no tendria que pasar", malo)
+		}
+	}
+}

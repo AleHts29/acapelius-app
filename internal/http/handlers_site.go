@@ -1,12 +1,16 @@
 package httpapi
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/ale-hts/acapelius/web"
 )
@@ -39,6 +43,7 @@ func (s *Server) mountSite(r chi.Router) {
 	index := s.web.Index()
 	r.Get("/e/*", index.ServeHTTP)
 	r.Get("/t/*", index.ServeHTTP)
+	r.Get("/k/{short}", s.handleShortLink)
 
 	r.NotFound(s.handleNotFound)
 }
@@ -91,4 +96,23 @@ func (s *Server) handleSitemap(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "  <url><loc>%s%s</loc></url>\n", s.cfg.BaseURL, p)
 	}
 	fmt.Fprint(w, "</urlset>\n")
+}
+
+// handleShortLink: /k/{short} lleva a la pagina de las entradas. Es el link
+// que va por WhatsApp, donde no se le puede poner nombre a un link y uno
+// largo se ve feo. Si no existe, va igual a /e/: esa pagina ya sabe decir
+// "esta entrada no existe" con la cara de la app.
+func (s *Server) handleShortLink(w http.ResponseWriter, r *http.Request) {
+	short := chi.URLParam(r, "short")
+	destino := "/e/" + url.PathEscape(short)
+	if len(short) == 8 {
+		code, err := s.queries.GetSaleCodeByShort(r.Context(), short)
+		switch {
+		case err == nil:
+			destino = "/e/" + code
+		case !errors.Is(err, pgx.ErrNoRows):
+			slog.ErrorContext(r.Context(), "no se pudo resolver el link corto", "error", err)
+		}
+	}
+	http.Redirect(w, r, destino, http.StatusFound)
 }

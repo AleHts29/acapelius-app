@@ -394,6 +394,8 @@ SELECT
   f.id,
   f.name,
   f.venue,
+  f.address,
+  f.maps_url,
   f.starts_at,
   f.capacity,
   f.price_cents,
@@ -428,6 +430,8 @@ type FunctionsSummaryRow struct {
 	ID             int64     `json:"id"`
 	Name           *string   `json:"name"`
 	Venue          string    `json:"venue"`
+	Address        *string   `json:"address"`
+	MapsUrl        *string   `json:"maps_url"`
 	StartsAt       time.Time `json:"starts_at"`
 	Capacity       int32     `json:"capacity"`
 	PriceCents     int64     `json:"price_cents"`
@@ -453,6 +457,8 @@ func (q *Queries) FunctionsSummary(ctx context.Context, arg FunctionsSummaryPara
 			&i.ID,
 			&i.Name,
 			&i.Venue,
+			&i.Address,
+			&i.MapsUrl,
 			&i.StartsAt,
 			&i.Capacity,
 			&i.PriceCents,

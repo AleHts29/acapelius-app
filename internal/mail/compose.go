@@ -38,18 +38,24 @@ type TicketEmailData struct {
 	SellerName    string
 	BuyerPhone    string
 
+	// Donde queda el teatro (opcionales): la direccion y el link a Google
+	// Maps para el "Como llegar".
+	Address string
+	MapsURL string
+
 	// PreviousStartsAt, si viene, es que direccion paso la venta a otra
 	// funcion: el mail arranca avisando el cambio. Los QR son los mismos.
 	PreviousStartsAt *time.Time
 }
 
-// ShortSaleCode es la referencia corta de la compra que ve el comprador: el
-// final del codigo, que es la parte aleatoria del ULID.
+// ShortSaleCode es la referencia corta de la compra que ve el comprador: los
+// ultimos 8 caracteres del codigo (la parte aleatoria del ULID). Es la misma
+// que usa el link corto /k/{short}.
 func ShortSaleCode(code string) string {
-	if len(code) <= 6 {
+	if len(code) <= 8 {
 		return strings.ToUpper(code)
 	}
-	return strings.ToUpper(code[len(code)-6:])
+	return strings.ToUpper(code[len(code)-8:])
 }
 
 func metodoDePago(m string) string {
@@ -117,6 +123,12 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 		fmt.Fprintf(&textB, "Aca van tus %d %s para %s.\n", data.Quantity, plural, eventName)
 	}
 	fmt.Fprintf(&textB, "\nCuando:  %s\nDonde:   %s\n", formatStartsAt(data.StartsAt), data.Venue)
+	if data.Address != "" {
+		fmt.Fprintf(&textB, "         %s\n", data.Address)
+	}
+	if data.MapsURL != "" {
+		fmt.Fprintf(&textB, "Como llegar: %s\n", data.MapsURL)
+	}
 	fmt.Fprintf(&textB, "\nEntrada general, sin numerar. Un QR por persona en la puerta.\n")
 	fmt.Fprintf(&textB, "\nDetalle de tu compra\n")
 	for _, f := range detalleCompra(data, eventName) {
@@ -151,7 +163,20 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 			brandBordo, esc(formatStartsAt(*data.PreviousStartsAt)), esc(formatStartsAt(data.StartsAt)))
 	}
 	fmt.Fprintf(&b, `<h1 style="margin:0 0 4px;font-size:22px">%s</h1>`, esc(eventName))
-	fmt.Fprintf(&b, `<p style="margin:0 0 18px;color:#666">%s · %s</p>`, esc(formatStartsAt(data.StartsAt)), esc(data.Venue))
+	fmt.Fprintf(&b, `<p style="margin:0 0 12px;color:#666">%s · %s</p>`, esc(formatStartsAt(data.StartsAt)), esc(data.Venue))
+
+	// Donde: el lugar, la direccion y el boton "Como llegar" si hay link.
+	fmt.Fprintf(&b, `<table style="width:100%%;border-collapse:collapse;margin:0 0 18px;background:%s;border-radius:12px"><tr>`, brandCream)
+	fmt.Fprintf(&b, `<td style="padding:12px 14px;font-size:14px;line-height:1.4"><span style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:%s">Dónde</span><br>%s`, brandBordo, esc(data.Venue))
+	if data.Address != "" {
+		fmt.Fprintf(&b, `<br><span style="color:#666">%s</span>`, esc(data.Address))
+	}
+	fmt.Fprintf(&b, `</td>`)
+	if data.MapsURL != "" {
+		fmt.Fprintf(&b, `<td align="right" style="padding:12px 14px;white-space:nowrap"><a href="%s" style="display:inline-block;border:2px solid %s;color:%s;text-decoration:none;font-weight:700;font-size:13px;padding:8px 12px;border-radius:10px">Cómo llegar →</a></td>`,
+			esc(data.MapsURL), brandBordo, brandBordo)
+	}
+	fmt.Fprintf(&b, `</tr></table>`)
 
 	fmt.Fprintf(&b, `<p style="margin:0 0 6px">Hola %s:</p>`, esc(data.BuyerName))
 	if data.IsComp {
@@ -245,7 +270,15 @@ func detalleCompra(data TicketEmailData, eventName string) []filaDetalle {
 	}
 	cuando := formatStartsAt(data.StartsAt)
 	add("Función", eventName+", "+cuando, esc(eventName)+"<br>"+gris(cuando), false)
-	add("Lugar", data.Venue, esc(data.Venue), false)
+	lugar, lugarHTML := data.Venue, esc(data.Venue)
+	if data.Address != "" {
+		lugar += ", " + data.Address
+		lugarHTML += "<br>" + gris(data.Address)
+	}
+	if data.MapsURL != "" {
+		lugarHTML += fmt.Sprintf(`<br><a href="%s" style="color:%s;font-size:12px">Ver en Google Maps →</a>`, esc(data.MapsURL), brandBordo)
+	}
+	add("Lugar", lugar, lugarHTML, false)
 
 	n := len(data.TicketCodes)
 	if data.IsComp {

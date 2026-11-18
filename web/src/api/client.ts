@@ -181,6 +181,8 @@ export interface ShowFunction {
   season_id: number
   name: string | null
   venue: string
+  address: string | null
+  maps_url: string | null
   starts_at: string
   capacity: number
   price_cents: number
@@ -201,6 +203,9 @@ export interface FunctionInput {
   season_id: number
   name: string
   venue: string
+  /** Opcionales: van al mail y al WhatsApp. */
+  address: string
+  maps_url: string
   starts_at: string
   capacity: number
   price_cents: number
@@ -272,6 +277,8 @@ export interface SaleListItem {
   function_venue: string
   function_starts_at: string
   function_name: string | null
+  function_address: string | null
+  function_maps_url: string | null
   seller_id: number
   seller_name: string
   last_email_at: string | null
@@ -522,6 +529,9 @@ export interface FunctionSummary {
   id: number
   name: string | null
   venue: string
+  /** Opcionales: la lista de Dirección no los trae. */
+  address?: string | null
+  maps_url?: string | null
   starts_at: string
   capacity: number
   price_cents: number
@@ -989,6 +999,12 @@ export function activeSeason(seasons: Season[] | undefined): Season | undefined 
 /** Link publico de una venta, para compartir por WhatsApp. */
 export function publicSaleURL(code: string): string {
   return `${window.location.origin}/e/${code}`
+}
+
+/** El link corto de las entradas (/k/…): es el que va por WhatsApp, donde no
+ *  se le puede poner nombre a un link. Son los últimos 8 del código. */
+export function shortSaleURL(code: string): string {
+  return `${window.location.origin}/k/${code.slice(-8)}`
 }
 
 /** Link publico de UNA entrada, para reenviarle a cada persona la suya. */

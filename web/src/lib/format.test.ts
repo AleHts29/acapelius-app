@@ -153,9 +153,33 @@ describe('ojito de la plata', () => {
 })
 
 describe('mensajeEntradas', () => {
-  it('dice la función, el día, la hora y el lugar', () => {
-    expect(
-      mensajeEntradas('Judy Rojas', 'https://x/e/1', { name: 'Test 01', venue: 'ABM', starts_at: '2026-11-07T19:00:00-03:00' }),
-    ).toBe('Hola Judy! Acá están tus entradas para Test 01, el sábado 7 de noviembre a las 19:00 en ABM: https://x/e/1')
+  const fn = {
+    venue: 'Salón de conferencias del Teatro del Globo',
+    starts_at: '2026-12-11T20:00:00-03:00',
+    address: 'Marcelo T. de Alvear 1155, CABA',
+    maps_url: 'https://maps.app.goo.gl/2hCqy1V3H1bd9j8r8',
+  }
+  it('arma la plantilla con cada link en su renglón y con etiqueta', () => {
+    expect(mensajeEntradas('Ezequiel Rodríguez', 'https://x/k/K7QX9F3A', fn, { que: 'Acapelius', cantidad: 2 })).toBe(
+      [
+        'Hola Ezequiel!',
+        '',
+        '🎫 Acá están tus 2 entradas para *Acapelius*',
+        '',
+        '📅 Viernes 11 de diciembre a las 20:00 en Salón de conferencias del Teatro del Globo',
+        '',
+        '📍 Marcelo T. de Alvear 1155, CABA',
+        '🗺️ *Cómo llegar:* https://maps.app.goo.gl/2hCqy1V3H1bd9j8r8',
+        '',
+        '🎟️ Para ingresar presentá el QR en la entrada al salón',
+        '👉 *Tus entradas:* https://x/k/K7QX9F3A',
+      ].join('\n'),
+    )
+  })
+  it('sin dirección ni Maps, esas líneas no van; una sola entrada va en singular', () => {
+    const msg = mensajeEntradas('Ana', 'https://x/k/1', { venue: 'ABM', starts_at: fn.starts_at }, { cantidad: 1, cortesia: true })
+    expect(msg).toContain('🎫 Acá está tu entrada de cortesía')
+    expect(msg).not.toContain('📍')
+    expect(msg).not.toContain('Cómo llegar')
   })
 })

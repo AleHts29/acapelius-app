@@ -102,6 +102,8 @@ SELECT
   f.id,
   f.name,
   f.venue,
+  f.address,
+  f.maps_url,
   f.starts_at,
   f.capacity,
   f.price_cents,
