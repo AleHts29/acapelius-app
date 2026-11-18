@@ -143,3 +143,72 @@ func TestComposeInviteEmail(t *testing.T) {
 		t.Fatalf("el reseteo explica que la clave es nueva:\n%s", reset.Text)
 	}
 }
+
+func TestComposeDetalleDeLaCompra(t *testing.T) {
+	t.Parallel()
+
+	data := sampleData()
+	data.SaleCode = "01JD7Z8Q4X5M2PAK7QX9F3"
+	data.PriceCents = 1200000
+	data.AmountCents = 3600000
+	data.PaidCents = 1200000
+	data.PaymentMethod = "cash"
+	data.SellerName = "Eli"
+	data.BuyerPhone = "11 5555-1234"
+
+	msg, err := mail.ComposeTicketEmail(data, fakePNG)
+	if err != nil {
+		t.Fatalf("ComposeTicketEmail: %v", err)
+	}
+	for _, body := range []string{msg.HTML, msg.Text} {
+		for _, want := range []string{"Detalle de tu compra", "QX9F3", "3 × $12.000", "$36.000", "efectivo", "Falta pagar", "$24.000", "Eli", "11 5555-1234"} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("falta %q en el detalle:\n%s", want, body)
+			}
+		}
+	}
+	if strings.Contains(msg.Subject, "Cambio") {
+		t.Fatalf("sin cambio de funcion el asunto no habla de cambio: %q", msg.Subject)
+	}
+}
+
+func TestComposeCortesiaSinMontos(t *testing.T) {
+	t.Parallel()
+
+	data := sampleData()
+	data.IsComp = true
+	data.PriceCents = 1200000
+	msg, err := mail.ComposeTicketEmail(data, fakePNG)
+	if err != nil {
+		t.Fatalf("ComposeTicketEmail: %v", err)
+	}
+	for _, body := range []string{msg.HTML, msg.Text} {
+		if strings.Contains(body, "$") || strings.Contains(body, "Falta pagar") {
+			t.Fatalf("una cortesia no muestra montos:\n%s", body)
+		}
+	}
+}
+
+func TestComposeCambioDeFuncion(t *testing.T) {
+	t.Parallel()
+
+	data := sampleData()
+	antes := data.StartsAt
+	data.StartsAt = antes.AddDate(0, 0, 7)
+	data.PreviousStartsAt = &antes
+
+	msg, err := mail.ComposeTicketEmail(data, fakePNG)
+	if err != nil {
+		t.Fatalf("ComposeTicketEmail: %v", err)
+	}
+	if !strings.HasPrefix(msg.Subject, "Cambio de fecha: tus 3 entradas") {
+		t.Fatalf("asunto: %q", msg.Subject)
+	}
+	for _, body := range []string{msg.HTML, msg.Text} {
+		for _, want := range []string{"Cambiamos la fecha", "sabado 5 de diciembre", "sabado 12 de diciembre", "siguen siendo los mismos"} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("falta %q:\n%s", want, body)
+			}
+		}
+	}
+}

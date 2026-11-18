@@ -112,6 +112,23 @@ WHERE f.id = s.function_id
   AND se.organization_id = sqlc.arg(organization_id)::bigint
 RETURNING s.*;
 
+-- name: UpdateSaleDetails :one
+-- Correccion de datos que hace direccion: a nombre de quien esta, su mail y
+-- su telefono, y a que funcion va. El monto queda como se vendio. El handler
+-- ya resolvio la venta y la funcion nueva con consultas acotadas.
+UPDATE sales s
+SET buyer_name  = sqlc.arg(buyer_name)::text,
+    buyer_email = sqlc.narg(buyer_email),
+    buyer_phone = sqlc.narg(buyer_phone),
+    function_id = sqlc.arg(function_id)::bigint,
+    over_capacity = sqlc.arg(over_capacity)::boolean
+FROM functions f
+JOIN seasons se ON se.id = f.season_id
+WHERE f.id = s.function_id
+  AND s.id = sqlc.arg(id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
+RETURNING s.*;
+
 -- name: VoidSale :one
 UPDATE sales s SET voided_at = now()
 FROM functions f

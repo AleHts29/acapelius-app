@@ -15,7 +15,7 @@ import (
 const listSalesPage = `-- name: ListSalesPage :many
 
 SELECT
-  s.id, s.code, s.buyer_name, s.buyer_email, s.quantity, s.amount_cents,
+  s.id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents,
   s.payment_status, s.payment_method, s.paid_cents, s.is_comp, s.over_capacity, s.voided_at, s.created_at,
   s.function_id, s.seller_id,
   f.venue AS function_venue,
@@ -96,6 +96,7 @@ type ListSalesPageRow struct {
 	Code             string     `json:"code"`
 	BuyerName        string     `json:"buyer_name"`
 	BuyerEmail       *string    `json:"buyer_email"`
+	BuyerPhone       *string    `json:"buyer_phone"`
 	Quantity         int32      `json:"quantity"`
 	AmountCents      int64      `json:"amount_cents"`
 	PaymentStatus    string     `json:"payment_status"`
@@ -160,6 +161,7 @@ func (q *Queries) ListSalesPage(ctx context.Context, arg ListSalesPageParams) ([
 			&i.Code,
 			&i.BuyerName,
 			&i.BuyerEmail,
+			&i.BuyerPhone,
 			&i.Quantity,
 			&i.AmountCents,
 			&i.PaymentStatus,

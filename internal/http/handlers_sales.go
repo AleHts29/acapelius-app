@@ -231,6 +231,12 @@ func (s *Server) handleCreateSale(w http.ResponseWriter, r *http.Request) {
 // sendTicketEmail compone y manda el email de la entrada, y registra el
 // resultado en email_sends. Nunca devuelve error: reporta el estado.
 func (s *Server) sendTicketEmail(ctx context.Context, sale sqlcgen.Sale, function sqlcgen.Function, tickets []sqlcgen.Ticket) string {
+	return s.sendTicketEmailCambio(ctx, sale, function, tickets, nil)
+}
+
+// sendTicketEmailCambio es sendTicketEmail con el aviso de cambio de funcion:
+// previous es la fecha que tenia antes. Los QR no cambian.
+func (s *Server) sendTicketEmailCambio(ctx context.Context, sale sqlcgen.Sale, function sqlcgen.Function, tickets []sqlcgen.Ticket, previous *time.Time) string {
 	codes := make([]string, 0, len(tickets))
 	for _, t := range tickets {
 		if t.Status != string(domain.TicketVoid) {
@@ -243,17 +249,39 @@ func (s *Server) sendTicketEmail(ctx context.Context, sale sqlcgen.Sale, functio
 		functionName = *function.Name
 	}
 
+	// El nombre de quien vendio va en el detalle. Si no se encuentra, el mail
+	// sale igual sin esa fila.
+	sellerName := ""
+	if seller, err := s.queries.GetUserByID(ctx, sqlcgen.GetUserByIDParams{ID: sale.SellerID, OrganizationID: s.org(ctx)}); err == nil {
+		sellerName = seller.Name
+	}
+	method, phone := "", ""
+	if sale.PaymentMethod != nil {
+		method = *sale.PaymentMethod
+	}
+	if sale.BuyerPhone != nil {
+		phone = *sale.BuyerPhone
+	}
+
 	msg, err := mail.ComposeTicketEmail(mail.TicketEmailData{
-		BuyerName:    sale.BuyerName,
-		BuyerEmail:   *sale.BuyerEmail,
-		FunctionName: functionName,
-		Venue:        function.Venue,
-		StartsAt:     function.StartsAt,
-		Quantity:     len(codes),
-		IsComp:       sale.IsComp,
-		PublicURL:    s.publicSaleURL(sale.Code),
-		TicketCodes:  codes,
-		BaseURL:      s.cfg.BaseURL,
+		SaleCode:         sale.Code,
+		PriceCents:       function.PriceCents,
+		AmountCents:      sale.AmountCents,
+		PaidCents:        sale.PaidCents,
+		PaymentMethod:    method,
+		SellerName:       sellerName,
+		BuyerPhone:       phone,
+		PreviousStartsAt: previous,
+		BuyerName:        sale.BuyerName,
+		BuyerEmail:       *sale.BuyerEmail,
+		FunctionName:     functionName,
+		Venue:            function.Venue,
+		StartsAt:         function.StartsAt,
+		Quantity:         len(codes),
+		IsComp:           sale.IsComp,
+		PublicURL:        s.publicSaleURL(sale.Code),
+		TicketCodes:      codes,
+		BaseURL:          s.cfg.BaseURL,
 	}, s.signer.PNG)
 
 	status := emailStatusSent
@@ -908,4 +936,173 @@ func (s *Server) seasonDelListado(w http.ResponseWriter, r *http.Request) (*int6
 		return nil, true
 	}
 	return &season.ID, true
+}
+
+// ============================================================================
+// Corregir los datos de una venta (solo direccion)
+// ============================================================================
+
+type updateSaleDetailsRequest struct {
+	BuyerName  string `json:"buyer_name"`
+	BuyerEmail string `json:"buyer_email"`
+	BuyerPhone string `json:"buyer_phone"`
+	FunctionID int64  `json:"function_id"`
+	// OverCapacity: pasarla a una funcion que ya no tiene lugar, a sabiendas.
+	OverCapacity bool `json:"over_capacity"`
+}
+
+type updateSaleDetailsResponse struct {
+	Sale sqlcgen.Sale `json:"sale"`
+	// EmailStatus: si se mando el mail (cambio de funcion o de mail), como
+	// salio; "" si no hacia falta mandar nada.
+	EmailStatus string `json:"email_status"`
+}
+
+// handleUpdateSaleDetails: PATCH /api/sales/{id}/details — direccion corrige
+// a nombre de quien esta la venta (nombre, mail, telefono) o la pasa a otra
+// funcion. Las entradas y sus QR son los mismos: la puerta resuelve la
+// funcion a partir de la venta, asi que el QR pasa a valer para la funcion
+// nueva y deja de valer para la vieja. El monto queda como se vendio.
+//
+// Si cambia la funcion o el mail, le sale el mail de nuevo al comprador; con
+// cambio de funcion, avisando la fecha nueva.
+func (s *Server) handleUpdateSaleDetails(w http.ResponseWriter, r *http.Request) {
+	var req updateSaleDetailsRequest
+	if !httpx.DecodeJSON(w, r, &req) {
+		return
+	}
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrSaleNotFound)
+		return
+	}
+
+	req.BuyerName = strings.TrimSpace(req.BuyerName)
+	req.BuyerEmail = domain.NormalizeEmail(req.BuyerEmail)
+	if err := domain.ValidateNewSale(req.BuyerName, req.BuyerEmail, 1); err != nil {
+		if !mapDomainError(w, err) {
+			httpx.Internal(w, r, err)
+		}
+		return
+	}
+
+	ctx := r.Context()
+	org := s.org(ctx)
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	q := s.queries.WithTx(tx)
+
+	sale, err := q.GetSale(ctx, sqlcgen.GetSaleParams{ID: id, OrganizationID: org})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			mapDomainError(w, domain.ErrSaleNotFound)
+			return
+		}
+		httpx.Internal(w, r, err)
+		return
+	}
+	if sale.VoidedAt != nil {
+		mapDomainError(w, domain.ErrSaleVoided)
+		return
+	}
+	if req.FunctionID == 0 {
+		req.FunctionID = sale.FunctionID
+	}
+
+	oldFunction, err := q.GetFunction(ctx, sqlcgen.GetFunctionParams{ID: sale.FunctionID, OrganizationID: org})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	function := oldFunction
+	overCapacity := sale.OverCapacity
+	cambiaFuncion := req.FunctionID != sale.FunctionID
+
+	tickets, err := q.ListTicketsBySale(ctx, sale.ID)
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	if cambiaFuncion {
+		vivas := int32(0)
+		for _, t := range tickets {
+			switch domain.TicketStatus(t.Status) {
+			case domain.TicketCheckedIn:
+				httpx.Error(w, http.StatusConflict, httpx.CodeConflict,
+					"Esta venta ya tiene entradas que ingresaron: no se puede pasar a otra función.")
+				return
+			case domain.TicketIssued:
+				vivas++
+			}
+		}
+
+		// El lock serializa el chequeo de cupo con las ventas de esa funcion.
+		function, err = q.GetFunctionForUpdate(ctx, sqlcgen.GetFunctionForUpdateParams{ID: req.FunctionID, OrganizationID: org})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				mapDomainError(w, domain.ErrFunctionNotFound)
+				return
+			}
+			httpx.Internal(w, r, err)
+			return
+		}
+		if function.StartsAt.Before(time.Now().Add(-3 * time.Hour)) {
+			httpx.Error(w, http.StatusConflict, httpx.CodeConflict, "Esa función ya pasó: elegí una que todavía no se hizo.")
+			return
+		}
+
+		active, err := q.CountActiveTickets(ctx, sqlcgen.CountActiveTicketsParams{FunctionID: req.FunctionID, OrganizationID: org})
+		if err != nil {
+			httpx.Internal(w, r, err)
+			return
+		}
+		entra := domain.FitsCapacity(function.Capacity, active, vivas)
+		if !entra && !req.OverCapacity {
+			remaining := int64(function.Capacity) - active
+			if remaining < 0 {
+				remaining = 0
+			}
+			httpx.Error(w, http.StatusConflict, httpx.CodeNoCapacity,
+				fmt.Sprintf("En esa función no hay lugar: quedan %d entradas y esta venta tiene %d.", remaining, vivas))
+			return
+		}
+		overCapacity = !entra
+	}
+
+	updated, err := q.UpdateSaleDetails(ctx, sqlcgen.UpdateSaleDetailsParams{
+		BuyerName:      req.BuyerName,
+		BuyerEmail:     optionalText(req.BuyerEmail),
+		BuyerPhone:     optionalText(req.BuyerPhone),
+		FunctionID:     req.FunctionID,
+		OverCapacity:   overCapacity,
+		ID:             sale.ID,
+		OrganizationID: org,
+	})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+
+	// El mail va despues del commit, como al vender: si no sale, la
+	// correccion queda hecha y se puede reenviar.
+	cambiaMail := sale.BuyerEmail == nil || *sale.BuyerEmail != req.BuyerEmail
+	status := ""
+	if updated.BuyerEmail != nil && (cambiaFuncion || cambiaMail) {
+		var previous *time.Time
+		if cambiaFuncion {
+			antes := oldFunction.StartsAt
+			previous = &antes
+		}
+		status = s.sendTicketEmailCambio(ctx, updated, function, tickets, previous)
+	}
+	httpx.JSON(w, http.StatusOK, updateSaleDetailsResponse{Sale: updated, EmailStatus: status})
 }

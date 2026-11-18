@@ -2,10 +2,22 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError, api, publicSaleURL } from '../api/client'
+import { ApiError, api, publicSaleURL, telefonoWhatsApp, whatsAppURL } from '../api/client'
 import type { PaymentMethod, SaleListItem, SalePayments } from '../api/client'
-import { dayLabel, daysAgo, centavosAMonto, escribirMonto, formatMoney, pesosToCents } from '../lib/format'
+import {
+  dayLabel,
+  daysAgo,
+  centavosAMonto,
+  escribirMonto,
+  formatMoney,
+  functionDay,
+  functionTime,
+  mensajeEntradas,
+  pesosToCents,
+} from '../lib/format'
 import { useIsDesktop } from '../lib/viewport'
+import { useSeason } from '../season/SeasonProvider'
+import { Menu } from '../ui/Menu'
 import { Button, Seg } from '../ui/Button'
 import { DataList } from '../ui/DataList'
 import { Figure } from '../ui/Figure'
@@ -45,6 +57,7 @@ export function SaleSheet({
   const [parcialAbierto, setParcialAbierto] = useState(false)
   const [monto, setMonto] = useState('')
   const [metodo, setMetodo] = useState<PaymentMethod>('cash')
+  const [editando, setEditando] = useState(false)
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: salesQueryKey })
@@ -152,6 +165,18 @@ export function SaleSheet({
     onError: (err) => fail(err, 'No se pudo anular la venta.'),
   })
 
+  // El mismo mensaje que al vender, al número que quedó en la ficha. Sin
+  // teléfono (o uno que no sirve), WhatsApp pregunta a quién mandarlo.
+  const whatsapp = whatsAppURL(
+    mensajeEntradas(sale.buyer_name, publicSaleURL(sale.code), {
+      name: sale.function_name,
+      venue: sale.function_venue,
+      starts_at: sale.function_starts_at,
+    }),
+    sale.buyer_phone,
+  )
+  const conNumero = telefonoWhatsApp(sale.buyer_phone) !== ''
+
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(publicSaleURL(sale.code))
@@ -170,6 +195,7 @@ export function SaleSheet({
 
   const datos: Array<[string, ReactNode]> = [
     ['Mail', sale.buyer_email ?? 'Sin email'],
+    ['Teléfono', sale.buyer_phone ?? 'Sin teléfono'],
     ['Vendió', sale.seller_name],
     ['Función', `${dayLabel(sale.function_starts_at)} · ${sale.function_name ?? sale.function_venue}`],
     ...(sale.is_comp ? [] : ([['Total', formatMoney(sale.amount_cents)]] as Array<[string, ReactNode]>)),
@@ -254,7 +280,21 @@ export function SaleSheet({
         </section>
       )}
 
-      <DataList rows={datos} />
+      {editando ? (
+        <EditarVenta
+          sale={sale}
+          onCancel={() => setEditando(false)}
+          onSaved={(cambios, aviso) => {
+            setSale((prev) => ({ ...prev, ...cambios }))
+            setEditando(false)
+            setError(null)
+            setNotice(aviso)
+            refresh()
+          }}
+        />
+      ) : (
+        <DataList rows={datos} />
+      )}
 
       {cobrable && cobros.length > 0 && (
         <div>
@@ -286,7 +326,22 @@ export function SaleSheet({
         <div>
           <Label>Más</Label>
           <div className="mini" style={{ marginTop: 7 }}>
+            <Row
+              title="Mandar por WhatsApp"
+              sub={conNumero ? `Al ${sale.buyer_phone}` : 'Sin teléfono: WhatsApp te pregunta a quién'}
+              onClick={() => window.open(whatsapp, '_blank', 'noopener,noreferrer')}
+            />
             <Row title="Copiar link de la entrada" onClick={() => void copyLink()} />
+            {isAdmin && !editando && (
+              <Row
+                title="Editar datos"
+                sub="Nombre, mail, teléfono o función"
+                onClick={() => {
+                  setNotice(null)
+                  setEditando(true)
+                }}
+              />
+            )}
             {pago && <Row title="Volver a pendiente" onClick={ocupado ? undefined : () => setPayment.mutate({ paid: false })} />}
             {isAdmin && (sale.entered > 0 || sale.paid_cents > 0) && (
               <Row
@@ -335,5 +390,216 @@ export function SaleSheet({
     <Sheet open onClose={onClose} title={sale.buyer_name} sub={sub} status={<SaleStatus sale={sale} />} actions={acciones}>
       {cuerpo}
     </Sheet>
+  )
+}
+
+/** Lo que la ficha tiene que actualizar después de editar. */
+type CambiosVenta = Pick<
+  SaleListItem,
+  | 'buyer_name'
+  | 'buyer_email'
+  | 'buyer_phone'
+  | 'function_id'
+  | 'function_name'
+  | 'function_venue'
+  | 'function_starts_at'
+  | 'over_capacity'
+>
+
+/**
+ * Sólo dirección: corregir a nombre de quién está la venta o pasarla a otra
+ * función. Las entradas y sus QR siguen siendo los mismos; si cambia la
+ * función o el mail, al comprador le llega el mail de nuevo (con la fecha
+ * nueva avisada). Con entradas ya ingresadas, la función no se puede cambiar.
+ */
+function EditarVenta({
+  sale,
+  onCancel,
+  onSaved,
+}: {
+  sale: SaleListItem
+  onCancel: () => void
+  onSaved: (cambios: CambiosVenta, aviso: string) => void
+}) {
+  const { seasonId } = useSeason()
+  const [nombre, setNombre] = useState(sale.buyer_name)
+  const [mail, setMail] = useState(sale.buyer_email ?? '')
+  const [telefono, setTelefono] = useState(sale.buyer_phone ?? '')
+  const [functionId, setFunctionId] = useState(sale.function_id)
+  const [error, setError] = useState<string | null>(null)
+  const [sinLugar, setSinLugar] = useState(false)
+
+  const functions = useQuery({
+    queryKey: ['functions', seasonId],
+    queryFn: () => api.listFunctions(seasonId),
+    enabled: seasonId !== undefined,
+  })
+  // Sólo las que todavía no pasaron, más la actual (aunque haya pasado).
+  const limite = Date.now() - 3 * 60 * 60 * 1000
+  const opciones = (functions.data?.functions ?? []).filter(
+    (fn) => fn.id === sale.function_id || new Date(fn.starts_at).getTime() >= limite,
+  )
+  const elegida = opciones.find((fn) => fn.id === functionId)
+  const yaEntro = sale.entered > 0
+  const cambiaFuncion = functionId !== sale.function_id
+  const cambiaMail = mail.trim().toLowerCase() !== (sale.buyer_email ?? '').toLowerCase()
+
+  const guardar = useMutation({
+    meta: { exito: false },
+    mutationFn: (sobreCupo: boolean) =>
+      api.updateSaleDetails(sale.id, {
+        buyer_name: nombre.trim(),
+        buyer_email: mail.trim(),
+        buyer_phone: telefono.trim(),
+        function_id: functionId,
+        over_capacity: sobreCupo,
+      }),
+    onSuccess: ({ sale: s, email_status }) => {
+      const fn = elegida
+      const mailAviso =
+        email_status === 'sent'
+          ? cambiaFuncion
+            ? ' Le mandamos el mail con la fecha nueva: el QR es el mismo.'
+            : ' Le mandamos el QR al mail nuevo.'
+          : email_status === 'preview'
+            ? ' En la demo no se mandan mails.'
+            : email_status === 'failed'
+              ? ' El mail no salió: reenvialo con "Reenviar QR".'
+              : ''
+      onSaved(
+        {
+          buyer_name: s.buyer_name,
+          buyer_email: s.buyer_email,
+          buyer_phone: s.buyer_phone,
+          function_id: s.function_id,
+          function_name: fn?.name ?? sale.function_name,
+          function_venue: fn?.venue ?? sale.function_venue,
+          function_starts_at: fn?.starts_at ?? sale.function_starts_at,
+          over_capacity: s.over_capacity,
+        },
+        'Datos guardados.' + mailAviso,
+      )
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.code === 'no_capacity') setSinLugar(true)
+      setError(err instanceof ApiError ? err.message : 'No se pudieron guardar los datos.')
+    },
+  })
+
+  const campo = (label: string, input: ReactNode) => (
+    <label className="field" style={{ margin: 0 }}>
+      <span className="field__label">{label}</span>
+      {input}
+    </label>
+  )
+
+  return (
+    <form
+      className="mini"
+      style={{ padding: 'var(--s3)', display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}
+      onSubmit={(e) => {
+        e.preventDefault()
+        setError(null)
+        setSinLugar(false)
+        guardar.mutate(false)
+      }}
+    >
+      <Label>Editar datos</Label>
+      {error && (
+        <p className="st st--bad" role="alert" style={{ margin: 0, whiteSpace: 'normal' }}>
+          {error}
+        </p>
+      )}
+      {campo(
+        'A nombre de',
+        <input id="editar-nombre" className="field__input" value={nombre} onChange={(e) => setNombre(e.target.value)} required />,
+      )}
+      {campo(
+        'Mail',
+        <input
+          id="editar-mail"
+          className="field__input"
+          type="email"
+          value={mail}
+          onChange={(e) => setMail(e.target.value)}
+          autoCapitalize="none"
+          autoCorrect="off"
+          inputMode="email"
+          required
+        />,
+      )}
+      {campo(
+        'Teléfono',
+        <input
+          id="editar-telefono"
+          className="field__input"
+          type="tel"
+          value={telefono}
+          onChange={(e) => setTelefono(e.target.value)}
+          inputMode="tel"
+          placeholder="Opcional"
+        />,
+      )}
+      <div>
+        <span className="field__label">Función</span>
+        <div style={{ marginTop: 7 }}>
+          {yaEntro ? (
+            <span className="rs" style={{ whiteSpace: 'normal' }}>
+              {dayLabel(sale.function_starts_at)} · ya entró alguien con esta venta: la función no se puede cambiar.
+            </span>
+          ) : (
+            <Menu
+              trigger="field"
+              ariaLabel="Función"
+              label={
+                elegida
+                  ? `${functionDay(elegida.starts_at)} · ${functionTime(elegida.starts_at)}`
+                  : `${dayLabel(sale.function_starts_at)}`
+              }
+              value={String(functionId)}
+              groups={[
+                {
+                  options: opciones.map((fn) => {
+                    const libres = fn.capacity - fn.sold
+                    return {
+                      id: String(fn.id),
+                      label: fn.name ?? fn.venue,
+                      hint: `${functionDay(fn.starts_at)} · ${functionTime(fn.starts_at)}${
+                        fn.id === sale.function_id ? ' · la actual' : ` · ${Math.max(libres, 0)} libres`
+                      }`,
+                      onSelect: () => {
+                        setFunctionId(fn.id)
+                        setSinLugar(false)
+                      },
+                    }
+                  }),
+                },
+              ]}
+            />
+          )}
+        </div>
+      </div>
+      {(cambiaFuncion || cambiaMail) && (
+        <span className="rs" style={{ whiteSpace: 'normal' }}>
+          {cambiaFuncion
+            ? 'Al guardar le llega un mail avisando la fecha nueva. El QR es el mismo y deja de valer para la función anterior.'
+            : 'Al guardar le mandamos el QR al mail nuevo.'}
+        </span>
+      )}
+      <div style={{ display: 'flex', gap: 'var(--s1)', flexWrap: 'wrap' }}>
+        <Button type="button" onClick={onCancel}>
+          Cancelar
+        </Button>
+        {sinLugar ? (
+          <Button go type="button" disabled={guardar.isPending} onClick={() => guardar.mutate(true)}>
+            Pasarla igual, sobre cupo
+          </Button>
+        ) : (
+          <Button go type="submit" disabled={guardar.isPending}>
+            {guardar.isPending ? 'Guardando…' : 'Guardar'}
+          </Button>
+        )}
+      </div>
+    </form>
   )
 }

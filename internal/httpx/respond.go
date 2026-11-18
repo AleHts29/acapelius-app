@@ -29,6 +29,9 @@ const (
 	CodeAllocationBelowSold  = "allocation_below_sold"
 	CodeUnsupportedMediaType = "unsupported_media_type"
 	CodePayloadTooLarge      = "payload_too_large"
+	// CodeNoCapacity: la funcion no tiene lugar; direccion puede insistir
+	// sobre cupo.
+	CodeNoCapacity = "no_capacity"
 )
 
 // APIError es el cuerpo de toda respuesta de error de la API.

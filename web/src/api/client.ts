@@ -108,6 +108,7 @@ export type ApiErrorCode =
   | 'no_allocation'
   | 'allocation_exceeded'
   | 'allocation_below_sold'
+  | 'no_capacity'
   | 'network_error'
 
 export class ApiError extends Error {
@@ -241,11 +242,21 @@ export interface Ticket {
 }
 
 /** Fila del listado de ventas (C3), con funcion, corista y ultimo envio. */
+export interface SaleDetailsInput {
+  buyer_name: string
+  buyer_email: string
+  buyer_phone: string
+  function_id: number
+  /** Pasarla a una función sin lugar, a sabiendas. */
+  over_capacity?: boolean
+}
+
 export interface SaleListItem {
   id: number
   code: string
   buyer_name: string
   buyer_email: string | null
+  buyer_phone: string | null
   quantity: number
   amount_cents: number
   /** Lo ya cobrado. La diferencia con amount_cents es lo que se debe. */
@@ -691,6 +702,10 @@ export const api = {
   resendSaleEmail: (id: number) =>
     request<{ email_status: EmailStatus }>('POST', `/sales/${id}/resend-email`),
   voidSale: (id: number) => request<{ sale: Sale }>('POST', `/sales/${id}/void`),
+  /** Sólo dirección: corregir a nombre de quién está o pasarla a otra función.
+   *  `email_status` vacío = no hacía falta mandar el mail. */
+  updateSaleDetails: (id: number, data: SaleDetailsInput) =>
+    request<{ sale: Sale; email_status: EmailStatus | '' }>('PATCH', `/sales/${id}/details`, data),
 
   publicSale: (code: string) => request<PublicSale>('GET', `/public/sales/${code}`),
   publicTicket: (code: string) => request<PublicSingleTicket>('GET', `/public/tickets/${code}`),

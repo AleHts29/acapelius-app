@@ -754,6 +754,67 @@ func (q *Queries) RecordEmailSend(ctx context.Context, arg RecordEmailSendParams
 	return i, err
 }
 
+const updateSaleDetails = `-- name: UpdateSaleDetails :one
+UPDATE sales s
+SET buyer_name  = $1::text,
+    buyer_email = $2,
+    buyer_phone = $3,
+    function_id = $4::bigint,
+    over_capacity = $5::boolean
+FROM functions f
+JOIN seasons se ON se.id = f.season_id
+WHERE f.id = s.function_id
+  AND s.id = $6::bigint
+  AND se.organization_id = $7::bigint
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity
+`
+
+type UpdateSaleDetailsParams struct {
+	BuyerName      string  `json:"buyer_name"`
+	BuyerEmail     *string `json:"buyer_email"`
+	BuyerPhone     *string `json:"buyer_phone"`
+	FunctionID     int64   `json:"function_id"`
+	OverCapacity   bool    `json:"over_capacity"`
+	ID             int64   `json:"id"`
+	OrganizationID int64   `json:"organization_id"`
+}
+
+// Correccion de datos que hace direccion: a nombre de quien esta, su mail y
+// su telefono, y a que funcion va. El monto queda como se vendio. El handler
+// ya resolvio la venta y la funcion nueva con consultas acotadas.
+func (q *Queries) UpdateSaleDetails(ctx context.Context, arg UpdateSaleDetailsParams) (Sale, error) {
+	row := q.db.QueryRow(ctx, updateSaleDetails,
+		arg.BuyerName,
+		arg.BuyerEmail,
+		arg.BuyerPhone,
+		arg.FunctionID,
+		arg.OverCapacity,
+		arg.ID,
+		arg.OrganizationID,
+	)
+	var i Sale
+	err := row.Scan(
+		&i.ID,
+		&i.FunctionID,
+		&i.SellerID,
+		&i.Code,
+		&i.BuyerName,
+		&i.BuyerEmail,
+		&i.BuyerPhone,
+		&i.Quantity,
+		&i.AmountCents,
+		&i.PaymentStatus,
+		&i.PaymentMethod,
+		&i.IsComp,
+		&i.Notes,
+		&i.VoidedAt,
+		&i.CreatedAt,
+		&i.PaidCents,
+		&i.OverCapacity,
+	)
+	return i, err
+}
+
 const updateSalePayment = `-- name: UpdateSalePayment :one
 UPDATE sales s
 SET payment_status = $1::text,

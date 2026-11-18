@@ -27,6 +27,39 @@ type TicketEmailData struct {
 	PublicURL    string   // BASE_URL/e/{sale_code}
 	TicketCodes  []string // para los nombres de adjuntos y las imagenes
 	BaseURL      string
+
+	// Detalle de la compra: el comprador lo tiene a mano y, si algo esta mal
+	// cargado, sabe exactamente que pedir que corrijan.
+	SaleCode      string // el codigo publico; el mail muestra solo el final
+	PriceCents    int64  // precio de la funcion, para "2 × $12.000"
+	AmountCents   int64
+	PaidCents     int64
+	PaymentMethod string // cash | transfer | ""
+	SellerName    string
+	BuyerPhone    string
+
+	// PreviousStartsAt, si viene, es que direccion paso la venta a otra
+	// funcion: el mail arranca avisando el cambio. Los QR son los mismos.
+	PreviousStartsAt *time.Time
+}
+
+// ShortSaleCode es la referencia corta de la compra que ve el comprador: el
+// final del codigo, que es la parte aleatoria del ULID.
+func ShortSaleCode(code string) string {
+	if len(code) <= 6 {
+		return strings.ToUpper(code)
+	}
+	return strings.ToUpper(code[len(code)-6:])
+}
+
+func metodoDePago(m string) string {
+	switch m {
+	case "cash":
+		return "efectivo"
+	case "transfer":
+		return "transferencia"
+	}
+	return ""
 }
 
 var monthNames = [...]string{
@@ -65,10 +98,19 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 		subjectLead = fmt.Sprintf("Tus %d entradas", data.Quantity)
 	}
 	subject := fmt.Sprintf("%s para %s — %s", subjectLead, eventName, formatStartsAt(data.StartsAt))
+	if data.PreviousStartsAt != nil {
+		subject = "Cambio de fecha: " + strings.ToLower(subjectLead[:1]) + subjectLead[1:] +
+			fmt.Sprintf(" para %s — %s", eventName, formatStartsAt(data.StartsAt))
+	}
 
 	// --- Version texto plano -------------------------------------------------
 	var textB strings.Builder
 	fmt.Fprintf(&textB, "Hola %s:\n\n", data.BuyerName)
+	if data.PreviousStartsAt != nil {
+		fmt.Fprintf(&textB, "Cambiamos la fecha de tu entrada. Antes era el %s; ahora es el %s.\n",
+			formatStartsAt(*data.PreviousStartsAt), formatStartsAt(data.StartsAt))
+		fmt.Fprintf(&textB, "Tus QR siguen siendo los mismos: no hace falta que hagas nada.\n\n")
+	}
 	if data.IsComp {
 		fmt.Fprintf(&textB, "Tenes %d %s de cortesia para %s.\n", data.Quantity, plural, eventName)
 	} else {
@@ -76,6 +118,11 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 	}
 	fmt.Fprintf(&textB, "\nCuando:  %s\nDonde:   %s\n", formatStartsAt(data.StartsAt), data.Venue)
 	fmt.Fprintf(&textB, "\nEntrada general, sin numerar. Un QR por persona en la puerta.\n")
+	fmt.Fprintf(&textB, "\nDetalle de tu compra\n")
+	for _, f := range detalleCompra(data, eventName) {
+		fmt.Fprintf(&textB, "  %-14s %s\n", f.k+":", f.texto)
+	}
+	fmt.Fprintf(&textB, "Si algun dato esta mal, responde este mail o avisale a quien te la vendio.\n")
 	fmt.Fprintf(&textB, "\nTus entradas online:\n%s\n", data.PublicURL)
 	if len(data.TicketCodes) > 1 {
 		fmt.Fprintf(&textB, "\nPara reenviarle a cada persona la suya:\n")
@@ -98,6 +145,11 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 
 	// Cuerpo.
 	fmt.Fprintf(&b, `<div style="background:#ffffff;border-radius:0 0 16px 16px;padding:28px 24px;color:%s">`, brandInk)
+	if data.PreviousStartsAt != nil {
+		fmt.Fprintf(&b, `<div style="border:2px solid %s;background:#fff4ec;border-radius:12px;padding:12px 14px;margin:0 0 18px;font-size:14px;line-height:1.45">`, brandBordo)
+		fmt.Fprintf(&b, `<strong style="color:%s">Cambiamos la fecha de tu entrada.</strong><br>Antes era el %s. Ahora es el <strong>%s</strong>. Tus QR siguen siendo los mismos: no hace falta que hagas nada.</div>`,
+			brandBordo, esc(formatStartsAt(*data.PreviousStartsAt)), esc(formatStartsAt(data.StartsAt)))
+	}
 	fmt.Fprintf(&b, `<h1 style="margin:0 0 4px;font-size:22px">%s</h1>`, esc(eventName))
 	fmt.Fprintf(&b, `<p style="margin:0 0 18px;color:#666">%s · %s</p>`, esc(formatStartsAt(data.StartsAt)), esc(data.Venue))
 
@@ -119,6 +171,26 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 		}
 		fmt.Fprintf(&b, `</div>`)
 	}
+
+	// Detalle de la compra.
+	filas := detalleCompra(data, eventName)
+	fmt.Fprintf(&b, `<div style="margin:22px 0 6px;padding:16px 16px 6px;border:1px solid #eadfd3;border-radius:14px">`)
+	fmt.Fprintf(&b, `<p style="margin:0 0 6px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:%s">Detalle de tu compra</p>`, brandBordo)
+	fmt.Fprintf(&b, `<table style="width:100%%;border-collapse:collapse">`)
+	for i, f := range filas {
+		borde := "border-bottom:1px solid #eee;"
+		if i == len(filas)-1 {
+			borde = ""
+		}
+		peso := ""
+		if f.fuerte {
+			peso = "font-weight:700;"
+		}
+		fmt.Fprintf(&b, `<tr><td style="padding:7px 8px 7px 0;%scolor:#888;font-size:13px;vertical-align:top">%s</td><td align="right" style="padding:7px 0;%sfont-size:14px;%s">%s</td></tr>`,
+			borde, esc(f.k), borde, peso, f.html)
+	}
+	fmt.Fprintf(&b, `</table></div>`)
+	fmt.Fprintf(&b, `<p style="margin:0 0 4px;color:#888;font-size:12px">¿Algún dato está mal? Respondé este mail o avisale a quien te la vendió.</p>`)
 
 	// Boton principal.
 	fmt.Fprintf(&b, `<div style="text-align:center;margin:22px 0 8px">`)
@@ -148,6 +220,68 @@ func ComposeTicketEmail(data TicketEmailData, qrPNG func(code string) ([]byte, e
 		})
 	}
 	return msg, nil
+}
+
+type filaDetalle struct {
+	k      string
+	texto  string // version texto plano
+	html   string // ya escapado
+	fuerte bool
+}
+
+// detalleCompra arma las filas del bloque "Detalle de tu compra", las mismas
+// para la version HTML y la de texto. Una cortesia no muestra montos.
+func detalleCompra(data TicketEmailData, eventName string) []filaDetalle {
+	esc := html.EscapeString
+	gris := func(s string) string { return `<span style="color:#888;font-size:12px">` + esc(s) + `</span>` }
+	var filas []filaDetalle
+	add := func(k, texto, htmlV string, fuerte bool) {
+		filas = append(filas, filaDetalle{k: k, texto: texto, html: htmlV, fuerte: fuerte})
+	}
+
+	if data.SaleCode != "" {
+		corto := ShortSaleCode(data.SaleCode)
+		add("Compra", corto, `<span style="font-family:ui-monospace,Menlo,Consolas,monospace">`+esc(corto)+`</span>`, false)
+	}
+	cuando := formatStartsAt(data.StartsAt)
+	add("Función", eventName+", "+cuando, esc(eventName)+"<br>"+gris(cuando), false)
+	add("Lugar", data.Venue, esc(data.Venue), false)
+
+	n := len(data.TicketCodes)
+	if data.IsComp {
+		cant := fmt.Sprintf("%d de cortesía", n)
+		add("Entradas", cant, esc(cant), false)
+	} else {
+		cant := fmt.Sprintf("%d", n)
+		// "2 × $12.000" solo si el total sale de ahi; si la venta se hizo con
+		// otro precio (o se paso de funcion), la cuenta no cerraria.
+		if data.PriceCents > 0 && data.PriceCents*int64(n) == data.AmountCents {
+			cant = fmt.Sprintf("%d × %s", n, Money(data.PriceCents))
+		}
+		add("Entradas", cant, esc(cant), false)
+		add("Total", Money(data.AmountCents), Money(data.AmountCents), true)
+
+		metodo := metodoDePago(data.PaymentMethod)
+		pagado, pagadoHTML := Money(data.PaidCents), Money(data.PaidCents)
+		if data.PaidCents > 0 && metodo != "" {
+			pagado += " (" + metodo + ")"
+			pagadoHTML += " " + gris("· "+metodo)
+		}
+		add("Pagado", pagado, pagadoHTML, false)
+		if falta := data.AmountCents - data.PaidCents; falta > 0 {
+			add("Falta pagar", Money(falta), fmt.Sprintf(`<span style="color:%s">%s</span>`, brandBordo, Money(falta)), true)
+		}
+	}
+
+	if data.SellerName != "" {
+		add("Te la vendió", data.SellerName, esc(data.SellerName), false)
+	}
+	contacto := data.BuyerEmail
+	if data.BuyerPhone != "" {
+		contacto += " · " + data.BuyerPhone
+	}
+	add("A nombre de", data.BuyerName+" ("+contacto+")", esc(data.BuyerName)+"<br>"+gris(contacto), false)
+	return filas
 }
 
 // InviteEmailData es lo que necesita el email de acceso al equipo (C7).
