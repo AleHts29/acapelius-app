@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -44,6 +45,7 @@ func (s *Server) mountSite(r chi.Router) {
 	r.Get("/e/*", index.ServeHTTP)
 	r.Get("/t/*", index.ServeHTTP)
 	r.Get("/k/{short}", s.handleShortLink)
+	r.Get("/k/{short}/mapa", s.handleShortMapa)
 
 	r.NotFound(s.handleNotFound)
 }
@@ -116,3 +118,54 @@ func (s *Server) handleShortLink(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Redirect(w, r, destino, http.StatusFound)
 }
+
+// handleShortMapa: /k/{short}/mapa es el "Como llegar" del WhatsApp. Lleva al
+// Google Maps de la funcion de esa venta. No va directo el link de Google
+// porque WhatsApp le arma la vista previa al primer link del mensaje, y con el
+// de Maps sale la foto del teatro arriba de todo. Esta pagina tiene la vista
+// previa de Acapelius y manda al Maps apenas abre (no con un 302: WhatsApp
+// sigue las redirecciones y volveria a mostrar la de Google).
+func (s *Server) handleShortMapa(w http.ResponseWriter, r *http.Request) {
+	short := chi.URLParam(r, "short")
+	var mapsURL string
+	if len(short) == 8 {
+		u, err := s.queries.GetMapsURLByShort(r.Context(), short)
+		switch {
+		case err == nil && u != nil:
+			mapsURL = *u
+		case err != nil && !errors.Is(err, pgx.ErrNoRows):
+			slog.ErrorContext(r.Context(), "no se pudo resolver el mapa del link corto", "error", err)
+		}
+	}
+	if mapsURL == "" {
+		// Sin Maps cargado (o venta que no existe): a las entradas.
+		http.Redirect(w, r, "/k/"+url.PathEscape(short), http.StatusFound)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Robots-Tag", "noindex")
+	if err := paginaMapa.Execute(w, map[string]string{"Maps": mapsURL, "Base": s.cfg.BaseURL}); err != nil {
+		slog.ErrorContext(r.Context(), "no se pudo armar la pagina del mapa", "error", err)
+	}
+}
+
+var paginaMapa = template.Must(template.New("mapa").Parse(`<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acapelius</title>
+<meta name="description" content="Entradas del coro: ventas, envio por email y control de ingreso.">
+<meta property="og:title" content="Acapelius">
+<meta property="og:description" content="Entradas del coro: ventas, envio por email y control de ingreso.">
+<meta property="og:image" content="{{.Base}}/app/apple-touch-icon.png?v=bordo">
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="0; url={{.Maps}}">
+<script>location.replace({{.Maps}})</script>
+</head>
+<body style="font-family:system-ui,sans-serif;padding:24px">
+<p>Abriendo el mapa… <a href="{{.Maps}}">Tocá acá si no se abre.</a></p>
+</body>
+</html>
+`))

@@ -210,8 +210,12 @@ export interface FuncionMensaje {
 /**
  * El mensaje de WhatsApp con las entradas. WhatsApp no deja ponerle nombre a
  * un link, así que cada link va en su renglón con una etiqueta en negrita
- * adelante (*Cómo llegar:*, *Tus entradas:*). `que` es lo que va en negrita
- * en "tus entradas para *…*": el nombre del grupo.
+ * adelante (*Cómo llegar:*, *Tus entradas:*). Siempre dice "para *Acapelius*",
+ * no el nombre completo del coro.
+ *
+ * El "Cómo llegar" no es el link de Google sino el de las entradas + /mapa,
+ * que lleva al mismo Maps: WhatsApp le arma la vista previa al primer link, y
+ * con el de Google sale la foto del teatro arriba del mensaje.
  *
  *   Hola Ezequiel!
  *
@@ -220,16 +224,17 @@ export interface FuncionMensaje {
  *   📅 Viernes 11 de diciembre a las 20:00 en el Salón del Teatro del Globo
  *
  *   📍 Marcelo T. de Alvear 1155, CABA
- *   🗺️ *Cómo llegar:* https://maps.app.goo.gl/…
+ *   🗺️ *Cómo llegar:* https://…/k/K7QX9F3A/mapa
  *
  *   🎟️ Para ingresar presentá el QR en la entrada al salón
+ *
  *   👉 *Tus entradas:* https://…/k/K7QX9F3A
  */
 export function mensajeEntradas(
   comprador: string,
   url: string,
   fn?: FuncionMensaje,
-  opts: { que?: string; cantidad?: number; cortesia?: boolean } = {},
+  opts: { cantidad?: number; cortesia?: boolean } = {},
 ): string {
   const nombre = comprador.trim().split(/\s+/)[0] ?? ''
   const saludo = nombre ? `Hola ${nombre}!` : 'Hola!'
@@ -237,17 +242,16 @@ export function mensajeEntradas(
     opts.cantidad && opts.cantidad > 1 ? `tus ${opts.cantidad} entradas` : opts.cantidad === 1 ? 'tu entrada' : 'tus entradas'
   const cortesia = opts.cortesia ? ' de cortesía' : ''
   const verbo = opts.cantidad === 1 ? 'Acá está' : 'Acá están'
-  const para = opts.que ? ` para *${opts.que}*` : ''
 
-  const lineas = [saludo, '', `🎫 ${verbo} ${cuantas}${cortesia}${para}`]
+  const lineas = [saludo, '', `🎫 ${verbo} ${cuantas}${cortesia} para *Acapelius*`]
   if (fn) {
     lineas.push('', `📅 ${weekdayLong(fn.starts_at)} ${dayAndMonth(fn.starts_at)} a las ${functionTime(fn.starts_at)} en ${fn.venue}`)
     const donde = [
       fn.address ? `📍 ${fn.address}` : null,
-      fn.maps_url ? `🗺️ *Cómo llegar:* ${fn.maps_url}` : null,
+      fn.maps_url ? `🗺️ *Cómo llegar:* ${url}/mapa` : null,
     ].filter((l): l is string => l !== null)
     if (donde.length > 0) lineas.push('', ...donde)
   }
-  lineas.push('', '🎟️ Para ingresar presentá el QR en la entrada al salón', `👉 *Tus entradas:* ${url}`)
+  lineas.push('', '🎟️ Para ingresar presentá el QR en la entrada al salón', '', `👉 *Tus entradas:* ${url}`)
   return lineas.join('\n')
 }

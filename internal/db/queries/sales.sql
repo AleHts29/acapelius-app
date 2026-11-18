@@ -255,3 +255,9 @@ SELECT * FROM tickets WHERE code = sqlc.arg(code)::text;
 -- El link corto /k/{short}: los ultimos 8 caracteres del codigo de la venta.
 -- Publica como /e/{code}: el codigo identifica la venta.
 SELECT code FROM sales WHERE right(code, 8) = upper(sqlc.arg(short)::text);
+
+-- name: GetMapsURLByShort :one
+-- El "Como llegar" del WhatsApp (/k/{short}/mapa): el Maps de la funcion de
+-- esa venta.
+SELECT f.maps_url FROM sales s JOIN functions f ON f.id = s.function_id
+WHERE right(s.code, 8) = upper(sqlc.arg(short)::text);

@@ -16,7 +16,6 @@ import {
   pesosToCents,
 } from '../lib/format'
 import { useIsDesktop } from '../lib/viewport'
-import { useSession } from '../auth/session'
 import { useSeason } from '../season/SeasonProvider'
 import { Menu } from '../ui/Menu'
 import { Button, Seg } from '../ui/Button'
@@ -47,7 +46,6 @@ export function SaleSheet({
   onClose: () => void
 }) {
   const escritorio = useIsDesktop()
-  const { user } = useSession()
   const queryClient = useQueryClient()
   // El detalle se queda con su propia copia de la venta: registrar o quitar un
   // cobro devuelve la venta ya recalculada, así que los números de acá se
@@ -182,7 +180,7 @@ export function SaleSheet({
         address: sale.function_address,
         maps_url: sale.function_maps_url,
       },
-      { que: user?.organization_name, cantidad: sale.quantity, cortesia: sale.is_comp },
+      { cantidad: sale.quantity, cortesia: sale.is_comp },
     ),
     sale.buyer_phone,
   )

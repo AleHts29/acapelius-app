@@ -292,6 +292,20 @@ func (q *Queries) GetFunctionForUpdate(ctx context.Context, arg GetFunctionForUp
 	return i, err
 }
 
+const getMapsURLByShort = `-- name: GetMapsURLByShort :one
+SELECT f.maps_url FROM sales s JOIN functions f ON f.id = s.function_id
+WHERE right(s.code, 8) = upper($1::text)
+`
+
+// El "Como llegar" del WhatsApp (/k/{short}/mapa): el Maps de la funcion de
+// esa venta.
+func (q *Queries) GetMapsURLByShort(ctx context.Context, short string) (*string, error) {
+	row := q.db.QueryRow(ctx, getMapsURLByShort, short)
+	var maps_url *string
+	err := row.Scan(&maps_url)
+	return maps_url, err
+}
+
 const getPublicSale = `-- name: GetPublicSale :one
 
 SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, s.direct_to_box,

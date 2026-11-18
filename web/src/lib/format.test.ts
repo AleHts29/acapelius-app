@@ -160,7 +160,7 @@ describe('mensajeEntradas', () => {
     maps_url: 'https://maps.app.goo.gl/2hCqy1V3H1bd9j8r8',
   }
   it('arma la plantilla con cada link en su renglón y con etiqueta', () => {
-    expect(mensajeEntradas('Ezequiel Rodríguez', 'https://x/k/K7QX9F3A', fn, { que: 'Acapelius', cantidad: 2 })).toBe(
+    expect(mensajeEntradas('Ezequiel Rodríguez', 'https://x/k/K7QX9F3A', fn, { cantidad: 2 })).toBe(
       [
         'Hola Ezequiel!',
         '',
@@ -169,9 +169,10 @@ describe('mensajeEntradas', () => {
         '📅 Viernes 11 de diciembre a las 20:00 en Salón de conferencias del Teatro del Globo',
         '',
         '📍 Marcelo T. de Alvear 1155, CABA',
-        '🗺️ *Cómo llegar:* https://maps.app.goo.gl/2hCqy1V3H1bd9j8r8',
+        '🗺️ *Cómo llegar:* https://x/k/K7QX9F3A/mapa',
         '',
         '🎟️ Para ingresar presentá el QR en la entrada al salón',
+        '',
         '👉 *Tus entradas:* https://x/k/K7QX9F3A',
       ].join('\n'),
     )

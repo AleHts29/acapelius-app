@@ -18,14 +18,14 @@ interface CreatedSale {
   emailStatus: EmailStatus
 }
 
-function ShareLinkButton({ sale, que, fn }: { sale: Sale; que?: string; fn?: ShowFunction }) {
+function ShareLinkButton({ sale, fn }: { sale: Sale; fn?: ShowFunction }) {
   // Un link y no un botón con JS: así el navegador lo abre directo, sin que
   // un bloqueador de pop-ups se interponga.
   return (
     <a
       className="btn btn--go btn--w"
       href={whatsAppURL(
-        mensajeEntradas(sale.buyer_name, shortSaleURL(sale.code), fn, { que, cantidad: sale.quantity, cortesia: sale.is_comp }),
+        mensajeEntradas(sale.buyer_name, shortSaleURL(sale.code), fn, { cantidad: sale.quantity, cortesia: sale.is_comp }),
         sale.buyer_phone,
       )}
       target="_blank"
@@ -164,7 +164,6 @@ export function NewSalePage({ onDone }: { onDone?: () => void } = {}) {
         </p>
         <ShareLinkButton
           sale={created.sale}
-          que={user?.organization_name}
           fn={functions.data?.functions.find((f) => f.id === created.sale.function_id)}
         />
         <div className="dl">

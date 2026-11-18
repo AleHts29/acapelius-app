@@ -256,7 +256,7 @@ function FuncionForm({
             type="text"
             value={values.address}
             onChange={(e) => set({ address: e.target.value })}
-            placeholder="Marcelo T. de Alvear 1155, CABA"
+            placeholder="Ej.: Av. Corrientes 1234, CABA"
           />
         </label>
         <label className="field">
@@ -270,7 +270,7 @@ function FuncionForm({
             autoCorrect="off"
             value={values.mapsUrl}
             onChange={(e) => set({ mapsUrl: e.target.value })}
-            placeholder="https://maps.app.goo.gl/…"
+            placeholder="Pegá acá el link de Maps"
           />
           <span className="rs" style={{ whiteSpace: 'normal' }}>
             En Google Maps: buscá el teatro, tocá Compartir y pegá el link acá. Va al mail y al WhatsApp como "Cómo llegar".

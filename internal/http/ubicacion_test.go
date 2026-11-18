@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -61,7 +62,29 @@ func TestUbicacionYLinkCorto(t *testing.T) {
 			t.Fatalf("/k/%s tendria que llevar a /e/%s: %d %s", short, code, resp.StatusCode, resp.Header.Get("Location"))
 		}
 	}
-	resp, err := noFollow.Get(admin.baseURL + "/k/ZZZZZZZZ")
+	// El "Como llegar" del WhatsApp: una pagina de Acapelius que manda al
+	// Maps, para que la vista previa no sea la foto del teatro.
+	mapa, err := noFollow.Get(admin.baseURL + "/k/" + strings.ToLower(code[len(code)-8:]) + "/mapa")
+	if err != nil {
+		t.Fatalf("GET /k/mapa: %v", err)
+	}
+	cuerpo, _ := io.ReadAll(mapa.Body)
+	mapa.Body.Close()
+	if mapa.StatusCode != http.StatusOK ||
+		!strings.Contains(string(cuerpo), `content="0; url=https://maps.app.goo.gl/2hCqy1V3H1bd9j8r8"`) ||
+		!strings.Contains(string(cuerpo), `<meta property="og:title" content="Acapelius">`) {
+		t.Fatalf("/k/…/mapa tendria que mandar al Maps con la vista previa de Acapelius: %d %s", mapa.StatusCode, cuerpo)
+	}
+	resp, err := noFollow.Get(admin.baseURL + "/k/ZZZZZZZZ/mapa")
+	if err != nil {
+		t.Fatalf("GET /k/mapa: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusFound || resp.Header.Get("Location") != "/k/ZZZZZZZZ" {
+		t.Fatalf("sin venta, el mapa cae en el link de las entradas: %d %s", resp.StatusCode, resp.Header.Get("Location"))
+	}
+
+	resp, err = noFollow.Get(admin.baseURL + "/k/ZZZZZZZZ")
 	if err != nil {
 		t.Fatalf("GET /k: %v", err)
 	}
