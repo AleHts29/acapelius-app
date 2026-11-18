@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api } from '../api/client'
 import type { PaymentMethod, Settlement, SettlementReportRow, TimelineItem } from '../api/client'
+import { useSession } from '../auth/session'
 import { useSeason } from '../season/SeasonProvider'
 import { useIsDesktop } from '../lib/viewport'
 import { centavosAMonto, dayAndMonthShort, dayLabel, daysAgo, escribirMonto, formatMoney, pesosToCents, timeShort } from '../lib/format'
@@ -335,6 +336,7 @@ function DetalleCorista({
 export function SettlementsScreen() {
   const escritorio = useIsDesktop()
   const navigate = useNavigate()
+  const { user } = useSession()
   const queryClient = useQueryClient()
   const { sellerId: raw } = useParams()
   const sellerId = raw ? Number(raw) : undefined
@@ -529,6 +531,9 @@ export function SettlementsScreen() {
                     sub="Directo a caja · no se rinde"
                     amount={sinCentavos(r.direct_cents)}
                     unit="cobró"
+                    // Lleva a sus ventas: "Mis ventas" si es quien mira, o
+                    // Ventas filtrado por esa persona si es otro admin.
+                    onClick={() => navigate(r.seller_id === user?.id ? '/ventas?mias=1' : `/ventas?corista=${r.seller_id}`)}
                   />
                 ))}
               </div>

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import { api, publicSaleURL } from '../api/client'
-import type { Alert, Direccion, Home, HomeFunction, HomeToDo, SettlementReportRow } from '../api/client'
+import type { Alert, Direccion, Home, HomeFunction, HomeToDo, SaleListItem, SalesSummary, SettlementReportRow } from '../api/client'
 import { useSession } from '../auth/session'
 import { calendarDaysUntil, dayLabel, daysAgo, formatMoney, functionTime } from '../lib/format'
 import { useIsDesktop } from '../lib/viewport'
@@ -104,6 +104,49 @@ function EntradaFuncion({
 }
 
 /** La alerta de dirección como fila: qué pasa, y adónde se resuelve. */
+/**
+ * Lo que vendió dirección (C22): cuánto, cuánto ya está en caja y a quién le
+ * falta cobrarle. Solo aparece si vendió algo en la temporada.
+ */
+function TusVentas({ data, onVenta }: { data: { summary: SalesSummary; sales: SaleListItem[] }; onVenta: (s: SaleListItem) => void }) {
+  const { summary } = data
+  // Las que deben, la más vieja arriba: es la que más urge cobrar.
+  const deben = [...data.sales].sort((a, b) => a.created_at.localeCompare(b.created_at)).slice(0, 3)
+  return (
+    <Card title="Tus ventas" action={{ label: 'Ver mis ventas', to: '/ventas?mias=1' }}>
+      <div className="tus-ventas">
+        <div>
+          <span className="lbl">Vendiste</span>
+          <strong>{summary.tickets_sold}</strong>
+          <small>{summary.tickets_sold === 1 ? 'entrada' : 'entradas'}</small>
+        </div>
+        <div>
+          <span className="lbl">Cobraste</span>
+          <strong>{formatMoney(summary.paid_cents)}</strong>
+          <small>directo a caja</small>
+        </div>
+        <div>
+          <span className="lbl">Te deben</span>
+          <strong className={summary.pending_cents > 0 ? 'tus-ventas__debe' : undefined}>{formatMoney(summary.pending_cents)}</strong>
+          <small>
+            {summary.pending_count} {summary.pending_count === 1 ? 'comprador' : 'compradores'}
+          </small>
+        </div>
+      </div>
+      {deben.map((s) => (
+        <Row
+          key={s.id}
+          title={s.buyer_name}
+          sub={`${s.quantity} ${s.quantity === 1 ? 'entrada' : 'entradas'} · ${dayLabel(s.function_starts_at)}`}
+          amount={formatMoney(s.amount_cents - s.paid_cents)}
+          status={<Status tone="warn">Debe</Status>}
+          onClick={() => onVenta(s)}
+        />
+      ))}
+    </Card>
+  )
+}
+
 function AlertaRow({ alert, seasonId, onRendir }: { alert: Alert; seasonId?: number; onRendir: () => void }) {
   const navigate = useNavigate()
   if (alert.kind === 'settlement') {
@@ -234,6 +277,12 @@ export function HomePage() {
   const direccion = useQuery({
     queryKey: ['direccion', temporadaId],
     queryFn: () => api.direccion(temporadaId!),
+    enabled: user?.role === 'admin' && temporadaId !== undefined,
+  })
+  // "Tus ventas" de dirección (C22): el resumen de lo propio y quién debe.
+  const mias = useQuery({
+    queryKey: ['sales', 'mias-home', temporadaId],
+    queryFn: () => api.listSales({ seasonId: temporadaId, mine: true, status: 'pending' }),
     enabled: user?.role === 'admin' && temporadaId !== undefined,
   })
 
@@ -375,6 +424,13 @@ export function HomePage() {
               />
             ))}
           </Card>
+        )}
+
+        {!esCorista && mias.data && mias.data.summary.tickets_sold > 0 && (
+          <TusVentas
+            data={mias.data}
+            onVenta={(s) => navigate('/ventas', { state: { venta: { id: s.id, comprador: s.buyer_name } } })}
+          />
         )}
 
         <Card title={esCorista ? 'Tus últimas ventas' : 'Últimas ventas'} action={{ label: 'Ver todas', to: '/ventas' }}>
