@@ -4,6 +4,8 @@ import type { DoorCheckin, DoorSnapshot } from '../api/client'
 import type { QueuedCheckin } from './db'
 import {
   nocturnoPorDefecto,
+  listaVieja,
+  rechazosDelSync,
   codeFromPayload,
   doorCounter,
   effectiveCheckins,
@@ -127,5 +129,43 @@ describe('nocturnoPorDefecto', () => {
     expect(nocturnoPorDefecto('2026-12-10T21:00:00-03:00')).toBe(true)
     expect(nocturnoPorDefecto('2026-12-10T17:00:00-03:00')).toBe(false)
     expect(nocturnoPorDefecto(undefined)).toBe(false)
+  })
+})
+
+describe('listaVieja', () => {
+  const ahora = new Date('2026-12-05T21:10:00-03:00').getTime()
+  it('una lista de hace menos de 2 minutos está al día', () => {
+    expect(listaVieja('2026-12-05T21:09:00-03:00', ahora)).toBe(false)
+  })
+  it('más de 2 minutos sin bajarla es vieja', () => {
+    expect(listaVieja('2026-12-05T21:07:00-03:00', ahora)).toBe(true)
+  })
+  it('sin lista guardada, vieja', () => {
+    expect(listaVieja(null, ahora)).toBe(true)
+  })
+})
+
+describe('rechazosDelSync', () => {
+  const items = [
+    { functionId: 1, code: 'A', method: 'scan' as const, at: '2026-12-05T21:05:00-03:00' },
+    { functionId: 1, code: 'B', method: 'scan' as const, at: '2026-12-05T21:06:00-03:00' },
+    { functionId: 1, code: 'C', method: 'manual' as const, at: '2026-12-05T21:07:00-03:00' },
+  ]
+  it('se queda con los que el sistema no aceptó, con a qué función van', () => {
+    const r = rechazosDelSync(items, [
+      { result: 'ok' },
+      { result: 'wrong_function', buyer_name: 'Pablo', function_starts_at: '2026-12-12T21:00:00-03:00' },
+      { result: 'already_checked_in' },
+    ])
+    expect(r).toEqual([
+      {
+        code: 'B',
+        at: '2026-12-05T21:06:00-03:00',
+        result: 'wrong_function',
+        buyer_name: 'Pablo',
+        function_name: undefined,
+        function_starts_at: '2026-12-12T21:00:00-03:00',
+      },
+    ])
   })
 })

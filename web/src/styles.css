@@ -535,6 +535,7 @@ a.tile:active, button.tile:active, a.fn:active, button.fn:active { transform: tr
 .alert { margin: 0; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--bad-soft); color: var(--bad); font-size: var(--t-body) }
 /* Banda de aviso: temporada que no está en curso, puerta sin conexión, precio trabado. */
 .banner { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); flex-wrap: wrap; margin: 0 0 var(--s4); padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--warn-soft); color: var(--warn); font-size: var(--t-body) }
+.banner--bad { background: var(--bad-soft); color: var(--bad) }
 /* Texto secundario de párrafo: lo que .rs es en una fila, pero que se corta en líneas. */
 .note { margin: 0; font-size: var(--t-meta); line-height: 1.5; color: var(--ink3) }
 .btn--bad, .btn--bad:hover:not(:disabled) { background: var(--bad); color: #fff }

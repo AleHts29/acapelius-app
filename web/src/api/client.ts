@@ -361,6 +361,12 @@ export interface DoorCheckin {
   by_name: string
 }
 
+export interface DoorDevice {
+  device_id: string
+  user_name: string
+  last_snapshot_at: string
+}
+
 export interface DoorSnapshot {
   function: {
     id: number
@@ -397,6 +403,9 @@ export interface CheckinResponse {
   seller_name?: string
   checked_in_at?: string
   by_name?: string
+  /** wrong_function: a qué función va esa entrada. */
+  function_name?: string | null
+  function_starts_at?: string
 }
 
 export interface PublicSingleTicket {
@@ -705,7 +714,7 @@ export const api = {
   /** Sólo dirección: corregir a nombre de quién está o pasarla a otra función.
    *  `email_status` vacío = no hacía falta mandar el mail. */
   updateSaleDetails: (id: number, data: SaleDetailsInput) =>
-    request<{ sale: Sale; email_status: EmailStatus | '' }>('PATCH', `/sales/${id}/details`, data),
+    request<{ sale: Sale; email_status: EmailStatus | ''; changed_at: string }>('PATCH', `/sales/${id}/details`, data),
 
   publicSale: (code: string) => request<PublicSale>('GET', `/public/sales/${code}`),
   publicTicket: (code: string) => request<PublicSingleTicket>('GET', `/public/tickets/${code}`),
@@ -731,8 +740,15 @@ export const api = {
       { allocations: entries },
     ),
 
-  doorSnapshot: (functionId: number) =>
-    request<DoorSnapshot>('GET', `/functions/${functionId}/door-snapshot`),
+  /** Con `deviceId`, el server anota que este celular tiene la lista de ahora. */
+  doorSnapshot: (functionId: number, deviceId?: string) =>
+    request<DoorSnapshot>(
+      'GET',
+      `/functions/${functionId}/door-snapshot${deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''}`,
+    ),
+  /** Sólo dirección: qué celulares tienen abierta la puerta y de cuándo es su lista. */
+  doorDevices: (functionId: number) =>
+    request<{ now: string; devices: DoorDevice[] }>('GET', `/functions/${functionId}/door-devices`),
   checkin: (input: CheckinInput) => request<CheckinResponse>('POST', '/checkins', input),
   syncCheckins: (input: {
     function_id: number

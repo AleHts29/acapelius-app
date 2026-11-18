@@ -15,7 +15,8 @@ import {
   saveStoredSnapshot,
 } from './db'
 import type { QueuedCheckin } from './db'
-import { codeFromPayload, validateLocally } from './logic'
+import { codeFromPayload, rechazosDelSync, validateLocally } from './logic'
+import type { Rechazo } from './logic'
 
 export type CheckinAttempt =
   | { method: 'scan'; payload: string }
@@ -28,6 +29,33 @@ export interface DoorStore {
   /** null mientras no fallo nada; texto si el snapshot nunca se pudo bajar. */
   loadError: string | null
   checkin: (attempt: CheckinAttempt) => Promise<CheckinResponse>
+  /** Cuándo se bajó la lista que tiene el teléfono (ISO), o null si nunca. */
+  savedAt: string | null
+  /** Baja la lista ya. Devuelve si pudo. */
+  refreshNow: () => Promise<boolean>
+  /** Ingresos que se dejaron pasar sin conexión y el sistema rechazó. */
+  rechazos: Rechazo[]
+  descartarRechazos: () => void
+}
+
+// Los rechazos se guardan para que no se pierdan si se cierra la app antes
+// de leerlos. Si el navegador no deja guardar, quedan en memoria.
+const rechazosKey = (functionId: number) => `acapelius-door-rechazos-${functionId}`
+function leerRechazos(functionId: number): Rechazo[] {
+  try {
+    const raw = localStorage.getItem(rechazosKey(functionId))
+    return raw ? (JSON.parse(raw) as Rechazo[]) : []
+  } catch {
+    return []
+  }
+}
+function guardarRechazos(functionId: number, items: Rechazo[]) {
+  try {
+    if (items.length === 0) localStorage.removeItem(rechazosKey(functionId))
+    else localStorage.setItem(rechazosKey(functionId), JSON.stringify(items))
+  } catch {
+    // Sin almacenamiento: quedan en memoria.
+  }
 }
 
 const SNAPSHOT_REFRESH_MS = 30_000
@@ -38,6 +66,8 @@ export function useDoorStore(functionId: number): DoorStore {
   const [pending, setPending] = useState<QueuedCheckin[]>([])
   const [online, setOnline] = useState(navigator.onLine)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
+  const [rechazos, setRechazos] = useState<Rechazo[]>(() => leerRechazos(functionId))
 
   // Refs espejo para que los callbacks de timers vean el estado actual.
   const snapshotRef = useRef(snapshot)
@@ -54,13 +84,15 @@ export function useDoorStore(functionId: number): DoorStore {
 
   // Baja el snapshot del server y lo persiste. Si falla, se sigue con el
   // guardado; el snapshot viejo es mejor que ninguno.
-  const refreshSnapshot = useCallback(async () => {
+  const refreshSnapshot = useCallback(async (): Promise<boolean> => {
     try {
-      const fresh = await api.doorSnapshot(functionId)
+      const fresh = await api.doorSnapshot(functionId, deviceId())
       await saveStoredSnapshot(functionId, fresh)
       setSnapshot(fresh)
+      setSavedAt(new Date().toISOString())
       setOnline(true)
       setLoadError(null)
+      return true
     } catch {
       setOnline(navigator.onLine)
       if (!snapshotRef.current) {
@@ -68,6 +100,7 @@ export function useDoorStore(functionId: number): DoorStore {
           'No se pudo bajar la lista de entradas y este dispositivo no tiene una copia local. Necesitas conexion la primera vez.',
         )
       }
+      return false
     }
   }, [functionId])
 
@@ -80,7 +113,7 @@ export function useDoorStore(functionId: number): DoorStore {
       const items = await pendingCheckins(functionId)
       if (items.length === 0) return
 
-      await api.syncCheckins({
+      const { results } = await api.syncCheckins({
         function_id: functionId,
         device_id: deviceId(),
         checkins: items.map((q) => ({
@@ -90,6 +123,15 @@ export function useDoorStore(functionId: number): DoorStore {
           at: q.at,
         })),
       })
+
+      const nuevos = rechazosDelSync(items, results)
+      if (nuevos.length > 0) {
+        setRechazos((prev) => {
+          const todos = [...prev, ...nuevos]
+          guardarRechazos(functionId, todos)
+          return todos
+        })
+      }
 
       await removeQueued(items.map((q) => q.localId!))
       await refreshPending()
@@ -112,6 +154,7 @@ export function useDoorStore(functionId: number): DoorStore {
       const stored = await loadStoredSnapshot(functionId)
       if (alive && stored && !snapshotRef.current) {
         setSnapshot(stored.snapshot)
+        setSavedAt(stored.savedAt)
       }
       await refreshPending()
       await refreshSnapshot()
@@ -149,7 +192,28 @@ export function useDoorStore(functionId: number): DoorStore {
 
       const code =
         attempt.method === 'scan' ? codeFromPayload(attempt.payload) : attempt.code
-      const verdict = validateLocally(current, pendingRef.current, code)
+      const local = validateLocally(current, pendingRef.current, code)
+
+      // Un QR que no está en la lista puede ser una venta que dirección
+      // acaba de pasar a esta función. Con conexión se le pregunta al
+      // sistema, que lo registra si es bueno; sin conexión queda el rojo.
+      if (local.result === 'invalid' && attempt.method === 'scan' && code !== '' && navigator.onLine) {
+        try {
+          const online = await api.checkin({
+            function_id: functionId,
+            method: 'scan',
+            payload: attempt.payload,
+            device_id: deviceId(),
+          })
+          if (online.result !== 'invalid') {
+            void refreshSnapshot()
+            return online
+          }
+        } catch {
+          // Sin respuesta: queda el veredicto local.
+        }
+      }
+      const verdict = local
 
       if (verdict.result === 'ok') {
         const item: QueuedCheckin = {
@@ -166,8 +230,23 @@ export function useDoorStore(functionId: number): DoorStore {
 
       return verdict
     },
-    [functionId, refreshPending, flushQueue],
+    [functionId, refreshPending, flushQueue, refreshSnapshot],
   )
 
-  return { snapshot, pending, online, loadError, checkin }
+  const descartarRechazos = useCallback(() => {
+    setRechazos([])
+    guardarRechazos(functionId, [])
+  }, [functionId])
+
+  return {
+    snapshot,
+    pending,
+    online,
+    loadError,
+    checkin,
+    savedAt,
+    refreshNow: refreshSnapshot,
+    rechazos,
+    descartarRechazos,
+  }
 }

@@ -125,3 +125,43 @@ export function nocturnoPorDefecto(startsAt: string | undefined): boolean {
   )
   return hora >= 19
 }
+
+/**
+ * Con internet la lista se baja cada 30 segundos. Si pasaron más de 2 minutos
+ * sin poder bajarla, la puerta puede no ver un cambio que hizo dirección (una
+ * venta que pasó a otra función, por ejemplo) y tiene que decirlo.
+ */
+export const LISTA_VIEJA_MS = 2 * 60 * 1000
+
+export function listaVieja(savedAt: string | null, now: number): boolean {
+  if (!savedAt) return true
+  return now - new Date(savedAt).getTime() > LISTA_VIEJA_MS
+}
+
+/** Un ingreso que la puerta dejó pasar sin conexión y el sistema rechazó al subirlo. */
+export interface Rechazo {
+  code: string
+  at: string
+  result: CheckinResponse['result']
+  buyer_name?: string
+  function_name?: string | null
+  function_starts_at?: string
+}
+
+/** Los ingresos de la cola que el server no aceptó. Ya entrado no es rechazo. */
+export function rechazosDelSync(items: QueuedCheckin[], results: CheckinResponse[]): Rechazo[] {
+  const out: Rechazo[] = []
+  items.forEach((item, i) => {
+    const r = results[i]
+    if (!r || r.result === 'ok' || r.result === 'already_checked_in') return
+    out.push({
+      code: item.code,
+      at: item.at,
+      result: r.result,
+      buyer_name: r.buyer_name,
+      function_name: r.function_name,
+      function_starts_at: r.function_starts_at,
+    })
+  })
+  return out
+}

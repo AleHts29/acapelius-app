@@ -956,6 +956,9 @@ type updateSaleDetailsResponse struct {
 	// EmailStatus: si se mando el mail (cambio de funcion o de mail), como
 	// salio; "" si no hacia falta mandar nada.
 	EmailStatus string `json:"email_status"`
+	// ChangedAt: hora del server en que quedo el cambio. La ficha la compara
+	// con la lista que tiene cada celular de la puerta.
+	ChangedAt time.Time `json:"changed_at"`
 }
 
 // handleUpdateSaleDetails: PATCH /api/sales/{id}/details — direccion corrige
@@ -1091,6 +1094,7 @@ func (s *Server) handleUpdateSaleDetails(w http.ResponseWriter, r *http.Request)
 		httpx.Internal(w, r, err)
 		return
 	}
+	changedAt := time.Now()
 
 	// El mail va despues del commit, como al vender: si no sale, la
 	// correccion queda hecha y se puede reenviar.
@@ -1104,5 +1108,5 @@ func (s *Server) handleUpdateSaleDetails(w http.ResponseWriter, r *http.Request)
 		}
 		status = s.sendTicketEmailCambio(ctx, updated, function, tickets, previous)
 	}
-	httpx.JSON(w, http.StatusOK, updateSaleDetailsResponse{Sale: updated, EmailStatus: status})
+	httpx.JSON(w, http.StatusOK, updateSaleDetailsResponse{Sale: updated, EmailStatus: status, ChangedAt: changedAt})
 }

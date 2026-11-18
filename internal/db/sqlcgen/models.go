@@ -33,6 +33,13 @@ type CustomRole struct {
 	CreatedAt      time.Time `json:"created_at"`
 }
 
+type DoorDevice struct {
+	FunctionID     int64     `json:"function_id"`
+	DeviceID       string    `json:"device_id"`
+	UserID         int64     `json:"user_id"`
+	LastSnapshotAt time.Time `json:"last_snapshot_at"`
+}
+
 type EmailSend struct {
 	ID        int64     `json:"id"`
 	SaleID    int64     `json:"sale_id"`

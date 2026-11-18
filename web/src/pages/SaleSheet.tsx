@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, api, publicSaleURL, telefonoWhatsApp, whatsAppURL } from '../api/client'
 import type { PaymentMethod, SaleListItem, SalePayments } from '../api/client'
@@ -58,6 +58,9 @@ export function SaleSheet({
   const [monto, setMonto] = useState('')
   const [metodo, setMetodo] = useState<PaymentMethod>('cash')
   const [editando, setEditando] = useState(false)
+  // Si dirección la pasó de función: cuándo y entre cuáles, para mirar si la
+  // puerta de cada una ya tiene el cambio.
+  const [movida, setMovida] = useState<Movida | null>(null)
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: salesQueryKey })
@@ -284,7 +287,8 @@ export function SaleSheet({
         <EditarVenta
           sale={sale}
           onCancel={() => setEditando(false)}
-          onSaved={(cambios, aviso) => {
+          onSaved={(cambios, aviso, mov) => {
+            if (mov) setMovida(mov)
             setSale((prev) => ({ ...prev, ...cambios }))
             setEditando(false)
             setError(null)
@@ -295,6 +299,8 @@ export function SaleSheet({
       ) : (
         <DataList rows={datos} />
       )}
+
+      {movida && <PuertaAlDia movida={movida} />}
 
       {cobrable && cobros.length > 0 && (
         <div>
@@ -419,7 +425,7 @@ function EditarVenta({
 }: {
   sale: SaleListItem
   onCancel: () => void
-  onSaved: (cambios: CambiosVenta, aviso: string) => void
+  onSaved: (cambios: CambiosVenta, aviso: string, movida: Movida | null) => void
 }) {
   const { seasonId } = useSeason()
   const [nombre, setNombre] = useState(sale.buyer_name)
@@ -454,7 +460,7 @@ function EditarVenta({
         function_id: functionId,
         over_capacity: sobreCupo,
       }),
-    onSuccess: ({ sale: s, email_status }) => {
+    onSuccess: ({ sale: s, email_status, changed_at }) => {
       const fn = elegida
       const mailAviso =
         email_status === 'sent'
@@ -478,6 +484,15 @@ function EditarVenta({
           over_capacity: s.over_capacity,
         },
         'Datos guardados.' + mailAviso,
+        cambiaFuncion
+          ? {
+              changedAt: changed_at,
+              funciones: [
+                { id: sale.function_id, label: `${dayLabel(sale.function_starts_at)} (la anterior)` },
+                { id: s.function_id, label: fn ? `${functionDay(fn.starts_at)} · ${functionTime(fn.starts_at)} (la nueva)` : 'la nueva' },
+              ],
+            }
+          : null,
       )
     },
     onError: (err) => {
@@ -601,5 +616,63 @@ function EditarVenta({
         )}
       </div>
     </form>
+  )
+}
+
+interface Movida {
+  /** Hora del server en que quedó el cambio. */
+  changedAt: string
+  funciones: Array<{ id: number; label: string }>
+}
+
+/**
+ * Después de pasar una venta de función: ¿la puerta ya tiene el cambio? Mira
+ * los celulares que tienen abierta la puerta de la función vieja y de la
+ * nueva. Una función sin puerta abierta no tiene nada viejo: cuando la abran
+ * baja la lista al día. Se refresca sola hasta que todas lo tengan.
+ */
+function PuertaAlDia({ movida }: { movida: Movida }) {
+  // Cada 10 segundos mientras la ficha está abierta: es una consulta chica.
+  const consultas = useQueries({
+    queries: movida.funciones.map((fn) => ({
+      queryKey: ['door-devices', fn.id],
+      queryFn: () => api.doorDevices(fn.id),
+      refetchInterval: 10_000,
+    })),
+  })
+
+  const filas = movida.funciones.flatMap((fn, i) =>
+    (consultas[i].data?.devices ?? []).map((d) => ({
+      key: `${fn.id}-${d.device_id}`,
+      funcion: fn.label,
+      nombre: d.user_name,
+      alDia: new Date(d.last_snapshot_at).getTime() >= new Date(movida.changedAt).getTime(),
+      desde: d.last_snapshot_at,
+    })),
+  )
+  if (filas.length === 0) return null
+
+  return (
+    <div>
+      <Label>Puerta</Label>
+      <div className="mini" style={{ marginTop: 7 }}>
+        {filas.map((f) => (
+          <Row
+            key={f.key}
+            title={f.alDia ? `${f.nombre} ya tiene el cambio` : `${f.nombre} todavía no tiene el cambio`}
+            sub={
+              f.alDia
+                ? `Puerta de ${f.funcion}`
+                : `Puerta de ${f.funcion} · su lista es de las ${new Date(f.desde).toLocaleTimeString('es-AR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hourCycle: 'h23',
+                  })}. Si no se actualiza en un minuto, avisale que busque señal y toque "Actualizar ahora".`
+            }
+            status={f.alDia ? <span className="st st--ok">Al día</span> : <span className="st st--warn">Esperando</span>}
+          />
+        ))}
+      </div>
+    </div>
   )
 }

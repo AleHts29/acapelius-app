@@ -205,6 +205,7 @@ func (s *Server) Handler() http.Handler {
 					admin.Delete("/functions/{id}", s.handleDeleteFunction)
 					admin.Post("/sales/{id}/void", s.handleVoidSale)
 					admin.Patch("/sales/{id}/details", s.handleUpdateSaleDetails)
+					admin.Get("/functions/{id}/door-devices", s.handleDoorDevices)
 					admin.Post("/tickets/{id}/void", s.handleVoidTicket)
 					admin.Get("/reports/attendance", s.handleAttendanceReport)
 					admin.Get("/reports/attention", s.handleAttention)

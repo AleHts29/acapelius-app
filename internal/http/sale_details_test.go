@@ -129,3 +129,67 @@ func TestPasarDeFuncionRespetaElCupo(t *testing.T) {
 		t.Fatalf("tendria que quedar marcada sobre cupo: %v", ok.Body["sale"])
 	}
 }
+
+// TestPuertaAlDiaTrasMoverUnaVenta: cada vez que un celular de la puerta baja
+// la lista queda anotado; direccion ve si ya la bajo despues del cambio. Un
+// ingreso rechazado por otra funcion dice a cual va.
+func TestPuertaAlDiaTrasMoverUnaVenta(t *testing.T) {
+	env := newTestEnv(t)
+	admin := loginAdmin(t, env)
+	fnID := setupCatalog(t, admin, 5)
+	door := createDoorClient(t, env, admin)
+	otra := admin.post("/api/functions", map[string]any{
+		"season_id": activeSeasonID(t, admin), "name": "Sábado 12", "venue": "Teatro Municipal",
+		"starts_at": "2099-12-17T21:00:00-03:00", "capacity": 5, "price_cents": 800000,
+	})
+	assertStatus(t, otra, http.StatusCreated)
+	otraID := otra.Body["function"].(map[string]any)["id"].(float64)
+
+	created := admin.post("/api/sales", map[string]any{
+		"function_id": fnID, "buyer_name": "Pablo", "buyer_email": "pablo@prueba.test", "quantity": 1,
+	})
+	assertStatus(t, created, http.StatusCreated)
+	sale := created.Body["sale"].(map[string]any)
+
+	// La puerta abre la funcion: queda anotada.
+	assertStatus(t, door.get(fmt.Sprintf("/api/functions/%.0f/door-snapshot?device_id=cel-1", fnID)), http.StatusOK)
+	devs := admin.get(fmt.Sprintf("/api/functions/%.0f/door-devices", fnID))
+	assertStatus(t, devs, http.StatusOK)
+	list := devs.Body["devices"].([]any)
+	if len(list) != 1 || list[0].(map[string]any)["device_id"] != "cel-1" {
+		t.Fatalf("la puerta tendria que quedar anotada: %v", devs.Body)
+	}
+	antes := list[0].(map[string]any)["last_snapshot_at"].(string)
+
+	// La puerta no ve quien tiene la lista: es de direccion.
+	assertStatus(t, door.get(fmt.Sprintf("/api/functions/%.0f/door-devices", fnID)), http.StatusForbidden)
+
+	moved := admin.do(http.MethodPatch, fmt.Sprintf("/api/sales/%.0f/details", sale["id"].(float64)), map[string]any{
+		"buyer_name": "Pablo", "buyer_email": "pablo@prueba.test", "function_id": otraID,
+	})
+	assertStatus(t, moved, http.StatusOK)
+	changedAt := moved.Body["changed_at"].(string)
+	if antes >= changedAt {
+		t.Fatalf("la lista de la puerta es de antes del cambio: %s vs %s", antes, changedAt)
+	}
+
+	// Vuelve a bajar la lista: ahora es posterior al cambio.
+	assertStatus(t, door.get(fmt.Sprintf("/api/functions/%.0f/door-snapshot?device_id=cel-1", fnID)), http.StatusOK)
+	despues := admin.get(fmt.Sprintf("/api/functions/%.0f/door-devices", fnID)).Body["devices"].([]any)[0].(map[string]any)["last_snapshot_at"].(string)
+	if despues < changedAt {
+		t.Fatalf("la puerta tendria que tener el cambio: %s vs %s", despues, changedAt)
+	}
+
+	// El ingreso que la puerta vieja dejo pasar sin conexion vuelve rechazado
+	// diciendo a que funcion va.
+	payload := admin.get("/api/public/sales/" + sale["code"].(string)).Body["tickets"].([]any)[0].(map[string]any)["payload"]
+	sync := door.post("/api/checkins/sync", map[string]any{
+		"function_id": fnID, "device_id": "cel-1",
+		"checkins": []map[string]any{{"payload": payload, "method": "scan", "at": "2099-12-10T21:05:00-03:00"}},
+	})
+	assertStatus(t, sync, http.StatusOK)
+	r := sync.Body["results"].([]any)[0].(map[string]any)
+	if r["result"] != "wrong_function" || r["function_name"] != "Sábado 12" || r["function_starts_at"] == nil {
+		t.Fatalf("el rechazo tendria que decir a que funcion va: %v", r)
+	}
+}

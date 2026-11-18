@@ -248,6 +248,52 @@ func (q *Queries) InsertCheckin(ctx context.Context, arg InsertCheckinParams) (C
 	return i, err
 }
 
+const listDoorDevices = `-- name: ListDoorDevices :many
+SELECT d.device_id, d.last_snapshot_at, u.name AS user_name
+FROM door_devices d
+JOIN users u ON u.id = d.user_id
+JOIN functions f ON f.id = d.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE d.function_id = $1::bigint
+  AND se.organization_id = $2::bigint
+  AND d.last_snapshot_at > now() - interval '12 hours'
+ORDER BY d.last_snapshot_at
+`
+
+type ListDoorDevicesParams struct {
+	FunctionID     int64 `json:"function_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+type ListDoorDevicesRow struct {
+	DeviceID       string    `json:"device_id"`
+	LastSnapshotAt time.Time `json:"last_snapshot_at"`
+	UserName       string    `json:"user_name"`
+}
+
+// Los celulares que tuvieron abierta la puerta de esta funcion en las ultimas
+// 12 horas. Uno que nunca la abrio no tiene nada viejo: cuando la abra baja
+// la lista al dia.
+func (q *Queries) ListDoorDevices(ctx context.Context, arg ListDoorDevicesParams) ([]ListDoorDevicesRow, error) {
+	rows, err := q.db.Query(ctx, listDoorDevices, arg.FunctionID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDoorDevicesRow{}
+	for rows.Next() {
+		var i ListDoorDevicesRow
+		if err := rows.Scan(&i.DeviceID, &i.LastSnapshotAt, &i.UserName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markTicketCheckedIn = `-- name: MarkTicketCheckedIn :exec
 UPDATE tickets t SET status = 'checked_in'
 FROM sales s
@@ -265,5 +311,34 @@ type MarkTicketCheckedInParams struct {
 
 func (q *Queries) MarkTicketCheckedIn(ctx context.Context, arg MarkTicketCheckedInParams) error {
 	_, err := q.db.Exec(ctx, markTicketCheckedIn, arg.ID, arg.OrganizationID)
+	return err
+}
+
+const touchDoorDevice = `-- name: TouchDoorDevice :exec
+INSERT INTO door_devices (function_id, device_id, user_id, last_snapshot_at)
+SELECT f.id, $1::text, $2::bigint, now()
+FROM functions f
+JOIN seasons se ON se.id = f.season_id
+WHERE f.id = $3::bigint
+  AND se.organization_id = $4::bigint
+ON CONFLICT (function_id, device_id)
+DO UPDATE SET user_id = EXCLUDED.user_id, last_snapshot_at = EXCLUDED.last_snapshot_at
+`
+
+type TouchDoorDeviceParams struct {
+	DeviceID       string `json:"device_id"`
+	UserID         int64  `json:"user_id"`
+	FunctionID     int64  `json:"function_id"`
+	OrganizationID int64  `json:"organization_id"`
+}
+
+// Solo si la funcion es de la organizacion; si no, no anota nada.
+func (q *Queries) TouchDoorDevice(ctx context.Context, arg TouchDoorDeviceParams) error {
+	_, err := q.db.Exec(ctx, touchDoorDevice,
+		arg.DeviceID,
+		arg.UserID,
+		arg.FunctionID,
+		arg.OrganizationID,
+	)
 	return err
 }

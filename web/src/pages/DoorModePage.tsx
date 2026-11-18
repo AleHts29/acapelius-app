@@ -6,7 +6,9 @@ import { Html5Qrcode } from 'html5-qrcode'
 import type { CheckinResponse, DoorCheckin, DoorTicket } from '../api/client'
 import type { CheckinAttempt } from '../door/useDoorStore'
 import { useDoorStore } from '../door/useDoorStore'
-import { doorCounter, effectiveCheckins, effectiveTickets, nocturnoPorDefecto } from '../door/logic'
+import { doorCounter, effectiveCheckins, effectiveTickets, listaVieja, nocturnoPorDefecto } from '../door/logic'
+import type { Rechazo } from '../door/logic'
+import { functionDay, functionTime } from '../lib/format'
 import { filterTickets, groupByBuyer } from '../lib/search'
 import { useIsDesktop } from '../lib/viewport'
 import { Button, Search } from '../ui/Button'
@@ -32,7 +34,18 @@ function timeOf(iso: string): string {
   return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 }
 
-function toDisplay(resp: CheckinResponse): DisplayResult {
+/** "sáb 12 de diciembre · 21:00": a qué función va una entrada. */
+function cuandoEs(startsAt: string | undefined, name?: string | null): string | undefined {
+  if (!startsAt) return undefined
+  return `${name ? `${name} · ` : ''}${functionDay(startsAt)} · ${functionTime(startsAt)}`
+}
+
+/**
+ * `listaDe`: la hora de la lista del teléfono cuando está vieja. Con la lista
+ * vieja, un QR que no está puede ser un cambio reciente de dirección, y el
+ * cartel lo dice en vez de dar un rojo seco.
+ */
+function toDisplay(resp: CheckinResponse, listaDe?: string): DisplayResult {
   switch (resp.result) {
     case 'ok':
       return {
@@ -53,9 +66,26 @@ function toDisplay(resp: CheckinResponse): DisplayResult {
       }
     case 'void':
       return { ok: false, sello: 'Anulada', title: resp.buyer_name ?? 'Esta entrada', autoCloseMs: 5000 }
-    case 'wrong_function':
-      return { ok: false, sello: 'Otra función', title: resp.buyer_name ?? 'Esta entrada', autoCloseMs: 5000 }
+    case 'wrong_function': {
+      const cuando = cuandoEs(resp.function_starts_at, resp.function_name)
+      return {
+        ok: false,
+        sello: 'Otra función',
+        title: resp.buyer_name ?? 'Esta entrada',
+        detail: cuando ? `Su entrada es para ${cuando}.` : undefined,
+        autoCloseMs: 6000,
+      }
+    }
     case 'invalid':
+      if (listaDe) {
+        return {
+          ok: false,
+          sello: 'No está en la lista',
+          title: 'Revisá antes de rechazar',
+          detail: `Tu lista es de las ${listaDe}. Puede ser un cambio reciente de dirección: actualizá o consultá.`,
+          autoCloseMs: 8000,
+        }
+      }
       return { ok: false, sello: 'QR inválido', title: 'No sirve', detail: 'No es una entrada de esta función.', autoCloseMs: 5000 }
   }
 }
@@ -465,6 +495,96 @@ function Costado({ tickets, checkins }: { tickets: DoorTicket[]; checkins: DoorC
   )
 }
 
+function motivoRechazo(r: Rechazo): string {
+  switch (r.result) {
+    case 'wrong_function': {
+      const cuando = cuandoEs(r.function_starts_at, r.function_name)
+      return cuando ? `su entrada es para ${cuando}` : 'su entrada es de otra función'
+    }
+    case 'void':
+      return 'la venta estaba anulada'
+    default:
+      return 'el QR no es válido'
+  }
+}
+
+/**
+ * Ingresos que este teléfono dejó pasar sin conexión y que el sistema no
+ * aceptó al subirlos: casi siempre, una venta que dirección movió de función
+ * mientras la puerta no tenía señal. Quedan a la vista hasta que alguien los lee.
+ */
+function AvisoRechazos({ rechazos, onOk }: { rechazos: Rechazo[]; onOk: () => void }) {
+  if (rechazos.length === 0) return null
+  return (
+    <div className="banner banner--bad" role="alert" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
+      <b>
+        {rechazos.length === 1
+          ? 'Este ingreso no lo aceptó el sistema:'
+          : `Estos ${rechazos.length} ingresos no los aceptó el sistema:`}
+      </b>
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        {rechazos.map((r) => (
+          <li key={`${r.code}-${r.at}`}>
+            {r.buyer_name ?? 'Una entrada'} entró a las {timeOf(r.at)}, pero {motivoRechazo(r)}.
+          </li>
+        ))}
+      </ul>
+      <span>Avisale a dirección.</span>
+      <div>
+        <Button onClick={onOk}>Entendido</Button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * La lista del teléfono es vieja: hace más de 2 minutos que no se puede
+ * bajar. Si dirección cambió algo, la puerta no lo ve; hay que buscar señal
+ * y actualizar.
+ */
+function AvisoListaVieja({
+  listaDe,
+  pendientes,
+  onActualizar,
+}: {
+  listaDe: string | null
+  pendientes: number
+  onActualizar: () => Promise<boolean>
+}) {
+  const [estado, setEstado] = useState<'idle' | 'cargando' | 'fallo'>('idle')
+  return (
+    <div className="banner" role="status" style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
+      <span>
+        <b>{listaDe ? `Tu lista es de las ${listaDe}.` : 'Tu lista no está actualizada.'}</b> Seguí escaneando, pero si
+        dirección cambió algo después, este teléfono no lo sabe. Cuando puedas, buscá señal y actualizá.
+        {pendientes > 0 && ` ${pendientes} ${pendientes === 1 ? 'ingreso espera' : 'ingresos esperan'} para subir.`}
+      </span>
+      {estado === 'fallo' && <span>Todavía no hay señal. Probá de nuevo en otro lugar.</span>}
+      <div>
+        <Button
+          disabled={estado === 'cargando'}
+          onClick={async () => {
+            setEstado('cargando')
+            setEstado((await onActualizar()) ? 'idle' : 'fallo')
+          }}
+        >
+          {estado === 'cargando' ? 'Actualizando…' : 'Actualizar ahora'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/** Re-render cada `ms` para que los avisos que dependen de la hora se muevan solos. */
+function useAhora(ms: number): number {
+  const [ahora, setAhora] = useState(() => Date.now())
+  useEffect(() => {
+    const t = window.setInterval(() => setAhora(Date.now()), ms)
+    return () => window.clearInterval(t)
+  }, [ms])
+  return ahora
+}
+
 export function DoorModePage() {
   const { functionId: raw } = useParams()
   // ?buscar= llega del "Marcar" de Asistencia: la búsqueda arranca con ese
@@ -489,6 +609,11 @@ export function DoorModePage() {
   const store = useDoorStore(functionId)
   const escritorio = useIsDesktop()
   useWakeLock()
+  const ahora = useAhora(15_000)
+  const vieja = store.snapshot !== null && listaVieja(store.savedAt, ahora)
+  const listaDe = store.savedAt ? timeOf(store.savedAt) : null
+  // Sólo se le pasa a los carteles si la lista está vieja.
+  const listaDeSiVieja = vieja ? (listaDe ?? 'antes') : undefined
 
   // En escritorio la cámara no se enciende nunca: `enabled` en false deja el
   // hook inerte y el botón de escanear no se renderiza, así que html5-qrcode
@@ -519,7 +644,7 @@ export function DoorModePage() {
   async function attempt(input: CheckinAttempt) {
     const verdict = await store.checkin(input)
     setSheetOpen(false)
-    showResult(toDisplay(verdict))
+    showResult(toDisplay(verdict, listaDeSiVieja))
   }
 
   /**
@@ -539,7 +664,7 @@ export function DoorModePage() {
     setSheetOpen(false)
     const problema = verdicts.find((v) => v.result !== 'ok')
     if (problema) {
-      showResult(toDisplay(problema))
+      showResult(toDisplay(problema, listaDeSiVieja))
       return
     }
     const primero = verdicts[0]
@@ -605,7 +730,11 @@ export function DoorModePage() {
         )}
       </div>
 
-      {!store.online && (
+      <AvisoRechazos rechazos={store.rechazos} onOk={store.descartarRechazos} />
+
+      {vieja && <AvisoListaVieja listaDe={listaDe} pendientes={store.pending.length} onActualizar={store.refreshNow} />}
+
+      {!store.online && !vieja && (
         <p className="banner" role="status" style={{ margin: 0 }}>
           <b>Seguí escaneando</b>: la lista está guardada en el teléfono y se sincroniza sola.
           {store.pending.length > 0 &&

@@ -2,8 +2,10 @@ package httpapi
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -40,6 +42,10 @@ type checkinResponse struct {
 	SellerName  string     `json:"seller_name,omitempty"`
 	CheckedInAt *time.Time `json:"checked_in_at,omitempty"`
 	ByName      string     `json:"by_name,omitempty"` // quien lo registro antes
+	// wrong_function: a que funcion va la entrada. Sirve para decirle a la
+	// puerta "su entrada es del sabado 12" y no solo "no es de esta funcion".
+	FunctionName     *string    `json:"function_name,omitempty"`
+	FunctionStartsAt *time.Time `json:"function_starts_at,omitempty"`
 }
 
 // resolveTicketCode saca el codigo del ticket segun el metodo: verifica la
@@ -91,6 +97,10 @@ func (s *Server) processCheckin(r *http.Request, functionID, userID int64, metho
 
 	if sale.FunctionID != functionID {
 		resp.Result = checkinWrongFunction
+		if fn, err := s.queries.GetFunction(ctx, sqlcgen.GetFunctionParams{ID: sale.FunctionID, OrganizationID: s.org(ctx)}); err == nil {
+			resp.FunctionName = fn.Name
+			resp.FunctionStartsAt = &fn.StartsAt
+		}
 		return resp, nil
 	}
 	if ticket.Status == string(domain.TicketVoid) || sale.VoidedAt != nil {
@@ -273,6 +283,17 @@ func (s *Server) handleDoorSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Se anota que este celular tiene la lista de ahora: direccion lo mira
+	// cuando mueve una venta el dia de la funcion. Si falla, la puerta anda
+	// igual.
+	if device := strings.TrimSpace(r.URL.Query().Get("device_id")); device != "" && len(device) <= 100 {
+		if err := s.queries.TouchDoorDevice(r.Context(), sqlcgen.TouchDoorDeviceParams{
+			FunctionID: id, DeviceID: device, UserID: auth.MustUserFrom(r.Context()).ID, OrganizationID: s.org(r.Context()),
+		}); err != nil {
+			slog.ErrorContext(r.Context(), "no se pudo anotar el dispositivo de la puerta", "function_id", id, "error", err)
+		}
+	}
+
 	tickets, err := s.queries.DoorSnapshotTickets(r.Context(), sqlcgen.DoorSnapshotTicketsParams{FunctionID: id, OrganizationID: s.org(r.Context())})
 	if err != nil {
 		httpx.Internal(w, r, err)
@@ -294,4 +315,31 @@ func (s *Server) handleDoorSnapshot(w http.ResponseWriter, r *http.Request) {
 	resp.Checkins = checkins
 
 	httpx.JSON(w, http.StatusOK, resp)
+}
+
+type doorDevicesResponse struct {
+	// Now es la hora del server: el cliente compara contra esto y no contra
+	// su reloj, que puede estar corrido.
+	Now     time.Time                    `json:"now"`
+	Devices []sqlcgen.ListDoorDevicesRow `json:"devices"`
+}
+
+// handleDoorDevices: GET /api/functions/{id}/door-devices — solo direccion.
+// Los celulares que tienen abierta la puerta de esta funcion y de cuando es
+// la lista que tiene cada uno.
+func (s *Server) handleDoorDevices(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		mapDomainError(w, domain.ErrFunctionNotFound)
+		return
+	}
+	if !s.funcionExiste(w, r, id) {
+		return
+	}
+	devices, err := s.queries.ListDoorDevices(r.Context(), sqlcgen.ListDoorDevicesParams{FunctionID: id, OrganizationID: s.org(r.Context())})
+	if err != nil {
+		httpx.Internal(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, doorDevicesResponse{Now: time.Now(), Devices: devices})
 }

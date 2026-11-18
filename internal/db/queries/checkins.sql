@@ -89,3 +89,28 @@ JOIN seasons se ON se.id = f.season_id
 WHERE s.function_id = sqlc.arg(function_id)::bigint
   AND se.organization_id = sqlc.arg(organization_id)::bigint
 ORDER BY c.created_at;
+
+-- name: TouchDoorDevice :exec
+-- Solo si la funcion es de la organizacion; si no, no anota nada.
+INSERT INTO door_devices (function_id, device_id, user_id, last_snapshot_at)
+SELECT f.id, sqlc.arg(device_id)::text, sqlc.arg(user_id)::bigint, now()
+FROM functions f
+JOIN seasons se ON se.id = f.season_id
+WHERE f.id = sqlc.arg(function_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
+ON CONFLICT (function_id, device_id)
+DO UPDATE SET user_id = EXCLUDED.user_id, last_snapshot_at = EXCLUDED.last_snapshot_at;
+
+-- name: ListDoorDevices :many
+-- Los celulares que tuvieron abierta la puerta de esta funcion en las ultimas
+-- 12 horas. Uno que nunca la abrio no tiene nada viejo: cuando la abra baja
+-- la lista al dia.
+SELECT d.device_id, d.last_snapshot_at, u.name AS user_name
+FROM door_devices d
+JOIN users u ON u.id = d.user_id
+JOIN functions f ON f.id = d.function_id
+JOIN seasons se ON se.id = f.season_id
+WHERE d.function_id = sqlc.arg(function_id)::bigint
+  AND se.organization_id = sqlc.arg(organization_id)::bigint
+  AND d.last_snapshot_at > now() - interval '12 hours'
+ORDER BY d.last_snapshot_at;
