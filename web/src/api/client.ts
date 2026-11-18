@@ -1020,10 +1020,14 @@ export function publicTicketURL(code: string): string {
  * persona; sin teléfono, WhatsApp pregunta a quién mandarlo. Anda igual en el
  * celular (abre la app) y en la compu (WhatsApp Web o la app de escritorio):
  * el menú de compartir del sistema, en cambio, en la Mac no trae WhatsApp.
+ *
+ * Va a api.whatsapp.com y no a wa.me: wa.me redirige ahí y en el camino
+ * cambia los emojis (🎫 📅 👉…) por �. api.whatsapp.com los pasa enteros.
  */
 export function whatsAppURL(text: string, phone?: string | null): string {
   const numero = telefonoWhatsApp(phone)
-  return `https://wa.me/${numero}?text=${encodeURIComponent(text)}`
+  const destino = numero ? `phone=${numero}&` : ''
+  return `https://api.whatsapp.com/send?${destino}text=${encodeURIComponent(text)}`
 }
 
 /** Un teléfono argentino como lo pide wa.me: 549 + característica + número. */

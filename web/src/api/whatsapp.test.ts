@@ -18,6 +18,9 @@ describe('telefonoWhatsApp', () => {
 
 describe('whatsAppURL', () => {
   it('lleva el texto codificado', () => {
-    expect(whatsAppURL('Hola Ana! http://x/e/1', null)).toBe('https://wa.me/?text=Hola%20Ana!%20http%3A%2F%2Fx%2Fe%2F1')
+    expect(whatsAppURL('Hola Ana! http://x/e/1', null)).toBe('https://api.whatsapp.com/send?text=Hola%20Ana!%20http%3A%2F%2Fx%2Fe%2F1')
+  })
+  it('con teléfono abre ese chat, y los emojis van enteros (no por wa.me, que los rompe)', () => {
+    expect(whatsAppURL('🎫', '11 2345-6789')).toBe('https://api.whatsapp.com/send?phone=5491123456789&text=%F0%9F%8E%AB')
   })
 })
