@@ -171,6 +171,7 @@ function filaDeAlerta(alert: Alert): SettlementReportRow {
     pending_cents: 0,
     settled_cents: alert.settled_cents ?? 0,
     balance_cents: alert.amount_cents ?? 0,
+    direct_cents: 0,
   }
 }
 

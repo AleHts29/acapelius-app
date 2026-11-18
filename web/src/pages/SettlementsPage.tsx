@@ -295,6 +295,7 @@ function DetalleCorista({
         pending_cents: d.uncollected_cents,
         settled_cents: d.settled_cents,
         balance_cents: d.balance_cents,
+        direct_cents: 0,
       }
     : null
 
@@ -344,7 +345,13 @@ export function SettlementsScreen() {
   const [confirmando, setConfirmando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
 
-  const rows = report.data?.rows ?? []
+  const todas = report.data?.rows ?? []
+  // Dirección que vendió por su cuenta: esa plata ya está en caja, no tiene a
+  // quién rendírsela. Va aparte y sin acciones (C22). Si además arrastra algo
+  // de cuando era corista, sigue apareciendo como cualquier otra.
+  const esDireccion = (r: SettlementReportRow) => r.direct_cents > 0 && r.collected_cents === 0 && r.settled_cents === 0
+  const direccion = todas.filter(esDireccion)
+  const rows = todas.filter((r) => !esDireccion(r))
   const deudoras = rows.filter((r) => r.balance_cents > 0).sort((a, b) => b.balance_cents - a.balance_cents)
   const alDia = rows.filter((r) => r.balance_cents <= 0)
   const totalDebt = deudoras.reduce((acc, r) => acc + r.balance_cents, 0)
@@ -502,6 +509,26 @@ export function SettlementsScreen() {
                       !escritorio ? undefined : r.collected_cents > 0 ? <Status tone="ok">Al día</Status> : <Status tone="mute">Sin ventas</Status>
                     }
                     onClick={() => abrir(r.seller_id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {direccion.length > 0 && (
+            <section className="grp bloque">
+              <div className="grp__h">
+                <h2 className="lbl">Vendió dirección</h2>
+                <span className="grp__n">{formatMoney(direccion.reduce((acc, r) => acc + r.direct_cents, 0))}</span>
+              </div>
+              <div className="card">
+                {direccion.map((r) => (
+                  <Row
+                    key={r.seller_id}
+                    title={r.seller_name}
+                    sub="Directo a caja · no se rinde"
+                    amount={sinCentavos(r.direct_cents)}
+                    unit="cobró"
                   />
                 ))}
               </div>

@@ -90,6 +90,7 @@ type Sale struct {
 	CreatedAt     time.Time  `json:"created_at"`
 	PaidCents     int64      `json:"paid_cents"`
 	OverCapacity  bool       `json:"over_capacity"`
+	DirectToBox   bool       `json:"direct_to_box"`
 }
 
 type SalePayment struct {

@@ -21,6 +21,17 @@ WITH temporada AS (
   WHERE f.season_id = (SELECT id FROM temporada)
     AND NOT s.is_comp
     AND s.voided_at IS NULL
+    AND NOT s.direct_to_box
+  GROUP BY s.seller_id
+), direct AS (
+  -- Lo que cobro direccion en sus propias ventas: ya esta en caja (C22).
+  SELECT s.seller_id, COALESCE(SUM(s.paid_cents), 0)::bigint AS cents
+  FROM sales s
+  JOIN functions f ON s.function_id = f.id
+  WHERE f.season_id = (SELECT id FROM temporada)
+    AND NOT s.is_comp
+    AND s.voided_at IS NULL
+    AND s.direct_to_box
   GROUP BY s.seller_id
 ), settled AS (
   SELECT seller_id, COALESCE(SUM(amount_cents), 0)::bigint AS cents
@@ -33,15 +44,17 @@ SELECT
   u.name AS seller_name,
   COALESCE(c.paid_cents, 0)::bigint AS collected_cents,
   COALESCE(c.pending_cents, 0)::bigint AS pending_cents,
-  COALESCE(st.cents, 0)::bigint AS settled_cents
+  COALESCE(st.cents, 0)::bigint AS settled_cents,
+  COALESCE(d.cents, 0)::bigint AS direct_cents
 FROM users u
 LEFT JOIN collected c ON c.seller_id = u.id
 LEFT JOIN settled st ON st.seller_id = u.id
+LEFT JOIN direct d ON d.seller_id = u.id
 LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = (SELECT id FROM temporada)
 -- Las coristas de la temporada, mas cualquiera que haya movido plata en ella
 -- aunque ya no este: su deuda no desaparece porque dejo el coro.
 WHERE u.organization_id = sqlc.arg(organization_id)::bigint
-  AND (m.role = 'seller' OR c.seller_id IS NOT NULL OR st.seller_id IS NOT NULL)
+  AND (m.role = 'seller' OR c.seller_id IS NOT NULL OR st.seller_id IS NOT NULL OR d.seller_id IS NOT NULL)
 ORDER BY u.name;
 
 -- name: CreateSettlement :one
@@ -165,6 +178,7 @@ WITH temporada AS (
   WHERE f.season_id = (SELECT id FROM temporada)
     AND NOT s.is_comp
     AND s.voided_at IS NULL
+    AND NOT s.direct_to_box
   GROUP BY s.seller_id
 ), settled AS (
   SELECT seller_id, COALESCE(SUM(amount_cents), 0)::bigint AS cents
@@ -297,6 +311,8 @@ WHERE s.voided_at IS NULL
 SELECT
   COALESCE(SUM(s.amount_cents), 0)::bigint AS sold_cents,
   COALESCE(SUM(s.paid_cents), 0)::bigint AS collected_cents,
+  -- Lo cobrado por direccion en sus ventas: ya esta en caja, no se rinde (C22).
+  COALESCE(SUM(s.paid_cents) FILTER (WHERE s.direct_to_box), 0)::bigint AS direct_cents,
   COALESCE(SUM(s.amount_cents - s.paid_cents), 0)::bigint AS uncollected_cents,
   COUNT(*) FILTER (WHERE s.amount_cents > s.paid_cents)::bigint AS sales_uncollected
 FROM sales s
@@ -336,6 +352,7 @@ WHERE s.seller_id = sqlc.arg(seller_id)::bigint
   AND s.voided_at IS NULL
   AND NOT s.is_comp
   AND s.paid_cents > 0
+  AND NOT s.direct_to_box
 ORDER BY paid_at DESC NULLS LAST, s.id DESC;
 
 -- name: SellerSeasonStats :one

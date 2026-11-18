@@ -465,6 +465,8 @@ export interface SettlementReportRow {
   pending_cents: number
   settled_cents: number
   balance_cents: number
+  /** Lo que cobró en ventas hechas como dirección: ya está en caja, no se rinde. */
+  direct_cents: number
 }
 
 export interface Settlement {

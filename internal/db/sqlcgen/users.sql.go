@@ -821,7 +821,7 @@ SELECT
   (COALESCE((SELECT SUM(sa.paid_cents) FROM sales sa
      JOIN functions f ON sa.function_id = f.id
    WHERE sa.seller_id = u.id AND f.season_id = m.season_id
-     AND NOT sa.is_comp AND sa.voided_at IS NULL), 0)
+     AND NOT sa.is_comp AND sa.voided_at IS NULL AND NOT sa.direct_to_box), 0)
    - COALESCE((SELECT SUM(st.amount_cents) FROM settlements st
    WHERE st.seller_id = u.id AND st.season_id = m.season_id), 0))::bigint AS balance_cents,
   -- Ingresos que registro en la puerta, en esta temporada: es lo unico que

@@ -144,6 +144,7 @@ WITH temporada AS (
   WHERE f.season_id = (SELECT id FROM temporada)
     AND NOT s.is_comp
     AND s.voided_at IS NULL
+    AND NOT s.direct_to_box
   GROUP BY s.seller_id
 ), settled AS (
   SELECT seller_id, COALESCE(SUM(amount_cents), 0)::bigint AS cents
@@ -853,6 +854,8 @@ const seasonMoney = `-- name: SeasonMoney :one
 SELECT
   COALESCE(SUM(s.amount_cents), 0)::bigint AS sold_cents,
   COALESCE(SUM(s.paid_cents), 0)::bigint AS collected_cents,
+  -- Lo cobrado por direccion en sus ventas: ya esta en caja, no se rinde (C22).
+  COALESCE(SUM(s.paid_cents) FILTER (WHERE s.direct_to_box), 0)::bigint AS direct_cents,
   COALESCE(SUM(s.amount_cents - s.paid_cents), 0)::bigint AS uncollected_cents,
   COUNT(*) FILTER (WHERE s.amount_cents > s.paid_cents)::bigint AS sales_uncollected
 FROM sales s
@@ -872,6 +875,7 @@ type SeasonMoneyParams struct {
 type SeasonMoneyRow struct {
 	SoldCents        int64 `json:"sold_cents"`
 	CollectedCents   int64 `json:"collected_cents"`
+	DirectCents      int64 `json:"direct_cents"`
 	UncollectedCents int64 `json:"uncollected_cents"`
 	SalesUncollected int64 `json:"sales_uncollected"`
 }
@@ -888,6 +892,7 @@ func (q *Queries) SeasonMoney(ctx context.Context, arg SeasonMoneyParams) (Seaso
 	err := row.Scan(
 		&i.SoldCents,
 		&i.CollectedCents,
+		&i.DirectCents,
 		&i.UncollectedCents,
 		&i.SalesUncollected,
 	)
@@ -1022,6 +1027,7 @@ WHERE s.seller_id = $1::bigint
   AND s.voided_at IS NULL
   AND NOT s.is_comp
   AND s.paid_cents > 0
+  AND NOT s.direct_to_box
 ORDER BY paid_at DESC NULLS LAST, s.id DESC
 `
 
@@ -1137,6 +1143,17 @@ WITH temporada AS (
   WHERE f.season_id = (SELECT id FROM temporada)
     AND NOT s.is_comp
     AND s.voided_at IS NULL
+    AND NOT s.direct_to_box
+  GROUP BY s.seller_id
+), direct AS (
+  -- Lo que cobro direccion en sus propias ventas: ya esta en caja (C22).
+  SELECT s.seller_id, COALESCE(SUM(s.paid_cents), 0)::bigint AS cents
+  FROM sales s
+  JOIN functions f ON s.function_id = f.id
+  WHERE f.season_id = (SELECT id FROM temporada)
+    AND NOT s.is_comp
+    AND s.voided_at IS NULL
+    AND s.direct_to_box
   GROUP BY s.seller_id
 ), settled AS (
   SELECT seller_id, COALESCE(SUM(amount_cents), 0)::bigint AS cents
@@ -1149,13 +1166,15 @@ SELECT
   u.name AS seller_name,
   COALESCE(c.paid_cents, 0)::bigint AS collected_cents,
   COALESCE(c.pending_cents, 0)::bigint AS pending_cents,
-  COALESCE(st.cents, 0)::bigint AS settled_cents
+  COALESCE(st.cents, 0)::bigint AS settled_cents,
+  COALESCE(d.cents, 0)::bigint AS direct_cents
 FROM users u
 LEFT JOIN collected c ON c.seller_id = u.id
 LEFT JOIN settled st ON st.seller_id = u.id
+LEFT JOIN direct d ON d.seller_id = u.id
 LEFT JOIN season_members m ON m.user_id = u.id AND m.season_id = (SELECT id FROM temporada)
 WHERE u.organization_id = $1::bigint
-  AND (m.role = 'seller' OR c.seller_id IS NOT NULL OR st.seller_id IS NOT NULL)
+  AND (m.role = 'seller' OR c.seller_id IS NOT NULL OR st.seller_id IS NOT NULL OR d.seller_id IS NOT NULL)
 ORDER BY u.name
 `
 
@@ -1170,6 +1189,7 @@ type SettlementsReportRow struct {
 	CollectedCents int64  `json:"collected_cents"`
 	PendingCents   int64  `json:"pending_cents"`
 	SettledCents   int64  `json:"settled_cents"`
+	DirectCents    int64  `json:"direct_cents"`
 }
 
 // Reportes y home. Todo cuelga de seasons o users (C17 §A.1): cada consulta
@@ -1198,6 +1218,7 @@ func (q *Queries) SettlementsReport(ctx context.Context, arg SettlementsReportPa
 			&i.CollectedCents,
 			&i.PendingCents,
 			&i.SettledCents,
+			&i.DirectCents,
 		); err != nil {
 			return nil, err
 		}

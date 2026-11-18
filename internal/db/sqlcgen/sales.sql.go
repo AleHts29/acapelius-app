@@ -73,7 +73,7 @@ func (q *Queries) CountTicketsBySaleAndStatus(ctx context.Context, arg CountTick
 }
 
 const createSale = `-- name: CreateSale :one
-INSERT INTO sales (function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, is_comp, notes, over_capacity)
+INSERT INTO sales (function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, is_comp, notes, over_capacity, direct_to_box)
 SELECT
   f.id,
   $1::bigint,
@@ -85,12 +85,16 @@ SELECT
   $7::bigint,
   $8::boolean,
   $9,
-  $10::boolean
+  $10::boolean,
+  EXISTS (SELECT 1 FROM season_members m
+          WHERE m.season_id = f.season_id
+            AND m.user_id = $1::bigint
+            AND m.role = 'admin')
 FROM functions f
 JOIN seasons se ON se.id = f.season_id
 WHERE f.id = $11::bigint
   AND se.organization_id = $12::bigint
-RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents, over_capacity
+RETURNING id, function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, payment_status, payment_method, is_comp, notes, voided_at, created_at, paid_cents, over_capacity, direct_to_box
 `
 
 type CreateSaleParams struct {
@@ -109,6 +113,8 @@ type CreateSaleParams struct {
 }
 
 // Solo si la funcion es de la organizacion; si no, no inserta (ErrNoRows).
+// direct_to_box: si quien vende es direccion en esa temporada, lo que cobre ya
+// esta en la caja y no genera rendicion (C22).
 func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (Sale, error) {
 	row := q.db.QueryRow(ctx, createSale,
 		arg.SellerID,
@@ -143,6 +149,7 @@ func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (Sale, e
 		&i.CreatedAt,
 		&i.PaidCents,
 		&i.OverCapacity,
+		&i.DirectToBox,
 	)
 	return i, err
 }
@@ -287,7 +294,7 @@ func (q *Queries) GetFunctionForUpdate(ctx context.Context, arg GetFunctionForUp
 
 const getPublicSale = `-- name: GetPublicSale :one
 
-SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity,
+SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, s.direct_to_box,
   f.name AS function_name,
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
@@ -316,6 +323,7 @@ type GetPublicSaleRow struct {
 	CreatedAt        time.Time  `json:"created_at"`
 	PaidCents        int64      `json:"paid_cents"`
 	OverCapacity     bool       `json:"over_capacity"`
+	DirectToBox      bool       `json:"direct_to_box"`
 	FunctionName     *string    `json:"function_name"`
 	FunctionVenue    string     `json:"function_venue"`
 	FunctionStartsAt time.Time  `json:"function_starts_at"`
@@ -347,6 +355,7 @@ func (q *Queries) GetPublicSale(ctx context.Context, code string) (GetPublicSale
 		&i.CreatedAt,
 		&i.PaidCents,
 		&i.OverCapacity,
+		&i.DirectToBox,
 		&i.FunctionName,
 		&i.FunctionVenue,
 		&i.FunctionStartsAt,
@@ -373,7 +382,7 @@ func (q *Queries) GetPublicTicketByCode(ctx context.Context, code string) (Ticke
 }
 
 const getSale = `-- name: GetSale :one
-SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity FROM sales s
+SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, s.direct_to_box FROM sales s
 JOIN functions f ON f.id = s.function_id
 JOIN seasons se ON se.id = f.season_id
 WHERE s.id = $1::bigint
@@ -406,6 +415,7 @@ func (q *Queries) GetSale(ctx context.Context, arg GetSaleParams) (Sale, error) 
 		&i.CreatedAt,
 		&i.PaidCents,
 		&i.OverCapacity,
+		&i.DirectToBox,
 	)
 	return i, err
 }
@@ -559,7 +569,7 @@ func (q *Queries) ListSalePayments(ctx context.Context, saleID int64) ([]ListSal
 
 const listSalesDetailed = `-- name: ListSalesDetailed :many
 SELECT
-  s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity,
+  s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, s.direct_to_box,
   f.venue AS function_venue,
   f.starts_at AS function_starts_at,
   f.name AS function_name,
@@ -601,6 +611,7 @@ type ListSalesDetailedRow struct {
 	CreatedAt        time.Time  `json:"created_at"`
 	PaidCents        int64      `json:"paid_cents"`
 	OverCapacity     bool       `json:"over_capacity"`
+	DirectToBox      bool       `json:"direct_to_box"`
 	FunctionVenue    string     `json:"function_venue"`
 	FunctionStartsAt time.Time  `json:"function_starts_at"`
 	FunctionName     *string    `json:"function_name"`
@@ -637,6 +648,7 @@ func (q *Queries) ListSalesDetailed(ctx context.Context, arg ListSalesDetailedPa
 			&i.CreatedAt,
 			&i.PaidCents,
 			&i.OverCapacity,
+			&i.DirectToBox,
 			&i.FunctionVenue,
 			&i.FunctionStartsAt,
 			&i.FunctionName,
@@ -699,7 +711,7 @@ FROM (
   FROM sale_payments p WHERE p.sale_id = $1::bigint
 ) c
 WHERE s.id = $1::bigint
-RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, s.direct_to_box
 `
 
 // Recalcula el cache de la venta desde sus cobros: cuanto lleva cobrado, si
@@ -727,6 +739,7 @@ func (q *Queries) RecalcSalePayment(ctx context.Context, saleID int64) (Sale, er
 		&i.CreatedAt,
 		&i.PaidCents,
 		&i.OverCapacity,
+		&i.DirectToBox,
 	)
 	return i, err
 }
@@ -781,7 +794,7 @@ JOIN seasons se ON se.id = f.season_id
 WHERE f.id = s.function_id
   AND s.id = $6::bigint
   AND se.organization_id = $7::bigint
-RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, s.direct_to_box
 `
 
 type UpdateSaleDetailsParams struct {
@@ -826,6 +839,7 @@ func (q *Queries) UpdateSaleDetails(ctx context.Context, arg UpdateSaleDetailsPa
 		&i.CreatedAt,
 		&i.PaidCents,
 		&i.OverCapacity,
+		&i.DirectToBox,
 	)
 	return i, err
 }
@@ -839,7 +853,7 @@ JOIN seasons se ON se.id = f.season_id
 WHERE f.id = s.function_id
   AND s.id = $3::bigint
   AND se.organization_id = $4::bigint
-RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, s.direct_to_box
 `
 
 type UpdateSalePaymentParams struct {
@@ -875,6 +889,7 @@ func (q *Queries) UpdateSalePayment(ctx context.Context, arg UpdateSalePaymentPa
 		&i.CreatedAt,
 		&i.PaidCents,
 		&i.OverCapacity,
+		&i.DirectToBox,
 	)
 	return i, err
 }
@@ -886,7 +901,7 @@ JOIN seasons se ON se.id = f.season_id
 WHERE f.id = s.function_id
   AND s.id = $1::bigint
   AND se.organization_id = $2::bigint
-RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity
+RETURNING s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, s.direct_to_box
 `
 
 type VoidSaleParams struct {
@@ -915,6 +930,7 @@ func (q *Queries) VoidSale(ctx context.Context, arg VoidSaleParams) (Sale, error
 		&i.CreatedAt,
 		&i.PaidCents,
 		&i.OverCapacity,
+		&i.DirectToBox,
 	)
 	return i, err
 }

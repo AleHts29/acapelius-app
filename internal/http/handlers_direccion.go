@@ -108,10 +108,11 @@ func (s *Server) handleDireccion(w http.ResponseWriter, r *http.Request) {
 	resp := direccionResponse{
 		Money: direccionMoney{
 			SoldCents: money.SoldCents,
-			// Lo que ya esta en manos de direccion es lo rendido; el resto de
-			// lo cobrado sigue en el bolsillo de las coristas.
-			InHandCents:      settled,
-			UnsettledCents:   money.CollectedCents - settled,
+			// Lo que ya esta en manos de direccion es lo rendido mas lo que
+			// cobro direccion en sus propias ventas (C22); el resto de lo
+			// cobrado sigue en el bolsillo de las coristas.
+			InHandCents:      settled + money.DirectCents,
+			UnsettledCents:   money.CollectedCents - money.DirectCents - settled,
 			UncollectedCents: money.UncollectedCents,
 			SellersOwing:     len(deudoras),
 			SalesUncollected: money.SalesUncollected,

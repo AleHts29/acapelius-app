@@ -200,7 +200,7 @@ func (q *Queries) ListSalesPage(ctx context.Context, arg ListSalesPageParams) ([
 }
 
 const salesByIDs = `-- name: SalesByIDs :many
-SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, u.name AS seller_name
+SELECT s.id, s.function_id, s.seller_id, s.code, s.buyer_name, s.buyer_email, s.buyer_phone, s.quantity, s.amount_cents, s.payment_status, s.payment_method, s.is_comp, s.notes, s.voided_at, s.created_at, s.paid_cents, s.over_capacity, s.direct_to_box, u.name AS seller_name
 FROM sales s
 JOIN functions f ON f.id = s.function_id
 JOIN seasons se ON se.id = f.season_id
@@ -232,6 +232,7 @@ type SalesByIDsRow struct {
 	CreatedAt     time.Time  `json:"created_at"`
 	PaidCents     int64      `json:"paid_cents"`
 	OverCapacity  bool       `json:"over_capacity"`
+	DirectToBox   bool       `json:"direct_to_box"`
 	SellerName    string     `json:"seller_name"`
 }
 
@@ -265,6 +266,7 @@ func (q *Queries) SalesByIDs(ctx context.Context, arg SalesByIDsParams) ([]Sales
 			&i.CreatedAt,
 			&i.PaidCents,
 			&i.OverCapacity,
+			&i.DirectToBox,
 			&i.SellerName,
 		); err != nil {
 			return nil, err

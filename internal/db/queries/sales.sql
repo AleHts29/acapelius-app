@@ -24,7 +24,9 @@ WHERE s.function_id = sqlc.arg(function_id)::bigint
 
 -- name: CreateSale :one
 -- Solo si la funcion es de la organizacion; si no, no inserta (ErrNoRows).
-INSERT INTO sales (function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, is_comp, notes, over_capacity)
+-- direct_to_box: si quien vende es direccion en esa temporada, lo que cobre ya
+-- esta en la caja y no genera rendicion (C22).
+INSERT INTO sales (function_id, seller_id, code, buyer_name, buyer_email, buyer_phone, quantity, amount_cents, is_comp, notes, over_capacity, direct_to_box)
 SELECT
   f.id,
   sqlc.arg(seller_id)::bigint,
@@ -36,7 +38,11 @@ SELECT
   sqlc.arg(amount_cents)::bigint,
   sqlc.arg(is_comp)::boolean,
   sqlc.narg(notes),
-  sqlc.arg(over_capacity)::boolean
+  sqlc.arg(over_capacity)::boolean,
+  EXISTS (SELECT 1 FROM season_members m
+          WHERE m.season_id = f.season_id
+            AND m.user_id = sqlc.arg(seller_id)::bigint
+            AND m.role = 'admin')
 FROM functions f
 JOIN seasons se ON se.id = f.season_id
 WHERE f.id = sqlc.arg(function_id)::bigint
