@@ -16,7 +16,7 @@
 @font-face { font-family: 'Inter'; font-style: normal; font-weight: 400 800; font-display: swap; src: url(/site/fonts/inter.woff2) format('woff2'); }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 80px; }
 body { font-family: 'Inter', system-ui, sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; }
 a { color: inherit; text-decoration: none; }
 a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--indigo); outline-offset: 2px; }
@@ -56,6 +56,7 @@ img { display: block; max-width: 100%; }
 
 /* los tres pasos: entrada troquelada */
 .ticket { margin: 36px var(--side) 0; border: 2px solid var(--ink); display: grid; grid-template-columns: repeat(3, 1fr); list-style: none; }
+.sec .ticket { margin: 28px 0 0; }
 .ticket > li { padding: 20px 22px; border-right: 1px dashed var(--ink); }
 .ticket > li:last-child { border-right: 0; }
 .ticket .n { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; letter-spacing: .1em; }
@@ -73,22 +74,13 @@ img { display: block; max-width: 100%; }
 /* secciones */
 .sec { padding: 56px var(--side); border-bottom: 1px solid var(--ink); }
 .sec--ink { background: var(--ink); color: var(--paper); border-bottom: 0; }
-.sechead { display: grid; grid-template-columns: auto 1fr auto; gap: 26px; align-items: end; border-bottom: 2px solid var(--ink); padding-bottom: 14px; }
+.sechead { display: grid; grid-template-columns: auto 1fr; gap: 26px; align-items: end; border-bottom: 2px solid var(--ink); padding-bottom: 14px; }
 .sec--ink .sechead { border-color: var(--paper); }
 .sechead .no { font-family: 'Anton', Impact, sans-serif; font-size: clamp(34px, 5vw, 58px); line-height: .85; color: var(--ticket); }
 .sechead h2 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; font-size: clamp(26px, 3.6vw, 42px); line-height: .95; text-transform: uppercase; }
-.sechead .r { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; text-align: right; }
 
 /* para quién */
-.who { display: grid; grid-template-columns: repeat(3, 1fr); list-style: none; }
-.who > li { padding: 26px 24px 26px 0; border-right: 1px solid var(--ink); }
-.who > li + li { padding-left: 24px; }
-.who > li:last-child { border-right: 0; }
-.who .mk { font-family: 'Anton', Impact, sans-serif; font-size: 26px; color: var(--ticket); }
-.who h3 { margin-top: 10px; font-family: 'Anton', Impact, sans-serif; font-weight: 400; font-size: 21px; text-transform: uppercase; }
-.who p { margin-top: 9px; font-size: 13.5px; line-height: 1.6; }
-.who .tg { display: inline-block; margin-top: 14px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; border: 1px solid var(--ink); padding: 5px 9px; }
-.nofit { margin-top: 26px; border: 2px dashed var(--ink); padding: 16px 20px; font-size: 13.5px; line-height: 1.6; }
+.nofit { margin-top: 32px; border: 2px dashed var(--ink); padding: 16px 20px; font-size: 13.5px; line-height: 1.6; }
 .nofit b { font-family: 'Anton', Impact, sans-serif; font-weight: 400; font-size: 15px; text-transform: uppercase; letter-spacing: .02em; }
 
 /* demo */
@@ -134,11 +126,11 @@ img { display: block; max-width: 100%; }
 .demo .doorwrap .off { color: var(--warn); }
 
 /* ledger */
-.lrow { display: grid; grid-template-columns: 52px 1.1fr 1.4fr; gap: 22px; padding: 20px 0; border-bottom: 1px solid var(--ink); align-items: start; }
-.lrow:last-child { border-bottom: 0; }
+.ledger { margin-top: 28px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px 34px; }
+.lrow { display: block; }
 .lrow .n { font-family: 'Anton', Impact, sans-serif; font-size: 26px; color: var(--ticket); line-height: 1; }
-.lrow h3 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; font-size: 21px; text-transform: uppercase; line-height: 1.05; }
-.lrow p { font-size: 13.5px; line-height: 1.65; }
+.lrow h3 { margin-top: 10px; font-family: 'Anton', Impact, sans-serif; font-weight: 400; font-size: 21px; text-transform: uppercase; line-height: 1.05; }
+.lrow p { margin-top: 8px; max-width: 34ch; font-size: 13.5px; line-height: 1.65; }
 
 /* puerta destacada */
 .split { margin-top: 28px; display: grid; grid-template-columns: 1.05fr 1fr; gap: 34px; align-items: center; }
@@ -159,13 +151,17 @@ img { display: block; max-width: 100%; }
 .prices li::before { content: "◆"; position: absolute; left: 0; font-size: 9px; top: 4px; }
 .prices .b2 { margin-top: 22px; }
 .prices > div:last-child .btn { background: transparent; border-color: var(--paper); color: var(--paper); }
-.prices__lead { margin-top: 20px; font-size: 14.5px; max-width: 640px; line-height: 1.6; }
 
 /* faq */
-.fq { display: grid; grid-template-columns: 52px 1fr; gap: 22px; padding: 18px 0; border-bottom: 1px solid var(--ink); }
-.fq .n { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .08em; padding-top: 3px; }
+.fq { border-bottom: 1px solid var(--ink); }
+.fq summary { display: grid; grid-template-columns: 52px 1fr auto; gap: 22px; align-items: baseline; padding: 18px 0; cursor: pointer; list-style: none; }
+.fq summary::-webkit-details-marker { display: none; }
+.fq summary:focus-visible { outline: 3px solid var(--indigo); outline-offset: 2px; }
+.fq .n { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; letter-spacing: .08em; }
 .fq h3 { font-family: 'Anton', Impact, sans-serif; font-weight: 400; font-size: 17px; text-transform: uppercase; }
-.fq p { margin-top: 7px; font-size: 13.5px; line-height: 1.6; max-width: 760px; }
+.fq .ic::before { content: "+"; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 20px; font-weight: 700; line-height: 1; color: var(--ticket); }
+.fq[open] .ic::before { content: "–"; }
+.fq p { margin: -6px 0 0 74px; padding-bottom: 18px; font-size: 13.5px; line-height: 1.6; max-width: 760px; }
 
 /* cierre y pie */
 .final { background: var(--ticket); color: var(--paper); padding: 62px var(--side); text-align: center; }
@@ -223,11 +219,7 @@ fieldset { border: 0; min-width: 0; }
 @media (max-width: 900px) {
   .sub2, .split, .prices { grid-template-columns: 1fr; }
   .sub2 .acts { justify-content: flex-start; }
-  .who { grid-template-columns: 1fr; }
-  .who > li { padding: 22px 0; border-right: 0; border-bottom: 1px solid var(--ink); }
-  .who > li + li { padding-left: 0; }
-  .who > li:last-child { border-bottom: 0; }
-  .prices > div { border-right: 0; border-bottom: 2px dashed var(--ink); }
+          .prices > div { border-right: 0; border-bottom: 2px dashed var(--ink); }
   .prices > div:last-child { border-bottom: 0; }
   .auth { grid-template-columns: 1fr; }
   .auth__l { border-right: 0; border-bottom: 2px solid var(--ink); max-width: none; justify-self: stretch; }
@@ -240,10 +232,8 @@ fieldset { border: 0; min-width: 0; }
   /* apilados, la línea de troquel pasa a horizontal */
   .ticket > li { border-right: 0; border-bottom: 1px dashed var(--ink); }
   .ticket > li:last-child { border-bottom: 0; }
-  .sechead { grid-template-columns: auto 1fr; }
-  .sechead .r { grid-column: 1 / -1; text-align: left; }
-  .lrow, .fq { grid-template-columns: 40px 1fr; }
-  .lrow p { grid-column: 2; }
+  .fq summary { grid-template-columns: 40px 1fr auto; gap: 14px; }
+  .fq p { margin-left: 54px; }
   .demo { flex-direction: column; }
   .demo .sd { width: auto; border-right: 0; border-bottom: 2px solid var(--ink); display: flex; gap: 2px; overflow-x: auto; padding: 8px; }
   .demo .sd .l { display: none; }
